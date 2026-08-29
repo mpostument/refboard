@@ -98,11 +98,18 @@ Two, deliberately kept separate:
   live, from a HUD dropdown mid-session or a chip on the setup screen; shows
   the original and posterized copies side by side.
 - **Check your own image** - a drag-and-drop tool, entirely client-side and
-  independent of your library. Drop one image to check its tonal value; drop
-  several and run a real timed session against them, no library required -
-  this is the whole of what runs on the [live demo](https://mpostument.github.io/refboard/),
-  and it works the same way behind a container as a bonus way to throw a
-  handful of extra references into an otherwise library-backed session.
+  independent of your library. Drop one image to view it full-screen with
+  the tonal-value split, zoom and the angle tool, paused with no timer
+  running; drop several and run a real timed session against them - no
+  library required, this is the whole of what runs on the
+  [live demo](https://mpostument.github.io/refboard/), and it works the
+  same way behind a container as a bonus way to throw a handful of extra
+  references into an otherwise library-backed session.
+- **Zoom and pan** - scroll, drag, or the HUD +/- to zoom into a detail (a
+  hand, a face) without leaving the timed session; resets on every new pose.
+- **Angle tool** - drag anywhere on the reference to read the angle between
+  two points, the on-screen equivalent of holding a pencil up to measure a
+  shoulder or hip line before committing to it on paper.
 - Grid overlay, grayscale, random mirroring, session history/log, keyboard
   shortcuts, installable as a home-screen app, and a screen wake lock so a
   tablet propped up next to your paper doesn't sleep mid-pose.
