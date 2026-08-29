@@ -131,6 +131,9 @@ Two, deliberately kept separate:
 - Grid overlay, grayscale, random mirroring, session history/log, keyboard
   shortcuts, installable as a home-screen app, and a screen wake lock so a
   tablet propped up next to your paper doesn't sleep mid-pose.
+- **In-app help** - a `? Help` button on the setup screen, a matching `?` in
+  the HUD, or the `?` key from either, opens a card explaining every feature
+  above and how to use it, without leaving the page.
 
 ## Architecture
 

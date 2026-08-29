@@ -247,12 +247,45 @@
   #session:hover #hud.idle { opacity: 1; }
   .keys { margin-left: auto; font-size: 11px; color: #55555f; }
   @media (max-width: 700px) { .keys { display: none; } }
+
+  /* ---------- help ---------- */
+  /* Same always-dark trick as #session (see its own comment) - opened from
+     either screen, themed the same regardless of which. */
+  #helpOverlay {
+    color-scheme: dark;
+    --bg: #0b0b0d; --panel: #141419; --line: #26262e;
+    --ink: #e9e9ee; --dim: #8b8b98; --accent: #d8a24a; --accent-dim: #6b5223;
+    --line-hi: #3a3a46; --on-accent: #17130a;
+  }
+  #helpOverlay {
+    position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  #helpModal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    max-width: 640px; max-height: 100%; overflow-y: auto; padding: 24px 28px;
+    color: var(--ink);
+  }
+  #helpModal section { margin-bottom: 22px; }
+  #helpModal section:last-child { margin-bottom: 0; }
+  #helpModal h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--dim); font-weight: 600; margin: 0 0 8px;
+    border-bottom: 1px solid var(--line); padding-bottom: 7px;
+  }
+  #helpModal p, #helpModal ul { margin: 0 0 8px; font-size: 13px; line-height: 1.6; }
+  #helpModal ul { padding-left: 20px; }
+  #helpModal li { margin-bottom: 4px; }
+  #helpModal a { color: var(--accent); }
 </style>
 </head>
 <body>
 <div id="setup">
   <div class="wrap">
-    <h1>Reference Board</h1>
+    <div class="row" style="margin-bottom:4px">
+      <h1 class="grow" style="margin:0">Reference Board</h1>
+      <button id="btnHelpSetup" class="ghost" type="button" title="What every feature does and how to use it (?)">? Help</button>
+    </div>
     <div class="row" style="margin-bottom:28px">
       <div class="sub grow" id="summary" style="margin-bottom:0">loading index…</div>
       <!-- Hidden until boot() confirms a backend exists at all - meaningless
@@ -439,11 +472,122 @@
     <button id="btnAngle" title="Angle tool (a): drag to measure an angle. The first drag sets a reference length; every drag after compares against it, until you turn this off and back on.">Angle</button>
     <button id="btnEyedropper" title="Eyedropper (e): click the reference to read its exact colour and value">Eyedropper</button>
     <button id="btnInfo" title="Show this pose's brightness histogram and dominant colours (i)">Info</button>
+    <button id="btnHelpHud" title="What every feature does and how to use it (?)">?</button>
     <button id="btnSimilar" class="hidden">Similar</button>
     <button id="btnSkip" title="Never show this pose again (s)">Skip</button>
     <button id="btnStop">Stop</button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · v value · +/- zoom · a angle · e eyedrop · i info · r grid · m similar · s skip · esc stop</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · v value · +/- zoom · a angle · e eyedrop · i info · r grid · m similar · s skip · esc stop · ? help</span>
+  </div>
+</div>
+
+<!-- Reachable from the setup screen (#btnHelpSetup) and mid-session
+     (#btnHelpHud / the '?' key) alike, so it gets its own always-dark
+     theming (see #session's own comment on the same trick) rather than
+     inheriting whichever of light/dark #setup happens to be in - a help
+     card is read the same way regardless of which screen opened it from. -->
+<div id="helpOverlay" class="hidden" role="dialog" aria-modal="true" aria-label="Help">
+  <div id="helpModal">
+    <div class="row" style="margin-bottom:18px">
+      <div class="grow" style="font-size:17px;font-weight:600">How to use Refboard</div>
+      <button id="btnHelpClose" class="ghost" type="button" title="Close (Escape)">Close</button>
+    </div>
+
+    <section>
+      <h2>Timed sessions</h2>
+      <p>Pick one or more packs (or "All" / a random pool), an interval -
+        a preset, a custom number of seconds, or a structured
+        warm-up/quick/long-study schedule - and any options: grayscale,
+        random mirroring, a grid overlay, a bell when the pose changes,
+        fullscreen. Tone filtering (high-contrast / low-key / high-key) and
+        skipping near-duplicates are both computed from your own library, not
+        a fixed guess. Click <b>Start drawing</b>.</p>
+    </section>
+
+    <section>
+      <h2>During a session</h2>
+      <p><b>Space</b> pause/resume · <b>← →</b> previous/next pose ·
+        <b>F</b> flip horizontally · <b>G</b> grayscale · <b>S</b> skip this
+        pose for good · <b>Esc</b> stop. The HUD's own buttons do the same
+        thing for a mouse.</p>
+    </section>
+
+    <section>
+      <h2>Tonal value / Notan study</h2>
+      <p>The HUD's value select (or <b>V</b> to cycle) posterizes the
+        reference to 2-6 flat tones, shown side by side with the original -
+        block in light and dark masses before chasing detail. Two tones is a
+        pure Notan (light mass vs. dark mass); more tones reads closer to a
+        full value scale.</p>
+    </section>
+
+    <section>
+      <h2>Understand the pose</h2>
+      <p>Open the <b>Info</b> drawer (<b>I</b>, next to the value select) for
+        everything about the current pose rather than the session itself:</p>
+      <ul>
+        <li><b>Scheme</b> - swap the tonal-value view's colour: grayscale,
+          three duotones (Van Dyke brown, Payne's grey, sepia/burnt umber),
+          a false-colour heatmap, or edge detection.</li>
+        <li><b>Blur</b> - softens the reference before posterizing, so tone
+          blocks in as soft masses instead of hard edges around every small
+          bit of local contrast.</li>
+        <li>A <b>legend</b> showing exactly what each tone level maps to in
+          the current scheme, a <b>brightness histogram</b>, and the pose's
+          <b>top-5 dominant colours</b>.</li>
+      </ul>
+      <p><b>Eyedropper</b> (<b>E</b>, its own HUD button) - click anywhere on
+        the reference to read the exact hex colour and brightness percent
+        under the cursor.</p>
+    </section>
+
+    <section>
+      <h2>Zoom and pan</h2>
+      <p>Scroll the wheel, or use the HUD's <b>−</b> / <b>100%</b> /
+        <b>+</b> (also <b>-</b>/<b>+</b>/<b>0</b> on the keyboard), to zoom
+        into a detail - a hand, a face - up to 6x. Once zoomed in, drag
+        anywhere to pan; double-click, or the <b>100%</b> button, resets.
+        Zoom and pan reset automatically on every new pose.</p>
+    </section>
+
+    <section>
+      <h2>Angle tool</h2>
+      <p>Toggle it with the HUD's <b>Angle</b> button (or <b>A</b>), then
+        drag anywhere on the reference the way you'd hold a pencil up to
+        check a shoulder or hip line before committing to it on paper. The
+        <i>first</i> drag after turning it on also becomes a reference
+        length - drawn faint and dashed, kept on screen - and every drag
+        after that reads its own angle <i>and</i> its length as a ratio of
+        that reference (a head height, a hand span), until you turn the tool
+        off and back on.</p>
+    </section>
+
+    <section>
+      <h2>Check your own image</h2>
+      <p>The drop zone on the setup screen works with no library at all -
+        it's the whole of what runs on the
+        <a href="https://mpostument.github.io/refboard/" target="_blank" rel="noopener">live demo</a>.
+        Drop one image to view it full-screen with every tool above, paused
+        with no timer running; drop several to run a real timed session
+        against them. Nothing is ever uploaded anywhere - it stays local to
+        this browser.</p>
+    </section>
+
+    <section>
+      <h2>Rescan library</h2>
+      <p>Shown on the setup screen once a library index has loaded. Click it
+        to ask the container to reindex right away instead of waiting for
+        its next scheduled pass - useful right after dropping a new pack
+        into the mounted folder.</p>
+    </section>
+
+    <section>
+      <h2>All keyboard shortcuts</h2>
+      <p class="sub" style="margin-bottom:0">Space pause · ← → step · F flip
+        · G gray · V value levels · +/- zoom · 0 reset zoom · A angle tool ·
+        E eyedropper · I info drawer · R grid · M similar (when available) ·
+        S skip · Esc stop · ? this help</p>
+    </section>
   </div>
 </div>
 
@@ -2316,6 +2460,41 @@ function toggleValueTools() {
 }
 el('btnInfo').addEventListener('click', toggleValueTools);
 
+/* ------------------------------------------------------------------ help
+   Reachable from the setup screen (no session running yet) as well as
+   mid-session, so it lives outside both #setup's and #session's own
+   keydown-scoped shortcut handling - see the '?' listener and the guard
+   added at the top of the session one below, rather than teaching either
+   screen's own logic about a dialog that isn't really part of either. */
+function toggleHelp() {
+  const opening = el('helpOverlay').classList.contains('hidden');
+  el('helpOverlay').classList.toggle('hidden');
+  if (opening) el('helpModal').scrollTop = 0;
+}
+el('btnHelpSetup').addEventListener('click', toggleHelp);
+el('btnHelpHud').addEventListener('click', toggleHelp);
+el('btnHelpClose').addEventListener('click', toggleHelp);
+el('helpOverlay').addEventListener('click', e => { if (e.target === el('helpOverlay')) toggleHelp(); });
+document.addEventListener('keydown', e => {
+  // Not scoped to #session like most shortcuts below - help needs to open
+  // (and close) the same way from the setup screen, before any session
+  // exists at all. Escape-while-a-session-is-running is deliberately left
+  // to the session's own keydown handler below (it needs to swallow every
+  // other key too, and closing help there instead of here is what stops
+  // this same keypress from also falling through to its stopSession() case).
+  if (e.key === 'Escape' && el('session').classList.contains('hidden')
+      && !el('helpOverlay').classList.contains('hidden')) {
+    toggleHelp();
+    return;
+  }
+  if (e.key !== '?') return;
+  // A bare '?' still needs Shift on most layouts, but don't fight typing in
+  // the custom-interval field or any other form control that's focused.
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+  e.preventDefault();
+  toggleHelp();
+});
+
 /* ---------------------------------------------------------- image analysis
    One small offscreen canvas, redrawn on every pose (see show()'s onload),
    backing three features at once: the histogram, the dominant-colour
@@ -2417,6 +2596,13 @@ el('session').addEventListener('touchstart', armHudIdle, { passive: true });
 
 document.addEventListener('keydown', e => {
   if (el('session').classList.contains('hidden')) return;
+  // Swallow every session shortcut while the help card is up - Escape closes
+  // it instead of stopping the session underneath, and nothing else (f, g,
+  // s...) should leak through to the page while someone is reading it.
+  if (!el('helpOverlay').classList.contains('hidden')) {
+    if (e.key === 'Escape') { e.preventDefault(); toggleHelp(); }
+    return;
+  }
   armHudIdle();
   switch (e.key) {
     case ' ':          e.preventDefault(); togglePause(); break;
