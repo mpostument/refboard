@@ -1,0 +1,1813 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reference Board</title>
+<!-- Installable: a drawing session is run from a phone or tablet propped
+     beside the paper, and a home-screen icon beats finding the right browser
+     tab with charcoal on your hands. -->
+<link rel="manifest" href="/refboard.webmanifest">
+<link rel="icon" href="/icon-refboard.svg" type="image/svg+xml">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0d" media="(prefers-color-scheme: dark)">
+<!--
+  Timed gesture-drawing board over your own reference image library.
+  Self-contained: no build step, no dependencies, no external requests - it
+  reads one JSON manifest (index.json) that the server container generates
+  by walking whatever you mounted at /references, and, once the background
+  pass has had time to run, a second one (features.json) with per-image tone
+  stats and display copies. Both are optional in the sense that this page
+  degrades gracefully without them - see boot() below - but index.json is
+  what turns an empty page into a usable one.
+
+  All state is localStorage. There is one user and no account, so a
+  server-side session would be pure overhead.
+-->
+<style>
+  :root {
+    --bg: #0b0b0d; --panel: #141419; --line: #26262e;
+    --ink: #e9e9ee; --dim: #8b8b98; --accent: #d8a24a; --accent-dim: #6b5223;
+    --line-hi: #3a3a46;     /* border on hover */
+    --on-accent: #17130a;   /* text on the amber fill */
+    --btn-off: #2a2a33;     /* Start, before a pool exists */
+    --bad: #e0705f;
+  }
+  /* THE LIGHT THEME STOPS AT THE SETUP PANEL, AND THAT IS THE POINT.
+     #session below keeps its black backdrop in both themes and is not
+     themed at all. A drawing reference is judged for value against its
+     surround, and a pose on a white page reads a stop darker than the same
+     pose on black - so a "light mode" that reached the drawing surface would
+     quietly change what you are drawing. The setup panel is a form and can be
+     whatever is comfortable to read; the stage is an instrument.
+
+     The amber accent survives the switch, darkened to hold contrast on white.
+     It is this page's identity and the one thing that says at a glance that
+     this is the board and not the catalogue. */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f5f2; --panel: #ffffff; --line: #e0ded7;
+      --ink: #1a1917; --dim: #6b6a63; --accent: #8a6212; --accent-dim: #d8c39a;
+      --line-hi: #bdbab1;
+      --on-accent: #ffffff;
+      --btn-off: #e6e4de;
+      --bad: #b23f2f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink); overflow: hidden;
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  button, select, input { font: inherit; color: inherit; }
+  .hidden { display: none !important; }
+
+  /* ---------- setup ---------- */
+  #setup { height: 100%; overflow-y: auto; padding: 32px 24px 64px; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; letter-spacing: .01em; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 28px; }
+  section { margin-bottom: 28px; }
+  h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--dim); font-weight: 600; margin: 0 0 10px;
+    border-bottom: 1px solid var(--line); padding-bottom: 7px;
+  }
+  .packs { display: grid; gap: 6px; }
+  .pack {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
+    padding: 10px 13px;
+  }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .row + .row { margin-top: 7px; }
+  .grow { flex: 1; min-width: 0; }
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .count { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .sub-group { padding-left: 26px; font-size: 13px; color: var(--dim); }
+  .badge {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--accent); border: 1px solid var(--accent-dim);
+    border-radius: 4px; padding: 1px 5px; white-space: nowrap;
+  }
+  input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; flex: none; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 999px; padding: 7px 15px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--line-hi); }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  input[type=number] {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
+    padding: 7px 10px; width: 88px;
+  }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+  label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+  #start {
+    background: var(--accent); color: var(--on-accent); border: 0; border-radius: 8px;
+    padding: 13px 26px; font-weight: 600; cursor: pointer;
+  }
+  #start:disabled { background: var(--btn-off); color: var(--dim); cursor: not-allowed; }
+  .startbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .ghost {
+    background: none; border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; color: var(--dim); font-size: 12px;
+  }
+  .ghost:hover:not(:disabled) { color: var(--ink); border-color: var(--line-hi); }
+  .ghost:disabled { cursor: not-allowed; opacity: .5; }
+  .err { color: var(--bad); }
+
+  /* ---------- session ---------- */
+  /* Re-pins every variable the stage and its HUD use to the dark values, so the
+     light theme declared at the top cannot reach in here. Custom properties
+     inherit, and #session is the ancestor of #stage, #bar and #hud, so this one
+     block covers the whole drawing surface.
+     Without it the HUD would go pale in light mode while the stage behind it
+     stayed black - the two halves of the same control strip disagreeing - and
+     the timer bar would sit at light-mode contrast against #000. */
+  #session {
+    --line: #26262e; --line-hi: #3a3a46;
+    --ink: #e9e9ee; --dim: #8b8b98;
+    --accent: #d8a24a; --accent-dim: #6b5223;
+    --on-accent: #17130a; --bad: #e0705f;
+  }
+  #session { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; }
+  /* Always flex, even when only #paneOrig is visible: one flex:1 child fills
+     100% on its own, so showing #paneValue for a tonal-value session is just
+     removing .hidden from it - no separate "split" mode class needed. */
+  #stage { flex: 1; position: relative; overflow: hidden; display: flex; }
+  .pane { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+  .pane + .pane { border-left: 1px solid #1c1c22; }
+  #img, #imgValue {
+    position: absolute; inset: 0; margin: auto; display: block;
+    max-width: 100%; max-height: 100%; object-fit: contain;
+    transition: opacity .12s linear;
+  }
+  /* Flip covers both panes - it is a "see the pose fresh" technique
+     independent of the value view, so both sides must mirror together or
+     they would stop being the same pose at a glance. Grayscale stays
+     #img-only: #paneOrig is the one guarantee of an untouched original once
+     #paneValue exists, so the Grayscale checkbox is disabled rather than
+     wired to affect it while a tonal-value level is active - see
+     updateValueStepsUI(). */
+  #img.flip, #imgValue.flip { transform: scaleX(-1); }
+  #img.gray { filter: grayscale(1); }
+
+  #grid { position: absolute; inset: 0; pointer-events: none; opacity: .3; }
+
+  #bar { height: 3px; background: #1c1c22; flex: none; }
+  #fill { height: 100%; width: 100%; background: var(--accent); transition: width .25s linear; }
+  #fill.warn { background: var(--bad); }
+
+  #hud {
+    flex: none; display: flex; align-items: center; gap: 14px;
+    padding: 9px 14px; background: #08080a; border-top: 1px solid #17171c;
+    font-size: 13px; color: var(--dim);
+  }
+  #hud button {
+    background: #17171c; border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; color: var(--ink);
+  }
+  #hud button:hover:not(:disabled) { border-color: var(--line-hi); }
+  #hud button:disabled { opacity: .4; cursor: not-allowed; }
+  /* "Similar" is a mode rather than an action, so it needs to read as on at a
+     glance from across the room mid-session. */
+  #hud button[aria-pressed="true"] {
+    background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600;
+  }
+  /* Value used to be this same kind of button, cycling one step per click -
+     fine for "off or on" but five clicks to reach 6 from Off is not a
+     control, it's a chore. A <select> jumps there in one action and needs its
+     own rule because a bare <select> does not inherit button's look. Same
+     "read as on" treatment as above, via a class instead of aria-pressed
+     since a select's value already says what level is active - aria-pressed
+     is for a toggle, and this isn't one. */
+  #hud select {
+    background: #17171c; border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 10px; cursor: pointer; color: var(--ink);
+  }
+  #hud select:hover { border-color: var(--line-hi); }
+  #hud select.active {
+    background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600;
+  }
+  #clock { font-variant-numeric: tabular-nums; font-size: 19px; color: var(--ink); min-width: 62px; }
+  #clock.warn { color: var(--bad); }
+  #pos { font-variant-numeric: tabular-nums; }
+  #hud.idle { opacity: 0; transition: opacity .4s; }
+  #session:hover #hud.idle { opacity: 1; }
+  .keys { margin-left: auto; font-size: 11px; color: #55555f; }
+  @media (max-width: 700px) { .keys { display: none; } }
+</style>
+</head>
+<body>
+<div id="setup">
+  <div class="wrap">
+    <h1>Reference Board</h1>
+    <div class="sub" id="summary">loading index…</div>
+    <div class="sub" id="sessionLog"></div>
+
+    <!-- First on the page, not last: checking a photo's tonal value is a
+         thirty-second thing someone reaches for before they have touched the
+         pack list below, or without ever touching it at all. Independent of
+         everything below - not from the pack library, no pool, no session.
+         Local to this browser only - createObjectURL, never uploaded anywhere
+         - so it works exactly as well offline as it does served from the container.
+         Carries its own level selector rather than pointing down at Options,
+         since Options can be a full page-scroll away from here. -->
+    <section>
+      <h2>Check your own image</h2>
+      <div id="dropZone" tabindex="0" role="button"
+           style="border:1px dashed var(--line); border-radius:8px; padding:20px; text-align:center; color:var(--dim); font-size:13px; cursor:pointer;">
+        Drop an image here, or click to choose one.
+      </div>
+      <input type="file" id="dropInput" accept="image/*" class="hidden">
+      <div id="dropPreview" class="hidden" style="margin-top:12px">
+        <div class="row" style="margin-bottom:10px">
+          <label class="opt" for="dropValueSelect">Tonal value</label>
+          <select id="dropValueSelect"></select>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <img id="dropImgOrig" alt="" style="flex:1; min-width:200px; max-width:100%; border-radius:7px; display:block">
+          <img id="dropImgValue" alt="" style="flex:1; min-width:200px; max-width:100%; border-radius:7px; display:block">
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Packs</h2>
+      <div class="packs" id="packs"></div>
+    </section>
+
+    <section>
+      <h2>Interval</h2>
+      <div class="chips" id="intervals"></div>
+      <div class="row" style="margin-top:10px">
+        <label class="opt" for="customSecs">Custom</label>
+        <input type="number" id="customSecs" min="5" max="3600" step="5" placeholder="secs">
+        <span class="count">seconds per pose</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Session</h2>
+      <div class="chips" id="schedules"></div>
+      <div class="count" id="scheduleHint" style="margin-top:9px"></div>
+    </section>
+
+    <!-- Hidden entirely when features.json is absent: with no measurements the
+         chips would all select everything, which reads as a broken filter. -->
+    <section id="toneSection" class="hidden">
+      <h2>Tone</h2>
+      <div class="chips" id="tones"></div>
+      <div class="count" id="toneHint" style="margin-top:9px"></div>
+    </section>
+
+    <section>
+      <h2>Options</h2>
+      <div class="opts">
+        <label class="opt"><input type="checkbox" id="optGray"> Grayscale</label>
+        <label class="opt"><input type="checkbox" id="optFlipRandom"> Randomly mirror</label>
+        <label class="opt"><input type="checkbox" id="optGrid"> Grid overlay</label>
+        <label class="opt"><input type="checkbox" id="optBell" checked> Bell on change</label>
+        <label class="opt"><input type="checkbox" id="optFull" checked> Fullscreen</label>
+        <label class="opt hidden" id="optDedupWrap" title="Frames that hash as near-identical are drawn as one pose. Off by default: the measured distance distributions for &quot;same pose, other angle&quot; and &quot;different pose&quot; overlap, so this removes some genuinely distinct poses too. The count below shows exactly how many it takes."><input type="checkbox" id="optDedup"> Skip near-duplicates</label>
+      </div>
+      <!-- Empty when nothing is skipped, same convention as poolInfo - a
+           permanently-hidden control with nothing to say is worse than an
+           absent one. -->
+      <div class="count" id="skipInfo" style="margin-top:9px"></div>
+
+      <!-- A count, not a checkbox, because "on" is meaningless without
+           saying how many tones - this is a value study, not a filter with
+           one setting. Works with no features.json at all: unlike Tone
+           above, this reduces the image itself rather than selecting from
+           precomputed stats, so it needs nothing the page did not already
+           have. Grayscale is disabled rather than hidden while a step count
+           is active - it would still change nothing, since the SVG filter
+           below already forces its own grayscale, and a control that
+           silently does nothing is worse than one visibly turned off. -->
+      <div class="row" style="margin-top:14px; flex-wrap:wrap">
+        <span style="font-size:13px">Tonal value</span>
+        <div class="chips" id="valueSteps"></div>
+      </div>
+      <div class="count" id="valueStepsHint" style="margin-top:9px"></div>
+    </section>
+
+    <div class="startbar">
+      <button id="start" disabled>Start drawing</button>
+      <span class="count" id="poolInfo"></span>
+      <button id="copyLink" class="ghost" type="button" disabled>Copy link to this setup</button>
+    </div>
+  </div>
+</div>
+
+<!-- Value-study filters (buildValueFilters() below). Not visually rendered -
+     #imgValue and the drop-zone preview reference one by id via CSS
+     filter:url(#value3) etc - so this lives anywhere in the document rather
+     than inside #stage. Built by JS rather than hand-typed: evenly spacing N
+     tone levels as decimal fractions is exactly the kind of arithmetic that
+     quietly drifts off "evenly spaced" after one hand-edit. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs id="valueFilterDefs"></defs>
+</svg>
+
+<div id="session" class="hidden">
+  <div id="stage">
+    <div class="pane" id="paneOrig"><img id="img" alt=""></div>
+    <!-- Hidden whenever tonal value is off - see applyOptions(). Always the
+         SAME underlying file as #img (show() sets both src attributes
+         together), so nothing extra is fetched: the filter is the only
+         difference between the two panes. -->
+    <div class="pane hidden" id="paneValue"><img id="imgValue" alt=""></div>
+    <svg id="grid" class="hidden" preserveAspectRatio="none"></svg>
+  </div>
+  <div id="bar"><div id="fill"></div></div>
+  <div id="hud">
+    <span id="clock">0:30</span>
+    <button id="btnPause">Pause</button>
+    <button id="btnPrev">Prev</button>
+    <button id="btnNext">Next</button>
+    <button id="btnFlip">Flip</button>
+    <button id="btnGray">Gray</button>
+    <select id="valueSelect" title="Tonal value split view (v cycles)"></select>
+    <button id="btnSimilar" class="hidden">Similar</button>
+    <button id="btnSkip" title="Never show this pose again (s)">Skip</button>
+    <button id="btnStop">Stop</button>
+    <span id="pos"></span>
+    <span class="keys">space pause · ← → step · f flip · g gray · v value · r grid · m similar · s skip · esc stop</span>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const INDEX_URL = 'index.json';
+
+// Written by the server's background feature-builder pass: display copies
+// plus tone stats and a perceptual hash. Entirely optional - every feature it powers is skipped if the
+// fetch fails, and the board behaves exactly as it did before it existed.
+const FEATURES_URL = 'features.json';
+const STORE_KEY = 'refboard.settings.v1';
+
+const PRESETS = [30, 60, 120, 300, 600];
+
+// Standard figure-drawing class shapes. "endless" is the default because a pose
+// pack is not a class - most sessions are one interval until you stop.
+const SCHEDULES = {
+  endless: { label: 'Endless',   steps: null },
+  warmup:  { label: 'Warm-up',   steps: [[30,10],[60,5],[120,3],[300,2]] },
+  quick:   { label: 'Quick 20',  steps: [[30,20]] },
+  long:    { label: 'Long study',steps: [[300,4],[600,2]] },
+};
+
+// Tone filters. Cut points are computed from the actual distribution at load
+// rather than hardcoded, so each selects roughly a third of whatever packs are
+// present instead of encoding one library's histogram forever.
+const TONES = {
+  contrast: { label: 'High contrast', hint: 'Widest value range — for value studies.' },
+  lowkey:   { label: 'Low key',       hint: 'Darkest third: dramatic, low-light lighting.' },
+  highkey:  { label: 'High key',      hint: 'Lightest third: flat, bright, high-key lighting.' },
+};
+
+// Posterizes the reference itself to N flat tones - a classic value-study
+// step (see any "block in the shapes first" exercise), distinct from TONES
+// above: that picks WHICH images are in the pool by their measured
+// lightness/contrast, this changes HOW the one on screen right now renders.
+// 2 is a Notan (light-mass/dark-mass) study; higher counts read as a
+// posterize effect rather than a value study, which is why the set stops at
+// 6 - past that the point of collapsing shades starts disappearing.
+const VALUE_STEPS = [2, 3, 4, 5, 6];
+
+let INDEX = null;
+let FEATURES = null;     // null whenever features.json is missing or unreadable
+let TONE_CUTS = null;
+
+/* The speculative choice preloadNext() already made for whatever nextUnit()
+   returns next, so advance() can reuse it instead of re-rolling - see
+   pickFrame() and preloadNext() below for why the two must agree. Identity
+   ('unit' is the exact pool entry, not a copy) is what lets advance() tell
+   "this is the unit I preloaded for" from "the draw order changed under me
+   (toggleSimilar) since I preloaded" without extra bookkeeping. */
+let pendingPick = null;
+
+/* ---------------------------------------------------------------- skipped
+   A bad reference - cropped oddly, wrong pack, a scan artifact - has had no
+   way to leave the pool short of unchecking the whole pack it came from. This
+   is a permanent per-image exclusion, keyed by src, separate from `settings`
+   deliberately: settings sync is LAST-WRITE-WINS ON THE WHOLE DOCUMENT (see
+   syncSettings above) because a session design is one coherent choice - but a
+   skip is a fact about one image, and two devices skipping different images
+   between syncs must not have one skip clobber the other. Same shape as
+   /videos/'s watchedDoc: a tombstoned {on, t} per key so an UN-skip merges
+   correctly too, not just an addition. */
+let skipped = {};        // src -> { on: bool, t: unix }
+const SKIPPED_KEY = 'refboard.skipped.v1';
+const isSkipped = src => !!(skipped[src] && skipped[src].on);
+
+function loadSkipped() {
+  try { return JSON.parse(localStorage.getItem(SKIPPED_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveSkipped(share = true) {
+  try { localStorage.setItem(SKIPPED_KEY, JSON.stringify(skipped)); } catch { /* private mode */ }
+  if (share && window.FleetState) FleetState.push('refboard-skipped');
+}
+function setSkipped(src, on) {
+  if (!src) return;
+  skipped[src] = { on, t: Math.floor(Date.now() / 1000) };
+  saveSkipped();
+}
+function skippedCount() {
+  return Object.values(skipped).filter(v => v && v.on).length;
+}
+
+// Rendered on the setup screen only - by the time a session is running the
+// count cannot change except by skipCurrent(), which does not need to be told
+// what it just did.
+function renderSkipInfo() {
+  const host = el('skipInfo');
+  const n = skippedCount();
+  if (!n) { host.textContent = ''; return; }
+  host.innerHTML = `${n.toLocaleString()} pose${n === 1 ? '' : 's'} skipped ` +
+    `<button type="button" id="btnClearSkip" style="margin-left:6px;padding:2px 8px;font-size:11px">Clear</button>`;
+  el('btnClearSkip').addEventListener('click', () => {
+    skipped = {};
+    saveSkipped();
+    renderSkipInfo();
+    refreshPool();
+  });
+}
+function syncSkipped() {
+  if (!window.FleetState) return Promise.resolve();
+  return FleetState.sync('refboard-skipped', {
+    read: () => ({ v: 1, items: skipped }),
+    write: (doc) => { skipped = (doc && doc.items) || {}; saveSkipped(false); },
+    merge: (mine, theirs) => {
+      const a = (mine && mine.items) || {}, b = (theirs && theirs.items) || {};
+      const out = {};
+      for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+        const x = a[k], y = b[k];
+        out[k] = (!x) ? y : (!y) ? x : ((y.t || 0) > (x.t || 0) ? y : x);
+      }
+      return { v: 1, items: out };
+    },
+  });
+}
+
+/* --------------------------------------------------------- session log
+   Nothing on this board recorded that a session had ever happened - settings
+   sync says how it is CONFIGURED right now, which is a different question
+   from whether it was used. Log entries are immutable facts once written
+   (a session that happened did happen), so unlike settings (whole-document,
+   last write wins) and skipped (a tombstone per key), this merges as a UNION
+   keyed by session id - closer to how whatsnew.py's own event log is never
+   edited, only appended to and capped. */
+let sessions = [];       // newest first: { id, start, end, poses, packs }
+const SESSIONS_KEY = 'refboard.sessions.v1';
+const SESSION_CAP = 50;  // enough for months of practice without an unbounded doc
+
+function loadSessions() {
+  try { return JSON.parse(localStorage.getItem(SESSIONS_KEY)) || []; }
+  catch { return []; }
+}
+function saveSessions(share = true) {
+  try { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions)); } catch { /* private mode */ }
+  if (share && window.FleetState) FleetState.push('refboard-sessions');
+}
+
+// Called once from stopSession(), never from a scripted change - a session
+// that never drew a pose (the pool came up empty, or stop was pressed before
+// the first advance() landed) is not a session, and logging it would turn
+// "12 sessions" into a count of how many times the button was pressed.
+function logSession(start, end, poses, packs, secs) {
+  if (!(poses > 0)) return;
+  const id = start + '-' + Math.random().toString(36).slice(2, 8);
+  sessions.unshift({ id, start, end, poses, packs, secs });
+  if (sessions.length > SESSION_CAP) sessions.length = SESSION_CAP;
+  saveSessions();
+  renderSessionLog();
+}
+
+function mergeSessions(mine, theirs) {
+  if (!theirs || !Array.isArray(theirs.sessions)) return mine;
+  // A session id only ever comes from the device that logged it, so a
+  // collision means the same entry seen from both sides - keep either.
+  const byId = new Map();
+  for (const s of (mine && mine.sessions) || []) byId.set(s.id, s);
+  for (const s of theirs.sessions) if (!byId.has(s.id)) byId.set(s.id, s);
+  return { v: 1, sessions: [...byId.values()].sort((a, b) => b.start - a.start).slice(0, SESSION_CAP) };
+}
+function syncSessions() {
+  if (!window.FleetState) return Promise.resolve();
+  return FleetState.sync('refboard-sessions', {
+    read: () => ({ v: 1, sessions }),
+    write: (doc) => {
+      sessions = ((doc && doc.sessions) || []).slice(0, SESSION_CAP);
+      saveSessions(false);
+      renderSessionLog();
+    },
+    merge: mergeSessions,
+  });
+}
+
+function relTime(ts) {
+  const secs = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+  if (secs < 90) return 'just now';
+  if (secs < 5400) return Math.round(secs / 60) + ' min ago';
+  if (secs < 172800) return Math.round(secs / 3600) + ' h ago';
+  return Math.round(secs / 86400) + ' d ago';
+}
+
+// Quiet by default: nothing to say until there is something logged, and even
+// then this is one line, not a panel - a practice log is context for the
+// setup screen, not its subject.
+function renderSessionLog() {
+  const host = el('sessionLog');
+  if (!host) return;
+  if (!sessions.length) { host.textContent = ''; return; }
+  const poses = sessions.reduce((a, s) => a + (s.poses || 0), 0);
+  host.textContent = `${sessions.length.toLocaleString()} session${sessions.length === 1 ? '' : 's'} logged · ` +
+    `${poses.toLocaleString()} pose${poses === 1 ? '' : 's'} drawn · last ${relTime(sessions[0].start)}`;
+}
+const state = {
+  pool: [], order: [], cursor: 0, history: [], histPos: -1,
+  schedule: null, step: 0, doneInStep: 0,
+  secs: 30, remain: 30, paused: false, tick: null, drawn: 0,
+  wakeLock: null, audio: null, errors: 0,
+  tone: null, current: null, similarTo: null,
+  valueSteps: 0,   // 0 == off; otherwise one of VALUE_STEPS
+  hudIdleTimer: null,
+  // Set at startSession(), read and cleared at stopSession() - see logSession.
+  startedAt: null, startPacks: [],
+};
+
+/* ---------------------------------------------------------------- settings */
+
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch { return {}; }
+}
+/* Set while applyPackHash() drives the checkboxes through their own change
+   handlers. Those handlers save, and a #pack= link is explicitly not allowed to
+   overwrite a selection the reader built by hand - see applyPackHash. Suppressed
+   here rather than by unbinding the handlers, because sync() and refreshPool()
+   in the same handlers DO need to run. */
+let SUPPRESS_SAVE = false;
+
+function saveSettings() {
+  if (SUPPRESS_SAVE) return;
+  const s = {
+    packs: [...document.querySelectorAll('.grp:checked')].map(c => c.value),
+    // Every group that existed when this was saved. Without it, a pack added
+    // later is absent from `packs` for two different reasons - "you turned it
+    // off" and "it did not exist yet" - and the picker cannot tell them apart,
+    // so a new pack silently arrives switched off.
+    known: [...document.querySelectorAll('.grp')].map(c => c.value),
+    interval: state.secs,
+    schedule: document.querySelector('#schedules .chip[aria-pressed="true"]')?.dataset.key,
+    tone: state.tone,
+    dedup: el('optDedup').checked,
+    valueSteps: state.valueSteps,
+    gray: el('optGray').checked, flipRandom: el('optFlipRandom').checked,
+    grid: el('optGrid').checked, bell: el('optBell').checked, full: el('optFull').checked,
+    // When this setup was last changed, so the merge in syncSettings() can tell
+    // two devices' panels apart - see syncSettings() for why this is a
+    // whole-document last-write-wins merge rather than a field-by-field one.
+    t: Math.floor(Date.now() / 1000),
+  };
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch {}
+  if (window.FleetState) FleetState.push('refboard');
+}
+
+/* ------------------------------------------------------ sharing the setup
+   The board's setup is twelve controls, and rebuilding it by hand on the
+   tablet was enough work that the tablet mostly got whatever the defaults
+   were.
+
+   LAST WRITE WINS, ON THE WHOLE DOCUMENT, and that is the point of difference
+   from every other synced key here. The others merge field by field because
+   their fields are independent facts - a course you finished, a class you
+   watched. These are not facts, they are one coherent choice: pack selection
+   plus interval plus schedule plus tone filter is a session design, and a
+   field-wise merge of two designs produces a third that neither device chose
+   and nobody asked for. Taking the newer panel whole is the only answer that
+   leaves you with a setup someone actually built.
+
+   WHAT IT DOES NOT DO IS REDRAW A PANEL YOU ARE LOOKING AT. write() persists
+   and stops there. During boot that is invisible, because this runs before the
+   settings are read; afterwards it means a conflict resolved on another device
+   lands on the next load rather than moving checkboxes under the cursor. A
+   drawing session whose interval changed mid-pose because the phone saved is a
+   worse bug than a one-load delay. */
+function syncSettings() {
+  if (!window.FleetState) return Promise.resolve();
+  return FleetState.sync('refboard', {
+    read: () => loadSettings(),
+    write: (v) => {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(v)); } catch { /* private mode */ }
+    },
+    merge: (mine, theirs) => {
+      if (!theirs || typeof theirs !== 'object') return mine;
+      if (!mine || typeof mine !== 'object') return theirs;
+      return (theirs.t || 0) > (mine.t || 0) ? theirs : mine;
+    },
+  });
+}
+
+const el = id => document.getElementById(id);
+
+/* ---------------------------------------------------------------- setup UI */
+
+async function boot() {
+  let res;
+  try {
+    res = await fetch(INDEX_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    INDEX = await res.json();
+  } catch (e) {
+    el('summary').innerHTML =
+      '<span class="err">Could not load index.json (' + e.message + '). ' +
+      'The container may still be building its first index - try again in a ' +
+      'few seconds, or check that /references is actually mounted.</span>';
+    return;
+  }
+
+  // Optional, and deliberately not fatal. A features run that has not happened,
+  // has been budgeted out part-way, or failed entirely must leave a working board
+  // rather than an error page - so anything past this point is guarded on
+  // FEATURES being non-null.
+  try {
+    const fres = await fetch(FEATURES_URL, { cache: 'no-store' });
+    if (fres.ok) {
+      const f = await fres.json();
+      if (f && f.images && Object.keys(f.images).length) FEATURES = f;
+    }
+  } catch { /* no features: originals and no filters, exactly as before */ }
+
+  // Awaited rather than left to a race. /state.js is deferred, so it has not
+  // necessarily run when the last line of this script calls boot() - by here it
+  // has, two fetches later, but the settings the panel is about to be drawn
+  // from are exactly the thing that must not depend on that being true. Resolves
+  // immediately when the client is absent or the service is down, and the panel
+  // is then drawn from localStorage exactly as it always was.
+  skipped = loadSkipped();
+  sessions = loadSessions();
+  await Promise.all([syncSettings(), syncSkipped(), syncSessions()]);
+
+  const saved = loadSettings();
+  const gb = (INDEX.totalBytes / 1073741824).toFixed(1);
+  el('summary').textContent =
+    `${INDEX.totalImages.toLocaleString()} images · ${INDEX.packs.length} packs · ${gb} GB · ` +
+    `indexed ${new Date(INDEX.generated * 1000).toLocaleDateString()}` +
+    (FEATURES ? ` · ${FEATURES.featured.toLocaleString()} with display copies` : '');
+  renderSessionLog();
+
+  if (FEATURES) {
+    TONE_CUTS = computeToneCuts();
+    el('toneSection').classList.remove('hidden');
+    if (FEATURES.dupImages) el('optDedupWrap').classList.remove('hidden');
+    renderTones(saved);
+  }
+
+  renderPacks(saved);
+  // After renderPacks, because it overrides what that just drew from settings,
+  // and before renderIntervals, because it may edit saved.interval for that
+  // call to draw from too.
+  applyPackHash(saved);
+  renderIntervals(saved);
+  renderSchedules(saved);
+  renderSkipInfo();
+  buildValueFilters();
+  renderValueSelect(el('valueSelect'), 'Value: ');
+  renderValueSelect(el('dropValueSelect'), '');
+  renderValueSteps(saved);
+  initDropZone();
+  el('valueSelect').addEventListener('change', e => {
+    selectValueSteps(Number(e.target.value));
+    applyOptions();
+    saveSettings();
+  });
+  // No applyOptions() here, unlike the HUD select above: this one only ever
+  // runs from the setup screen, where #session (and the panes applyOptions()
+  // touches) is hidden - same reasoning the setup chips' own click handler
+  // already follows.
+  el('dropValueSelect').addEventListener('change', e => {
+    selectValueSteps(Number(e.target.value));
+    saveSettings();
+  });
+
+  for (const [id, key] of [['optGray','gray'],['optFlipRandom','flipRandom'],
+                           ['optGrid','grid'],['optBell','bell'],['optFull','full'],
+                           ['optDedup','dedup']]) {
+    if (saved[key] !== undefined) el(id).checked = saved[key];
+    el(id).addEventListener('change', saveSettings);
+  }
+  // Dedup changes how many poses are in the pool, so it has to repaint the count.
+  el('optDedup').addEventListener('change', refreshPool);
+
+  el('start').addEventListener('click', startSession);
+  el('copyLink').addEventListener('click', () => {
+    const name = selectedPackName();
+    if (!name) return;
+    const hash = '#pack=' + encodeURIComponent(name) + '&secs=' + state.secs;
+    copyLinkText(location.origin + location.pathname + hash, el('copyLink'));
+  });
+  refreshPool();
+}
+
+/* navigator.clipboard is undefined on a plain-http origin, which is exactly
+   what this page is served over - hence the textarea fallback, which works
+   everywhere. Reports the outcome on the button itself rather than a toast:
+   one button, one thing that can happen to it. */
+function copyLinkText(txt, btn) {
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(txt); ok = true; }
+  } catch (e) { /* fall through to the textarea */ }
+  if (!ok) {
+    const ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, txt.length);
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+  }
+  const label = btn.textContent;
+  btn.textContent = ok ? 'Copied!' : 'Could not copy';
+  setTimeout(() => { btn.textContent = label; }, 1400);
+}
+
+/* Thirds of the observed distribution. Measured over the live packs, lightness
+   runs 0.366-0.946 and contrast 0.092-0.407 - both wide enough to partition.
+   Saturation and hue were measured too and dropped: the warm fraction had a
+   median of 1.000 and a p10 of 0.929 across 200 images, because these are skin
+   tones on neutral backdrops. There is no colour axis here to filter on. */
+function computeToneCuts() {
+  const vs = [], cs = [];
+  for (const k in FEATURES.images) {
+    const f = FEATURES.images[k];
+    if (typeof f.v === 'number') vs.push(f.v);
+    if (typeof f.c === 'number') cs.push(f.c);
+  }
+  vs.sort((a, b) => a - b); cs.sort((a, b) => a - b);
+  const q = (arr, p) => arr.length ? arr[Math.min(arr.length - 1, Math.floor(arr.length * p))] : null;
+  return { vLow: q(vs, 1 / 3), vHigh: q(vs, 2 / 3), cHigh: q(cs, 2 / 3) };
+}
+
+function renderTones(saved) {
+  const host = el('tones');
+  host.innerHTML = '';
+  // A stored tone that no longer exists would throw on the hint lookup below and
+  // take the whole page down. Filters get removed - the colour ones already were -
+  // so treat an unknown value as "no filter" rather than trusting localStorage.
+  state.tone = (saved.tone && TONES[saved.tone]) ? saved.tone : null;
+
+  const entries = [['', { label: 'Any', hint: 'No tone filter.' }], ...Object.entries(TONES)];
+  for (const [key, t] of entries) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button'; b.dataset.key = key; b.textContent = t.label;
+    b.setAttribute('aria-pressed', String((key || null) === state.tone));
+    b.addEventListener('click', () => {
+      state.tone = key || null;
+      [...host.children].forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+      el('toneHint').textContent = t.hint;
+      refreshPool(); saveSettings();
+    });
+    host.appendChild(b);
+  }
+  el('toneHint').textContent =
+    (state.tone ? TONES[state.tone].hint : entries[0][1].hint);
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/* One SVG <filter> per VALUE_STEPS entry, each doing the same two-stage job:
+   feColorMatrix collapses the image to luminance (Rec. 709 weights - the same
+   ones behind every "convert to grayscale" tool, so this reads as the same
+   grayscale a photo editor would give, not an arbitrary channel mix), then
+   feComponentTransfer's "discrete" type snaps that single continuous value to
+   N evenly-spaced steps. Run once at boot - the filters do not depend on
+   anything session-specific, just on VALUE_STEPS - and referenced later from
+   plain CSS as filter:url(#value3) etc. */
+function buildValueFilters() {
+  const defs = el('valueFilterDefs');
+  const LUMA = '0.2126 0.7152 0.0722 0 0  ';
+  for (const n of VALUE_STEPS) {
+    const table = Array.from({ length: n }, (_, i) => (i / (n - 1)).toFixed(4)).join(' ');
+
+    const filter = document.createElementNS(SVG_NS, 'filter');
+    filter.setAttribute('id', 'value' + n);
+    filter.setAttribute('color-interpolation-filters', 'sRGB');
+
+    const matrix = document.createElementNS(SVG_NS, 'feColorMatrix');
+    matrix.setAttribute('type', 'matrix');
+    // Luma duplicated into all three output channels, so the result is
+    // neutral gray rather than a tinted single channel.
+    matrix.setAttribute('values', LUMA + LUMA + LUMA + '0 0 0 1 0');
+    filter.appendChild(matrix);
+
+    const transfer = document.createElementNS(SVG_NS, 'feComponentTransfer');
+    for (const tag of ['feFuncR', 'feFuncG', 'feFuncB']) {
+      const fn = document.createElementNS(SVG_NS, tag);
+      fn.setAttribute('type', 'discrete');
+      fn.setAttribute('tableValues', table);
+      transfer.appendChild(fn);
+    }
+    filter.appendChild(transfer);
+
+    defs.appendChild(filter);
+  }
+}
+
+function valueStepsHint(n) {
+  if (!n) return 'Off — the reference shows at its full tonal range.';
+  return n === 2
+    ? 'Notan: light mass vs. dark mass, nothing in between.'
+    : `Posterized to ${n} tones — block in shapes before chasing detail.`;
+}
+
+/* The one place state.valueSteps actually changes, called from three
+   different UI surfaces that all need to agree afterward: the setup-screen
+   chips, the HUD's Value button (cycled with 'v' or a click, live during a
+   session), and the drop-zone defaulting to a level the first time something
+   is dropped with none chosen. Each of those has its own trigger, but "what
+   changing the level means" - which chip lights up, the hint text, whether
+   Grayscale is disabled, the HUD button's label, a live drop preview's filter
+   - is one thing, not four kept in sync by hand. */
+function selectValueSteps(n) {
+  state.valueSteps = n;
+  const host = el('valueSteps');
+  if (host) {
+    [...host.children].forEach(c => c.setAttribute('aria-pressed', String(Number(c.dataset.n) === n)));
+  }
+  el('valueStepsHint').textContent = valueStepsHint(n);
+  updateValueStepsUI();
+  updateValueSelects();
+  updateDropPreviewFilter();
+}
+
+/* Builds the <option> list for one of the two <select> controls that mirror
+   state.valueSteps - the HUD's and the drop-zone's - so VALUE_STEPS stays the
+   single source of truth for both rather than two hand-typed option lists
+   drifting apart. labelPrefix distinguishes them: the HUD select sits among
+   plain-worded buttons (Pause, Flip, Gray) so its own value needs to be in
+   the option text to read at a glance; the drop-zone select sits right next
+   to a "Tonal value" label, where the same prefix would just repeat itself. */
+function renderValueSelect(select, labelPrefix) {
+  select.innerHTML = '';
+  for (const n of [0, ...VALUE_STEPS]) {
+    const opt = document.createElement('option');
+    opt.value = String(n);
+    opt.textContent = labelPrefix + (n ? String(n) : 'Off');
+    select.appendChild(opt);
+  }
+}
+
+// Keeps both selects' current value, and the HUD one's accent highlight, in
+// step with state.valueSteps regardless of which of the three UIs (setup
+// chips, HUD select, drop-zone select) actually changed it.
+function updateValueSelects() {
+  for (const [id, active] of [['valueSelect', true], ['dropValueSelect', false]]) {
+    const sel = el(id);
+    if (!sel) continue;
+    sel.value = String(state.valueSteps);
+    if (active) sel.classList.toggle('active', !!state.valueSteps);
+  }
+}
+
+function renderValueSteps(saved) {
+  const host = el('valueSteps');
+  host.innerHTML = '';
+  const initial = VALUE_STEPS.includes(saved.valueSteps) ? saved.valueSteps : 0;
+
+  for (const n of [0, ...VALUE_STEPS]) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button'; b.dataset.n = String(n); b.textContent = n ? String(n) : 'Off';
+    b.setAttribute('aria-pressed', String(n === initial));
+    b.addEventListener('click', () => { selectValueSteps(n); saveSettings(); });
+    host.appendChild(b);
+  }
+  selectValueSteps(initial);
+}
+
+/* Grayscale is disabled, not hidden, while a step count is active: the SVG
+   filter already forces its own grayscale (see buildValueFilters), so the
+   checkbox would visibly do nothing - and a control that silently does
+   nothing is worse than one plainly turned off. Its own checked/unchecked
+   state is left alone underneath, so switching value-steps back to Off
+   restores whatever Grayscale was actually set to. Same reasoning for the
+   HUD's Gray button once a session is running - see applyOptions(). */
+function updateValueStepsUI() {
+  const gray = el('optGray');
+  gray.disabled = !!state.valueSteps;
+  gray.closest('label').title = state.valueSteps
+    ? 'A tonal value view is active - it already renders in grayscale.' : '';
+}
+
+/* Keeps a live drop-zone preview in step if the level changes (a chip click,
+   a 'v' press mid-session has no bearing here, but the setup screen and the
+   drop zone sit on the same page) while something is already previewed.
+   A no-op otherwise - checked via the src attribute rather than a separate
+   flag, since "nothing previewed yet" and "src is empty" are the same fact. */
+function updateDropPreviewFilter() {
+  const val = el('dropImgValue');
+  if (!val || !val.getAttribute('src')) return;
+  val.style.filter = state.valueSteps ? 'url(#value' + state.valueSteps + ')' : '';
+}
+
+/* Local only - createObjectURL never leaves this browser, nothing is
+   uploaded. Independent of the pack library entirely: this exists for a
+   reference or a work-in-progress photo that was never going to be in the
+   library at all, so it does its own thing rather than routing through
+   buildPool()/pickFrame(). */
+function initDropZone() {
+  const zone = el('dropZone');
+  const input = el('dropInput');
+  const preview = el('dropPreview');
+  const orig = el('dropImgOrig');
+  const val = el('dropImgValue');
+  let objectUrl = null;
+
+  function showDropped(file) {
+    if (!file || !file.type || !file.type.startsWith('image/')) return;
+    // A dropped image with nothing chosen to check it against yet would just
+    // show a plain copy of an image already sitting in front of you - the
+    // one useless outcome here. 3 is the middle of VALUE_STEPS and the most
+    // commonly taught value-study split (dark / mid / light).
+    if (!state.valueSteps) { selectValueSteps(3); saveSettings(); }
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    orig.src = objectUrl;
+    val.src = objectUrl;
+    val.style.filter = 'url(#value' + state.valueSteps + ')';
+    preview.classList.remove('hidden');
+  }
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+  });
+  zone.addEventListener('dragover', e => {
+    e.preventDefault();
+    zone.style.borderColor = 'var(--accent)';
+  });
+  zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.style.borderColor = '';
+    showDropped(e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+  input.addEventListener('change', () => showDropped(input.files[0]));
+}
+
+function renderPacks(saved) {
+  const host = el('packs');
+  host.innerHTML = '';
+  const chosen = saved.packs;
+  const known = saved.known;
+
+  // A group is on if it was explicitly chosen, or if it is NEW - i.e. it was not
+  // present the last time settings were saved. New packs opt in; that is the
+  // behaviour you want when you have just gone to the trouble of adding one.
+  // `known` is absent in settings saved before this existed, in which case fall
+  // back to the old meaning rather than silently re-enabling something.
+  const isOn = key => !chosen ? true
+    : chosen.includes(key) || (Array.isArray(known) && !known.includes(key));
+
+  for (const pack of INDEX.packs) {
+    const box = document.createElement('div');
+    box.className = 'pack';
+
+    // A flat pack has exactly one group named after the pack itself; showing it
+    // twice would be noise, so only multi-group packs get the nested rows.
+    const flat = pack.groups.length === 1;
+
+    const head = document.createElement('label');
+    head.className = 'row';
+    head.innerHTML =
+      `<input type="checkbox" class="packToggle">` +
+      `<span class="grow name">${esc(pack.name)}</span>` +
+      `<span class="count">${pack.count.toLocaleString()}</span>`;
+    box.appendChild(head);
+
+    const kids = [];
+    for (const g of pack.groups) {
+      const key = pack.name + ' / ' + g.name;
+      const on = isOn(key);
+      if (flat) {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'grp'; cb.value = key; cb.checked = on;
+        cb.style.display = 'none';
+        box.appendChild(cb);
+        kids.push(cb);
+      } else {
+        const row = document.createElement('label');
+        row.className = 'row sub-group';
+        row.innerHTML =
+          `<input type="checkbox" class="grp" value="${esc(key)}" ${on ? 'checked' : ''}>` +
+          `<span class="grow name">${esc(g.name)}</span>` +
+          (g.rotation ? `<span class="badge" title="One pose from many angles - drawn as a single pose">rotation</span>` : '') +
+          `<span class="count">${g.images.length.toLocaleString()}</span>`;
+        box.appendChild(row);
+        kids.push(row.querySelector('.grp'));
+      }
+    }
+
+    const head_cb = head.querySelector('.packToggle');
+    const sync = () => {
+      const on = kids.filter(k => k.checked).length;
+      head_cb.checked = on > 0;
+      head_cb.indeterminate = on > 0 && on < kids.length;
+    };
+    head_cb.addEventListener('change', () => {
+      kids.forEach(k => { k.checked = head_cb.checked; });
+      sync(); refreshPool(); saveSettings(); updateCopyLink();
+    });
+    kids.forEach(k => k.addEventListener('change', () => { sync(); refreshPool(); saveSettings(); updateCopyLink(); }));
+    sync();
+
+    host.appendChild(box);
+  }
+  updateCopyLink();
+}
+
+/* The pack hash claims exactly one pack (see applyPackHash), so the link this
+   button builds only makes sense under the same constraint - one distinct
+   pack name across however many of its groups are checked. Anything else
+   (nothing checked, or two packs at once) disables the button rather than
+   building a link that would silently narrow to only one of them on arrival. */
+function selectedPackName() {
+  const checked = [...document.querySelectorAll('#packs .grp:checked')];
+  if (!checked.length) return null;
+  const packs = new Set(checked.map(b => b.value.split(' / ')[0]));
+  return packs.size === 1 ? [...packs][0] : null;
+}
+function updateCopyLink() {
+  const btn = el('copyLink');
+  const name = selectedPackName();
+  btn.disabled = !name;
+  btn.title = name ? '' : 'Select exactly one pack to link to it';
+}
+
+/* #pack=<name>[&secs=<n>] - select exactly that pack, and optionally the
+ * timer preset to go with it, and nothing else.
+ *
+ * This exists so What's New can hand off: it reports that a pose pack gained
+ * images and its "Draw it" link lands here with that pack already selected,
+ * rather than on a board still showing whatever was chosen last time. Without
+ * it the handoff is "go and find it", which is what the whole page of links was
+ * meant to stop. The copy-link button below builds the same shape by hand, for
+ * a setup worth handing to another device or another session.
+ *
+ * URLSearchParams rather than the old exact regex, so a link that only ever
+ * carried #pack=<name> keeps working unchanged - secs is additive, not a
+ * breaking reshape of the hash.
+ *
+ * Deliberately NOT saved. The hash is a way of arriving, not a preference: a
+ * link that quietly overwrote a carefully built selection would make the link
+ * something you think twice about opening. Press anything and the normal
+ * change handlers save as usual, at which point it is your choice rather than
+ * the link's. secs follows the same rule: it only sets what renderIntervals()
+ * below is about to draw the panel from, by editing the `saved` object this
+ * one boot reads and never writes back - see saveSettings for why write-back
+ * would break the same promise.
+ *
+ * A name that matches nothing leaves the board alone - a stale link should cost
+ * you nothing, and an empty pool with no explanation looks like a broken index.
+ */
+function applyPackHash(saved) {
+  const p = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const want = p.get('pack');
+  if (!want) return;
+
+  const boxes = [...document.querySelectorAll('#packs .grp')];
+  /* The group key is "<pack> / <group>", so the pack is everything before the
+     first separator. Compared rather than prefix-matched, or a pack named
+     "Hands" would also claim "Hands and Feet". */
+  const hit = boxes.filter(b => b.value.split(' / ')[0] === want);
+  if (!hit.length) return;
+
+  boxes.forEach(b => { b.checked = hit.includes(b); });
+
+  /* Each pack's head checkbox carries an indeterminate state that nothing
+     recomputes after a scripted change. Rather than duplicate that arithmetic,
+     fire the event the UI already listens for - one per pack is enough, since
+     every group in a pack shares that pack's sync() closure - and let the
+     normal handler run sync() and refreshPool().
+     SUPPRESS_SAVE is what keeps the same handler from persisting the narrowing. */
+  SUPPRESS_SAVE = true;
+  try {
+    for (const packBox of document.querySelectorAll('#packs .pack')) {
+      const first = packBox.querySelector('.grp');
+      if (first) first.dispatchEvent(new Event('change'));
+    }
+  } finally {
+    SUPPRESS_SAVE = false;
+  }
+
+  // Same bounds as the #customSecs field this ultimately feeds - an
+  // out-of-range or malformed value is treated the same as no value at all,
+  // rather than handed to the timer unclamped.
+  const secsWant = parseInt(p.get('secs'), 10);
+  const gotSecs = Number.isFinite(secsWant) && secsWant >= 5 && secsWant <= 3600;
+  if (gotSecs) saved.interval = secsWant;
+
+  el('summary').insertAdjacentHTML('afterend',
+    `<div class="sub" style="color:var(--accent)">Showing only <b>${esc(want)}</b>` +
+    (gotSecs ? ` at <b>${esc(fmt(secsWant))}</b>` : '') +
+    `, from the link you followed. Tick another pack to widen it.</div>`);
+}
+
+function renderIntervals(saved) {
+  const host = el('intervals');
+  host.innerHTML = '';
+  state.secs = saved.interval || 30;
+
+  for (const s of PRESETS) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button'; b.textContent = fmt(s);
+    b.setAttribute('aria-pressed', String(s === state.secs));
+    b.addEventListener('click', () => {
+      state.secs = s; el('customSecs').value = '';
+      [...host.children].forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+      saveSettings();
+    });
+    host.appendChild(b);
+  }
+
+  if (!PRESETS.includes(state.secs)) el('customSecs').value = state.secs;
+  el('customSecs').addEventListener('input', e => {
+    const v = parseInt(e.target.value, 10);
+    if (v > 0) {
+      state.secs = v;
+      [...host.children].forEach(c => c.setAttribute('aria-pressed', 'false'));
+      saveSettings();
+    }
+  });
+}
+
+function renderSchedules(saved) {
+  const host = el('schedules');
+  host.innerHTML = '';
+  const want = saved.schedule || 'endless';
+
+  for (const [key, sch] of Object.entries(SCHEDULES)) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button'; b.dataset.key = key; b.textContent = sch.label;
+    b.setAttribute('aria-pressed', String(key === want));
+    b.addEventListener('click', () => {
+      [...host.children].forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+      hintSchedule(key); saveSettings();
+    });
+    host.appendChild(b);
+  }
+  hintSchedule(want);
+}
+
+function hintSchedule(key) {
+  const sch = SCHEDULES[key];
+  el('scheduleHint').textContent = sch.steps
+    ? sch.steps.map(([s, n]) => `${n} × ${fmt(s)}`).join('  ·  ') +
+      `  —  ${sch.steps.reduce((a, [s, n]) => a + s * n, 0) / 60 | 0} min total, ignores the interval above`
+    : 'Runs until you stop, using the interval above.';
+}
+
+/* ------------------------------------------------------------------- pool */
+
+/* A draw unit is one POSE, not one file. A rotation group contributes a single
+   unit holding all its frames; drawing it picks one frame at random, so a
+   360-degree set can never serve five views of the same figure in a row. */
+function buildPool(ignoreFilters) {
+  const keys = new Set([...document.querySelectorAll('.grp:checked')].map(c => c.value));
+  const F = FEATURES && FEATURES.images;
+  const tone = ignoreFilters ? null : state.tone;
+  const dedup = !ignoreFilters && F && el('optDedup').checked;
+
+  // An image with no measurements is never filtered OUT. A features run capped by
+  // its time budget leaves most of the library unmeasured for a while, and a tone
+  // filter that hid everything not yet processed would look like the packs had
+  // emptied.
+  const passes = src => {
+    if (!tone || !F) return true;
+    const f = F[src];
+    if (!f) return true;
+    if (tone === 'contrast') return f.c >= TONE_CUTS.cHigh;
+    if (tone === 'lowkey')   return f.v <= TONE_CUTS.vLow;
+    if (tone === 'highkey')  return f.v >= TONE_CUTS.vHigh;
+    return true;
+  };
+
+  const pool = [];
+  for (const pack of INDEX.packs) {
+    for (const g of pack.groups) {
+      if (!keys.has(pack.name + ' / ' + g.name)) continue;
+      // Skipped is a permanent exclusion, not a session filter - it stays
+      // removed even in the ignoreFilters pass buildPool(true) takes for the
+      // "filtered from N" count, or a skipped image would count itself as
+      // available and make that number lie.
+      const imgs = g.images.filter(i => !isSkipped(i.src)).filter(i => passes(i.src));
+      if (!imgs.length) continue;
+      const meta = { pack: pack.name, group: g.name };
+
+      if (g.rotation) {
+        pool.push({ frames: imgs.map(i => i.src), ...meta });
+        continue;
+      }
+      if (dedup) {
+        // Same treatment a rotation group gets: one unit, one frame drawn from it.
+        const sets = new Map(), singles = [];
+        for (const img of imgs) {
+          const d = F[img.src] && F[img.src].dupGroup;
+          if (!d) { singles.push(img.src); continue; }
+          if (!sets.has(d)) sets.set(d, []);
+          sets.get(d).push(img.src);
+        }
+        for (const s of singles) pool.push({ frames: [s], ...meta });
+        for (const frames of sets.values()) pool.push({ frames, ...meta });
+        continue;
+      }
+      for (const img of imgs) pool.push({ frames: [img.src], ...meta });
+    }
+  }
+  return pool;
+}
+
+function refreshPool() {
+  const pool = buildPool();
+  el('start').disabled = pool.length === 0;
+
+  // When a filter is on, show what it costs. This is the whole reason the dedup
+  // option is safe to offer despite its measured unreliability: the number of
+  // poses it removes is visible before committing to a session.
+  const filtering = !!state.tone || el('optDedup').checked;
+  const unfiltered = filtering ? buildPool(true).length : pool.length;
+
+  if (!pool.length) {
+    // Distinguish the two ways of reaching zero. Telling someone to select a pack
+    // when they have selected several and merely picked a tone that none of them
+    // contain sends them looking in the wrong place.
+    el('poolInfo').textContent = unfiltered
+      ? `no poses match this filter — ${unfiltered.toLocaleString()} in the selected packs`
+      : 'select at least one pack';
+    return;
+  }
+  el('poolInfo').textContent = pool.length === unfiltered
+    ? `${pool.length.toLocaleString()} poses selected`
+    : `${pool.length.toLocaleString()} poses selected — filtered from ${unfiltered.toLocaleString()}`;
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* Draw without replacement, reshuffling only once the pool is exhausted - so
+   every pose appears before any repeats. On reshuffle, if the new first item is
+   the one just shown, swap it away: the seam is the only place a repeat can
+   feel like a bug. */
+function nextUnit() {
+  if (state.cursor >= state.order.length) {
+    const last = state.order[state.order.length - 1];
+    state.order = shuffle([...Array(state.pool.length).keys()]);
+    if (state.order.length > 1 && state.order[0] === last) {
+      [state.order[0], state.order[1]] = [state.order[1], state.order[0]];
+    }
+    state.cursor = 0;
+    // A reshuffle is a fresh pass over the whole pool; carrying a similarity
+    // ordering across it would silently re-sort the new pass too.
+    setSimilar(null);
+  }
+  return state.pool[state.order[state.cursor++]];
+}
+
+/* ------------------------------------------------------- "more like this" */
+
+/* Hamming distance over the 64-bit hashes, as two 32-bit halves - parsing the
+   whole 16 hex chars at once exceeds the range where bitwise ops stay exact. */
+function popcount(x) {
+  x = x - ((x >>> 1) & 0x55555555);
+  x = (x & 0x33333333) + ((x >>> 2) & 0x33333333);
+  x = (x + (x >>> 4)) & 0x0f0f0f0f;
+  return Math.imul(x, 0x01010101) >>> 24;
+}
+function hamm(a, b) {
+  return popcount((parseInt(a.slice(0, 8), 16) ^ parseInt(b.slice(0, 8), 16)) >>> 0) +
+         popcount((parseInt(a.slice(8), 16) ^ parseInt(b.slice(8), 16)) >>> 0);
+}
+
+/* Re-order only the part of the pass not yet drawn, so draw-without-replacement
+   still holds: every pose appears once before any repeats, just in a different
+   order. Ranking is all this hash is trusted for - it is not accurate enough to
+   decide that two frames ARE the same pose (see the server's dupGroup
+   clustering), but it is perfectly good at putting the closest ones first. */
+function setSimilar(src) {
+  state.similarTo = src;
+  const btn = el('btnSimilar');
+  btn.setAttribute('aria-pressed', String(!!src));
+  btn.textContent = src ? 'Similar ✓' : 'Similar';
+  if (!src) return;
+
+  const F = FEATURES && FEATURES.images;
+  const ref = F && F[src] && F[src].dhash;
+  if (!ref) { state.similarTo = null; btn.textContent = 'Similar'; return; }
+
+  const dist = idx => {
+    let best = 64;
+    for (const f of state.pool[idx].frames) {
+      const h = F[f] && F[f].dhash;
+      if (h) best = Math.min(best, hamm(ref, h));
+    }
+    return best;
+  };
+  const rest = state.order.slice(state.cursor);
+  const scored = rest.map(i => [dist(i), i]).sort((a, b) => a[0] - b[0]);
+  state.order = state.order.slice(0, state.cursor).concat(scored.map(p => p[1]));
+}
+
+function toggleSimilar() {
+  if (state.similarTo) {
+    setSimilar(null);
+    // Restore randomness for the remainder of the pass, otherwise the ordering
+    // imposed by the last similarity request would persist after switching off.
+    const rest = shuffle(state.order.slice(state.cursor));
+    state.order = state.order.slice(0, state.cursor).concat(rest);
+  } else {
+    setSimilar(state.current);
+  }
+}
+
+/* ---------------------------------------------------------------- session */
+
+function startSession() {
+  state.pool = buildPool();
+  if (!state.pool.length) return;
+
+  state.order = shuffle([...Array(state.pool.length).keys()]);
+  state.cursor = 0; state.history = []; state.histPos = -1; state.drawn = 0;
+  state.errors = 0; state.current = null;
+  state.startedAt = Math.floor(Date.now() / 1000);
+  state.startPacks = [...new Set(
+    [...document.querySelectorAll('#packs .grp:checked')].map(b => b.value.split(' / ')[0]))];
+  // Logged alongside packs so a session record could rebuild
+  // #pack=<name>&secs=<n> exactly, the same link applyPackHash() already
+  // knows how to read. Kept for copyLink and any future consumer.
+  state.startSecs = state.secs;
+  setSimilar(null);
+  el('btnSimilar').classList.toggle('hidden', !FEATURES);
+
+  const key = document.querySelector('#schedules .chip[aria-pressed="true"]')?.dataset.key || 'endless';
+  state.schedule = SCHEDULES[key].steps;
+  state.step = 0; state.doneInStep = 0;
+
+  el('setup').classList.add('hidden');
+  el('session').classList.remove('hidden');
+  applyOptions();
+
+  if (el('optFull').checked && document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+  requestWakeLock();
+  armHudIdle();
+
+  advance(true);
+  state.tick = setInterval(onTick, 250);
+}
+
+function stopSession() {
+  clearInterval(state.tick); state.tick = null;
+  clearHudIdle();
+  releaseWakeLock();
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  el('session').classList.add('hidden');
+  el('setup').classList.remove('hidden');
+  if (state.startedAt != null) {
+    logSession(state.startedAt, Math.floor(Date.now() / 1000), state.drawn, state.startPacks, state.startSecs);
+    state.startedAt = null;
+  }
+  // Whatever was skipped during the session just spent, so the setup screen
+  // must not keep showing the count from before it started.
+  renderSkipInfo();
+  refreshPool();
+}
+
+/* ------------------------------------------------------------- HUD auto-hide
+   #hud.idle exists in the stylesheet - opacity 0, restored on #session:hover -
+   but nothing ever added that class, so the bar sat fully visible for the
+   whole session regardless of activity. On a tablet propped beside the paper
+   that bar covers real drawing-surface area for no reason once someone is
+   mid-pose and not touching anything.
+
+   Hidden after HUD_IDLE_MS of no activity, shown again on any pointer motion,
+   touch or keypress inside #session - and held visible, with the timer
+   cancelled outright, while paused: someone who stopped the clock is deciding
+   something, not drawing, and the bar disappearing under them would be the one
+   time it is actively unhelpful. #session:hover still forces it visible too,
+   for a mouse simply resting over the stage - the two mechanisms agree, they
+   just answer "recently active" in different ways for mouse and touch. */
+const HUD_IDLE_MS = 3000;
+
+function armHudIdle() {
+  el('hud').classList.remove('idle');
+  clearTimeout(state.hudIdleTimer);
+  if (state.paused) return;
+  state.hudIdleTimer = setTimeout(() => el('hud').classList.add('idle'), HUD_IDLE_MS);
+}
+function clearHudIdle() {
+  clearTimeout(state.hudIdleTimer);
+  state.hudIdleTimer = null;
+  el('hud').classList.remove('idle');
+}
+
+function currentInterval() {
+  if (!state.schedule) return state.secs;
+  const step = state.schedule[state.step];
+  return step ? step[0] : state.secs;
+}
+
+/* Advance the class schedule, if one is running. Returns false when the last
+   step is complete, which ends the session rather than looping silently. */
+function advanceSchedule() {
+  if (!state.schedule) return true;
+  state.doneInStep++;
+  if (state.doneInStep >= state.schedule[state.step][1]) {
+    state.step++; state.doneInStep = 0;
+    if (state.step >= state.schedule.length) return false;
+  }
+  return true;
+}
+
+/* One non-skipped frame from a unit, or null if every frame in it has been
+   skipped since the pool was built. Skipping only ever marks the single
+   frame shown (see skipCurrent) - right for a rotation or dedup unit, where
+   the other frames are still distinct angles/near-duplicates worth drawing -
+   so a unit is only actually exhausted once every one of its frames has been
+   individually skipped. The single source both advance() and preloadNext()
+   call, which is what makes the two agree: before this, preloadNext() always
+   warmed frames[0] while advance() picked randomly, so for any multi-frame
+   unit (every rotation group, every dedup-collapsed group) the preload was
+   very likely for an image that was not the one about to be shown. */
+function pickFrame(unit) {
+  const avail = unit.frames.filter(f => !isSkipped(f));
+  return avail.length ? avail[Math.floor(Math.random() * avail.length)] : null;
+}
+
+function advance(first) {
+  if (!first && !advanceSchedule()) { stopSession(); return; }
+
+  // Skipping a pose is supposed to mean "never show this again," but
+  // buildPool() - which is what skipping actually filters against - only
+  // ever runs at session start. Left alone, the fixed state.pool built then
+  // would still contain a since-skipped unit for the rest of a session long
+  // enough to loop back around to it. Filtering per-draw here, instead of
+  // rebuilding pool/order mid-session, means nextUnit()'s draw-without-
+  // replacement bookkeeping never needs to know a removal happened - a fully
+  // skipped unit is simply redrawn past, bounded by one pass over the pool
+  // so a wholly-skipped session cannot spin forever.
+  let unit, src;
+  for (let tries = 0; tries < state.pool.length; tries++) {
+    unit = nextUnit();
+    src = (pendingPick && pendingPick.unit === unit) ? pendingPick.src : pickFrame(unit);
+    pendingPick = null;
+    if (src) break;
+  }
+  if (!src) {
+    stopSession();
+    el('summary').innerHTML =
+      '<span class="err">Stopped: every remaining pose in this session has been skipped.</span>';
+    return;
+  }
+
+  state.history.push(src);
+  if (state.history.length > 200) state.history.shift();
+  state.histPos = state.history.length - 1;
+  state.drawn++;
+
+  show(src);
+  resetClock();
+  preloadNext();
+}
+
+/* The image actually loaded is the resized display copy when one exists, not
+   the full-resolution original - many reference photos run tens of
+   megapixels, and on a phone or tablet over Wi-Fi that is the difference
+   between a clean interval change and a visible stall. Falls back to the
+   original whenever a copy is missing.
+
+   WebP support, detected once via canvas rather than trusted from the UA
+   string, and cached for the life of the page - this runs once per session,
+   not once per pose. The server encodes every display copy as both JPEG and
+   WebP; the WebP twin is meaningfully smaller at the same visual quality,
+   worth having when a session fetches a few of these a minute. */
+const supportsWebp = (() => {
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 1;
+    return c.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  } catch (e) { return false; }
+})();
+
+/* Ordered, best first: the WebP display copy, then the JPEG display copy,
+   then the original. show() and preloadNext() both need the exact same
+   order - preloadNext() has to warm the URL show() will actually request, or
+   the preload just wastes a fetch on the one it won't use. */
+function displayCandidates(src) {
+  const f = FEATURES && FEATURES.images[src];
+  const out = [];
+  if (f) {
+    if (supportsWebp && f.displayWebp) out.push(f.displayWebp);
+    if (f.display) out.push(f.display);
+  }
+  out.push(src);
+  return out;
+}
+
+function show(src) {
+  const img = el('img');
+  const imgValue = el('imgValue');
+  state.current = src;
+  const candidates = displayCandidates(src);
+  let stage = 0;
+  img.style.opacity = '0';
+  imgValue.style.opacity = '0';
+  // #imgValue rides along on whatever URL #img settles on - same file, only
+  // the CSS filter differs - so it needs no onload/onerror of its own: by
+  // the time #img's onload fires the identical URL is already resolved (and
+  // very likely browser-cached from preloadNext() besides).
+  img.onload = () => { img.style.opacity = '1'; imgValue.style.opacity = '1'; state.errors = 0; };
+  img.onerror = () => {
+    // A display copy can be absent - or the WebP twin specifically can be,
+    // since features runs are budgeted and resume across nights - while a
+    // later candidate is perfectly fine. Work down the list before counting
+    // a real failure.
+    stage++;
+    if (stage < candidates.length) {
+      img.src = imgValue.src = candidates[stage];
+      return;
+    }
+    // A missing file means the index is stale or the mount dropped. Skipping is
+    // right for one bad frame - but if the volume has gone away, EVERY image
+    // 404s and skip-on-error becomes an unbounded loop hammering the server a
+    // few times a second. Bail out after a run of failures and say why.
+    img.style.opacity = '1';
+    state.errors++;
+    if (state.errors >= 10) {
+      stopSession();
+      el('summary').innerHTML =
+        '<span class="err">Stopped: 10 images in a row failed to load. ' +
+        'The index is stale, or /references is not mounted.</span>';
+      return;
+    }
+    setTimeout(() => advance(false), 150);
+  };
+  img.src = imgValue.src = candidates[0];
+
+  // Flip covers both panes - see the CSS comment on #img.flip, #imgValue.flip.
+  const flip = el('optFlipRandom').checked && Math.random() < 0.5;
+  img.classList.toggle('flip', flip);
+  imgValue.classList.toggle('flip', flip);
+
+  el('pos').textContent = `#${state.drawn}` +
+    (state.schedule ? `  ·  ${fmt(currentInterval())} × ${state.schedule[state.step][1] - state.doneInStep} left` : '');
+}
+
+/* One hidden decode ahead. Preloads the same URL show() will request - the
+   best display copy where there is one - otherwise the preload warms the
+   wrong file and the stall it exists to prevent happens anyway. */
+function preloadNext() {
+  if (state.cursor >= state.order.length) return;
+  const unit = state.pool[state.order[state.cursor]];
+  if (!unit) return;
+  // Cached so advance() draws the exact frame just warmed rather than
+  // re-rolling - see pickFrame(). No cache written when the unit is already
+  // fully skipped; advance() will discover that itself and move past it.
+  const src = pickFrame(unit);
+  if (!src) return;
+  pendingPick = { unit, src };
+  new Image().src = displayCandidates(src)[0];
+}
+
+function resetClock() {
+  state.remain = currentInterval();
+  state.paused = false;
+  el('btnPause').textContent = 'Pause';
+  el('fill').classList.remove('warn');
+  el('clock').classList.remove('warn');
+  paint();
+}
+
+function onTick() {
+  if (state.paused) return;
+  state.remain -= 0.25;
+  if (state.remain <= 0) {
+    if (el('optBell').checked) bell();
+    advance(false);
+    return;
+  }
+  paint();
+}
+
+function paint() {
+  const total = currentInterval();
+  const pct = Math.max(0, state.remain / total * 100);
+  el('fill').style.width = pct + '%';
+  const secs = Math.ceil(state.remain);
+  el('clock').textContent = fmt(secs);
+  const warn = state.remain <= Math.min(5, total * 0.15);
+  el('fill').classList.toggle('warn', warn);
+  el('clock').classList.toggle('warn', warn);
+}
+
+function stepHistory(delta) {
+  const target = state.histPos + delta;
+  if (target < 0 || target >= state.history.length) {
+    if (delta > 0) advance(false);
+    return;
+  }
+  state.histPos = target;
+  show(state.history[target]);
+  resetClock();
+}
+
+/* ---------------------------------------------------------------- options */
+
+function applyOptions() {
+  const splitting = !!state.valueSteps;
+  // #paneOrig alone already fills #stage (see the CSS comment on #stage) -
+  // showing #paneValue is the only thing "entering split view" means.
+  el('paneValue').classList.toggle('hidden', !splitting);
+  el('imgValue').style.filter = splitting ? 'url(#value' + state.valueSteps + ')' : '';
+  el('img').classList.toggle('gray', !splitting && el('optGray').checked);
+  // The HUD's Gray button, not just the setup screen's checkbox: toggling it
+  // live would grayscale #paneOrig too, and #paneOrig is the one place a
+  // split session still guarantees an untouched original.
+  el('btnGray').disabled = splitting;
+  el('grid').classList.toggle('hidden', !el('optGrid').checked);
+  if (el('optGrid').checked) drawGrid();
+}
+
+/* Keyboard-only now: 'v' cycles Off -> 2 -> 3 -> 4 -> 5 -> 6 -> Off, which is
+   faster than reaching for the HUD's select with a mouse or a charcoal-dusted
+   finger mid-session. The select itself (see the 'change' listener in boot())
+   jumps straight to a level in one action instead - that's the point of
+   having both. selectValueSteps() keeps every UI surface (setup chips, HUD
+   select, drop-zone select) in step regardless of which one changed it. */
+function cycleValueSteps() {
+  const order = [0, ...VALUE_STEPS];
+  const n = order[(order.indexOf(state.valueSteps) + 1) % order.length];
+  selectValueSteps(n);
+  applyOptions();
+  saveSettings();
+}
+
+/* Rule-of-thirds guides. Drawn as an SVG rather than a background image so it
+   scales with the stage and costs nothing to toggle. */
+function drawGrid() {
+  const g = el('grid');
+  g.setAttribute('viewBox', '0 0 100 100');
+  g.innerHTML =
+    [33.33, 66.66].map(p =>
+      `<line x1="${p}" y1="0" x2="${p}" y2="100" stroke="#fff" stroke-width=".25"/>` +
+      `<line x1="0" y1="${p}" x2="100" y2="${p}" stroke="#fff" stroke-width=".25"/>`
+    ).join('') +
+    `<line x1="50" y1="0" x2="50" y2="100" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>` +
+    `<line x1="0" y1="50" x2="100" y2="50" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>`;
+}
+
+/* Synthesised so the page stays a single file with no audio asset to ship. */
+function bell() {
+  try {
+    state.audio = state.audio || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = state.audio;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.frequency.value = 880; osc.type = 'sine';
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.5);
+  } catch {}
+}
+
+/* Screen wake lock needs a secure context. This is served over plain HTTP on the
+   LAN, so it will simply be unavailable in most browsers - hence the silent
+   fallback rather than a warning. Tablet users: set the OS sleep timer instead. */
+async function requestWakeLock() {
+  try {
+    if (navigator.wakeLock) state.wakeLock = await navigator.wakeLock.request('screen');
+  } catch {}
+}
+function releaseWakeLock() {
+  try { state.wakeLock?.release(); } catch {}
+  state.wakeLock = null;
+}
+
+/* The lock is released BY THE BROWSER, automatically, the moment the page
+   loses visibility - an app switch, a notification pulled down, the OS
+   locking the screen once - and it does not come back on its own. Left
+   alone, whichever of those happens first in a 30-60 minute session
+   permanently loses the lock for whatever remains of it: the screen can then
+   go dark mid-pose with nothing on screen to explain why. Re-requesting here
+   is what makes "hidden then visible again" behave like "never lost it" -
+   harmless to call when no session is running or none was ever granted,
+   since requestWakeLock() itself is the one thing that decides whether it is
+   available at all. */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !el('session').classList.contains('hidden')) {
+    requestWakeLock();
+  }
+});
+
+/* ---------------------------------------------------------------- helpers */
+
+function fmt(s) {
+  s = Math.max(0, Math.round(s));
+  const m = Math.floor(s / 60);
+  return m ? `${m}:${String(s % 60).padStart(2, '0')}` : `0:${String(s).padStart(2, '0')}`;
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ------------------------------------------------------------------ input */
+
+el('btnPause').addEventListener('click', togglePause);
+el('btnNext').addEventListener('click', () => stepHistory(1));
+el('btnPrev').addEventListener('click', () => stepHistory(-1));
+el('btnStop').addEventListener('click', stopSession);
+function toggleFlip() {
+  const on = !el('img').classList.contains('flip');
+  el('img').classList.toggle('flip', on);
+  el('imgValue').classList.toggle('flip', on);
+}
+// No-op while splitting: the button stays present (rather than also
+// disabled) since Flip's own reasoning - see something fresh - still
+// applies to a tonal-value session, only Gray's does not.
+function toggleGray() {
+  if (state.valueSteps) return;
+  el('img').classList.toggle('gray');
+}
+el('btnFlip').addEventListener('click', toggleFlip);
+el('btnGray').addEventListener('click', toggleGray);
+el('btnSimilar').addEventListener('click', toggleSimilar);
+el('btnSkip').addEventListener('click', skipCurrent);
+
+/* Removes the pose on screen right now and moves on immediately - staying on
+   an image someone just said they never want to see again is the one wrong
+   answer here. state.current is the single frame shown, which is right even
+   for a rotation group: skipping one angle should not remove the other three,
+   the same distinction buildPool's own filtering makes. */
+function skipCurrent() {
+  if (!state.current) return;
+  setSkipped(state.current, true);
+  advance(false);
+}
+
+function togglePause() {
+  state.paused = !state.paused;
+  el('btnPause').textContent = state.paused ? 'Resume' : 'Pause';
+  // Held fully visible while paused (armHudIdle no-ops the timer in that
+  // state); resuming restarts the idle countdown from a clean slate.
+  armHudIdle();
+}
+
+// Delegated on #session rather than per-control: every HUD button already
+// bubbles a pointerdown up through it, so this needs no listener of its own
+// on any of them, and it still fires for a tap or mouse-move anywhere over
+// the stage itself, not just the bar.
+el('session').addEventListener('pointerdown', armHudIdle);
+el('session').addEventListener('pointermove', armHudIdle);
+el('session').addEventListener('touchstart', armHudIdle, { passive: true });
+
+document.addEventListener('keydown', e => {
+  if (el('session').classList.contains('hidden')) return;
+  armHudIdle();
+  switch (e.key) {
+    case ' ':          e.preventDefault(); togglePause(); break;
+    case 'ArrowRight': stepHistory(1); break;
+    case 'ArrowLeft':  stepHistory(-1); break;
+    case 'f': case 'F': toggleFlip(); break;
+    case 'g': case 'G': toggleGray(); break;
+    case 'v': case 'V': cycleValueSteps(); break;
+    case 'r': case 'R':
+      el('optGrid').checked = !el('optGrid').checked; applyOptions(); break;
+    case 'm': case 'M': if (FEATURES) toggleSimilar(); break;
+    case 's': case 'S': skipCurrent(); break;
+    case 'Escape':     stopSession(); break;
+  }
+});
+
+boot();
+</script>
+</body>
+</html>

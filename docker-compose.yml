@@ -1,0 +1,28 @@
+# Example compose file - copy this, point the first volume at your own
+# reference images, and `docker compose up -d`.
+services:
+  refboard:
+    image: ghcr.io/mpostument/refboard:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      # Your image library. Read-only: refboard only ever reads from here.
+      - /path/to/your/references:/references:ro
+      # Generated index.json/features.json and display copies. A named
+      # volume, not a bind mount, so it survives image updates without
+      # recomputing - the first full feature pass over a large library can
+      # take a while (see FEATURES_BUDGET_SECS below).
+      - refboard-data:/data
+    environment:
+      # Uncomment and adjust any of these - all have sane defaults.
+      # - INDEX_INTERVAL_SECS=600        # how often the cheap directory walk reruns
+      # - FEATURES_INTERVAL_SECS=1800    # how often the expensive feature pass reruns
+      # - FEATURES_BUDGET_SECS=0         # cap seconds per feature pass; 0 = unlimited
+      # - MAX_PX=1600                    # long edge of generated display copies
+      # - QUALITY=85                     # JPEG/WebP quality for display copies
+      # - DHASH_THRESHOLD=4              # near-duplicate sensitivity (lower = stricter)
+      # - ROTATION_PATTERNS=360,turnaround   # folder-name substrings marking a "one pose, many angles" set
+    restart: unless-stopped
+
+volumes:
+  refboard-data:
