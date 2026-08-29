@@ -155,10 +155,18 @@
   #stage { flex: 1; position: relative; overflow: hidden; display: flex; }
   .pane { position: relative; flex: 1; min-width: 0; overflow: hidden; }
   .pane + .pane { border-left: 1px solid #1c1c22; }
+  /* Carries the zoom/pan transform - see applyZoom(). Separate from #img
+     itself so that transform and #img.flip's own transform never have to be
+     combined into one hand-built string; the two are independent controls
+     with independent triggers. */
+  .zoomwrap { position: absolute; inset: 0; }
   #img, #imgValue {
     position: absolute; inset: 0; margin: auto; display: block;
     max-width: 100%; max-height: 100%; object-fit: contain;
     transition: opacity .12s linear;
+    /* Native browser image-drag would otherwise fight the pointer-based pan
+       in applyZoom()'s drag handler for the same gesture. */
+    -webkit-user-drag: none; user-select: none;
   }
   /* Flip covers both panes - it is a "see the pose fresh" technique
      independent of the value view, so both sides must mirror together or
@@ -171,6 +179,13 @@
   #img.gray { filter: grayscale(1); }
 
   #grid { position: absolute; inset: 0; pointer-events: none; opacity: .3; }
+  #angleOverlay { position: absolute; inset: 0; pointer-events: none; }
+  #angleOverlay line { stroke: var(--accent); stroke-width: 2; }
+  #angleOverlay circle { fill: var(--accent); }
+  #angleOverlay text {
+    fill: #fff; font-size: 13px; font-family: inherit;
+    paint-order: stroke; stroke: #000; stroke-width: 3px; stroke-linejoin: round;
+  }
 
   #bar { height: 3px; background: #1c1c22; flex: none; }
   #fill { height: 100%; width: 100%; background: var(--accent); transition: width .25s linear; }
@@ -232,27 +247,23 @@
          container, and exactly as well with no server behind it at all (see
          boot()'s "no library" path) - this is the whole board on GitHub
          Pages, where there never is one.
-         Carries its own level selector rather than pointing down at Options,
-         since Options can be a full page-scroll away from here.
-         Branches on how many files land: one is "check this image", several
-         is "run a session from these" - see initDropZone(). -->
+
+         Both a single drop and several route through the exact same
+         full-screen stage a pack-based session uses (see startSession()'s
+         adHoc branch) rather than a small inline preview of their own - a
+         thumbnail a few hundred pixels wide defeats the point of checking a
+         reference at all, and the stage already has the split view, the
+         tonal-value control, zoom and the angle tool built in. One dropped
+         file starts immediately, paused, with no timer running - "look at
+         this," not a timed drill; several show a count and a button, since
+         committing to an actual timed session is worth the extra click. -->
     <section>
       <h2>Check your own image</h2>
       <div id="dropZone" tabindex="0" role="button"
            style="border:1px dashed var(--line); border-radius:8px; padding:20px; text-align:center; color:var(--dim); font-size:13px; cursor:pointer;">
-        Drop one image to check its tonal value, or several to draw a timed session from them.
+        Drop one image to view it full-screen with the tonal-value tools, or several to draw a timed session from them.
       </div>
       <input type="file" id="dropInput" accept="image/*" multiple class="hidden">
-      <div id="dropPreview" class="hidden" style="margin-top:12px">
-        <div class="row" style="margin-bottom:10px">
-          <label class="opt" for="dropValueSelect">Tonal value</label>
-          <select id="dropValueSelect"></select>
-        </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap">
-          <img id="dropImgOrig" alt="" style="flex:1; min-width:200px; max-width:100%; border-radius:7px; display:block">
-          <img id="dropImgValue" alt="" style="flex:1; min-width:200px; max-width:100%; border-radius:7px; display:block">
-        </div>
-      </div>
       <!-- Uses the Interval/Session/Options sections below exactly as they
            are - a dropped-file session is not a different kind of session,
            just one whose pool came from the browser instead of the pack
@@ -353,13 +364,24 @@
 
 <div id="session" class="hidden">
   <div id="stage">
-    <div class="pane" id="paneOrig"><img id="img" alt=""></div>
+    <!-- .zoomwrap carries the zoom/pan transform, kept separate from #img's
+         own .flip transform (see applyOptions()) rather than combined into
+         one - two independent things changing on two independent triggers
+         is simpler to reason about as two transforms than as one string
+         rebuilt from both every time either changes. -->
+    <div class="pane" id="paneOrig"><div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"></div></div>
     <!-- Hidden whenever tonal value is off - see applyOptions(). Always the
          SAME underlying file as #img (show() sets both src attributes
          together), so nothing extra is fetched: the filter is the only
          difference between the two panes. -->
-    <div class="pane hidden" id="paneValue"><img id="imgValue" alt=""></div>
+    <div class="pane hidden" id="paneValue"><div class="zoomwrap" id="zoomValue"><img id="imgValue" alt="" draggable="false"></div></div>
     <svg id="grid" class="hidden" preserveAspectRatio="none"></svg>
+    <!-- The angle/plumb-line tool's drawn line - see startAngleDrag(). Zoom
+         and pan apply to the images; this deliberately does not follow them
+         (no transform of its own) - a measurement is about the pose as
+         currently framed on screen, not a value that should slide around
+         underneath you while you are still looking at it. -->
+    <svg id="angleOverlay" class="hidden"></svg>
   </div>
   <div id="bar"><div id="fill"></div></div>
   <div id="hud">
@@ -370,11 +392,15 @@
     <button id="btnFlip">Flip</button>
     <button id="btnGray">Gray</button>
     <select id="valueSelect" title="Tonal value split view (v cycles)"></select>
+    <button id="btnZoomOut" title="Zoom out (-)">−</button>
+    <button id="btnZoomReset" title="Reset zoom (0, or double-click the reference)">100%</button>
+    <button id="btnZoomIn" title="Zoom in (+)">+</button>
+    <button id="btnAngle" title="Angle tool: drag on the reference to measure an angle (a)">Angle</button>
     <button id="btnSimilar" class="hidden">Similar</button>
     <button id="btnSkip" title="Never show this pose again (s)">Skip</button>
     <button id="btnStop">Stop</button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · v value · r grid · m similar · s skip · esc stop</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · v value · +/- zoom · a angle · r grid · m similar · s skip · esc stop</span>
   </div>
 </div>
 
@@ -584,6 +610,8 @@ const state = {
   wakeLock: null, audio: null, errors: 0,
   tone: null, current: null, similarTo: null,
   valueSteps: 0,   // 0 == off; otherwise one of VALUE_STEPS
+  zoom: 1, panX: 0, panY: 0,   // see applyZoom() - reset on every new pose
+  angleMode: false,           // see toggleAngleMode()
   hudIdleTimer: null,
   // Set at startSession(), read and cleared at stopSession() - see logSession.
   startedAt: null, startPacks: [],
@@ -757,20 +785,11 @@ async function boot() {
   renderSkipInfo();
   buildValueFilters();
   renderValueSelect(el('valueSelect'), 'Value: ');
-  renderValueSelect(el('dropValueSelect'), '');
   renderValueSteps(saved);
   initDropZone();
   el('valueSelect').addEventListener('change', e => {
     selectValueSteps(Number(e.target.value));
     applyOptions();
-    saveSettings();
-  });
-  // No applyOptions() here, unlike the HUD select above: this one only ever
-  // runs from the setup screen, where #session (and the panes applyOptions()
-  // touches) is hidden - same reasoning the setup chips' own click handler
-  // already follows.
-  el('dropValueSelect').addEventListener('change', e => {
-    selectValueSteps(Number(e.target.value));
     saveSettings();
   });
 
@@ -911,14 +930,13 @@ function valueStepsHint(n) {
     : `Posterized to ${n} tones — block in shapes before chasing detail.`;
 }
 
-/* The one place state.valueSteps actually changes, called from three
-   different UI surfaces that all need to agree afterward: the setup-screen
-   chips, the HUD's Value button (cycled with 'v' or a click, live during a
-   session), and the drop-zone defaulting to a level the first time something
-   is dropped with none chosen. Each of those has its own trigger, but "what
-   changing the level means" - which chip lights up, the hint text, whether
-   Grayscale is disabled, the HUD button's label, a live drop preview's filter
-   - is one thing, not four kept in sync by hand. */
+/* The one place state.valueSteps actually changes, called from two different
+   UI surfaces that both need to agree afterward: the setup-screen chips, and
+   the HUD's select (changed directly, or cycled with 'v', live during a
+   session). Each has its own trigger, but "what changing the level means" -
+   which chip lights up, the hint text, whether Grayscale is disabled, the
+   HUD select's own value and highlight - is one thing, not three kept in
+   sync by hand. */
 function selectValueSteps(n) {
   state.valueSteps = n;
   const host = el('valueSteps');
@@ -928,16 +946,11 @@ function selectValueSteps(n) {
   el('valueStepsHint').textContent = valueStepsHint(n);
   updateValueStepsUI();
   updateValueSelects();
-  updateDropPreviewFilter();
 }
 
-/* Builds the <option> list for one of the two <select> controls that mirror
-   state.valueSteps - the HUD's and the drop-zone's - so VALUE_STEPS stays the
-   single source of truth for both rather than two hand-typed option lists
-   drifting apart. labelPrefix distinguishes them: the HUD select sits among
-   plain-worded buttons (Pause, Flip, Gray) so its own value needs to be in
-   the option text to read at a glance; the drop-zone select sits right next
-   to a "Tonal value" label, where the same prefix would just repeat itself. */
+/* Builds the <option> list for the HUD's select from VALUE_STEPS, so that
+   stays the single source of truth rather than a hand-typed option list
+   drifting from it. */
 function renderValueSelect(select, labelPrefix) {
   select.innerHTML = '';
   for (const n of [0, ...VALUE_STEPS]) {
@@ -948,16 +961,14 @@ function renderValueSelect(select, labelPrefix) {
   }
 }
 
-// Keeps both selects' current value, and the HUD one's accent highlight, in
-// step with state.valueSteps regardless of which of the three UIs (setup
-// chips, HUD select, drop-zone select) actually changed it.
+// Keeps the HUD select's value and accent highlight in step with
+// state.valueSteps regardless of which UI (the setup chips or the select
+// itself) actually changed it.
 function updateValueSelects() {
-  for (const [id, active] of [['valueSelect', true], ['dropValueSelect', false]]) {
-    const sel = el(id);
-    if (!sel) continue;
-    sel.value = String(state.valueSteps);
-    if (active) sel.classList.toggle('active', !!state.valueSteps);
-  }
+  const sel = el('valueSelect');
+  if (!sel) return;
+  sel.value = String(state.valueSteps);
+  sel.classList.toggle('active', !!state.valueSteps);
 }
 
 function renderValueSteps(saved) {
@@ -989,41 +1000,30 @@ function updateValueStepsUI() {
     ? 'A tonal value view is active - it already renders in grayscale.' : '';
 }
 
-/* Keeps a live drop-zone preview in step if the level changes (a chip click,
-   a 'v' press mid-session has no bearing here, but the setup screen and the
-   drop zone sit on the same page) while something is already previewed.
-   A no-op otherwise - checked via the src attribute rather than a separate
-   flag, since "nothing previewed yet" and "src is empty" are the same fact. */
-function updateDropPreviewFilter() {
-  const val = el('dropImgValue');
-  if (!val || !val.getAttribute('src')) return;
-  val.style.filter = state.valueSteps ? 'url(#value' + state.valueSteps + ')' : '';
-}
-
 /* Local only - createObjectURL never leaves this browser, nothing is
    uploaded. Independent of the pack library entirely: this exists for
    reference or work-in-progress photos that were never going to be in the
    library at all.
-   One file previews its tonal value; several build an ad hoc pool and hand
-   off to the exact same startSession()/advance() machinery a pack-based
-   session uses. That works with no changes there at all: pickFrame() and
-   show() only ever deal in URLs and never cared whether one came from the
-   server or from createObjectURL - see startSession()'s adHoc branch for the
-   one place that DOES need to know the difference (there is no pack
-   checkbox to read startPacks from). */
+
+   Both a single file and several build an ad hoc pool and hand off to the
+   exact same startSession()/advance() machinery a pack-based session uses.
+   That works with no changes there at all: pickFrame() and show() only ever
+   deal in URLs and never cared whether one came from the server or from
+   createObjectURL - see startSession()'s adHoc branch for the one place
+   that DOES need to know the difference (there is no pack checkbox to read
+   startPacks from). A small inline preview used to be how one dropped image
+   was shown instead of this - replaced because a few-hundred-pixel-wide
+   thumbnail is exactly the wrong size to actually judge a reference by, and
+   the full-screen stage already has the split view, zoom and the angle
+   tool built in for free. */
 function initDropZone() {
   const zone = el('dropZone');
   const input = el('dropInput');
-  const preview = el('dropPreview');
-  const orig = el('dropImgOrig');
-  const val = el('dropImgValue');
   const sessionInfo = el('dropSessionInfo');
   const sessionCount = el('dropSessionCount');
-  let objectUrl = null;      // the single-image preview's URL
-  let droppedUrls = [];      // the multi-image session pool's URLs
+  let droppedUrls = [];      // the multi-image "Start session" pool's URLs
 
   function showOne(file) {
-    preview.classList.remove('hidden');
     sessionInfo.classList.add('hidden');
     // A dropped image with nothing chosen to check it against yet would just
     // show a plain copy of an image already sitting in front of you - the
@@ -1031,18 +1031,15 @@ function initDropZone() {
     // commonly taught value-study split (dark / mid / light).
     if (!state.valueSteps) { selectValueSteps(3); saveSettings(); }
 
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(file);
-    orig.src = objectUrl;
-    val.src = objectUrl;
-    val.style.filter = 'url(#value' + state.valueSteps + ')';
+    startSession([{ frames: [URL.createObjectURL(file)], pack: 'Dropped', group: 'Dropped' }]);
+    // "Look at this," not a timed drill - startSession() always starts
+    // unpaused, so this is the one place that immediately reverses it.
+    if (!state.paused) togglePause();
   }
 
   function showMany(files) {
-    preview.classList.add('hidden');
-    // Revoke the previous batch, not the single-preview URL above - dropping
-    // a new multi-file batch replaces the last one; it does not touch
-    // whatever single image might still be shown in the preview pane.
+    // Revoke the previous batch - dropping a new multi-file batch replaces
+    // the last one that was only ever staged, not started.
     droppedUrls.forEach(u => URL.revokeObjectURL(u));
     droppedUrls = files.map(f => URL.createObjectURL(f));
     sessionCount.textContent = `${files.length.toLocaleString()} image${files.length === 1 ? '' : 's'} ready`;
@@ -1699,6 +1696,12 @@ function show(src) {
 
   el('pos').textContent = `#${state.drawn}` +
     (state.schedule ? `  ·  ${fmt(currentInterval())} × ${state.schedule[state.step][1] - state.doneInStep} left` : '');
+
+  // A new pose is a new framing - a zoom level or a measured angle from the
+  // last one describes nothing about this one, and would be actively
+  // misleading left on screen against a different image.
+  resetZoom();
+  clearAngleLine();
 }
 
 /* One hidden decode ahead. Preloads the same URL show() will request - the
@@ -1880,6 +1883,144 @@ function toggleGray() {
 }
 el('btnFlip').addEventListener('click', toggleFlip);
 el('btnGray').addEventListener('click', toggleGray);
+
+/* ------------------------------------------------------------- zoom & pan
+   Locked together across both panes, on purpose: the point of the split
+   view is comparing the same framing of the same pose, and independent zoom
+   levels would defeat that. Resets on every new pose - see show() - since a
+   zoom level describes a framing choice about one specific image, not a
+   standing preference.
+
+   Pan is stored in already-visual pixels; applyZoom() divides by zoom before
+   feeding it to translate() because transform functions compose outer-to-
+   inner, so scale(z) translate(x) moves the element by x*z on screen, not x -
+   dividing here is what keeps a pixel of drag equal to a pixel of on-screen
+   movement regardless of the current zoom level. */
+const ZOOM_MIN = 1, ZOOM_MAX = 6;
+
+function applyZoom() {
+  const t = state.zoom === 1 ? '' :
+    `scale(${state.zoom}) translate(${state.panX / state.zoom}px, ${state.panY / state.zoom}px)`;
+  el('zoomOrig').style.transform = t;
+  el('zoomValue').style.transform = t;
+  el('btnZoomReset').textContent = Math.round(state.zoom * 100) + '%';
+  el('btnZoomOut').disabled = state.zoom <= ZOOM_MIN;
+  el('btnZoomIn').disabled = state.zoom >= ZOOM_MAX;
+}
+
+function resetZoom() {
+  state.zoom = 1; state.panX = 0; state.panY = 0;
+  applyZoom();
+}
+
+// Generous rather than exact: this is a "cannot lose the image entirely"
+// backstop, not a precise edge-of-content clamp - object-fit:contain's own
+// letterboxing (for a pose whose aspect ratio does not match the pane's)
+// makes an exact bound depend on both, and generous costs nothing a viewer
+// would notice.
+function clampPan() {
+  const rect = el('paneOrig').getBoundingClientRect();
+  const maxX = (state.zoom - 1) * rect.width, maxY = (state.zoom - 1) * rect.height;
+  state.panX = Math.max(-maxX, Math.min(maxX, state.panX));
+  state.panY = Math.max(-maxY, Math.min(maxY, state.panY));
+}
+
+function zoomBy(factor) {
+  state.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, state.zoom * factor));
+  if (state.zoom === ZOOM_MIN) { state.panX = 0; state.panY = 0; }
+  clampPan();
+  applyZoom();
+}
+
+el('btnZoomIn').addEventListener('click', () => zoomBy(1.25));
+el('btnZoomOut').addEventListener('click', () => zoomBy(1 / 1.25));
+el('btnZoomReset').addEventListener('click', resetZoom);
+
+// Wheel always zooms toward the pane's centre rather than the cursor - a
+// real "zoom to point" needs the pan math to know which pane is under the
+// cursor and adjust for each one's own aspect-ratio letterboxing to keep
+// that point fixed, for a precision a gesture-timer's zoom does not need to
+// earn back the complexity.
+el('stage').addEventListener('wheel', e => {
+  e.preventDefault();
+  zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15);
+}, { passive: false });
+
+let panDrag = null;
+el('stage').addEventListener('pointerdown', e => {
+  if (state.angleMode || state.zoom <= ZOOM_MIN) return;
+  panDrag = { x: e.clientX, y: e.clientY, panX: state.panX, panY: state.panY };
+  try { el('stage').setPointerCapture(e.pointerId); } catch { /* keeps the drag going regardless */ }
+});
+el('stage').addEventListener('pointermove', e => {
+  if (!panDrag) return;
+  state.panX = panDrag.panX + (e.clientX - panDrag.x);
+  state.panY = panDrag.panY + (e.clientY - panDrag.y);
+  clampPan();
+  applyZoom();
+});
+el('stage').addEventListener('pointerup', () => { panDrag = null; });
+el('stage').addEventListener('pointercancel', () => { panDrag = null; });
+el('stage').addEventListener('dblclick', () => { if (!state.angleMode) resetZoom(); });
+
+/* --------------------------------------------------------------- angle tool
+   A digital plumb line: drag out a line anywhere on the stage and read its
+   angle, the same measuring technique as holding a pencil up against the
+   reference at arm's length - checking a shoulder line against a hip line,
+   or a limb's angle against vertical, before committing to it on paper.
+
+   Deliberately does not follow zoom/pan (#angleOverlay has no transform of
+   its own - see its HTML comment) and deliberately has no persistent state
+   across poses beyond "on or off" - a measurement is read once, against the
+   framing you took it against, and clearing on the next pose (see show())
+   is what stops a stale angle from ever being mistaken for a current one. */
+function toggleAngleMode() {
+  state.angleMode = !state.angleMode;
+  el('btnAngle').setAttribute('aria-pressed', String(state.angleMode));
+  if (!state.angleMode) clearAngleLine();
+}
+
+function clearAngleLine() {
+  el('angleOverlay').classList.add('hidden');
+  el('angleOverlay').innerHTML = '';
+}
+
+// Stage-relative, not viewport-relative - the overlay has no viewBox (see its
+// CSS: inset:0 with no scaling), so its coordinate space is CSS pixels from
+// #stage's own top-left, not the browser window's.
+function drawAngleLine(cx1, cy1, cx2, cy2) {
+  const rect = el('stage').getBoundingClientRect();
+  const x1 = cx1 - rect.left, y1 = cy1 - rect.top;
+  const x2 = cx2 - rect.left, y2 = cy2 - rect.top;
+  // A line has no direction, so 190 degrees and 10 degrees are the same
+  // measurement - mod 180 is what keeps the reading from flipping between
+  // two numbers that mean the same thing depending on which end you
+  // happened to drag from first.
+  let deg = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+  deg = ((deg % 180) + 180) % 180;
+
+  const svg = el('angleOverlay');
+  svg.classList.remove('hidden');
+  svg.innerHTML =
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>` +
+    `<circle cx="${x1}" cy="${y1}" r="4"/><circle cx="${x2}" cy="${y2}" r="4"/>` +
+    `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 10}" text-anchor="middle">${deg.toFixed(1)}°</text>`;
+}
+
+let angleDrag = null;
+el('stage').addEventListener('pointerdown', e => {
+  if (!state.angleMode) return;
+  angleDrag = { x: e.clientX, y: e.clientY };
+  try { el('stage').setPointerCapture(e.pointerId); } catch { /* keeps the drag going regardless */ }
+});
+el('stage').addEventListener('pointermove', e => {
+  if (!angleDrag) return;
+  drawAngleLine(angleDrag.x, angleDrag.y, e.clientX, e.clientY);
+});
+el('stage').addEventListener('pointerup', () => { angleDrag = null; });
+el('stage').addEventListener('pointercancel', () => { angleDrag = null; });
+el('btnAngle').addEventListener('click', toggleAngleMode);
+
 el('btnSimilar').addEventListener('click', toggleSimilar);
 el('btnSkip').addEventListener('click', skipCurrent);
 
@@ -1920,6 +2061,10 @@ document.addEventListener('keydown', e => {
     case 'f': case 'F': toggleFlip(); break;
     case 'g': case 'G': toggleGray(); break;
     case 'v': case 'V': cycleValueSteps(); break;
+    case '+': case '=': zoomBy(1.25); break;
+    case '-': case '_': zoomBy(1 / 1.25); break;
+    case '0': resetZoom(); break;
+    case 'a': case 'A': toggleAngleMode(); break;
     case 'r': case 'R':
       el('optGrid').checked = !el('optGrid').checked; applyOptions(); break;
     case 'm': case 'M': if (FEATURES) toggleSimilar(); break;
