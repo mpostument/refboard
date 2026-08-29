@@ -152,7 +152,15 @@
   /* Always flex, even when only #paneOrig is visible: one flex:1 child fills
      100% on its own, so showing #paneValue for a tonal-value session is just
      removing .hidden from it - no separate "split" mode class needed. */
-  #stage { flex: 1; position: relative; overflow: hidden; display: flex; }
+  /* touch-action:none - without it, a touch drag here is up for grabs between
+     this app's own pointer handlers (pan, the angle tool) and the browser's
+     native touch-scroll/pinch-zoom gesture, and on most touch browsers the
+     native gesture wins the first several pixels of movement before pointer
+     events even start arriving. Safe to disable entirely: #stage implements
+     its own pan (drag-to-pan while zoomed, see applyZoom()) and its own zoom
+     (wheel/+/-/0, never pinch), so there is no native touch gesture here this
+     would be taking away. */
+  #stage { flex: 1; position: relative; overflow: hidden; display: flex; touch-action: none; }
   .pane { position: relative; flex: 1; min-width: 0; overflow: hidden; }
   .pane + .pane { border-left: 1px solid #1c1c22; }
   /* Carries the zoom/pan transform - see applyZoom(). Separate from #img
@@ -216,6 +224,12 @@
   }
   #valueLegend .palette-swatch { width: 14px; height: 14px; border-radius: 3px; }
   #eyedropperReadout { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+  /* Rolling history of the last few sampled spots (see sampleEyedropper()) -
+     click one to copy its hex without re-clicking the same spot on the
+     reference again. Same swatch look as the dominant-colour palette; reads
+     newest-first, capped at EYEDROPPER_HISTORY_MAX with the oldest dropped. */
+  #eyedropperHistory { display: flex; gap: 4px; }
+  #eyedropperHistory .palette-swatch { cursor: pointer; }
 
   #hud {
     flex: none; display: flex; align-items: center; gap: 14px;
@@ -463,6 +477,7 @@
     <label class="opt">Blur <select id="blurSelect"></select></label>
     <div id="valueLegend" title="The current scheme's tone steps, dark to light - what each posterized level actually maps to"></div>
     <span id="eyedropperReadout"></span>
+    <div id="eyedropperHistory" title="Last few sampled colours - click to copy the hex"></div>
     <canvas id="histoCanvas" width="120" height="32" title="This pose's brightness distribution, dark to light"></canvas>
     <div id="paletteSwatches" title="This pose's dominant colours"></div>
   </div>
@@ -477,7 +492,8 @@
     <button id="btnZoomOut" title="Zoom out (-)">−</button>
     <button id="btnZoomReset" title="Reset zoom (0, or double-click the reference)">100%</button>
     <button id="btnZoomIn" title="Zoom in (+)">+</button>
-    <button id="btnAngle" title="Angle tool (a): drag to measure an angle. The first drag sets a reference length; every drag after compares against it, until you turn this off and back on.">Angle</button>
+    <button id="btnAngle" title="Angle tool (a): drag to measure an angle. The first drag sets a reference length; every drag after compares against it and stays on screen (a few at a time) until you clear or turn the tool off.">Angle</button>
+    <button id="btnAngleClear" title="Clear all measured angle lines" disabled>Clear lines</button>
     <button id="btnEyedropper" title="Eyedropper (e): click the reference to read its exact colour and value">Eyedropper</button>
     <button id="btnInfo" title="Show this pose's brightness histogram and dominant colours (i)">Info</button>
     <button id="btnHelpHud" title="What every feature does and how to use it (?)">?</button>
@@ -546,7 +562,10 @@
       </ul>
       <p><b>Eyedropper</b> (<b>E</b>, its own HUD button) - click anywhere on
         the reference to read the exact hex colour and brightness percent
-        under the cursor.</p>
+        under the cursor. The last few samples stay listed as small swatches
+        next to the reading - click one to copy its hex, to compare two
+        earlier spots (skin vs. background, say) without re-aiming at either
+        one again.</p>
     </section>
 
     <section>
@@ -564,10 +583,14 @@
         drag anywhere on the reference the way you'd hold a pencil up to
         check a shoulder or hip line before committing to it on paper. The
         <i>first</i> drag after turning it on also becomes a reference
-        length - drawn faint and dashed, kept on screen - and every drag
-        after that reads its own angle <i>and</i> its length as a ratio of
-        that reference (a head height, a hand span), until you turn the tool
-        off and back on.</p>
+        length - drawn faint and dashed once a second line exists - and every
+        drag after that reads its own angle <i>and</i> its length as a ratio
+        of that reference (a head height, a hand span). A few of these
+        comparison lines stay on screen at once (the oldest quietly makes way
+        for a new one past that), so you can measure a shoulder line and a
+        hip line and read both together instead of one at a time. <b>Clear
+        lines</b>, or turning the tool off and back on, wipes the slate for a
+        fresh reference.</p>
     </section>
 
     <section>
@@ -836,6 +859,7 @@ const state = {
   zoom: 1, panX: 0, panY: 0,   // see applyZoom() - reset on every new pose
   angleMode: false,           // see toggleAngleMode()
   angleRef: null,             // {x1,y1,x2,y2,length} - see toggleAngleMode()
+  angleLines: [],             // comparison lines after the reference - see commitAngleLine()
   eyedropperMode: false,      // see toggleEyedropper()
   valueScheme: 'gray',        // key into VALUE_SCHEMES
   valueBlur: 0,               // a value from BLUR_LEVELS
@@ -2077,6 +2101,8 @@ function show(src) {
   resetZoom();
   clearAngleLine();
   el('eyedropperReadout').innerHTML = '';
+  eyedropperHistory = [];
+  renderEyedropperHistory();
 }
 
 /* One hidden decode ahead. Preloads the same URL show() will request - the
@@ -2344,19 +2370,28 @@ el('stage').addEventListener('dblclick', () => { if (!state.angleMode) resetZoom
    reference at arm's length - checking a shoulder line against a hip line,
    or a limb's angle against vertical, before committing to it on paper.
 
-   The FIRST completed drag after turning this on also becomes the
-   comparative-measurement reference - drawn faint and dashed, kept on
-   screen - and every drag after that reads its own angle AND its length as
-   a ratio of that reference, the digital equivalent of measuring one unit
-   (a head height, say) and then checking everything else against it.
-   Turning the tool off and back on clears the reference so the next drag
-   starts a new one.
+   The FIRST completed drag after turning this on becomes the comparative-
+   measurement reference - drawn faint and dashed once a second line exists -
+   and every drag after that reads its own angle AND its length as a ratio of
+   that reference, the digital equivalent of measuring one unit (a head
+   height, say) and then checking everything else against it.
+
+   Unlike a single vanishing measurement, a FEW comparison lines (state.
+   angleLines, capped at MAX_ANGLE_LINES) stay on screen at once - this is
+   what makes it a real sight-size comparison tool: drag the shoulder line,
+   then the hip line, and read both angles/ratios together instead of one at
+   a time. Past the cap, the oldest comparison line (never the reference
+   itself) quietly drops off to make room for the newest. "Clear lines" (or
+   turning the tool off and back on) wipes both the reference and every
+   comparison line so the next drag starts a fresh baseline.
 
    Deliberately does not follow zoom/pan (#angleOverlay has no transform of
    its own - see its HTML comment) and deliberately has no persistent state
    across poses beyond "on or off" - clearing on the next pose (see show())
    is what stops a stale measurement from ever being mistaken for a current
    one. */
+const MAX_ANGLE_LINES = 2; // comparison lines besides the reference - "a few", not a cluttered mess
+
 function toggleAngleMode() {
   state.angleMode = !state.angleMode;
   if (state.angleMode && state.eyedropperMode) toggleEyedropper();
@@ -2366,42 +2401,76 @@ function toggleAngleMode() {
 
 function clearAngleLine() {
   state.angleRef = null;
+  state.angleLines = [];
   el('angleOverlay').classList.add('hidden');
   el('angleOverlay').innerHTML = '';
+  el('btnAngleClear').disabled = true;
+}
+
+// A line has no direction, so 190 degrees and 10 degrees are the same
+// measurement - mod 180 is what keeps the reading from flipping between two
+// numbers that mean the same thing depending on which end you happened to
+// drag from first.
+function angleOf(x1, y1, x2, y2) {
+  let deg = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+  return ((deg % 180) + 180) % 180;
+}
+
+// Rebuilds #angleOverlay from state.angleRef + state.angleLines, plus
+// (while a drag is in progress) the not-yet-committed live line on top.
+// Called on every pointermove (live redraw) and after every commit.
+function renderAngleOverlay(live) {
+  const svg = el('angleOverlay');
+  const ref = state.angleRef;
+  const haveComparisons = state.angleLines.length > 0 || live;
+
+  const lineMarkup = (l, label) =>
+    `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}"/>` +
+    `<circle cx="${l.x1}" cy="${l.y1}" r="4"/><circle cx="${l.x2}" cy="${l.y2}" r="4"/>` +
+    `<text x="${(l.x1 + l.x2) / 2}" y="${(l.y1 + l.y2) / 2 - 10}" text-anchor="middle">${label}</text>`;
+
+  let markup = '';
+  if (ref) {
+    // Solid and its own star while nothing exists to compare it against yet
+    // (the very first drag); once a comparison line shows up, it recedes to
+    // a faint dashed backdrop the same as before.
+    if (haveComparisons) {
+      markup += `<line x1="${ref.x1}" y1="${ref.y1}" x2="${ref.x2}" y2="${ref.y2}" stroke-dasharray="4 3" opacity=".5"/>`;
+    } else {
+      markup += lineMarkup(ref, `${ref.deg.toFixed(1)}°`);
+    }
+  }
+  for (const l of state.angleLines) {
+    markup += lineMarkup(l, `${l.deg.toFixed(1)}° · ${(l.length / ref.length).toFixed(2)}× reference`);
+  }
+  if (live) {
+    const label = ref ? `${live.deg.toFixed(1)}° · ${(live.length / ref.length).toFixed(2)}× reference` : `${live.deg.toFixed(1)}°`;
+    markup += lineMarkup(live, label);
+  }
+
+  svg.classList.toggle('hidden', markup === '');
+  svg.innerHTML = markup;
 }
 
 // Stage-relative, not viewport-relative - the overlay has no viewBox (see its
 // CSS: inset:0 with no scaling), so its coordinate space is CSS pixels from
-// #stage's own top-left, not the browser window's. commit=false is every
-// pointermove while dragging (redraw only); commit=true is pointerup, the
-// one moment a finished drag can become the reference.
-function drawAngleLine(cx1, cy1, cx2, cy2, commit) {
+// #stage's own top-left, not the browser window's.
+function angleLineAt(cx1, cy1, cx2, cy2) {
   const rect = el('stage').getBoundingClientRect();
   const x1 = cx1 - rect.left, y1 = cy1 - rect.top;
   const x2 = cx2 - rect.left, y2 = cy2 - rect.top;
-  const length = Math.hypot(x2 - x1, y2 - y1);
-  // A line has no direction, so 190 degrees and 10 degrees are the same
-  // measurement - mod 180 is what keeps the reading from flipping between
-  // two numbers that mean the same thing depending on which end you
-  // happened to drag from first.
-  let deg = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-  deg = ((deg % 180) + 180) % 180;
+  return { x1, y1, x2, y2, length: Math.hypot(x2 - x1, y2 - y1), deg: angleOf(x1, y1, x2, y2) };
+}
 
-  const label = state.angleRef
-    ? `${deg.toFixed(1)}° · ${(length / state.angleRef.length).toFixed(2)}× reference`
-    : `${deg.toFixed(1)}°`;
-  const refLine = state.angleRef
-    ? `<line x1="${state.angleRef.x1}" y1="${state.angleRef.y1}" x2="${state.angleRef.x2}" y2="${state.angleRef.y2}" stroke-dasharray="4 3" opacity=".5"/>`
-    : '';
-
-  const svg = el('angleOverlay');
-  svg.classList.remove('hidden');
-  svg.innerHTML = refLine +
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>` +
-    `<circle cx="${x1}" cy="${y1}" r="4"/><circle cx="${x2}" cy="${y2}" r="4"/>` +
-    `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 10}" text-anchor="middle">${label}</text>`;
-
-  if (commit && !state.angleRef && length > 0) state.angleRef = { x1, y1, x2, y2, length };
+function commitAngleLine(l) {
+  if (l.length === 0) return; // a click with no drag measures nothing - drop it
+  if (!state.angleRef) {
+    state.angleRef = l;
+  } else {
+    state.angleLines.push(l);
+    if (state.angleLines.length > MAX_ANGLE_LINES) state.angleLines.shift();
+  }
+  el('btnAngleClear').disabled = false;
 }
 
 let angleDrag = null;
@@ -2412,15 +2481,17 @@ el('stage').addEventListener('pointerdown', e => {
 });
 el('stage').addEventListener('pointermove', e => {
   if (!angleDrag) return;
-  drawAngleLine(angleDrag.x, angleDrag.y, e.clientX, e.clientY, false);
+  renderAngleOverlay(angleLineAt(angleDrag.x, angleDrag.y, e.clientX, e.clientY));
 });
 el('stage').addEventListener('pointerup', e => {
   if (!angleDrag) return;
-  drawAngleLine(angleDrag.x, angleDrag.y, e.clientX, e.clientY, true);
+  commitAngleLine(angleLineAt(angleDrag.x, angleDrag.y, e.clientX, e.clientY));
   angleDrag = null;
+  renderAngleOverlay(null);
 });
-el('stage').addEventListener('pointercancel', () => { angleDrag = null; });
+el('stage').addEventListener('pointercancel', () => { angleDrag = null; renderAngleOverlay(null); });
 el('btnAngle').addEventListener('click', toggleAngleMode);
+el('btnAngleClear').addEventListener('click', clearAngleLine);
 
 /* -------------------------------------------------------------- eyedropper
    Click the reference to read the exact colour under the cursor - hex and
@@ -2435,6 +2506,27 @@ function toggleEyedropper() {
   el('btnEyedropper').setAttribute('aria-pressed', String(state.eyedropperMode));
 }
 
+// Newest-first, capped - see the CSS comment on #eyedropperHistory. Not part
+// of `state`: like angleDrag, this is transient UI-only scratch, reset by
+// show() on every new pose rather than persisted or saved.
+const EYEDROPPER_HISTORY_MAX = 5;
+let eyedropperHistory = [];
+
+function renderEyedropperHistory() {
+  el('eyedropperHistory').innerHTML = eyedropperHistory
+    .map(hex => `<span class="palette-swatch" style="background:${hex}" data-hex="${hex}" title="${hex} - click to copy"></span>`)
+    .join('');
+}
+
+// Click-to-copy rather than a second read of the same pixel - the whole
+// point of keeping history is comparing two earlier spots (skin vs
+// background) without re-aiming the cursor at either one again.
+el('eyedropperHistory').addEventListener('click', e => {
+  const hex = e.target.dataset?.hex;
+  if (!hex) return;
+  navigator.clipboard?.writeText(hex).catch(() => { /* clipboard permission denied - not worth surfacing an error over */ });
+});
+
 function sampleEyedropper(clientX, clientY) {
   const img = el('img');
   const rect = img.getBoundingClientRect();
@@ -2448,6 +2540,10 @@ function sampleEyedropper(clientX, clientY) {
   el('eyedropperReadout').innerHTML =
     `<span class="palette-swatch" style="background:${hex}"></span> ${hex} · ${pct}% value`;
   el('valueTools').classList.remove('hidden'); // surface the reading even if the drawer was closed
+
+  eyedropperHistory.unshift(hex);
+  eyedropperHistory.length = Math.min(eyedropperHistory.length, EYEDROPPER_HISTORY_MAX);
+  renderEyedropperHistory();
 }
 
 function initEyedropper() {
