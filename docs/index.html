@@ -30,6 +30,14 @@
 -->
 <style>
   :root {
+    /* Without this, a <select>'s OPEN option list renders in the browser's
+       own default (light) native theme regardless of any CSS here - only the
+       closed control picks up --ink/--panel. That mismatch is exactly what
+       made the tonal-value dropdowns' options unreadable: near-white text
+       (--ink) over a native listbox the browser still drew white. This tells
+       the browser which native palette to use for form controls generally,
+       which the light-mode override below flips along with everything else. */
+    color-scheme: dark;
     --bg: #0b0b0d; --panel: #141419; --line: #26262e;
     --ink: #e9e9ee; --dim: #8b8b98; --accent: #d8a24a; --accent-dim: #6b5223;
     --line-hi: #3a3a46;     /* border on hover */
@@ -50,6 +58,7 @@
      this is the board and not the catalogue. */
   @media (prefers-color-scheme: light) {
     :root {
+      color-scheme: light;
       --bg: #f6f5f2; --panel: #ffffff; --line: #e0ded7;
       --ink: #1a1917; --dim: #6b6a63; --accent: #8a6212; --accent-dim: #d8c39a;
       --line-hi: #bdbab1;
@@ -133,6 +142,7 @@
      stayed black - the two halves of the same control strip disagreeing - and
      the timer bar would sit at light-mode contrast against #000. */
   #session {
+    color-scheme: dark;
     --line: #26262e; --line-hi: #3a3a46;
     --ink: #e9e9ee; --dim: #8b8b98;
     --accent: #d8a24a; --accent-dim: #6b5223;

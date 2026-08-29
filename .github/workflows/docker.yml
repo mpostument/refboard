@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    # The docs-sync workflow's own commits touch only docs/ - excluding it
+    # here stops a Pages-only sync from triggering an unrelated image rebuild.
+    paths-ignore:
+      - 'docs/**'
   pull_request:
     branches: [main]
 
@@ -28,6 +32,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Versioned tags only, no "type=sha": a build off main with no version
+      # tag yet gets "latest" and nothing else, and a `git tag v1.2.3 && git
+      # push --tags` is what actually produces 1.2.3 / 1.2 / 1 - see README
+      # for the release steps.
       - name: Metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -36,7 +44,8 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
-            type=sha
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
       # PRs build (both arches, to catch a target-arch-only failure) but never
       # push - forking this repo should never be able to publish to your GHCR.

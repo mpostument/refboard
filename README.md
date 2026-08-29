@@ -170,6 +170,20 @@ Or build the container image directly:
 docker build -t refboard .
 ```
 
+## Releasing
+
+Images are tagged by version, not by commit SHA. `main` always gets
+`:latest`; a real version comes from an annotated git tag:
+
+```bash
+git tag v1.2.3
+git push --tags
+```
+
+That single tag produces three image tags - `1.2.3`, `1.2`, and `1` - so you
+can pin to whichever precision you want. Nothing is pushed for an ordinary
+commit to main beyond `:latest`.
+
 ## What this isn't
 
 There's no user accounts, no server-side session, no telemetry, and no

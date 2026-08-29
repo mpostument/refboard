@@ -1,0 +1,38 @@
+name: Sync GitHub Pages
+
+# Keeps docs/ - the GitHub Pages source - identical to wwwroot/ automatically.
+# Triggered only by a change under wwwroot/, so the commit this makes (which
+# touches only docs/) does not re-trigger this workflow itself; see the
+# path-ignore on docker.yml for why it does not trigger an image rebuild either.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/Refboard/wwwroot/**'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Copy wwwroot into docs/
+        run: |
+          cp src/Refboard/wwwroot/index.html docs/index.html
+          cp src/Refboard/wwwroot/icon-refboard.svg docs/icon-refboard.svg
+          cp src/Refboard/wwwroot/refboard.webmanifest docs/refboard.webmanifest
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if git diff --cached --quiet; then
+            echo "docs/ already in sync"
+          else
+            git commit -m "docs: sync GitHub Pages copy from wwwroot"
+            git push
+          fi
