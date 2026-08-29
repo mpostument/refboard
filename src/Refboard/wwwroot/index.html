@@ -191,6 +191,24 @@
   #fill { height: 100%; width: 100%; background: var(--accent); transition: width .25s linear; }
   #fill.warn { background: var(--bad); }
 
+  #valueTools {
+    flex: none; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 8px 14px; background: #0c0c10; border-top: 1px solid #17171c;
+    font-size: 12px; color: var(--dim);
+  }
+  #valueTools select {
+    background: #17171c; border: 1px solid var(--line); border-radius: 6px;
+    padding: 4px 8px; color: var(--ink);
+  }
+  #histoCanvas { display: block; border-radius: 3px; background: #000; }
+  #paletteSwatches, #valueLegend { display: flex; gap: 4px; }
+  .palette-swatch {
+    width: 18px; height: 18px; border-radius: 4px; display: inline-block;
+    border: 1px solid rgba(255,255,255,.15); vertical-align: middle;
+  }
+  #valueLegend .palette-swatch { width: 14px; height: 14px; border-radius: 3px; }
+  #eyedropperReadout { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+
   #hud {
     flex: none; display: flex; align-items: center; gap: 14px;
     padding: 9px 14px; background: #08080a; border-top: 1px solid #17171c;
@@ -235,7 +253,15 @@
 <div id="setup">
   <div class="wrap">
     <h1>Reference Board</h1>
-    <div class="sub" id="summary">loading index…</div>
+    <div class="row" style="margin-bottom:28px">
+      <div class="sub grow" id="summary" style="margin-bottom:0">loading index…</div>
+      <!-- Hidden until boot() confirms a backend exists at all - meaningless
+           on GitHub Pages, which has none to ask. The index pass this kicks
+           off is cheap (a directory walk, no decoding) and runs within
+           seconds; the request itself only ever needs to succeed or fail,
+           never wait for that to finish. -->
+      <button id="btnRescan" class="ghost hidden" type="button" title="Ask the container to reindex now instead of waiting for its next scheduled pass">Rescan library</button>
+    </div>
     <div class="sub" id="sessionLog"></div>
 
     <!-- First on the page, not last: checking a photo's tonal value is a
@@ -384,6 +410,21 @@
     <svg id="angleOverlay" class="hidden"></svg>
   </div>
   <div id="bar"><div id="fill"></div></div>
+  <!-- Collapsed by default - see toggleValueTools(). Everything in here is
+       about UNDERSTANDING the reference (what scheme/blur the tonal-value
+       view uses, the current pose's own brightness histogram and dominant
+       colours, an eyedropper reading) rather than the moment-to-moment
+       controls in #hud below, so it gets its own strip instead of crowding
+       an already-full toolbar with five more buttons nobody needs open
+       every pose. -->
+  <div id="valueTools" class="hidden">
+    <label class="opt">Scheme <select id="schemeSelect"></select></label>
+    <label class="opt">Blur <select id="blurSelect"></select></label>
+    <div id="valueLegend" title="The current scheme's tone steps, dark to light - what each posterized level actually maps to"></div>
+    <span id="eyedropperReadout"></span>
+    <canvas id="histoCanvas" width="120" height="32" title="This pose's brightness distribution, dark to light"></canvas>
+    <div id="paletteSwatches" title="This pose's dominant colours"></div>
+  </div>
   <div id="hud">
     <span id="clock">0:30</span>
     <button id="btnPause">Pause</button>
@@ -395,12 +436,14 @@
     <button id="btnZoomOut" title="Zoom out (-)">−</button>
     <button id="btnZoomReset" title="Reset zoom (0, or double-click the reference)">100%</button>
     <button id="btnZoomIn" title="Zoom in (+)">+</button>
-    <button id="btnAngle" title="Angle tool: drag on the reference to measure an angle (a)">Angle</button>
+    <button id="btnAngle" title="Angle tool (a): drag to measure an angle. The first drag sets a reference length; every drag after compares against it, until you turn this off and back on.">Angle</button>
+    <button id="btnEyedropper" title="Eyedropper (e): click the reference to read its exact colour and value">Eyedropper</button>
+    <button id="btnInfo" title="Show this pose's brightness histogram and dominant colours (i)">Info</button>
     <button id="btnSimilar" class="hidden">Similar</button>
     <button id="btnSkip" title="Never show this pose again (s)">Skip</button>
     <button id="btnStop">Stop</button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · v value · +/- zoom · a angle · r grid · m similar · s skip · esc stop</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · v value · +/- zoom · a angle · e eyedrop · i info · r grid · m similar · s skip · esc stop</span>
   </div>
 </div>
 
@@ -451,6 +494,34 @@ const TONES = {
 // posterize effect rather than a value study, which is why the set stops at
 // 6 - past that the point of collapsing shades starts disappearing.
 const VALUE_STEPS = [2, 3, 4, 5, 6];
+
+// Every non-edge scheme is the same mechanism - luminance, then snapped to N
+// steps sampled along a gradient - so the schemes differ only in which
+// gradient. "stops" is an ordered list of [r,g,b] triples sampled by
+// sampleGradient() below; two stops is a plain duotone, more than two is a
+// real multi-hue ramp. Named after traditional monochrome-underpainting
+// pigments (grisaille) rather than invented names, since that is what an
+// artist reaches for this to approximate. "edges" has no stops at all - it
+// is a genuinely different filter chain, built by appendEdgeStages().
+const PAPER = [245, 239, 226]; // warm off-white "paper", not pure #fff
+const VALUE_SCHEMES = {
+  gray:    { label: 'Grayscale',      stops: [[0, 0, 0], PAPER] },
+  vandyke: { label: 'Van Dyke Brown', stops: [[58, 42, 30], PAPER] },
+  payne:   { label: "Payne's Gray",   stops: [[58, 69, 80], PAPER] },
+  sepia:   { label: 'Sepia',          stops: [[74, 55, 40], PAPER] },
+  umber:   { label: 'Burnt Umber',    stops: [[61, 43, 31], PAPER] },
+  heatmap: {
+    label: 'Heatmap',
+    stops: [[8, 8, 64], [0, 128, 200], [0, 190, 120], [230, 210, 40], [230, 90, 20], [250, 250, 230]],
+  },
+  edges: { label: 'Edges', stops: null },
+};
+
+// stdDeviation for the optional feGaussianBlur stage - see buildValueFilter().
+// Softens texture and small-scale noise so the big value masses read clearly
+// on their own, the same reason a value-study thumbnail is squinted at
+// through half-closed eyes rather than examined at full detail.
+const BLUR_LEVELS = { off: 0, soft: 1.5, medium: 3, strong: 6 };
 
 let INDEX = null;
 let FEATURES = null;     // null whenever features.json is missing or unreadable
@@ -612,6 +683,10 @@ const state = {
   valueSteps: 0,   // 0 == off; otherwise one of VALUE_STEPS
   zoom: 1, panX: 0, panY: 0,   // see applyZoom() - reset on every new pose
   angleMode: false,           // see toggleAngleMode()
+  angleRef: null,             // {x1,y1,x2,y2,length} - see toggleAngleMode()
+  eyedropperMode: false,      // see toggleEyedropper()
+  valueScheme: 'gray',        // key into VALUE_SCHEMES
+  valueBlur: 0,               // a value from BLUR_LEVELS
   hudIdleTimer: null,
   // Set at startSession(), read and cleared at stopSession() - see logSession.
   startedAt: null, startPacks: [],
@@ -644,6 +719,8 @@ function saveSettings() {
     tone: state.tone,
     dedup: el('optDedup').checked,
     valueSteps: state.valueSteps,
+    valueScheme: state.valueScheme,
+    valueBlur: state.valueBlur,
     gray: el('optGray').checked, flipRandom: el('optFlipRandom').checked,
     grid: el('optGrid').checked, bell: el('optBell').checked, full: el('optFull').checked,
     // When this setup was last changed, so the merge in syncSettings() can tell
@@ -723,6 +800,7 @@ async function boot() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     INDEX = await res.json();
     indexOk = true;
+    el('btnRescan').classList.remove('hidden');
   } catch {
     el('packsSection').classList.add('hidden');
     el('startbar').classList.add('hidden');
@@ -783,10 +861,11 @@ async function boot() {
   renderIntervals(saved);
   renderSchedules(saved);
   renderSkipInfo();
-  buildValueFilters();
   renderValueSelect(el('valueSelect'), 'Value: ');
+  renderValueTools(saved);
   renderValueSteps(saved);
   initDropZone();
+  initEyedropper();
   el('valueSelect').addEventListener('change', e => {
     selectValueSteps(Number(e.target.value));
     applyOptions();
@@ -812,6 +891,18 @@ async function boot() {
     if (!name) return;
     const hash = '#pack=' + encodeURIComponent(name) + '&secs=' + state.secs;
     copyLinkText(location.origin + location.pathname + hash, el('copyLink'));
+  });
+  // Relative, like every other fetch on this page - resolves under whatever
+  // prefix the page itself is served from, container root or nginx's
+  // /refboard/ alike, without needing to know which.
+  el('btnRescan').addEventListener('click', () => {
+    const btn = el('btnRescan');
+    const label = btn.textContent;
+    btn.disabled = true;
+    fetch('api/reindex', { method: 'POST' })
+      .then(r => { btn.textContent = r.ok ? 'Rescan requested' : 'Could not start rescan'; })
+      .catch(() => { btn.textContent = 'Could not reach the server'; })
+      .finally(() => setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 2500));
   });
   if (indexOk) refreshPool();
 }
@@ -885,46 +976,133 @@ function renderTones(saved) {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/* One SVG <filter> per VALUE_STEPS entry, each doing the same two-stage job:
-   feColorMatrix collapses the image to luminance (Rec. 709 weights - the same
-   ones behind every "convert to grayscale" tool, so this reads as the same
-   grayscale a photo editor would give, not an arbitrary channel mix), then
-   feComponentTransfer's "discrete" type snaps that single continuous value to
-   N evenly-spaced steps. Run once at boot - the filters do not depend on
-   anything session-specific, just on VALUE_STEPS - and referenced later from
-   plain CSS as filter:url(#value3) etc. */
-function buildValueFilters() {
+const LUMA = '0.2126 0.7152 0.0722 0 0  '; // Rec. 709 - the same weights every "convert to grayscale" tool uses
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// Piecewise-linear sample across an ordered list of [r,g,b] stops at t in
+// 0..1 - a plain 2-stop list is a duotone, more stops is a real multi-hue
+// ramp, and both are the same code path.
+function sampleGradient(stops, t) {
+  if (stops.length === 1) return stops[0];
+  const pos = t * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(pos));
+  const frac = pos - i;
+  const a = stops[i], b = stops[i + 1];
+  return [0, 1, 2].map(c => a[c] + (b[c] - a[c]) * frac);
+}
+
+/* Edge detection - a genuinely different filter chain from the tone-scheme
+   one below, not a variant of it: there is no meaningful "N levels" for a
+   line drawing, so state.valueSteps only gates whether this is showing at
+   all here, not how many bands - see valueStepsHint().
+
+   The standard SVG edge-detect recipe: a Laplacian kernel (sums to zero
+   over a flat area) with bias=0.5, so a flat area lands on mid-gray instead
+   of clipping to black, and an edge pushes away from that gray in whichever
+   direction its gradient runs - lighter on one side, darker on the other,
+   both readable as "something changes here" rather than one direction being
+   lost to clipping the way an unbiased convolution would lose it. */
+function appendEdgeStages(filter) {
+  const gray = document.createElementNS(SVG_NS, 'feColorMatrix');
+  gray.setAttribute('type', 'matrix');
+  gray.setAttribute('values', LUMA + LUMA + LUMA + '0 0 0 1 0');
+  filter.appendChild(gray);
+
+  const conv = document.createElementNS(SVG_NS, 'feConvolveMatrix');
+  conv.setAttribute('order', '3');
+  conv.setAttribute('kernelMatrix', '-1 -1 -1 -1 8 -1 -1 -1 -1');
+  conv.setAttribute('divisor', '1');
+  conv.setAttribute('bias', '0.5');
+  conv.setAttribute('preserveAlpha', 'true');
+  filter.appendChild(conv);
+}
+
+/* The one SVG <filter> the tonal-value view uses, rebuilt in place whenever
+   levels, colour scheme or blur change, rather than kept as one precomputed
+   filter per level the way an earlier version of this did: the combination
+   of level count x colour scheme x blur amount is too large to usefully
+   precompute, and rebuilding a handful of DOM nodes on a settings change
+   nobody makes more than a few times a minute is not a cost worth avoiding.
+
+   Implicit primitive chaining throughout - no in="..."/result="..." on any
+   stage - each one simply consumes whichever came before it (or
+   SourceGraphic, for whichever stage ends up first once blur is skipped
+   entirely at blur=0 rather than merely set to stdDeviation="0").
+
+   Gray/duotone/heatmap are the SAME mechanism with a different gradient:
+   feColorMatrix collapses to luminance, feComponentTransfer's discrete type
+   snaps that to N steps, and the per-channel tables are sampled from
+   whichever scheme's stops are active - not three separate filters for
+   three separate looks. Edges is the one genuine exception - see
+   appendEdgeStages() above. */
+function buildValueFilter() {
   const defs = el('valueFilterDefs');
-  const LUMA = '0.2126 0.7152 0.0722 0 0  ';
-  for (const n of VALUE_STEPS) {
-    const table = Array.from({ length: n }, (_, i) => (i / (n - 1)).toFixed(4)).join(' ');
+  defs.innerHTML = '';
+  if (!state.valueSteps) { drawLegend(); return; }
 
-    const filter = document.createElementNS(SVG_NS, 'filter');
-    filter.setAttribute('id', 'value' + n);
-    filter.setAttribute('color-interpolation-filters', 'sRGB');
+  const filter = document.createElementNS(SVG_NS, 'filter');
+  filter.setAttribute('id', 'valueFilter');
+  filter.setAttribute('color-interpolation-filters', 'sRGB');
 
+  if (state.valueBlur > 0) {
+    const blur = document.createElementNS(SVG_NS, 'feGaussianBlur');
+    blur.setAttribute('stdDeviation', String(state.valueBlur));
+    filter.appendChild(blur);
+  }
+
+  if (state.valueScheme === 'edges') {
+    appendEdgeStages(filter);
+  } else {
     const matrix = document.createElementNS(SVG_NS, 'feColorMatrix');
     matrix.setAttribute('type', 'matrix');
-    // Luma duplicated into all three output channels, so the result is
-    // neutral gray rather than a tinted single channel.
     matrix.setAttribute('values', LUMA + LUMA + LUMA + '0 0 0 1 0');
     filter.appendChild(matrix);
 
+    const n = state.valueSteps;
+    const stops = VALUE_SCHEMES[state.valueScheme].stops;
+    const tables = [0, 1, 2].map(channel => Array.from({ length: n }, (_, i) =>
+      (sampleGradient(stops, i / (n - 1))[channel] / 255).toFixed(4)).join(' '));
+
     const transfer = document.createElementNS(SVG_NS, 'feComponentTransfer');
-    for (const tag of ['feFuncR', 'feFuncG', 'feFuncB']) {
+    ['feFuncR', 'feFuncG', 'feFuncB'].forEach((tag, idx) => {
       const fn = document.createElementNS(SVG_NS, tag);
       fn.setAttribute('type', 'discrete');
-      fn.setAttribute('tableValues', table);
+      fn.setAttribute('tableValues', tables[idx]);
       transfer.appendChild(fn);
-    }
+    });
     filter.appendChild(transfer);
+  }
 
-    defs.appendChild(filter);
+  defs.appendChild(filter);
+  drawLegend();
+}
+
+// Reflects exactly what the transfer tables above just computed - one swatch
+// per tone level, dark to light - so "what does level 3 of 5 actually look
+// like in Van Dyke Brown" is a glance at the drawer instead of a guess.
+// Edges has no discrete tone levels to show, so the legend just clears.
+function drawLegend() {
+  const host = el('valueLegend');
+  host.innerHTML = '';
+  if (!state.valueSteps || state.valueScheme === 'edges') return;
+  const n = state.valueSteps;
+  const stops = VALUE_SCHEMES[state.valueScheme].stops;
+  for (let i = 0; i < n; i++) {
+    const [r, g, b] = sampleGradient(stops, i / (n - 1));
+    const sw = document.createElement('div');
+    sw.className = 'palette-swatch';
+    sw.style.background = `rgb(${r},${g},${b})`;
+    host.appendChild(sw);
   }
 }
 
 function valueStepsHint(n) {
   if (!n) return 'Off — the reference shows at its full tonal range.';
+  if (state.valueScheme === 'edges') return 'Edge detection — the level count above does not apply to this scheme.';
   return n === 2
     ? 'Notan: light mass vs. dark mass, nothing in between.'
     : `Posterized to ${n} tones — block in shapes before chasing detail.`;
@@ -946,6 +1124,21 @@ function selectValueSteps(n) {
   el('valueStepsHint').textContent = valueStepsHint(n);
   updateValueStepsUI();
   updateValueSelects();
+  buildValueFilter();
+}
+
+// Scheme and blur don't need their own "which UI changed it" fan-out the
+// way selectValueSteps() does - each has exactly one control (the drawer's
+// own selects), so keeping the <select>'s value in sync is just reading it
+// back, not broadcasting to siblings.
+function selectValueScheme(scheme) {
+  state.valueScheme = scheme;
+  el('valueStepsHint').textContent = valueStepsHint(state.valueSteps);
+  buildValueFilter();
+}
+function selectValueBlur(blur) {
+  state.valueBlur = blur;
+  buildValueFilter();
 }
 
 /* Builds the <option> list for the HUD's select from VALUE_STEPS, so that
@@ -969,6 +1162,35 @@ function updateValueSelects() {
   if (!sel) return;
   sel.value = String(state.valueSteps);
   sel.classList.toggle('active', !!state.valueSteps);
+}
+
+/* Sets scheme/blur from saved settings BEFORE renderValueSteps() below ever
+   calls buildValueFilter() for the first time, so that first build already
+   reflects them instead of building once with defaults and immediately
+   rebuilding - wasted work, not a correctness problem, but there is no
+   reason to pay it on every single boot. */
+function renderValueTools(saved) {
+  const schemeSelect = el('schemeSelect');
+  schemeSelect.innerHTML = '';
+  for (const [key, scheme] of Object.entries(VALUE_SCHEMES)) {
+    const opt = document.createElement('option');
+    opt.value = key; opt.textContent = scheme.label;
+    schemeSelect.appendChild(opt);
+  }
+  state.valueScheme = VALUE_SCHEMES[saved.valueScheme] ? saved.valueScheme : 'gray';
+  schemeSelect.value = state.valueScheme;
+  schemeSelect.addEventListener('change', e => { selectValueScheme(e.target.value); saveSettings(); });
+
+  const blurSelect = el('blurSelect');
+  blurSelect.innerHTML = '';
+  for (const [key, px] of Object.entries(BLUR_LEVELS)) {
+    const opt = document.createElement('option');
+    opt.value = String(px); opt.textContent = key[0].toUpperCase() + key.slice(1);
+    blurSelect.appendChild(opt);
+  }
+  state.valueBlur = Object.values(BLUR_LEVELS).includes(saved.valueBlur) ? saved.valueBlur : 0;
+  blurSelect.value = String(state.valueBlur);
+  blurSelect.addEventListener('change', e => { selectValueBlur(Number(e.target.value)); saveSettings(); });
 }
 
 function renderValueSteps(saved) {
@@ -1661,7 +1883,7 @@ function show(src) {
   // the CSS filter differs - so it needs no onload/onerror of its own: by
   // the time #img's onload fires the identical URL is already resolved (and
   // very likely browser-cached from preloadNext() besides).
-  img.onload = () => { img.style.opacity = '1'; imgValue.style.opacity = '1'; state.errors = 0; };
+  img.onload = () => { img.style.opacity = '1'; imgValue.style.opacity = '1'; state.errors = 0; refreshValueTools(); };
   img.onerror = () => {
     // A display copy can be absent - or the WebP twin specifically can be,
     // since features runs are budgeted and resume across nights - while a
@@ -1702,6 +1924,7 @@ function show(src) {
   // misleading left on screen against a different image.
   resetZoom();
   clearAngleLine();
+  el('eyedropperReadout').innerHTML = '';
 }
 
 /* One hidden decode ahead. Preloads the same URL show() will request - the
@@ -1769,7 +1992,7 @@ function applyOptions() {
   // #paneOrig alone already fills #stage (see the CSS comment on #stage) -
   // showing #paneValue is the only thing "entering split view" means.
   el('paneValue').classList.toggle('hidden', !splitting);
-  el('imgValue').style.filter = splitting ? 'url(#value' + state.valueSteps + ')' : '';
+  el('imgValue').style.filter = splitting ? 'url(#valueFilter)' : '';
   el('img').classList.toggle('gray', !splitting && el('optGray').checked);
   // The HUD's Gray button, not just the setup screen's checkbox: toggling it
   // live would grayscale #paneOrig too, and #paneOrig is the one place a
@@ -1948,7 +2171,7 @@ el('stage').addEventListener('wheel', e => {
 
 let panDrag = null;
 el('stage').addEventListener('pointerdown', e => {
-  if (state.angleMode || state.zoom <= ZOOM_MIN) return;
+  if (state.angleMode || state.eyedropperMode || state.zoom <= ZOOM_MIN) return;
   panDrag = { x: e.clientX, y: e.clientY, panX: state.panX, panY: state.panY };
   try { el('stage').setPointerCapture(e.pointerId); } catch { /* keeps the drag going regardless */ }
 });
@@ -1969,29 +2192,42 @@ el('stage').addEventListener('dblclick', () => { if (!state.angleMode) resetZoom
    reference at arm's length - checking a shoulder line against a hip line,
    or a limb's angle against vertical, before committing to it on paper.
 
+   The FIRST completed drag after turning this on also becomes the
+   comparative-measurement reference - drawn faint and dashed, kept on
+   screen - and every drag after that reads its own angle AND its length as
+   a ratio of that reference, the digital equivalent of measuring one unit
+   (a head height, say) and then checking everything else against it.
+   Turning the tool off and back on clears the reference so the next drag
+   starts a new one.
+
    Deliberately does not follow zoom/pan (#angleOverlay has no transform of
    its own - see its HTML comment) and deliberately has no persistent state
-   across poses beyond "on or off" - a measurement is read once, against the
-   framing you took it against, and clearing on the next pose (see show())
-   is what stops a stale angle from ever being mistaken for a current one. */
+   across poses beyond "on or off" - clearing on the next pose (see show())
+   is what stops a stale measurement from ever being mistaken for a current
+   one. */
 function toggleAngleMode() {
   state.angleMode = !state.angleMode;
+  if (state.angleMode && state.eyedropperMode) toggleEyedropper();
   el('btnAngle').setAttribute('aria-pressed', String(state.angleMode));
   if (!state.angleMode) clearAngleLine();
 }
 
 function clearAngleLine() {
+  state.angleRef = null;
   el('angleOverlay').classList.add('hidden');
   el('angleOverlay').innerHTML = '';
 }
 
 // Stage-relative, not viewport-relative - the overlay has no viewBox (see its
 // CSS: inset:0 with no scaling), so its coordinate space is CSS pixels from
-// #stage's own top-left, not the browser window's.
-function drawAngleLine(cx1, cy1, cx2, cy2) {
+// #stage's own top-left, not the browser window's. commit=false is every
+// pointermove while dragging (redraw only); commit=true is pointerup, the
+// one moment a finished drag can become the reference.
+function drawAngleLine(cx1, cy1, cx2, cy2, commit) {
   const rect = el('stage').getBoundingClientRect();
   const x1 = cx1 - rect.left, y1 = cy1 - rect.top;
   const x2 = cx2 - rect.left, y2 = cy2 - rect.top;
+  const length = Math.hypot(x2 - x1, y2 - y1);
   // A line has no direction, so 190 degrees and 10 degrees are the same
   // measurement - mod 180 is what keeps the reading from flipping between
   // two numbers that mean the same thing depending on which end you
@@ -1999,12 +2235,21 @@ function drawAngleLine(cx1, cy1, cx2, cy2) {
   let deg = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
   deg = ((deg % 180) + 180) % 180;
 
+  const label = state.angleRef
+    ? `${deg.toFixed(1)}° · ${(length / state.angleRef.length).toFixed(2)}× reference`
+    : `${deg.toFixed(1)}°`;
+  const refLine = state.angleRef
+    ? `<line x1="${state.angleRef.x1}" y1="${state.angleRef.y1}" x2="${state.angleRef.x2}" y2="${state.angleRef.y2}" stroke-dasharray="4 3" opacity=".5"/>`
+    : '';
+
   const svg = el('angleOverlay');
   svg.classList.remove('hidden');
-  svg.innerHTML =
+  svg.innerHTML = refLine +
     `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>` +
     `<circle cx="${x1}" cy="${y1}" r="4"/><circle cx="${x2}" cy="${y2}" r="4"/>` +
-    `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 10}" text-anchor="middle">${deg.toFixed(1)}°</text>`;
+    `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 10}" text-anchor="middle">${label}</text>`;
+
+  if (commit && !state.angleRef && length > 0) state.angleRef = { x1, y1, x2, y2, length };
 }
 
 let angleDrag = null;
@@ -2015,11 +2260,130 @@ el('stage').addEventListener('pointerdown', e => {
 });
 el('stage').addEventListener('pointermove', e => {
   if (!angleDrag) return;
-  drawAngleLine(angleDrag.x, angleDrag.y, e.clientX, e.clientY);
+  drawAngleLine(angleDrag.x, angleDrag.y, e.clientX, e.clientY, false);
 });
-el('stage').addEventListener('pointerup', () => { angleDrag = null; });
+el('stage').addEventListener('pointerup', e => {
+  if (!angleDrag) return;
+  drawAngleLine(angleDrag.x, angleDrag.y, e.clientX, e.clientY, true);
+  angleDrag = null;
+});
 el('stage').addEventListener('pointercancel', () => { angleDrag = null; });
 el('btnAngle').addEventListener('click', toggleAngleMode);
+
+/* -------------------------------------------------------------- eyedropper
+   Click the reference to read the exact colour under the cursor - hex and
+   brightness percent - rather than estimating it by eye. Samples from the
+   same small offscreen canvas refreshValueTools() already draws for the
+   histogram/palette on every pose (see analyzeCurrentImage()): 96x96 is
+   plenty of precision for "roughly what value is this," and there is no
+   reason a second, larger canvas should exist only for this. */
+function toggleEyedropper() {
+  state.eyedropperMode = !state.eyedropperMode;
+  if (state.eyedropperMode && state.angleMode) toggleAngleMode();
+  el('btnEyedropper').setAttribute('aria-pressed', String(state.eyedropperMode));
+}
+
+function sampleEyedropper(clientX, clientY) {
+  const img = el('img');
+  const rect = img.getBoundingClientRect();
+  if (!ANALYSIS_CANVAS || clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return;
+  const relX = (clientX - rect.left) / rect.width, relY = (clientY - rect.top) / rect.height;
+  const x = Math.min(ANALYSIS_CANVAS.width - 1, Math.floor(relX * ANALYSIS_CANVAS.width));
+  const y = Math.min(ANALYSIS_CANVAS.height - 1, Math.floor(relY * ANALYSIS_CANVAS.height));
+  const [r, g, b] = ANALYSIS_CANVAS.getContext('2d').getImageData(x, y, 1, 1).data;
+  const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+  const pct = Math.round((0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 * 100);
+  el('eyedropperReadout').innerHTML =
+    `<span class="palette-swatch" style="background:${hex}"></span> ${hex} · ${pct}% value`;
+  el('valueTools').classList.remove('hidden'); // surface the reading even if the drawer was closed
+}
+
+function initEyedropper() {
+  el('stage').addEventListener('pointerdown', e => {
+    if (state.eyedropperMode) sampleEyedropper(e.clientX, e.clientY);
+  });
+  el('btnEyedropper').addEventListener('click', toggleEyedropper);
+}
+
+/* ------------------------------------------------------------- info drawer
+   toggleValueTools() just shows/hides #valueTools - the histogram and
+   palette inside it are always kept current (see refreshValueTools(),
+   called from show()'s own onload) whether or not the drawer is open, so
+   opening it is instant rather than waiting on a fresh analysis. */
+function toggleValueTools() {
+  const open = el('valueTools').classList.toggle('hidden') === false;
+  el('btnInfo').setAttribute('aria-pressed', String(open));
+}
+el('btnInfo').addEventListener('click', toggleValueTools);
+
+/* ---------------------------------------------------------- image analysis
+   One small offscreen canvas, redrawn on every pose (see show()'s onload),
+   backing three features at once: the histogram, the dominant-colour
+   swatches, and the eyedropper's sampling. 96x96 is deliberately tiny - this
+   is for statistics and approximate colour reads, not pixels, and a small
+   canvas keeps getImageData() cheap enough to run on every single pose
+   without a second thought. */
+const ANALYSIS_SIZE = 96;
+let ANALYSIS_CANVAS = null;
+
+function refreshValueTools() {
+  const img = el('img');
+  if (!img.naturalWidth) return;
+  if (!ANALYSIS_CANVAS) ANALYSIS_CANVAS = document.createElement('canvas');
+  ANALYSIS_CANVAS.width = ANALYSIS_SIZE;
+  ANALYSIS_CANVAS.height = ANALYSIS_SIZE;
+  const ctx = ANALYSIS_CANVAS.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, ANALYSIS_SIZE, ANALYSIS_SIZE);
+
+  let data;
+  try { data = ctx.getImageData(0, 0, ANALYSIS_SIZE, ANALYSIS_SIZE).data; }
+  catch { return; } // a tainted canvas should never happen here (same-origin/blob), but never break the page over it
+
+  const BUCKETS = 16;
+  const hist = new Array(BUCKETS).fill(0);
+  // Coarse-quantized (3 bits/channel = 512 buckets) rather than exact RGB,
+  // which would almost never repeat across a photo and so would never
+  // surface a genuine "dominant" colour at all.
+  const colorCounts = new Map();
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    hist[Math.min(BUCKETS - 1, Math.floor((0.2126 * r + 0.7152 * g + 0.0722 * b) / 256 * BUCKETS))]++;
+    const key = (r >> 5) + '_' + (g >> 5) + '_' + (b >> 5);
+    colorCounts.set(key, (colorCounts.get(key) || 0) + 1);
+  }
+  const palette = [...colorCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([key]) => key.split('_').map(v => Number(v) * 32 + 16));
+
+  drawHistogram(hist);
+  drawPalette(palette);
+}
+
+function drawHistogram(hist) {
+  const canvas = el('histoCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const max = Math.max(1, ...hist);
+  const barW = w / hist.length;
+  // Read back rather than hardcoded, so this still matches the accent in
+  // whichever theme is active - canvas fillStyle cannot take a CSS custom
+  // property directly the way an element's own style can.
+  ctx.fillStyle = getComputedStyle(el('session')).getPropertyValue('--accent').trim() || '#d8a24a';
+  hist.forEach((v, i) => ctx.fillRect(i * barW, h - (v / max) * h, Math.max(1, barW - 1), (v / max) * h));
+}
+
+function drawPalette(colors) {
+  const host = el('paletteSwatches');
+  host.innerHTML = '';
+  for (const [r, g, b] of colors) {
+    const sw = document.createElement('div');
+    sw.className = 'palette-swatch';
+    sw.style.background = `rgb(${r},${g},${b})`;
+    host.appendChild(sw);
+  }
+}
 
 el('btnSimilar').addEventListener('click', toggleSimilar);
 el('btnSkip').addEventListener('click', skipCurrent);
@@ -2065,6 +2429,8 @@ document.addEventListener('keydown', e => {
     case '-': case '_': zoomBy(1 / 1.25); break;
     case '0': resetZoom(); break;
     case 'a': case 'A': toggleAngleMode(); break;
+    case 'e': case 'E': toggleEyedropper(); break;
+    case 'i': case 'I': toggleValueTools(); break;
     case 'r': case 'R':
       el('optGrid').checked = !el('optGrid').checked; applyOptions(); break;
     case 'm': case 'M': if (FEATURES) toggleSimilar(); break;

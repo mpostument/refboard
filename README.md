@@ -43,7 +43,9 @@ decodes each image once to compute a resized display copy, tone stats, and a
 perceptual hash for near-duplicate detection; it's capped by
 `FEATURES_BUDGET_SECS` per pass and resumes where it left off, so a huge
 library on first run doesn't block indefinitely. You can also trigger it
-immediately instead of waiting for the next tick:
+immediately instead of waiting for the next tick - either from the setup
+screen's **Rescan library** button (shown whenever the app has a working
+index), or directly:
 
 ```bash
 curl -X POST http://localhost:8080/api/reindex
@@ -109,7 +111,23 @@ Two, deliberately kept separate:
   hand, a face) without leaving the timed session; resets on every new pose.
 - **Angle tool** - drag anywhere on the reference to read the angle between
   two points, the on-screen equivalent of holding a pencil up to measure a
-  shoulder or hip line before committing to it on paper.
+  shoulder or hip line before committing to it on paper. The first drag also
+  sets a reference length - every drag after it reads its own angle *and* its
+  length as a ratio of that reference (a head height, a hand span), until you
+  turn the tool off and back on.
+- **Understand the pose, not just look at it** - a collapsible drawer next to
+  the HUD (`Info`, or `i`) keeps three things current on every pose:
+  - **Colour scheme for the tonal-value view** - grayscale, three duotones
+    (Van Dyke brown, Payne's grey, sepia/burnt umber-style), a false-colour
+    heatmap, and an edge-detection mode, all the same posterize machinery
+    under a different gradient - plus a **blur** step you can dial in before
+    posterizing, so tone blocks in as soft masses instead of hard-edged
+    islands around every small bit of local contrast.
+  - **A live legend** showing exactly what each tone level maps to in the
+    current scheme, a brightness histogram, and the pose's top-5 dominant
+    colours - read at a glance instead of guessed.
+  - **Eyedropper** (`e`) - click anywhere on the reference to read the exact
+    hex colour and brightness percent under the cursor.
 - Grid overlay, grayscale, random mirroring, session history/log, keyboard
   shortcuts, installable as a home-screen app, and a screen wake lock so a
   tablet propped up next to your paper doesn't sleep mid-pose.
