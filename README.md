@@ -119,12 +119,17 @@ src/Refboard/
 ### A note on ImageSharp's license
 
 The feature-building pass uses [SixLabors.ImageSharp](https://sixlabors.com/)
-for image decoding, resizing, and encoding. As of ImageSharp 3.x it ships
-under the Six Labors Split License: free for open-source projects, personal
-use, and small businesses under a revenue threshold; a paid license is
-required above that. This repository and its use of ImageSharp fall under the
-free tier, but if you fork this for a commercial deployment, check
-[the current terms](https://sixlabors.com/pricing/) yourself before you do.
+for image decoding, resizing, and encoding, pinned to **2.1.x** on purpose.
+Starting with 3.0, ImageSharp ships under the Six Labors Split License -
+free for open-source/personal/small-business use, but it requires obtaining
+and embedding a license key (even the free one), which isn't something to
+bake into a public repo's build. 2.1.x is the last major version under the
+plain Apache 2.0 license: no key, no build-time license check, nothing to
+configure. The cost is one optimization - see the comment on
+`FeatureBuilder.MeasureAsync` - not a feature gap; everything the board uses
+(resize, JPEG/WebP encode, the perceptual hash, tone stats) works the same.
+If you want 3.x's decode-time downscaling and are fine with its license
+terms, that's a deliberate version bump for you to make, not a default.
 
 ## Building from source
 

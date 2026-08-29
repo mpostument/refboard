@@ -191,14 +191,17 @@ public static class FeatureBuilder
     ///   - True original dimensions come from a header-only Identify, BEFORE
     ///     the scaled decode below - matching Pillow's im.size captured before
     ///     im.draft() rescales what the decoder actually produces.
-    ///   - DecoderOptions.TargetSize asks the JPEG decoder for a cheap
-    ///     downscaled decode (IDCT scaling), the same trick im.draft() plays
-    ///     and for the same reason: a decode at full resolution is the
-    ///     expensive part, and a many-megapixel source should never be fully
-    ///     expanded just to be shrunk back down moments later.
-    ///   - The subsequent explicit Resize is still needed for an exact target
-    ///     size and real Lanczos filtering, since the decoder's scaling only
-    ///     hits a handful of discrete ratios.
+    ///   - Unlike Pillow's im.draft(), this decodes at full resolution before
+    ///     resizing down - ImageSharp's decode-time downscale hint
+    ///     (DecoderOptions.TargetSize) only exists from v3 onward, and v3+
+    ///     requires a Six Labors commercial license for anything outside
+    ///     open-source/personal/small-business use (see README). Staying on
+    ///     the last fully Apache-2.0 major version (2.x) avoids that
+    ///     dependency entirely, at the cost of this one optimization: a
+    ///     many-megapixel source is fully decoded before being shrunk, rather
+    ///     than decoded-small in the first place. Correct either way -
+    ///     slower per image - and exactly what FEATURES_BUDGET_SECS exists to
+    ///     bound.
     /// </summary>
     private static async Task<MeasureResult> MeasureAsync(
         string path, string displayPath, string webpPath, int maxPx, int quality, CancellationToken ct)
@@ -206,8 +209,7 @@ public static class FeatureBuilder
         var info = await Image.IdentifyAsync(path, ct);
         int origW = info.Width, origH = info.Height;
 
-        using var disp = await Image.LoadAsync<Rgb24>(
-            new DecoderOptions { TargetSize = new Size(maxPx, maxPx) }, path, ct);
+        using var disp = await Image.LoadAsync<Rgb24>(path, ct);
 
         // Never upscale: some packs contain images already below the target.
         var longEdge = Math.Max(disp.Width, disp.Height);
