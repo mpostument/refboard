@@ -116,6 +116,10 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
     padding: 7px 10px; width: 88px;
   }
+  input[type=search] {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
+    padding: 7px 10px; width: 100%; box-sizing: border-box; color: var(--ink);
+  }
   .opts { display: flex; flex-wrap: wrap; gap: 8px 22px; }
   label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
@@ -326,6 +330,7 @@
   }
   #valueLegend .palette-swatch { width: 14px; height: 14px; border-radius: 3px; }
   #eyedropperReadout { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+  #mixGuide { color: var(--dim); font-size: 12px; }
   /* Rolling history of the last few sampled spots (see sampleEyedropper()) -
      click one to copy its hex without re-clicking the same spot on the
      reference again. Same swatch look as the dominant-colour palette; reads
@@ -459,7 +464,13 @@
 
     <section id="packsSection">
       <h2>Packs</h2>
-      <div class="packs" id="packs"></div>
+      <!-- Filters which pack boxes are VISIBLE only - never touches a
+           checkbox's checked state, so narrowing the list to find one pack
+           and then widening it again never silently drops a selection made
+           while it was hidden. See applyPackFilter(). -->
+      <input type="search" id="packFilter" placeholder="Filter packs by name...">
+      <div class="count" id="packFilterCount" style="margin:6px 0 0"></div>
+      <div class="packs" id="packs" style="margin-top:10px"></div>
     </section>
 
     <section>
@@ -619,6 +630,7 @@
     <label class="opt">Blur <select id="blurSelect"></select></label>
     <div id="valueLegend" title="The current scheme's tone steps, dark to light - what each posterized level actually maps to"></div>
     <span id="eyedropperReadout"></span>
+    <span id="mixGuide" title="A rough paint-mixing starting point for the sampled colour - not a precise pigment match, real paint mixes differently than a screen's RGB."></span>
     <div id="eyedropperHistory" title="Last few sampled colours - click to copy the hex"></div>
     <canvas id="histoCanvas" width="120" height="32" title="This pose's brightness distribution, dark to light"></canvas>
     <div id="paletteSwatches" title="This pose's dominant colours"></div>
@@ -668,7 +680,9 @@
 
     <section>
       <h2>Timed sessions</h2>
-      <p>Pick one or more packs (or "All" / a random pool), an interval -
+      <p>Pick one or more packs (or "All" / a random pool - the filter box
+        above the list narrows it by name for a large library, without
+        changing which packs are already ticked), an interval -
         a preset, a custom number of seconds, or a structured
         warm-up/quick/long-study schedule (or build your own under
         <b>Custom</b>: any number of steps, each its own seconds-per-pose and
@@ -718,10 +732,14 @@
       </ul>
       <p><b>Eyedropper</b> (<b>E</b>, its own HUD button) - click anywhere on
         the reference to read the exact hex colour and brightness percent
-        under the cursor. The last few samples stay listed as small swatches
-        next to the reading - click one to copy its hex, to compare two
-        earlier spots (skin vs. background, say) without re-aiming at either
-        one again.</p>
+        under the cursor, plus a rough paint-mixing starting point (which two
+        of Yellow/Blue/Magenta, roughly what ratio, and how much to dilute
+        for the value) - useful for watercolour, not a precise pigment match,
+        since real paint mixes by absorption across the whole spectrum, not
+        a screen's three colour channels. The last few samples stay listed
+        as small swatches next to the reading - click one to copy its hex,
+        to compare two earlier spots (skin vs. background, say) without
+        re-aiming at either one again.</p>
       <p>Two more, both Options-screen checkboxes since they apply to every
         pose in the session rather than being switched pose to pose:
         <b>Ghost previous pose</b> overlays a faint edge-detected silhouette
@@ -1763,7 +1781,29 @@ function renderPacks(saved) {
     host.appendChild(box);
   }
   updateCopyLink();
+  applyPackFilter(); // re-apply whatever was already typed - renderPacks() re-runs on Rescan too
 }
+
+// Filters which .pack boxes are VISIBLE only - never touches a checkbox's
+// checked state (see the HTML comment on #packFilter), so narrowing the
+// list to find one pack and widening it again never silently drops a
+// selection made while a pack was hidden. Matches against the pack's own
+// name AND its sub-group names, so searching "hands" still finds a pack
+// whose own name doesn't say so but has a "Hands" group inside it.
+function applyPackFilter() {
+  const q = el('packFilter').value.trim().toLowerCase();
+  let shown = 0, total = 0;
+  for (const box of document.querySelectorAll('#packs .pack')) {
+    total++;
+    const name = box.querySelector('.name')?.textContent.toLowerCase() || '';
+    const groupNames = [...box.querySelectorAll('.sub-group .name')].map(s => s.textContent.toLowerCase());
+    const match = !q || name.includes(q) || groupNames.some(g => g.includes(q));
+    box.classList.toggle('hidden', !match);
+    if (match) shown++;
+  }
+  el('packFilterCount').textContent = q ? `${shown.toLocaleString()} of ${total.toLocaleString()} packs` : '';
+}
+el('packFilter').addEventListener('input', applyPackFilter);
 
 /* The pack hash claims exactly one pack (see applyPackHash), so the link this
    button builds only makes sense under the same constraint - one distinct
@@ -2385,6 +2425,7 @@ function show(src) {
   clearAngleLine();
   clearConstruct();
   el('eyedropperReadout').innerHTML = '';
+  el('mixGuide').textContent = '';
   eyedropperHistory = [];
   renderEyedropperHistory();
 
@@ -3066,6 +3107,63 @@ el('eyedropperHistory').addEventListener('click', e => {
   navigator.clipboard?.writeText(hex).catch(() => { /* clipboard permission denied - not worth surfacing an error over */ });
 });
 
+/* --------------------------------------------------------- mixing guide
+   A rough paint-mixing suggestion for the eyedropper's sampled colour - see
+   #mixGuide's CSS comment and sampleEyedropper(). NOT a spectrally accurate
+   pigment matcher (real paint mixes by absorption/reflectance across the
+   whole spectrum, not a screen's three RGB channels - two colours that look
+   identical on screen can still mix differently on paper) - this is a
+   starting suggestion built on the same 3-primary intuition most
+   "mixing primary" watercolour sets are sold around: a Yellow, a Blue, and
+   a Magenta/Red, spaced 120 degrees apart on the hue wheel, with the
+   sampled colour's ratio interpolated continuously between whichever two
+   it falls between - not a fixed table of named hues. */
+const MIX_PRIMARY_NAMES = ['Yellow', 'Blue', 'Magenta']; // 120° apart - Yellow sits at hue 60
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return { h: h * 60, s, l };
+}
+
+function mixGuide(r, g, b) {
+  const { h, s, l } = rgbToHsl(r, g, b);
+
+  // Shift so Yellow (hue 60) is the zero point, then which 120° third of
+  // the wheel the sample falls in picks the two primaries either side of
+  // it, and how far along that third gives the mix ratio between them.
+  const shifted = (((h - 60) % 360) + 360) % 360;
+  const segment = Math.floor(shifted / 120);
+  const t = (shifted % 120) / 120;
+  const loName = MIX_PRIMARY_NAMES[segment], hiName = MIX_PRIMARY_NAMES[(segment + 1) % 3];
+  const loPct = Math.round((1 - t) * 100), hiPct = 100 - loPct;
+  const ratio = loPct === 100 ? loName : hiPct === 100 ? hiName : `${loPct}% ${loName} + ${hiPct}% ${hiName}`;
+
+  // Watercolour lightens with water, not white paint - so this reads as
+  // dilution, not a "+ white" instruction the way an opaque medium would get.
+  const value = l > 0.8 ? 'very light - mostly water, just a hint of pigment'
+    : l > 0.6 ? 'light - dilute the mix well'
+    : l > 0.35 ? 'mid value - a moderately loaded brush'
+    : l > 0.15 ? 'dark - concentrated pigment'
+    : 'very dark - fully loaded; a touch of a dark neutral (not black) deepens it without muddying the hue';
+
+  const mute = s < 0.15
+    ? ' - reads as nearly neutral/gray; equal parts of two near-opposite colours gets there faster than chasing this ratio'
+    : s < 0.35
+    ? " - muted; a small touch of the mix's complement tones it down"
+    : '';
+
+  return `≈ ${ratio} · ${value}${mute}`;
+}
+
 function sampleEyedropper(clientX, clientY) {
   const img = el('img');
   const rect = img.getBoundingClientRect();
@@ -3078,6 +3176,7 @@ function sampleEyedropper(clientX, clientY) {
   const pct = Math.round((0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 * 100);
   el('eyedropperReadout').innerHTML =
     `<span class="palette-swatch" style="background:${hex}"></span> ${hex} · ${pct}% value`;
+  el('mixGuide').textContent = mixGuide(r, g, b);
   el('valueTools').classList.remove('hidden'); // surface the reading even if the drawer was closed
 
   eyedropperHistory.unshift(hex);

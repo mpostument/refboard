@@ -155,9 +155,16 @@ Two, deliberately kept separate:
     current scheme, a brightness histogram, and the pose's top-5 dominant
     colours - read at a glance instead of guessed.
   - **Eyedropper** (`e`) - click anywhere on the reference to read the exact
-    hex colour and brightness percent under the cursor; the last few samples
-    stay listed as swatches to click-to-copy, for comparing two spots (skin
-    vs. background) without re-aiming at either one again.
+    hex colour and brightness percent under the cursor, plus a rough
+    paint-mixing starting point (which two of Yellow/Blue/Magenta, roughly
+    what ratio, and how much to dilute for the value) - useful for
+    watercolour, not a precise pigment match, since real paint mixes by
+    absorption across the whole spectrum, not a screen's three colour
+    channels. The last few samples stay listed as swatches to click-to-copy,
+    for comparing two spots (skin vs. background) without re-aiming at
+    either one again.
+- **Pack filter** - a text box above the Packs list narrows it by name for a
+  large library, without changing which packs are already ticked.
 - Grid overlay, grayscale, random mirroring, session history/log, keyboard
   shortcuts, installable as a home-screen app, and a screen wake lock so a
   tablet propped up next to your paper doesn't sleep mid-pose.
