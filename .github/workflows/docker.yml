@@ -60,6 +60,53 @@ jobs:
             echo "value=0.0.0-dev" >> "$GITHUB_OUTPUT"
           fi
 
+      # A clean multi-arch build only proves both targets cross-compiled - it
+      # never runs either one, so a native-library problem in the image
+      # (Magick.NET's is the current one worth worrying about: a missing
+      # shared library it dynamically links against would build fine and
+      # fail at runtime) would sail through unnoticed until someone's
+      # container actually failed to index anything. scripts/smoke-test.sh
+      # runs each platform for real and checks the whole decode/resize/
+      # encode/hash pipeline actually produces a featured image - see its
+      # own comment for why a bare healthcheck isn't enough. amd64 runs
+      # natively on the GitHub runner; arm64 runs under the QEMU emulation
+      # set up above - slower, but arm64 is this project's actual deployment
+      # target, so it is worth the CI minutes to catch an arm64-only problem
+      # here instead of on someone's Pi.
+      - name: Prepare smoke-test image
+        run: |
+          mkdir -p /tmp/smoke/references/Test
+          sudo apt-get update -qq && sudo apt-get install -yqq imagemagick
+          convert -size 800x1200 xc:red /tmp/smoke/references/Test/a.jpg
+
+      - name: Build amd64 for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: refboard:smoke-amd64
+          build-args: VERSION=${{ steps.ver.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test (amd64)
+        run: bash scripts/smoke-test.sh refboard:smoke-amd64 linux/amd64 18080
+
+      - name: Build arm64 for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          load: true
+          tags: refboard:smoke-arm64
+          build-args: VERSION=${{ steps.ver.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test (arm64, via QEMU)
+        run: bash scripts/smoke-test.sh refboard:smoke-arm64 linux/arm64 18081
+
       # PRs build (both arches, to catch a target-arch-only failure) but never
       # push - forking this repo should never be able to publish to your GHCR.
       - name: Build and push

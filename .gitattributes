@@ -1,0 +1,5 @@
+# Force LF regardless of the checkout platform's core.autocrlf - a script
+# that Actions' Ubuntu runners execute directly cannot tolerate CRLF (the
+# shebang line, and often lines mid-script, break), and this repo is worked
+# on from Windows where autocrlf can otherwise silently convert it.
+*.sh text eol=lf
