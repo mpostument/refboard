@@ -203,6 +203,29 @@
     paint-order: stroke; stroke: #000; stroke-width: 3px; stroke-linejoin: round;
   }
 
+  /* High-contrast overlay mode - see applyOptions() and the 'h' key. Default
+     mode tells lines apart by color/opacity alone (one accent color; a
+     dashed+faded reference vs. solid comparisons) - exactly the kind of
+     subtle difference that washes out in bright light or for low contrast
+     sensitivity. This swaps in a black-outlined white line/circle (which
+     per-line dash pattern - not color - now tells apart, see
+     renderAngleOverlay()'s COMPARISON_DASHES) and a higher-opacity outlined
+     grid. The outline is 4 stacked drop-shadows rather than a real
+     stroke-on-stroke: a <line> (unlike #angleOverlay's own <text>, which
+     already gets a proper paint-order:stroke outline above) has only one
+     paint layer to work with, and at the stroke widths this ever draws,
+     four 1px shadows read as a solid outline. */
+  #session.high-contrast #angleOverlay line,
+  #session.high-contrast #angleOverlay circle {
+    stroke: #fff; fill: #fff;
+    filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
+  }
+  #session.high-contrast #angleOverlay line { stroke-width: 2.5px; }
+  #session.high-contrast #grid {
+    opacity: .8;
+    filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
+  }
+
   #bar { height: 3px; background: #1c1c22; flex: none; }
   #fill { height: 100%; width: 100%; background: var(--accent); transition: width .25s linear; }
   #fill.warn { background: var(--bad); }
@@ -374,6 +397,15 @@
       <h2>Session</h2>
       <div class="chips" id="schedules"></div>
       <div class="count" id="scheduleHint" style="margin-top:9px"></div>
+      <!-- Hidden unless the Custom chip is selected - see renderSchedules().
+           Each row is a plain [secs, count] pair, the exact shape every
+           built-in SCHEDULES entry already uses, so nothing downstream
+           (startSession(), advanceSchedule(), hintSchedule()) needs a
+           special case for a schedule just because it came from here. -->
+      <div id="customSchedule" class="hidden" style="margin-top:10px">
+        <div id="customScheduleRows"></div>
+        <button id="addScheduleStep" class="ghost" type="button" style="margin-top:6px">+ Add step</button>
+      </div>
     </section>
 
     <!-- Hidden entirely when features.json is absent: with no measurements the
@@ -390,6 +422,7 @@
         <label class="opt"><input type="checkbox" id="optGray"> Grayscale</label>
         <label class="opt"><input type="checkbox" id="optFlipRandom"> Randomly mirror</label>
         <label class="opt"><input type="checkbox" id="optGrid"> Grid overlay</label>
+        <label class="opt" title="Black-outlined white lines with a distinct dash pattern per line, instead of one accent colour and opacity - for bright light or low contrast sensitivity. Also 'h' mid-session."><input type="checkbox" id="optHighContrast"> High-contrast overlays</label>
         <label class="opt"><input type="checkbox" id="optBell" checked> Bell on change</label>
         <label class="opt"><input type="checkbox" id="optFull" checked> Fullscreen</label>
         <label class="opt hidden" id="optDedupWrap" title="Frames that hash as near-identical are drawn as one pose. Off by default: the measured distance distributions for &quot;same pose, other angle&quot; and &quot;different pose&quot; overlap, so this removes some genuinely distinct poses too. The count below shows exactly how many it takes."><input type="checkbox" id="optDedup"> Skip near-duplicates</label>
@@ -521,7 +554,9 @@
       <h2>Timed sessions</h2>
       <p>Pick one or more packs (or "All" / a random pool), an interval -
         a preset, a custom number of seconds, or a structured
-        warm-up/quick/long-study schedule - and any options: grayscale,
+        warm-up/quick/long-study schedule (or build your own under
+        <b>Custom</b>: any number of steps, each its own seconds-per-pose and
+        pose count, saved for next time) - and any options: grayscale,
         random mirroring, a grid overlay, a bell when the pose changes,
         fullscreen. Tone filtering (high-contrast / low-key / high-key) and
         skipping near-duplicates are both computed from your own library, not
@@ -590,7 +625,10 @@
         for a new one past that), so you can measure a shoulder line and a
         hip line and read both together instead of one at a time. <b>Clear
         lines</b>, or turning the tool off and back on, wipes the slate for a
-        fresh reference.</p>
+        fresh reference. <b>High-contrast overlays</b> (Options, or <b>H</b>)
+        swaps the colour/opacity used to tell lines apart for a black-outlined
+        white line with its own dash pattern per line - the grid overlay gets
+        the same outline, more visible in bright light either way.</p>
     </section>
 
     <section>
@@ -616,8 +654,8 @@
       <h2>All keyboard shortcuts</h2>
       <p class="sub" style="margin-bottom:0">Space pause · ← → step · F flip
         · G gray · V value levels · +/- zoom · 0 reset zoom · A angle tool ·
-        E eyedropper · I info drawer · R grid · M similar (when available) ·
-        S skip · Esc stop · ? this help</p>
+        E eyedropper · I info drawer · R grid · H high-contrast overlays ·
+        M similar (when available) · S skip · Esc stop · ? this help</p>
     </section>
   </div>
 </div>
@@ -645,11 +683,18 @@ const PRESETS = [30, 60, 120, 300, 600];
 
 // Standard figure-drawing class shapes. "endless" is the default because a pose
 // pack is not a class - most sessions are one interval until you stop.
+// `custom`'s steps start null like Endless's and are populated at runtime by
+// syncCustomSchedule() from the builder rows under the Custom chip - see the
+// HTML comment on #customSchedule. A plain property on this const object,
+// not a separate variable: every consumer (startSession(), hintSchedule())
+// already just reads `SCHEDULES[key].steps` and needs no special case added
+// for where those steps came from.
 const SCHEDULES = {
   endless: { label: 'Endless',   steps: null },
   warmup:  { label: 'Warm-up',   steps: [[30,10],[60,5],[120,3],[300,2]] },
   quick:   { label: 'Quick 20',  steps: [[30,20]] },
   long:    { label: 'Long study',steps: [[300,4],[600,2]] },
+  custom:  { label: 'Custom',    steps: null },
 };
 
 // Tone filters. Cut points are computed from the actual distribution at load
@@ -863,6 +908,7 @@ const state = {
   eyedropperMode: false,      // see toggleEyedropper()
   valueScheme: 'gray',        // key into VALUE_SCHEMES
   valueBlur: 0,               // a value from BLUR_LEVELS
+  highContrast: false,        // see applyOptions() and the 'h' key
   hudIdleTimer: null,
   // Set at startSession(), read and cleared at stopSession() - see logSession.
   startedAt: null, startPacks: [],
@@ -892,6 +938,7 @@ function saveSettings() {
     known: [...document.querySelectorAll('.grp')].map(c => c.value),
     interval: state.secs,
     schedule: document.querySelector('#schedules .chip[aria-pressed="true"]')?.dataset.key,
+    customSchedule: SCHEDULES.custom.steps || [],
     tone: state.tone,
     dedup: el('optDedup').checked,
     valueSteps: state.valueSteps,
@@ -899,6 +946,7 @@ function saveSettings() {
     valueBlur: state.valueBlur,
     gray: el('optGray').checked, flipRandom: el('optFlipRandom').checked,
     grid: el('optGrid').checked, bell: el('optBell').checked, full: el('optFull').checked,
+    highContrast: el('optHighContrast').checked,
     // When this setup was last changed, so the merge in syncSettings() can tell
     // two devices' panels apart - see syncSettings() for why this is a
     // whole-document last-write-wins merge rather than a field-by-field one.
@@ -1050,7 +1098,7 @@ async function boot() {
 
   for (const [id, key] of [['optGray','gray'],['optFlipRandom','flipRandom'],
                            ['optGrid','grid'],['optBell','bell'],['optFull','full'],
-                           ['optDedup','dedup']]) {
+                           ['optHighContrast','highContrast'],['optDedup','dedup']]) {
     if (saved[key] !== undefined) el(id).checked = saved[key];
     el(id).addEventListener('change', saveSettings);
   }
@@ -1670,10 +1718,17 @@ function renderSchedules(saved) {
     b.setAttribute('aria-pressed', String(key === want));
     b.addEventListener('click', () => {
       [...host.children].forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+      el('customSchedule').classList.toggle('hidden', key !== 'custom');
       hintSchedule(key); saveSettings();
     });
     host.appendChild(b);
   }
+  el('customSchedule').classList.toggle('hidden', want !== 'custom');
+  // A single example row rather than one truly blank one - "60 sec x 5
+  // poses" shows the shape of a step at a glance instead of two empty
+  // placeholder-only fields, the same reasoning selectValueSteps(3) uses for
+  // a dropped single image.
+  renderCustomScheduleRows(saved.customSchedule?.length ? saved.customSchedule : [[60, 5]]);
   hintSchedule(want);
 }
 
@@ -1682,7 +1737,59 @@ function hintSchedule(key) {
   el('scheduleHint').textContent = sch.steps
     ? sch.steps.map(([s, n]) => `${n} × ${fmt(s)}`).join('  ·  ') +
       `  —  ${sch.steps.reduce((a, [s, n]) => a + s * n, 0) / 60 | 0} min total, ignores the interval above`
+    : key === 'custom' ? 'Add at least one step below.'
     : 'Runs until you stop, using the interval above.';
+}
+
+/* ------------------------------------------------------- custom schedule */
+function renderCustomScheduleRows(steps) {
+  el('customScheduleRows').innerHTML = '';
+  for (const [secs, count] of steps) addScheduleStepRow(secs, count);
+  // Pure recompute, no save - this also runs during boot's initial render,
+  // and boot must never resave settings that were just loaded unchanged
+  // (see syncCustomSchedule()'s own comment for why that matters here more
+  // than it would look at first).
+  updateCustomScheduleSteps();
+}
+
+function addScheduleStepRow(secs, count) {
+  const row = document.createElement('div');
+  row.className = 'row custom-schedule-row';
+  row.style.marginTop = '6px';
+  row.innerHTML =
+    `<input type="number" class="stepSecs" min="5" max="3600" step="5" placeholder="secs" value="${secs ?? ''}">` +
+    `<span class="count">sec ×</span>` +
+    `<input type="number" class="stepCount" min="1" max="99" placeholder="count" value="${count ?? ''}">` +
+    `<span class="count">poses</span>` +
+    `<button type="button" class="ghost" title="Remove this step">×</button>`;
+  row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncCustomSchedule));
+  row.querySelector('button').addEventListener('click', () => { row.remove(); syncCustomSchedule(); });
+  el('customScheduleRows').appendChild(row);
+}
+
+el('addScheduleStep').addEventListener('click', () => { addScheduleStepRow('', ''); syncCustomSchedule(); });
+
+// Same bounds as #customSecs (5-3600s) plus a 1-99 pose count. An
+// incomplete or out-of-range row (still being typed into, or never
+// finished) is just dropped rather than blocking the whole schedule on one
+// bad field - the same clamp-or-drop treatment applyPackHash()'s own secs
+// parsing already uses.
+function updateCustomScheduleSteps() {
+  const steps = [...document.querySelectorAll('#customScheduleRows .custom-schedule-row')]
+    .map(row => [parseInt(row.querySelector('.stepSecs').value, 10), parseInt(row.querySelector('.stepCount').value, 10)])
+    .filter(([secs, count]) => secs >= 5 && secs <= 3600 && count >= 1 && count <= 99);
+  SCHEDULES.custom.steps = steps.length ? steps : null;
+  if (document.querySelector('#schedules .chip[aria-pressed="true"]')?.dataset.key === 'custom') hintSchedule('custom');
+}
+
+// A user actually edited a row (typed a value, added or removed a step) -
+// recompute AND persist. Kept separate from updateCustomScheduleSteps()
+// itself, which boot's own initial render also calls and must not have the
+// side effect of writing localStorage (and pinging FleetState.push, see
+// saveSettings()) before the user has changed anything at all.
+function syncCustomSchedule() {
+  updateCustomScheduleSteps();
+  saveSettings();
 }
 
 /* ------------------------------------------------------------------- pool */
@@ -2178,6 +2285,12 @@ function applyOptions() {
   el('btnGray').disabled = splitting;
   el('grid').classList.toggle('hidden', !el('optGrid').checked);
   if (el('optGrid').checked) drawGrid();
+  // Read by renderAngleOverlay() for its per-line dash pattern; the actual
+  // black-outlined-white recolor is pure CSS (#session.high-contrast), see
+  // that rule's own comment for why the dash pattern can't also live there.
+  state.highContrast = el('optHighContrast').checked;
+  el('session').classList.toggle('high-contrast', state.highContrast);
+  renderAngleOverlay(null); // re-render any lines already on screen in the new mode
 }
 
 /* Keyboard-only now: 'v' cycles Off -> 2 -> 3 -> 4 -> 5 -> 6 -> Off, which is
@@ -2416,16 +2529,27 @@ function angleOf(x1, y1, x2, y2) {
   return ((deg % 180) + 180) % 180;
 }
 
+// In high-contrast mode (see applyOptions(), the 'h' key), color/opacity are
+// no longer available to tell lines apart - the whole point is not relying
+// on them - so each comparison line instead gets its own dash pattern.
+// Cycles rather than a fixed 1:1 list, so a comparison line past the end
+// still gets *a* distinct pattern instead of silently falling through to
+// solid like every other line (were MAX_ANGLE_LINES ever raised past 3).
+const COMPARISON_DASHES = ['', '10 4', '2 3'];
+
 // Rebuilds #angleOverlay from state.angleRef + state.angleLines, plus
 // (while a drag is in progress) the not-yet-committed live line on top.
-// Called on every pointermove (live redraw) and after every commit.
+// Called on every pointermove (live redraw), after every commit, and
+// whenever applyOptions() flips high-contrast mode on an already-drawn set
+// of lines.
 function renderAngleOverlay(live) {
   const svg = el('angleOverlay');
   const ref = state.angleRef;
   const haveComparisons = state.angleLines.length > 0 || live;
+  const hc = state.highContrast;
 
-  const lineMarkup = (l, label) =>
-    `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}"/>` +
+  const lineMarkup = (l, label, dash) =>
+    `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}"${dash ? ` stroke-dasharray="${dash}"` : ''}/>` +
     `<circle cx="${l.x1}" cy="${l.y1}" r="4"/><circle cx="${l.x2}" cy="${l.y2}" r="4"/>` +
     `<text x="${(l.x1 + l.x2) / 2}" y="${(l.y1 + l.y2) / 2 - 10}" text-anchor="middle">${label}</text>`;
 
@@ -2433,23 +2557,52 @@ function renderAngleOverlay(live) {
   if (ref) {
     // Solid and its own star while nothing exists to compare it against yet
     // (the very first drag); once a comparison line shows up, it recedes to
-    // a faint dashed backdrop the same as before.
+    // a faint dashed backdrop the same as before (or, in high-contrast, a
+    // finer dash instead of relying on opacity to read as "faint").
     if (haveComparisons) {
-      markup += `<line x1="${ref.x1}" y1="${ref.y1}" x2="${ref.x2}" y2="${ref.y2}" stroke-dasharray="4 3" opacity=".5"/>`;
+      markup += `<line x1="${ref.x1}" y1="${ref.y1}" x2="${ref.x2}" y2="${ref.y2}" stroke-dasharray="${hc ? '3 3' : '4 3'}"${hc ? '' : ' opacity=".5"'}/>`;
     } else {
       markup += lineMarkup(ref, `${ref.deg.toFixed(1)}°`);
     }
   }
-  for (const l of state.angleLines) {
-    markup += lineMarkup(l, `${l.deg.toFixed(1)}° · ${(l.length / ref.length).toFixed(2)}× reference`);
-  }
+  state.angleLines.forEach((l, i) => {
+    const label = `${l.deg.toFixed(1)}° · ${(l.length / ref.length).toFixed(2)}× reference`;
+    markup += lineMarkup(l, label, hc ? COMPARISON_DASHES[i % COMPARISON_DASHES.length] : '');
+  });
   if (live) {
     const label = ref ? `${live.deg.toFixed(1)}° · ${(live.length / ref.length).toFixed(2)}× reference` : `${live.deg.toFixed(1)}°`;
-    markup += lineMarkup(live, label);
+    markup += lineMarkup(live, label, hc ? COMPARISON_DASHES[state.angleLines.length % COMPARISON_DASHES.length] : '');
   }
 
   svg.classList.toggle('hidden', markup === '');
   svg.innerHTML = markup;
+  if (markup) avoidLabelCollisions(svg);
+}
+
+// Cheap collision avoidance for the handful of labels ever on screen at
+// once (at most: the reference-or-not, plus MAX_ANGLE_LINES comparisons,
+// plus a live drag). Real SVG bounding boxes via getBBox(), not an estimate
+// - meaningful only once the elements are actually in the (visible) DOM,
+// which innerHTML just above guarantees. Nudges a colliding label straight
+// down a few px at a time against every label already placed, rather than
+// solving for a globally non-overlapping layout - enough to keep "which
+// line is this" legible when two measurements are drawn close together,
+// which is exactly the case multiple on-screen lines exist to support.
+function avoidLabelCollisions(svg) {
+  const placed = [];
+  for (const text of svg.querySelectorAll('text')) {
+    let box = text.getBBox();
+    let guard = 0;
+    while (placed.some(p => rectsOverlap(box, p)) && guard++ < 6) {
+      text.setAttribute('y', Number(text.getAttribute('y')) + box.height + 2);
+      box = text.getBBox();
+    }
+    placed.push(box);
+  }
+}
+
+function rectsOverlap(a, b) {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
 // Stage-relative, not viewport-relative - the overlay has no viewBox (see its
@@ -2723,6 +2876,8 @@ document.addEventListener('keydown', e => {
     case 'i': case 'I': toggleValueTools(); break;
     case 'r': case 'R':
       el('optGrid').checked = !el('optGrid').checked; applyOptions(); break;
+    case 'h': case 'H':
+      el('optHighContrast').checked = !el('optHighContrast').checked; applyOptions(); break;
     case 'm': case 'M': if (FEATURES) toggleSimilar(); break;
     case 's': case 'S': skipCurrent(); break;
     case 'Escape':     stopSession(); break;

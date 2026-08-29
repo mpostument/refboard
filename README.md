@@ -89,7 +89,8 @@ Two, deliberately kept separate:
 ## Features
 
 - **Timed sessions** - presets or a custom interval, endless or a structured
-  warm-up/quick/long-study schedule.
+  warm-up/quick/long-study schedule, or build and save your own under
+  Custom: any number of steps, each its own seconds-per-pose and pose count.
 - **Tone filtering** - high-contrast / low-key / high-key, computed from the
   actual measured distribution of your own library rather than fixed
   thresholds.
@@ -117,7 +118,11 @@ Two, deliberately kept separate:
   comparison lines stay on screen at once (oldest drops off past that), so
   you can measure a shoulder line and a hip line and read both together
   instead of one at a time - clear them, or turn the tool off and back on,
-  to start a fresh reference.
+  to start a fresh reference. **High-contrast overlays** (an Options
+  checkbox, or `h`) swaps the colour/opacity normally used to tell lines
+  apart for a black-outlined white line with its own dash pattern per line -
+  the grid overlay gets the same outline - for bright light or low contrast
+  sensitivity.
 - **Understand the pose, not just look at it** - a collapsible drawer next to
   the HUD (`Info`, or `i`) keeps three things current on every pose:
   - **Colour scheme for the tonal-value view** - grayscale, three duotones
