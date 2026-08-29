@@ -123,6 +123,26 @@ Two, deliberately kept separate:
   apart for a black-outlined white line with its own dash pattern per line -
   the grid overlay gets the same outline - for bright light or low contrast
   sensitivity.
+- **Construction guides** (`c` cycles) - a vanishing point (drag to drop it,
+  fanning guide lines out across the whole stage - perspective construction
+  on a box, a room, a foreshortened limb), a plumb line (a full
+  vertical+horizontal crosshair through a point, for checking whether one
+  landmark sits directly over another), or a proportion divider (drag out
+  one unit the way the angle tool's reference length works, and it marks off
+  repeating multiples of it automatically - "how many head-heights tall,"
+  measured instead of eyeballed). One at a time, mutually exclusive with the
+  angle tool and eyedropper.
+- **Ghost previous pose** and **focal-point marker** - two Options checkboxes:
+  a faint edge-detected silhouette of whatever pose was on screen just
+  before this one, to help track how a gesture or form carries from pose to
+  pose; and a marker at this pose's own visual-weight centroid, from its
+  actual brightness distribution - a rough guide to where the eye lands
+  first.
+- **Squint** (`q`) - blurs the plain original directly, the fastest version
+  of the classic "unfocus your eyes" technique to check big shapes and
+  values, without going into the full tonal-value split view for it.
+- **Selectable grid styles** - rule of thirds, golden ratio, diagonals, or
+  just a center cross, under the same Grid overlay checkbox.
 - **Understand the pose, not just look at it** - a collapsible drawer next to
   the HUD (`Info`, or `i`) keeps three things current on every pose:
   - **Colour scheme for the tonal-value view** - grayscale, three duotones

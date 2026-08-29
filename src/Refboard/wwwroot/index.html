@@ -185,6 +185,15 @@
      updateValueStepsUI(). */
   #img.flip, #imgValue.flip { transform: scaleX(-1); }
   #img.gray { filter: grayscale(1); }
+  /* Squint - see toggleSquint(). A fixed blur radius on #img directly rather
+     than the tonal-value view's own dial (BLUR_LEVELS/blurSelect): that dial
+     only ever affects #imgValue inside a posterized split view, and the
+     whole point here is checking big shapes/values WITHOUT leaving the
+     plain original - disabled during a split session for the same "#paneOrig
+     is the one guaranteed-untouched original" reason Gray is disabled then,
+     doubly so since squint is specifically about that pane. */
+  #img.squint { filter: blur(6px); }
+  #img.gray.squint { filter: grayscale(1) blur(6px); }
 
   /* width/height:100%, not just inset:0 - an <svg> with no viewBox is a
      "replaced element" with a fixed 300x150 default intrinsic size, and
@@ -226,9 +235,79 @@
     filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
   }
 
-  #bar { height: 3px; background: #1c1c22; flex: none; }
+  /* Construction guides - vanishing point / plumb line / proportion divider,
+     see setConstructMode(). Same sizing fix and non-interactive treatment as
+     #grid/#angleOverlay above; same high-contrast recolor below. */
+  #constructOverlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #constructOverlay line { stroke: var(--accent); stroke-width: 1; opacity: .7; }
+  #constructOverlay .construct-guide { stroke-width: 1.5; opacity: .9; }
+  #constructOverlay circle { fill: var(--accent); }
+  #constructOverlay text {
+    fill: #fff; font-size: 11px; font-family: inherit;
+    paint-order: stroke; stroke: #000; stroke-width: 2px; stroke-linejoin: round;
+  }
+  #session.high-contrast #constructOverlay line,
+  #session.high-contrast #constructOverlay circle {
+    stroke: #fff; fill: #fff;
+    filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
+  }
+
+  /* Ghost overlay of the previous pose - see optGhost, show(). Lives inside
+     #paneOrig itself, not #stage like #grid/#angleOverlay/#constructOverlay,
+     so it only ever covers the original pane's own image position (object-
+     fit:contain letterboxing and all - see positionGhost()) rather than
+     stretching across a split view's combined width. Deliberately does not
+     follow zoom/pan/flip, the same "describes THIS pose, not a moving
+     target" reasoning #angleOverlay's own comment gives - and here doubly
+     so, since it is literally a picture of a DIFFERENT pose. Sized/centered
+     with the SAME properties as #img itself, deliberately max-width/
+     max-height rather than width/height: those clamp the image to its own
+     natural size (scaled down only if too big for the pane) and margin:auto
+     centers it, whereas width/height:100% would force the box to fill the
+     whole pane and let object-fit:contain scale the ghost's content up to
+     match THAT box - visibly larger than, and misaligned with, whatever
+     #img is actually showing. Getting this wrong is the same class of
+     mistake v0.4.2 fixed for #grid/#angleOverlay, just one box-model
+     property off instead of missing a size entirely. */
+  #ghostImg {
+    position: absolute; inset: 0; margin: auto; display: block;
+    max-width: 100%; max-height: 100%; object-fit: contain;
+    pointer-events: none; opacity: .35; filter: url(#ghostFilter);
+    -webkit-user-drag: none; user-select: none;
+  }
+
+  /* Approximate visual-weight centroid - see refreshValueTools()'s own
+     focal-point math and positionFocalMarker(). Unlike #ghostImg just above
+     (a whole image, so object-fit:contain positions it for free the same
+     way it positions #img itself), this marks one POINT - object-fit has
+     nothing to fit here, so positionFocalMarker() computes its px position
+     by hand against #img's actual rendered box, letterboxing and all,
+     rather than a plain CSS percentage that would ignore that letterboxing
+     entirely. */
+  #focalMarker {
+    position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;
+    border: 2px solid #fff; border-radius: 50%; pointer-events: none;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.6); opacity: .75;
+  }
+
+  #bar {
+    height: 3px; background: #1c1c22; flex: none; position: relative;
+  }
   #fill { height: 100%; width: 100%; background: var(--accent); transition: width .25s linear; }
   #fill.warn { background: var(--bad); }
+  /* A static halfway tick - "gesture done, into refinement" pacing - not
+     tied to the interval value at all, so it needs no JS: always the middle
+     of the bar regardless of what "the middle" means in seconds. */
+  #bar::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+    background: rgba(0,0,0,.45); pointer-events: none;
+  }
+  /* Brief "time's up" pulse - see flashExpired() - rather than the timer bar
+     and clock just silently snapping to the next pose with no acknowledgment
+     at all. Purely cosmetic: advance() still fires on the same clock tick,
+     this only delays it by the animation's own short duration. */
+  @keyframes timeUpFlash { from { filter: brightness(2.4); } to { filter: brightness(1); } }
+  #fill.expired, #clock.expired { animation: timeUpFlash .22s ease-out; }
 
   #valueTools {
     flex: none; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -422,7 +501,15 @@
         <label class="opt"><input type="checkbox" id="optGray"> Grayscale</label>
         <label class="opt"><input type="checkbox" id="optFlipRandom"> Randomly mirror</label>
         <label class="opt"><input type="checkbox" id="optGrid"> Grid overlay</label>
+        <select id="gridStyle" title="Which guide lines the grid overlay draws">
+          <option value="thirds">Rule of thirds</option>
+          <option value="golden">Golden ratio</option>
+          <option value="diagonal">Diagonals</option>
+          <option value="center">Center only</option>
+        </select>
         <label class="opt" title="Black-outlined white lines with a distinct dash pattern per line, instead of one accent colour and opacity - for bright light or low contrast sensitivity. Also 'h' mid-session."><input type="checkbox" id="optHighContrast"> High-contrast overlays</label>
+        <label class="opt" title="Overlay a faint edge-detected silhouette of whatever pose was on screen just before this one, to help track how a gesture or form carries from pose to pose."><input type="checkbox" id="optGhost"> Ghost previous pose</label>
+        <label class="opt" title="Mark this pose's approximate visual-weight centroid (from its own brightness distribution) - a rough guide to where the eye lands first."><input type="checkbox" id="optFocalPoint"> Focal-point marker</label>
         <label class="opt"><input type="checkbox" id="optBell" checked> Bell on change</label>
         <label class="opt"><input type="checkbox" id="optFull" checked> Fullscreen</label>
         <label class="opt hidden" id="optDedupWrap" title="Frames that hash as near-identical are drawn as one pose. Off by default: the measured distance distributions for &quot;same pose, other angle&quot; and &quot;different pose&quot; overlap, so this removes some genuinely distinct poses too. The count below shows exactly how many it takes."><input type="checkbox" id="optDedup"> Skip near-duplicates</label>
@@ -474,6 +561,15 @@
      quietly drifts off "evenly spaced" after one hand-edit. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs id="valueFilterDefs"></defs>
+  <!-- Ghost overlay's filter (see #ghostImg) - the same gray + Laplacian
+       edge-detect recipe as the "Edges" tonal-value scheme (appendEdgeStages()),
+       but static rather than rebuilt: nothing user-configurable feeds this one,
+       unlike the real value filter buildValueFilter() rebuilds on every
+       settings change. -->
+  <filter id="ghostFilter" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"/>
+    <feConvolveMatrix order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" divisor="1" bias="0.5" preserveAlpha="true"/>
+  </filter>
 </svg>
 
 <div id="session" class="hidden">
@@ -483,19 +579,32 @@
          one - two independent things changing on two independent triggers
          is simpler to reason about as two transforms than as one string
          rebuilt from both every time either changes. -->
-    <div class="pane" id="paneOrig"><div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"></div></div>
+    <div class="pane" id="paneOrig">
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"></div>
+      <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
+           comment. Hidden unless optGhost is checked. -->
+      <img id="ghostImg" class="hidden" alt="" draggable="false">
+      <!-- Visual-weight centroid marker - see refreshValueTools() and
+           #focalMarker's own CSS comment. Hidden unless optFocalPoint is
+           checked. -->
+      <div id="focalMarker" class="hidden" aria-hidden="true"></div>
+    </div>
     <!-- Hidden whenever tonal value is off - see applyOptions(). Always the
          SAME underlying file as #img (show() sets both src attributes
          together), so nothing extra is fetched: the filter is the only
          difference between the two panes. -->
     <div class="pane hidden" id="paneValue"><div class="zoomwrap" id="zoomValue"><img id="imgValue" alt="" draggable="false"></div></div>
     <svg id="grid" class="hidden" preserveAspectRatio="none"></svg>
-    <!-- The angle/plumb-line tool's drawn line - see startAngleDrag(). Zoom
+    <!-- The angle tool's drawn line(s) - see renderAngleOverlay(). Zoom
          and pan apply to the images; this deliberately does not follow them
          (no transform of its own) - a measurement is about the pose as
          currently framed on screen, not a value that should slide around
          underneath you while you are still looking at it. -->
     <svg id="angleOverlay" class="hidden"></svg>
+    <!-- Construction guides (vanishing point / plumb line / proportion
+         divider) - see setConstructMode(). Same "does not follow zoom/pan"
+         treatment as #angleOverlay just above, for the same reason. -->
+    <svg id="constructOverlay" class="hidden"></svg>
   </div>
   <div id="bar"><div id="fill"></div></div>
   <!-- Collapsed by default - see toggleValueTools(). Everything in here is
@@ -521,12 +630,19 @@
     <button id="btnNext">Next</button>
     <button id="btnFlip">Flip</button>
     <button id="btnGray">Gray</button>
+    <button id="btnSquint" title="Squint (q): blur the reference directly, to check big shapes and values without leaving the plain original view">Squint</button>
     <select id="valueSelect" title="Tonal value split view (v cycles)"></select>
     <button id="btnZoomOut" title="Zoom out (-)">−</button>
     <button id="btnZoomReset" title="Reset zoom (0, or double-click the reference)">100%</button>
     <button id="btnZoomIn" title="Zoom in (+)">+</button>
     <button id="btnAngle" title="Angle tool (a): drag to measure an angle. The first drag sets a reference length; every drag after compares against it and stays on screen (a few at a time) until you clear or turn the tool off.">Angle</button>
     <button id="btnAngleClear" title="Clear all measured angle lines" disabled>Clear lines</button>
+    <select id="constructSelect" title="Construction guides (c cycles): a vanishing point, a plumb line, or a repeating proportion divider">
+      <option value="off">Guides: Off</option>
+      <option value="vp">Vanishing point</option>
+      <option value="plumb">Plumb line</option>
+      <option value="divider">Proportion divider</option>
+    </select>
     <button id="btnEyedropper" title="Eyedropper (e): click the reference to read its exact colour and value">Eyedropper</button>
     <button id="btnInfo" title="Show this pose's brightness histogram and dominant colours (i)">Info</button>
     <button id="btnHelpHud" title="What every feature does and how to use it (?)">?</button>
@@ -534,7 +650,7 @@
     <button id="btnSkip" title="Never show this pose again (s)">Skip</button>
     <button id="btnStop">Stop</button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · v value · +/- zoom · a angle · e eyedrop · i info · r grid · m similar · s skip · esc stop · ? help</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · i info · r grid · m similar · s skip · esc stop · ? help</span>
   </div>
 </div>
 
@@ -557,18 +673,20 @@
         warm-up/quick/long-study schedule (or build your own under
         <b>Custom</b>: any number of steps, each its own seconds-per-pose and
         pose count, saved for next time) - and any options: grayscale,
-        random mirroring, a grid overlay, a bell when the pose changes,
-        fullscreen. Tone filtering (high-contrast / low-key / high-key) and
-        skipping near-duplicates are both computed from your own library, not
-        a fixed guess. Click <b>Start drawing</b>.</p>
+        random mirroring, a grid overlay (rule of thirds, golden ratio,
+        diagonals, or just a center cross), a ghost of the previous pose, a
+        focal-point marker, a bell when the pose changes, fullscreen. Tone
+        filtering (high-contrast / low-key / high-key) and skipping
+        near-duplicates are both computed from your own library, not a fixed
+        guess. Click <b>Start drawing</b>.</p>
     </section>
 
     <section>
       <h2>During a session</h2>
       <p><b>Space</b> pause/resume · <b>← →</b> previous/next pose ·
-        <b>F</b> flip horizontally · <b>G</b> grayscale · <b>S</b> skip this
-        pose for good · <b>Esc</b> stop. The HUD's own buttons do the same
-        thing for a mouse.</p>
+        <b>F</b> flip horizontally · <b>G</b> grayscale · <b>Q</b> squint ·
+        <b>S</b> skip this pose for good · <b>Esc</b> stop. The HUD's own
+        buttons do the same thing for a mouse.</p>
     </section>
 
     <section>
@@ -577,7 +695,10 @@
         reference to 2-6 flat tones, shown side by side with the original -
         block in light and dark masses before chasing detail. Two tones is a
         pure Notan (light mass vs. dark mass); more tones reads closer to a
-        full value scale.</p>
+        full value scale. For a quicker check without leaving the plain
+        original, <b>Squint</b> (<b>Q</b>) just blurs it directly - the
+        fastest version of holding a reference at arm's length and
+        unfocusing your eyes to see its big shapes and values.</p>
     </section>
 
     <section>
@@ -601,6 +722,14 @@
         next to the reading - click one to copy its hex, to compare two
         earlier spots (skin vs. background, say) without re-aiming at either
         one again.</p>
+      <p>Two more, both Options-screen checkboxes since they apply to every
+        pose in the session rather than being switched pose to pose:
+        <b>Ghost previous pose</b> overlays a faint edge-detected silhouette
+        of whatever was on screen just before this one, to help track how a
+        gesture or form carries from pose to pose; <b>Focal-point marker</b>
+        marks this pose's own visual-weight centroid - a rough guide to
+        where the eye tends to land first, from its actual brightness
+        distribution rather than a guess.</p>
     </section>
 
     <section>
@@ -632,6 +761,30 @@
     </section>
 
     <section>
+      <h2>Construction guides</h2>
+      <p>The HUD's guide select (<b>C</b> cycles) offers three more
+        traditional construction aids, one at a time:</p>
+      <ul>
+        <li><b>Vanishing point</b> - drag (following the cursor live) to drop
+          a point and fan guide lines out from it across the whole stage,
+          for perspective construction on a box, a room, or a foreshortened
+          limb.</li>
+        <li><b>Plumb line</b> - drop a full vertical+horizontal crosshair
+          through a point, the digital equivalent of holding a pencil
+          straight up to check whether one landmark sits directly over
+          another.</li>
+        <li><b>Proportion divider</b> - drag out one unit the same way the
+          angle tool's own reference length works, and the tool marks off
+          repeating multiples of it automatically along the same line - "how
+          many head-heights tall," measured instead of eyeballed.</li>
+      </ul>
+      <p>Only one guide is ever active at a time, and switching to a guide
+        turns the angle tool and eyedropper off (and vice versa) - all three
+        want the same drag gesture for different things. Selecting "Off," or
+        switching guides, clears whatever was drawn.</p>
+    </section>
+
+    <section>
       <h2>Check your own image</h2>
       <p>The drop zone on the setup screen works with no library at all -
         it's the whole of what runs on the
@@ -653,9 +806,10 @@
     <section>
       <h2>All keyboard shortcuts</h2>
       <p class="sub" style="margin-bottom:0">Space pause · ← → step · F flip
-        · G gray · V value levels · +/- zoom · 0 reset zoom · A angle tool ·
-        E eyedropper · I info drawer · R grid · H high-contrast overlays ·
-        M similar (when available) · S skip · Esc stop · ? this help</p>
+        · G gray · Q squint · V value levels · +/- zoom · 0 reset zoom ·
+        A angle tool · C construction guides · E eyedropper · I info drawer ·
+        R grid · H high-contrast overlays · M similar (when available) ·
+        S skip · Esc stop · ? this help</p>
     </section>
   </div>
 </div>
@@ -909,6 +1063,13 @@ const state = {
   valueScheme: 'gray',        // key into VALUE_SCHEMES
   valueBlur: 0,               // a value from BLUR_LEVELS
   highContrast: false,        // see applyOptions() and the 'h' key
+  gridStyle: 'thirds',        // key into GRID_STYLES - see drawGrid()
+  constructMode: 'off',       // 'off'|'vp'|'plumb'|'divider' - see setConstructMode()
+  vp: null,                   // {x,y} - vanishing point, construct mode 'vp'
+  plumb: null,                // {x,y} - construct mode 'plumb'
+  divider: null,              // {x1,y1,x2,y2} unit vector - construct mode 'divider'
+  ghostSrc: null,             // previous pose's src, for #ghostImg - see show()
+  focalFrac: null,            // {x,y} 0..1 - see refreshValueTools(), positionFocalMarker()
   hudIdleTimer: null,
   // Set at startSession(), read and cleared at stopSession() - see logSession.
   startedAt: null, startPacks: [],
@@ -947,6 +1108,8 @@ function saveSettings() {
     gray: el('optGray').checked, flipRandom: el('optFlipRandom').checked,
     grid: el('optGrid').checked, bell: el('optBell').checked, full: el('optFull').checked,
     highContrast: el('optHighContrast').checked,
+    gridStyle: el('gridStyle').value,
+    ghost: el('optGhost').checked, focalPoint: el('optFocalPoint').checked,
     // When this setup was last changed, so the merge in syncSettings() can tell
     // two devices' panels apart - see syncSettings() for why this is a
     // whole-document last-write-wins merge rather than a field-by-field one.
@@ -1098,12 +1261,22 @@ async function boot() {
 
   for (const [id, key] of [['optGray','gray'],['optFlipRandom','flipRandom'],
                            ['optGrid','grid'],['optBell','bell'],['optFull','full'],
-                           ['optHighContrast','highContrast'],['optDedup','dedup']]) {
+                           ['optHighContrast','highContrast'],['optGhost','ghost'],
+                           ['optFocalPoint','focalPoint'],['optDedup','dedup']]) {
     if (saved[key] !== undefined) el(id).checked = saved[key];
     el(id).addEventListener('change', saveSettings);
   }
   // Dedup changes how many poses are in the pool, so it has to repaint the count.
   el('optDedup').addEventListener('change', refreshPool);
+
+  // Not a checkbox, so it sits outside the loop above - same restore-then-
+  // persist idea, just a select's .value instead of a checkbox's .checked.
+  el('gridStyle').value = saved.gridStyle || 'thirds';
+  el('gridStyle').addEventListener('change', () => {
+    state.gridStyle = el('gridStyle').value;
+    saveSettings();
+    if (el('optGrid').checked) drawGrid();
+  });
 
   // The wrapper, not startSession itself, as the listener: addEventListener
   // hands a click Event as the first argument, and startSession(pool) reads
@@ -2157,6 +2330,9 @@ function displayCandidates(src) {
 function show(src) {
   const img = el('img');
   const imgValue = el('imgValue');
+  // Captured before state.current is overwritten below - see the ghost-
+  // overlay block near the end of this function.
+  const prevSrc = state.current;
   state.current = src;
   const candidates = displayCandidates(src);
   let stage = 0;
@@ -2207,9 +2383,26 @@ function show(src) {
   // misleading left on screen against a different image.
   resetZoom();
   clearAngleLine();
+  clearConstruct();
   el('eyedropperReadout').innerHTML = '';
   eyedropperHistory = [];
   renderEyedropperHistory();
+
+  // Ghost overlay - see #ghostImg's own CSS comment. Uses whatever was on
+  // screen a moment ago regardless of pack/rotation-group, not just within
+  // one rotation set: the shuffled draw order means two consecutive poses
+  // are almost never the same figure anyway, so scoping this to "only
+  // within a rotation group" would make it fire so rarely it may as well
+  // not exist. src is set even when the checkbox is off, so switching it on
+  // works immediately without waiting for the pose after next.
+  state.ghostSrc = prevSrc;
+  el('ghostImg').src = prevSrc || '';
+  el('ghostImg').classList.toggle('hidden', !el('optGhost').checked || !prevSrc);
+  // The focal-point marker instead waits for refreshValueTools() (img's own
+  // onload, just below) - it needs the new image's actual decoded pixels,
+  // which are not ready yet at this point in show().
+  state.focalFrac = null;
+  el('focalMarker').classList.add('hidden');
 }
 
 /* One hidden decode ahead. Preloads the same URL show() will request - the
@@ -2242,10 +2435,27 @@ function onTick() {
   state.remain -= 0.25;
   if (state.remain <= 0) {
     if (el('optBell').checked) bell();
-    advance(false);
+    flashExpired();
     return;
   }
   paint();
+}
+
+// A brief acknowledgment - see the CSS comment on #fill.expired - instead of
+// the timer bar and clock silently snapping straight to the next pose with
+// no sense that time actually ran out. Purely cosmetic: advance() still
+// fires off the same clock tick that would have called it directly, just
+// delayed by the flash's own short, fixed duration - re-checked against
+// state.tick/state.paused after that delay, in case Stop or Pause happened
+// during the gap.
+function flashExpired() {
+  el('fill').classList.add('expired');
+  el('clock').classList.add('expired');
+  setTimeout(() => {
+    el('fill').classList.remove('expired');
+    el('clock').classList.remove('expired');
+    if (state.tick && !state.paused) advance(false);
+  }, 220);
 }
 
 function paint() {
@@ -2281,8 +2491,17 @@ function applyOptions() {
   el('img').classList.toggle('gray', !splitting && el('optGray').checked);
   // The HUD's Gray button, not just the setup screen's checkbox: toggling it
   // live would grayscale #paneOrig too, and #paneOrig is the one place a
-  // split session still guarantees an untouched original.
+  // split session still guarantees an untouched original. Squint gets the
+  // exact same treatment, and for the same reason - see #img.squint's CSS
+  // comment.
   el('btnGray').disabled = splitting;
+  // Squint has no setup-screen checkbox to reset from the way Gray does
+  // (see toggleSquint() - it's HUD-only, like Flip) - so unlike Gray's line
+  // just above, this only ever forces it OFF while splitting and otherwise
+  // leaves whatever toggleSquint() last set alone.
+  el('btnSquint').disabled = splitting;
+  if (splitting) el('img').classList.remove('squint');
+  state.gridStyle = el('gridStyle').value;
   el('grid').classList.toggle('hidden', !el('optGrid').checked);
   if (el('optGrid').checked) drawGrid();
   // Read by renderAngleOverlay() for its per-line dash pattern; the actual
@@ -2291,6 +2510,13 @@ function applyOptions() {
   state.highContrast = el('optHighContrast').checked;
   el('session').classList.toggle('high-contrast', state.highContrast);
   renderAngleOverlay(null); // re-render any lines already on screen in the new mode
+  renderConstructOverlay(); // same, for the construction-guide overlay
+  // Ghost/focal marker: toggling either checkbox takes effect immediately,
+  // using whatever was already computed for the CURRENT pose - no need to
+  // wait for the next one just to see the effect of a checkbox click.
+  el('ghostImg').classList.toggle('hidden', !el('optGhost').checked || !state.ghostSrc);
+  el('focalMarker').classList.toggle('hidden', !el('optFocalPoint').checked || !state.focalFrac);
+  if (state.focalFrac) positionFocalMarker();
 }
 
 /* Keyboard-only now: 'v' cycles Off -> 2 -> 3 -> 4 -> 5 -> 6 -> Off, which is
@@ -2309,14 +2535,32 @@ function cycleValueSteps() {
 
 /* Rule-of-thirds guides. Drawn as an SVG rather than a background image so it
    scales with the stage and costs nothing to toggle. */
+// Selectable guide lines under the same grid overlay/checkbox - see the
+// #gridStyle select. Every style shares the same dashed center cross
+// (drawGrid() appends it unconditionally); only the pair-of-lines-at-two-
+// cut-points-per-axis part differs, except "diagonal" and "center" which
+// don't have a symmetric pair-of-cuts shape to begin with. cuts() is the one
+// bit of actual math (thirds/golden are both just "two lines mirrored around
+// the middle at some percentage") shared by the two styles that do.
+function cuts(p) {
+  return [p, 100 - p].map(x =>
+    `<line x1="${x}" y1="0" x2="${x}" y2="100" stroke="#fff" stroke-width=".25"/>` +
+    `<line x1="0" y1="${x}" x2="100" y2="${x}" stroke="#fff" stroke-width=".25"/>`
+  ).join('');
+}
+const GRID_STYLES = {
+  thirds: () => cuts(33.33),
+  golden: () => cuts(38.2), // ~1/phi - the wider-spaced of the two classic ratios
+  diagonal: () => `<line x1="0" y1="0" x2="100" y2="100" stroke="#fff" stroke-width=".25"/>` +
+                  `<line x1="100" y1="0" x2="0" y2="100" stroke="#fff" stroke-width=".25"/>`,
+  center: () => '',
+};
+
 function drawGrid() {
   const g = el('grid');
   g.setAttribute('viewBox', '0 0 100 100');
-  g.innerHTML =
-    [33.33, 66.66].map(p =>
-      `<line x1="${p}" y1="0" x2="${p}" y2="100" stroke="#fff" stroke-width=".25"/>` +
-      `<line x1="0" y1="${p}" x2="100" y2="${p}" stroke="#fff" stroke-width=".25"/>`
-    ).join('') +
+  const style = GRID_STYLES[state.gridStyle] ? state.gridStyle : 'thirds';
+  g.innerHTML = GRID_STYLES[style]() +
     `<line x1="50" y1="0" x2="50" y2="100" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>` +
     `<line x1="0" y1="50" x2="100" y2="50" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>`;
 }
@@ -2395,8 +2639,17 @@ function toggleGray() {
   if (state.valueSteps) return;
   el('img').classList.toggle('gray');
 }
+// Same disabled-while-splitting treatment as Gray, and the same reason -
+// see applyOptions()'s own comment on #btnSquint. The fastest version of
+// "squint at it" to check big shapes/values, without going into a full
+// tonal-value split view first.
+function toggleSquint() {
+  if (state.valueSteps) return;
+  el('img').classList.toggle('squint');
+}
 el('btnFlip').addEventListener('click', toggleFlip);
 el('btnGray').addEventListener('click', toggleGray);
+el('btnSquint').addEventListener('click', toggleSquint);
 
 /* ------------------------------------------------------------- zoom & pan
    Locked together across both panes, on purpose: the point of the split
@@ -2462,7 +2715,7 @@ el('stage').addEventListener('wheel', e => {
 
 let panDrag = null;
 el('stage').addEventListener('pointerdown', e => {
-  if (state.angleMode || state.eyedropperMode || state.zoom <= ZOOM_MIN) return;
+  if (state.angleMode || state.eyedropperMode || state.constructMode !== 'off' || state.zoom <= ZOOM_MIN) return;
   panDrag = { x: e.clientX, y: e.clientY, panX: state.panX, panY: state.panY };
   try { el('stage').setPointerCapture(e.pointerId); } catch { /* keeps the drag going regardless */ }
 });
@@ -2508,6 +2761,7 @@ const MAX_ANGLE_LINES = 2; // comparison lines besides the reference - "a few", 
 function toggleAngleMode() {
   state.angleMode = !state.angleMode;
   if (state.angleMode && state.eyedropperMode) toggleEyedropper();
+  if (state.angleMode && state.constructMode !== 'off') exitConstructMode();
   el('btnAngle').setAttribute('aria-pressed', String(state.angleMode));
   if (!state.angleMode) clearAngleLine();
 }
@@ -2646,6 +2900,137 @@ el('stage').addEventListener('pointercancel', () => { angleDrag = null; renderAn
 el('btnAngle').addEventListener('click', toggleAngleMode);
 el('btnAngleClear').addEventListener('click', clearAngleLine);
 
+/* ------------------------------------------------------- construct guides
+   Three traditional construction aids sharing one overlay/select, since
+   only one is ever active at a time and none needs a HUD button of its own:
+
+   - Vanishing point: click (or drag, following the cursor live) drops a
+     point and fans guide lines out from it across the whole stage - the
+     classic perspective aid for a box, a room, or a foreshortened limb.
+   - Plumb line: click drops a full vertical+horizontal crosshair through
+     that point - the digital equivalent of holding a pencil straight up to
+     check whether one landmark is directly over another.
+   - Proportion divider: drag defines one unit (the same reference-length
+     idea the angle tool uses), then the tool marks off repeating multiples
+     of it along the same line automatically - "how many head-heights tall"
+     made persistent instead of eyeballed one tap at a time.
+
+   Mutually exclusive with the angle tool and the eyedropper (see the guards
+   added to toggleAngleMode()/toggleEyedropper() above and setConstructMode()
+   below) - all three want the same stage pointer gesture for different
+   things, so only one may own it at once. Like the angle tool, has no
+   persistent state across poses (clearConstruct() runs from show()) beyond
+   which MODE is selected, which stays selected. */
+function setConstructMode(mode) {
+  if (mode !== state.constructMode) {
+    // Turn the other two off directly rather than via their own toggle
+    // functions - those would call clearConstruct() right back, undoing
+    // the mode this function is in the middle of setting.
+    if (state.angleMode) { state.angleMode = false; el('btnAngle').setAttribute('aria-pressed', 'false'); clearAngleLine(); }
+    if (state.eyedropperMode) { state.eyedropperMode = false; el('btnEyedropper').setAttribute('aria-pressed', 'false'); }
+  }
+  state.constructMode = mode;
+  el('constructSelect').value = mode;
+  clearConstruct();
+}
+function clearConstruct() {
+  state.vp = state.plumb = state.divider = null;
+  renderConstructOverlay();
+}
+// Fully turns the guide off (mode + select, not just the drawn points) -
+// what toggleAngleMode()/toggleEyedropper() actually need when THEY are
+// turning on and a guide is active. clearConstruct() alone isn't enough
+// there: it deliberately leaves state.constructMode as-is (that's what
+// makes it safe for show() to call on every new pose without silently
+// switching your selected guide back to Off each time), so using it here
+// would clear the drawn guide but leave the select reading a guide that
+// is, from the user's perspective, still "on."
+function exitConstructMode() {
+  state.constructMode = 'off';
+  el('constructSelect').value = 'off';
+  clearConstruct();
+}
+function cycleConstruct() {
+  const order = ['off', 'vp', 'plumb', 'divider'];
+  setConstructMode(order[(order.indexOf(state.constructMode) + 1) % order.length]);
+}
+el('constructSelect').addEventListener('change', e => setConstructMode(e.target.value));
+
+// Same stage-relative coordinate space as angleLineAt() - see its own
+// comment. Rebuilds #constructOverlay from scratch on every call, the same
+// full-redraw approach renderAngleOverlay() uses.
+function renderConstructOverlay() {
+  const svg = el('constructOverlay');
+  const rect = el('stage').getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  let markup = '';
+
+  if (state.constructMode === 'vp' && state.vp) {
+    const { x, y } = state.vp;
+    // Half-turn's worth of angles is enough - a line through the point
+    // already covers both directions of its own angle, so 0..180 degrees
+    // (not 360) is the full set of distinct lines.
+    const RAYS = 16;
+    const diag = Math.hypot(w, h); // long enough that #constructOverlay's own edge, not the line length, decides where it ends
+    for (let i = 0; i < RAYS; i++) {
+      const a = (i / RAYS) * Math.PI;
+      const dx = Math.cos(a) * diag, dy = Math.sin(a) * diag;
+      markup += `<line x1="${x - dx}" y1="${y - dy}" x2="${x + dx}" y2="${y + dy}"/>`;
+    }
+    markup += `<circle cx="${x}" cy="${y}" r="5"/>`;
+  } else if (state.constructMode === 'plumb' && state.plumb) {
+    const { x, y } = state.plumb;
+    markup += `<line class="construct-guide" x1="${x}" y1="0" x2="${x}" y2="${h}"/>` +
+      `<line class="construct-guide" x1="0" y1="${y}" x2="${w}" y2="${y}"/>` +
+      `<circle cx="${x}" cy="${y}" r="5"/>`;
+  } else if (state.constructMode === 'divider' && state.divider) {
+    const { x1, y1, x2, y2 } = state.divider;
+    const unit = Math.hypot(x2 - x1, y2 - y1);
+    if (unit > 0) {
+      const nx = (x2 - x1) / unit, ny = (y2 - y1) / unit; // unit direction
+      const px = -ny, py = nx;                            // perpendicular, for tick marks
+      const TICK = 10;
+      // Stops at the first tick that lands off-stage (with a little slack)
+      // rather than a fixed count - a short unit near an edge should not
+      // draw ticks nobody will ever see, and a long one should not stop
+      // early just because some fixed cap said so.
+      for (let n = 1; n <= 20; n++) {
+        const tx = x1 + nx * unit * n, ty = y1 + ny * unit * n;
+        if (tx < -50 || tx > w + 50 || ty < -50 || ty > h + 50) break;
+        markup += `<line x1="${tx - px * TICK}" y1="${ty - py * TICK}" x2="${tx + px * TICK}" y2="${ty + py * TICK}"/>` +
+          `<text x="${tx + px * (TICK + 9)}" y="${ty + py * (TICK + 9)}" text-anchor="middle">${n}</text>`;
+      }
+      markup += `<line class="construct-guide" x1="${x1}" y1="${y1}" x2="${x1 + nx * unit * 20}" y2="${y1 + ny * unit * 20}"/>`;
+    }
+  }
+
+  svg.classList.toggle('hidden', markup === '');
+  svg.innerHTML = markup;
+}
+
+// Gates live-follow the same way angleDrag gates the angle tool's own drag -
+// without it, a bare pointermove (hovering, no button down) would keep
+// relocating the vanishing point/plumb line on every mouse twitch.
+let constructDrag = null;
+el('stage').addEventListener('pointerdown', e => {
+  if (state.constructMode === 'off') return;
+  const rect = el('stage').getBoundingClientRect();
+  constructDrag = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  try { el('stage').setPointerCapture(e.pointerId); } catch { /* keeps the drag going regardless */ }
+  if (state.constructMode === 'vp') { state.vp = constructDrag; renderConstructOverlay(); }
+  else if (state.constructMode === 'plumb') { state.plumb = constructDrag; renderConstructOverlay(); }
+});
+el('stage').addEventListener('pointermove', e => {
+  if (!constructDrag) return;
+  const rect = el('stage').getBoundingClientRect();
+  const pt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  if (state.constructMode === 'vp') { state.vp = pt; renderConstructOverlay(); }
+  else if (state.constructMode === 'plumb') { state.plumb = pt; renderConstructOverlay(); }
+  else if (state.constructMode === 'divider') { state.divider = { x1: constructDrag.x, y1: constructDrag.y, x2: pt.x, y2: pt.y }; renderConstructOverlay(); }
+});
+el('stage').addEventListener('pointerup', () => { constructDrag = null; });
+el('stage').addEventListener('pointercancel', () => { constructDrag = null; });
+
 /* -------------------------------------------------------------- eyedropper
    Click the reference to read the exact colour under the cursor - hex and
    brightness percent - rather than estimating it by eye. Samples from the
@@ -2656,6 +3041,7 @@ el('btnAngleClear').addEventListener('click', clearAngleLine);
 function toggleEyedropper() {
   state.eyedropperMode = !state.eyedropperMode;
   if (state.eyedropperMode && state.angleMode) toggleAngleMode();
+  if (state.eyedropperMode && state.constructMode !== 'off') exitConstructMode();
   el('btnEyedropper').setAttribute('aria-pressed', String(state.eyedropperMode));
 }
 
@@ -2781,11 +3167,20 @@ function refreshValueTools() {
   // which would almost never repeat across a photo and so would never
   // surface a genuine "dominant" colour at all.
   const colorCounts = new Map();
+  // Visual-weight centroid: a luminance-weighted average position, on the
+  // rough heuristic that the brightest region of a photo reference is
+  // usually also where the eye lands first - the same weighting the
+  // histogram/eyedropper already use, just summed against position too
+  // instead of only against a tone bucket.
+  let sumW = 0, sumX = 0, sumY = 0;
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
-    hist[Math.min(BUCKETS - 1, Math.floor((0.2126 * r + 0.7152 * g + 0.0722 * b) / 256 * BUCKETS))]++;
+    const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    hist[Math.min(BUCKETS - 1, Math.floor(luma / 256 * BUCKETS))]++;
     const key = (r >> 5) + '_' + (g >> 5) + '_' + (b >> 5);
     colorCounts.set(key, (colorCounts.get(key) || 0) + 1);
+    const px = (i / 4) % ANALYSIS_SIZE, py = Math.floor((i / 4) / ANALYSIS_SIZE);
+    sumW += luma; sumX += luma * px; sumY += luma * py;
   }
   const palette = [...colorCounts.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -2794,6 +3189,25 @@ function refreshValueTools() {
 
   drawHistogram(hist);
   drawPalette(palette);
+
+  state.focalFrac = sumW > 0 ? { x: sumX / sumW / ANALYSIS_SIZE, y: sumY / sumW / ANALYSIS_SIZE } : null;
+  el('focalMarker').classList.toggle('hidden', !el('optFocalPoint').checked || !state.focalFrac);
+  if (state.focalFrac) positionFocalMarker();
+}
+
+// Converts state.focalFrac (0..1 across the image) into a px position
+// against #img's OWN rendered box, not a raw % of #paneOrig - #img is
+// object-fit:contain, so a reference whose aspect ratio doesn't match the
+// pane letterboxes, and a plain percentage would land the marker in that
+// letterbox gutter instead of on the actual image content. Read fresh each
+// call rather than cached, since the pane's own size can change (a window
+// resize) between poses.
+function positionFocalMarker() {
+  const pane = el('paneOrig').getBoundingClientRect();
+  const img = el('img').getBoundingClientRect();
+  const marker = el('focalMarker');
+  marker.style.left = (img.left - pane.left + state.focalFrac.x * img.width) + 'px';
+  marker.style.top = (img.top - pane.top + state.focalFrac.y * img.height) + 'px';
 }
 
 function drawHistogram(hist) {
@@ -2867,11 +3281,13 @@ document.addEventListener('keydown', e => {
     case 'ArrowLeft':  stepHistory(-1); break;
     case 'f': case 'F': toggleFlip(); break;
     case 'g': case 'G': toggleGray(); break;
+    case 'q': case 'Q': toggleSquint(); break;
     case 'v': case 'V': cycleValueSteps(); break;
     case '+': case '=': zoomBy(1.25); break;
     case '-': case '_': zoomBy(1 / 1.25); break;
     case '0': resetZoom(); break;
     case 'a': case 'A': toggleAngleMode(); break;
+    case 'c': case 'C': cycleConstruct(); break;
     case 'e': case 'E': toggleEyedropper(); break;
     case 'i': case 'I': toggleValueTools(); break;
     case 'r': case 'R':
