@@ -10,6 +10,14 @@ external dependencies at runtime.
 This started as a role in a private homelab Ansible repo and was extracted
 here to stand on its own.
 
+**[Try it live](https://mpostument.github.io/refboard/)** - no install, no
+account, nothing uploaded anywhere. That page has no image library behind it
+(GitHub Pages is static hosting; there's nothing to run a background indexer),
+so it runs entirely off the drop-zone: drop one image to check its tonal
+value, or several to run a real timed session against them. Run it behind a
+container (below) for the full thing - your own library, tone filtering,
+near-duplicate detection.
+
 ## Quick start
 
 ```bash
@@ -90,7 +98,11 @@ Two, deliberately kept separate:
   live, from a HUD dropdown mid-session or a chip on the setup screen; shows
   the original and posterized copies side by side.
 - **Check your own image** - a drag-and-drop tool, entirely client-side and
-  independent of your library, for checking any image's value structure.
+  independent of your library. Drop one image to check its tonal value; drop
+  several and run a real timed session against them, no library required -
+  this is the whole of what runs on the [live demo](https://mpostument.github.io/refboard/),
+  and it works the same way behind a container as a bonus way to throw a
+  handful of extra references into an otherwise library-backed session.
 - Grid overlay, grayscale, random mirroring, session history/log, keyboard
   shortcuts, installable as a home-screen app, and a screen wake lock so a
   tablet propped up next to your paper doesn't sleep mid-pose.
@@ -104,6 +116,11 @@ changed images, write the manifest. No nginx, no separate cron daemon, no
 database - state that needs to persist is a couple of JSON files and a folder
 of resized copies, and everything else is `localStorage` in the browser.
 
+The frontend (`wwwroot/index.html`) itself doesn't assume a backend exists at
+all - `boot()` falls back to a "no library" mode (see its own comment) when
+`index.json` isn't there, which is what makes the same file work as a GitHub
+Pages demo with nothing behind it at all.
+
 ```
 src/Refboard/
   Program.cs              - HTTP setup: static files, health check, reindex trigger
@@ -114,6 +131,12 @@ src/Refboard/
     ReindexHostedService.cs - the background loop tying the two together
   wwwroot/
     index.html             - the entire frontend: one file, no build step, no JS framework
+docs/
+  index.html               - GitHub Pages source (Settings > Pages > main /docs).
+                              A manual copy of wwwroot/index.html, not a symlink or
+                              a build step - keep them identical by hand when either
+                              changes. (icon-refboard.svg and refboard.webmanifest
+                              are copied alongside it for the same reason.)
 ```
 
 ### A note on ImageSharp's license

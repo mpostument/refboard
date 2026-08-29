@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Reference Board">
+  <!-- Managed by Ansible (roles/nginx, files/app). One glyph on the page's own
+       accent, so the six installed icons are told apart by colour and letter
+       rather than by reading six labels on a home screen.
+       The safe area for a maskable icon is the middle 80%, which is why the
+       glyph sits well inside a full-bleed background. -->
+  <rect width="512" height="512" fill="#d8a24a"/>
+  <text x="256" y="256" fill="#17130a" font-family="ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif"
+        font-size="248" font-weight="700" text-anchor="middle" dominant-baseline="central">R</text>
+</svg>
