@@ -47,6 +47,19 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
 
+      # The Dockerfile's VERSION build-arg, stamped into the assembly so
+      # /healthz (and the page footer that reads it) report the version
+      # actually running - "0.0.0-dev" for anything that isn't a real vX.Y.Z
+      # tag push, matching the csproj's own local-build default.
+      - name: Compute version
+        id: ver
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == v* ]]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=0.0.0-dev" >> "$GITHUB_OUTPUT"
+          fi
+
       # PRs build (both arches, to catch a target-arch-only failure) but never
       # push - forking this repo should never be able to publish to your GHCR.
       - name: Build and push
@@ -57,5 +70,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: VERSION=${{ steps.ver.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

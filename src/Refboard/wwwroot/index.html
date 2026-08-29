@@ -328,6 +328,16 @@
       <span class="count" id="poolInfo"></span>
       <button id="copyLink" class="ghost" type="button" disabled>Copy link to this setup</button>
     </div>
+
+    <!-- APP_VERSION below is the source of truth on GitHub Pages, which has
+         no backend to ask - bump it there by hand on release (see the
+         project README). Everywhere else, updateFooterVersion() overwrites
+         it with whatever the running container's own /healthz reports, so a
+         container never shows a stale hand-typed number. -->
+    <footer style="margin-top:40px; padding-top:16px; border-top:1px solid var(--line); color:var(--dim); font-size:11px; text-align:center;">
+      <a href="https://github.com/mpostument/refboard" style="color:inherit">Refboard</a>
+      <span id="appVersion"></span>
+    </footer>
   </div>
 </div>
 
@@ -370,6 +380,14 @@
 
 <script>
 "use strict";
+
+// The footer's fallback, and the only version this page can show at all when
+// there is no backend to ask - i.e. on GitHub Pages. Bump this by hand on
+// release; see the README's Releasing section. Behind a container,
+// updateFooterVersion() below overwrites it with the real running version
+// from /healthz, so this constant drifting a little on Pages costs nothing
+// where it actually matters.
+const APP_VERSION = '0.1.0';
 
 const INDEX_URL = 'index.json';
 
@@ -648,7 +666,22 @@ const el = id => document.getElementById(id);
 
 /* ---------------------------------------------------------------- setup UI */
 
+/* Footer version. Starts from the hard-coded fallback (the only thing
+   GitHub Pages, with no backend at all, can ever show), then tries to
+   replace it with the real running container's own version. Fire-and-forget
+   - a slow or failed /healthz should never delay or block the rest of
+   boot(), it just leaves the fallback showing. */
+function updateFooterVersion() {
+  el('appVersion').textContent = 'v' + APP_VERSION;
+  fetch('healthz', { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => { if (data && data.version) el('appVersion').textContent = 'v' + data.version; })
+    .catch(() => { /* no backend, or it's down - the fallback already covers this */ });
+}
+
 async function boot() {
+  updateFooterVersion();
+
   // No library is a real, expected state here - not just "the fetch failed
   // once" - it's the whole of what this page is on GitHub Pages, which has
   // no server behind it to ever produce an index.json at all. So this is not

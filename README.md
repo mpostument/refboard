@@ -127,7 +127,7 @@ src/Refboard/
   RefboardOptions.cs       - environment-variable configuration
   Services/
     IndexBuilder.cs        - the cheap directory walk
-    FeatureBuilder.cs      - the expensive per-image pass (ImageSharp)
+    FeatureBuilder.cs      - the expensive per-image pass (Magick.NET)
     ReindexHostedService.cs - the background loop tying the two together
   wwwroot/
     index.html             - the entire frontend: one file, no build step, no JS framework
@@ -139,20 +139,23 @@ docs/
                               are copied alongside it for the same reason.)
 ```
 
-### A note on ImageSharp's license
+### On the imaging library
 
-The feature-building pass uses [SixLabors.ImageSharp](https://sixlabors.com/)
-for image decoding, resizing, and encoding, pinned to **2.1.x** on purpose.
-Starting with 3.0, ImageSharp ships under the Six Labors Split License -
-free for open-source/personal/small-business use, but it requires obtaining
-and embedding a license key (even the free one), which isn't something to
-bake into a public repo's build. 2.1.x is the last major version under the
-plain Apache 2.0 license: no key, no build-time license check, nothing to
-configure. The cost is one optimization - see the comment on
-`FeatureBuilder.MeasureAsync` - not a feature gap; everything the board uses
-(resize, JPEG/WebP encode, the perceptual hash, tone stats) works the same.
-If you want 3.x's decode-time downscaling and are fine with its license
-terms, that's a deliberate version bump for you to make, not a default.
+The feature-building pass uses [Magick.NET](https://github.com/dlemstra/Magick.NET)
+(the .NET wrapper around ImageMagick) for image decoding, resizing, and
+encoding - Apache 2.0, no license key, no revenue threshold. This project
+started on SixLabors.ImageSharp 2.1.x instead, for the same license reasons,
+but that version is now over a year old with no sign of another 2.x release
+(ImageSharp's own development has moved on to 3.x, which requires a Six
+Labors commercial/OSS license key to build - see the note in an earlier
+version of this README, or the git history, for why that wasn't used here).
+Building new image-processing code against an unmaintained major version
+isn't a great trade just to dodge a license file, so this switched to
+Magick.NET instead: still fully permissive, and actively maintained.
+
+Bonus: Magick.NET's read-time size hint (`MagickReadSettings.Width/Height`)
+gets back the decode-time downscale optimization ImageSharp 2.x couldn't do -
+see the comment on `FeatureBuilder.Measure`.
 
 ## Building from source
 
@@ -193,5 +196,5 @@ fresh, on purpose, for a tool this small.
 
 ## License
 
-[MIT](LICENSE) for this project's own code. See the note above on
-ImageSharp's separate license for the dependency it uses.
+[MIT](LICENSE) for this project's own code. See the note above on the
+imaging library's own (also permissive) license.

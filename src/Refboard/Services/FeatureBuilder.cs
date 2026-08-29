@@ -1,11 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using ImageMagick;
 using Refboard.Models;
 
 namespace Refboard.Services;
@@ -99,7 +94,7 @@ public static class FeatureBuilder
                 {
                     try
                     {
-                        using var disp = await Image.LoadAsync<Rgb24>(displayPath, ct);
+                        using var disp = new MagickImage(displayPath);
                         await SaveWebpAsync(disp, webpPath, opts.Quality, ct);
                         prev.WebpBytes = new FileInfo(webpPath).Length;
                         prev.DisplayWebp = opts.DisplayPrefix + digest + ".webp";
@@ -121,7 +116,7 @@ public static class FeatureBuilder
             MeasureResult rec;
             try
             {
-                rec = await MeasureAsync(path, displayPath, webpPath, opts.MaxPx, opts.Quality, ct);
+                rec = Measure(path, displayPath, webpPath, opts.MaxPx, opts.Quality);
             }
             catch (Exception ex)
             {
@@ -188,112 +183,127 @@ public static class FeatureBuilder
     /// One decode -> display copy (JPEG + WebP twin), tone stats, perceptual
     /// hash. Mirrors refboard-features.py's measure():
     ///
-    ///   - True original dimensions come from a header-only Identify, BEFORE
-    ///     the scaled decode below - matching Pillow's im.size captured before
-    ///     im.draft() rescales what the decoder actually produces.
-    ///   - Unlike Pillow's im.draft(), this decodes at full resolution before
-    ///     resizing down - ImageSharp's decode-time downscale hint
-    ///     (DecoderOptions.TargetSize) only exists from v3 onward, and v3+
-    ///     requires a Six Labors commercial license for anything outside
-    ///     open-source/personal/small-business use (see README). Staying on
-    ///     the last fully Apache-2.0 major version (2.x) avoids that
-    ///     dependency entirely, at the cost of this one optimization: a
-    ///     many-megapixel source is fully decoded before being shrunk, rather
-    ///     than decoded-small in the first place. Correct either way -
-    ///     slower per image - and exactly what FEATURES_BUDGET_SECS exists to
-    ///     bound.
+    ///   - True original dimensions come from MagickImageInfo, a header-only
+    ///     read - matching Pillow's im.size captured before im.draft()
+    ///     rescales what the decoder actually produces.
+    ///   - MagickReadSettings.Width/Height is ImageMagick's own "size hint"
+    ///     mechanism: for JPEG it drives libjpeg's shrink-on-load (scaled
+    ///     IDCT decode), the same trick im.draft() plays and for the same
+    ///     reason - a many-megapixel source should never be fully expanded
+    ///     just to be shrunk back down moments later. This is the
+    ///     optimization ImageSharp 2.x (kept for its plain Apache-2.0
+    ///     license - see README) cannot do; Magick.NET gets it back without
+    ///     reintroducing a licensing tradeoff, on top of being the actively
+    ///     maintained one of the two.
+    ///   - The subsequent Resize with Greater=true is still needed for an
+    ///     exact target size and real Lanczos filtering (the size hint only
+    ///     hits a handful of discrete ratios) - Greater=true is
+    ///     ImageMagick's own "shrink only, never enlarge" geometry flag, so
+    ///     it encodes the same never-upscale rule in one call rather than a
+    ///     hand-rolled scale computation.
+    ///   - Grayscale(Rec601Luma) explicitly matches Pillow's own
+    ///     .convert('L') formula (ITU-R 601-2), rather than trusting
+    ///     whatever a library's unspecified default grayscale conversion
+    ///     happens to be - the dhash/tone-stat thresholds this whole feature
+    ///     was calibrated against were measured against that exact formula.
     /// </summary>
-    private static async Task<MeasureResult> MeasureAsync(
-        string path, string displayPath, string webpPath, int maxPx, int quality, CancellationToken ct)
+    private static MeasureResult Measure(string path, string displayPath, string webpPath, int maxPx, int quality)
     {
-        var info = await Image.IdentifyAsync(path, ct);
-        int origW = info.Width, origH = info.Height;
+        var info = new MagickImageInfo(path);
+        int origW = (int)info.Width, origH = (int)info.Height;
 
-        using var disp = await Image.LoadAsync<Rgb24>(path, ct);
-
-        // Never upscale: some packs contain images already below the target.
-        var longEdge = Math.Max(disp.Width, disp.Height);
-        if (longEdge > maxPx)
+        using var disp = new MagickImage(path, new MagickReadSettings
         {
-            var scale = maxPx / (double)longEdge;
-            var newW = Math.Max(1, (int)Math.Round(disp.Width * scale));
-            var newH = Math.Max(1, (int)Math.Round(disp.Height * scale));
-            disp.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(newW, newH),
-                Sampler = KnownResamplers.Lanczos3,
-                Mode = ResizeMode.Stretch,
-            }));
-        }
+            Width = (uint)maxPx,
+            Height = (uint)maxPx,
+        });
+
+        disp.FilterType = FilterType.Lanczos;
+        disp.Resize(new MagickGeometry((uint)maxPx, (uint)maxPx) { Greater = true });
 
         Directory.CreateDirectory(Path.GetDirectoryName(displayPath)!);
         var jpegTmp = displayPath + ".tmp";
-        await disp.SaveAsync(jpegTmp, new JpegEncoder { Quality = quality }, ct);
+        disp.Quality = (uint)quality;
+        disp.Write(jpegTmp, MagickFormat.Jpeg);
         File.Move(jpegTmp, displayPath, overwrite: true);
 
         // The JPEG stays the fallback for whatever cannot decode WebP; this
         // must never be the encode that blocks the run. A codec problem here
         // costs the smaller copy, not the frame.
         long webpBytes = 0;
-        try { webpBytes = await SaveWebpAsync(disp, webpPath, quality, ct); }
+        try { webpBytes = SaveWebp(disp, webpPath, quality); }
         catch { /* logged by the caller via the returned 0 having no WebP file behind it */ }
 
         var dhash = ComputeDhash(disp);
         var (v, c) = ComputeToneStats(disp);
 
-        return new MeasureResult(dhash, v, c, origW, origH, disp.Width, disp.Height,
+        return new MeasureResult(dhash, v, c, origW, origH, (int)disp.Width, (int)disp.Height,
             new FileInfo(displayPath).Length, webpBytes);
     }
 
-    private static async Task<long> SaveWebpAsync(Image<Rgb24> disp, string webpPath, int quality, CancellationToken ct)
+    private static async Task<long> SaveWebpAsync(IMagickImage<byte> disp, string webpPath, int quality, CancellationToken ct)
     {
         var tmp = webpPath + ".tmp";
-        await disp.SaveAsync(tmp, new WebpEncoder { Quality = quality, FileFormat = WebpFileFormatType.Lossy }, ct);
+        disp.Quality = (uint)quality;
+        await disp.WriteAsync(tmp, MagickFormat.WebP, ct);
+        File.Move(tmp, webpPath, overwrite: true);
+        return new FileInfo(webpPath).Length;
+    }
+
+    private static long SaveWebp(IMagickImage<byte> disp, string webpPath, int quality)
+    {
+        var tmp = webpPath + ".tmp";
+        disp.Quality = (uint)quality;
+        disp.Write(tmp, MagickFormat.WebP);
         File.Move(tmp, webpPath, overwrite: true);
         return new FileInfo(webpPath).Length;
     }
 
     /// <summary>64-bit difference hash from a 9x8 grayscale image, as 16 hex
     /// chars - identical scheme to refboard-features.py's dhash().</summary>
-    private static string ComputeDhash(Image<Rgb24> disp)
+    private static string ComputeDhash(IMagickImage<byte> disp)
     {
-        using var gray = disp.CloneAs<L8>();
-        gray.Mutate(x => x.Resize(new ResizeOptions
-        {
-            Size = new Size(HashW, HashH), Sampler = KnownResamplers.Lanczos3, Mode = ResizeMode.Stretch,
-        }));
+        using var gray = disp.Clone();
+        gray.Grayscale(PixelIntensityMethod.Rec601Luma);
+        gray.FilterType = FilterType.Lanczos;
+        // IgnoreAspectRatio: an exact WxH stretch, matching Pillow's own
+        // .resize((w, h)) - unlike the display copy above, this has no
+        // "preserve aspect ratio, fit within bounds" requirement at all.
+        gray.Resize(new MagickGeometry((uint)HashW, (uint)HashH) { IgnoreAspectRatio = true });
 
+        using var pixels = gray.GetPixels();
         ulong bits = 0;
         for (var row = 0; row < HashH; row++)
             for (var col = 0; col < HashW - 1; col++)
-                bits = (bits << 1) | (gray[col, row].PackedValue > gray[col + 1, row].PackedValue ? 1UL : 0UL);
+            {
+                var a = pixels.GetPixel(col, row).GetChannel(0);
+                var b = pixels.GetPixel(col + 1, row).GetChannel(0);
+                bits = (bits << 1) | (a > b ? 1UL : 0UL);
+            }
         return bits.ToString("x16");
     }
 
     /// <summary>Mean lightness and contrast (stddev) at 32x32, normalised to
     /// 0-1 and rounded to 3 decimals - same resolution and rounding as
     /// refboard-features.py's ImageStat pass over disp.convert('L').</summary>
-    private static (double V, double C) ComputeToneStats(Image<Rgb24> disp)
+    private static (double V, double C) ComputeToneStats(IMagickImage<byte> disp)
     {
-        using var small = disp.CloneAs<L8>();
-        small.Mutate(x => x.Resize(new ResizeOptions
-        {
-            Size = new Size(FeatureSize, FeatureSize), Sampler = KnownResamplers.Lanczos3, Mode = ResizeMode.Stretch,
-        }));
+        using var small = disp.Clone();
+        small.Grayscale(PixelIntensityMethod.Rec601Luma);
+        small.FilterType = FilterType.Lanczos;
+        small.Resize(new MagickGeometry((uint)FeatureSize, (uint)FeatureSize) { IgnoreAspectRatio = true });
 
+        using var pixels = small.GetPixels();
         double sum = 0, sumSq = 0;
-        small.ProcessPixelRows(accessor =>
+        for (var y = 0; y < FeatureSize; y++)
         {
-            for (var y = 0; y < accessor.Height; y++)
+            for (var x = 0; x < FeatureSize; x++)
             {
-                foreach (var px in accessor.GetRowSpan(y))
-                {
-                    double val = px.PackedValue;
-                    sum += val;
-                    sumSq += val * val;
-                }
+                double val = pixels.GetPixel(x, y).GetChannel(0);
+                sum += val;
+                sumSq += val * val;
             }
-        });
+        }
 
         var n = (double)(FeatureSize * FeatureSize);
         var mean = sum / n;

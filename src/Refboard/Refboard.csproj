@@ -4,10 +4,21 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Overridden at image build time via `dotnet publish -p:Version=X.Y.Z`
+         (see the Dockerfile's VERSION build-arg and docker.yml, which derives
+         it from the git tag) so /healthz always reports the version actually
+         running, with no separate place to remember to bump. This default is
+         only what a plain local `dotnet build`/`dotnet run` sees. -->
+    <Version>0.0.0-dev</Version>
+    <!-- Otherwise the SDK appends "+<git-sha>" to InformationalVersion on its
+         own whenever the project sits in a git repo, so /healthz's "version"
+         (and the footer that reads it) would show a 40-character hash tacked
+         onto a clean "0.1.0" for no reason a viewer of the page would want. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.11" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.16.0" />
   </ItemGroup>
 
 </Project>

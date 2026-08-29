@@ -1,7 +1,16 @@
+using System.Reflection;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Refboard;
 using Refboard.Services;
+
+// InformationalVersion, not GetName().Version: the latter is AssemblyVersion,
+// a strictly-numeric 4-part number that silently drops a "-dev" suffix -
+// InformationalVersion is what -p:Version=X.Y.Z at publish time (see the
+// Dockerfile's VERSION build-arg) actually lands in, unmodified.
+var appVersion = Assembly.GetExecutingAssembly()
+    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+    ?? "0.0.0-dev";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,7 +56,7 @@ app.UseStaticFiles(new StaticFileOptions
     ServeUnknownFileTypes = true, // a stray extension in someone's pose pack should not 404
 });
 
-app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok", version = appVersion }));
 
 // Lets you skip the wait for the next scheduled tick right after dropping a
 // new pack in - see ReindexHostedService for what "requested" actually does.
