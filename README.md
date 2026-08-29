@@ -113,8 +113,11 @@ Two, deliberately kept separate:
   two points, the on-screen equivalent of holding a pencil up to measure a
   shoulder or hip line before committing to it on paper. The first drag also
   sets a reference length - every drag after it reads its own angle *and* its
-  length as a ratio of that reference (a head height, a hand span), until you
-  turn the tool off and back on.
+  length as a ratio of that reference (a head height, a hand span). A few
+  comparison lines stay on screen at once (oldest drops off past that), so
+  you can measure a shoulder line and a hip line and read both together
+  instead of one at a time - clear them, or turn the tool off and back on,
+  to start a fresh reference.
 - **Understand the pose, not just look at it** - a collapsible drawer next to
   the HUD (`Info`, or `i`) keeps three things current on every pose:
   - **Colour scheme for the tonal-value view** - grayscale, three duotones
@@ -127,7 +130,9 @@ Two, deliberately kept separate:
     current scheme, a brightness histogram, and the pose's top-5 dominant
     colours - read at a glance instead of guessed.
   - **Eyedropper** (`e`) - click anywhere on the reference to read the exact
-    hex colour and brightness percent under the cursor.
+    hex colour and brightness percent under the cursor; the last few samples
+    stay listed as swatches to click-to-copy, for comparing two spots (skin
+    vs. background) without re-aiming at either one again.
 - Grid overlay, grayscale, random mirroring, session history/log, keyboard
   shortcuts, installable as a home-screen app, and a screen wake lock so a
   tablet propped up next to your paper doesn't sleep mid-pose.

@@ -16,6 +16,17 @@ permissions:
   packages: write
 
 jobs:
+  # Fast, no-Docker static check - catches the exact CSS mistake fixed in
+  # v0.4.2 (a replaced element sized only via inset:0, silently collapsing to
+  # the browser's 300x150 default) before it ever reaches a build. Runs in
+  # parallel with `build` rather than gating it via `needs`, since it doesn't
+  # depend on anything the build job produces.
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: node scripts/check-replaced-element-sizing.js
+
   build:
     runs-on: ubuntu-latest
     steps:
