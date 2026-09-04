@@ -36,6 +36,14 @@ public sealed class RefboardOptions
     public double FeaturesBudgetSecs { get; set; }
 
     public int MaxPx { get; set; } = 1600;
+
+    /// <summary>Long edge of the grid thumbnails the library browser draws.
+    /// Separate from <see cref="MaxPx"/> because the two answer different
+    /// questions: a display copy is what you draw from, a thumbnail is one of
+    /// a few hundred on screen at once. Sending 1600px copies to fill a grid
+    /// is tens of megabytes for a view that renders each of them ~200px wide.</summary>
+    public int ThumbPx { get; set; } = 400;
+
     public int Quality { get; set; } = 85;
 
     /// <summary>Hamming distance at or below which two frames in the same group
@@ -72,6 +80,7 @@ public sealed class RefboardOptions
             FeaturesIntervalSecs = Int("FEATURES_INTERVAL_SECS", 1800),
             FeaturesBudgetSecs = Dbl("FEATURES_BUDGET_SECS", 0),
             MaxPx = Int("MAX_PX", 1600),
+            ThumbPx = Int("THUMB_PX", 400),
             Quality = Int("QUALITY", 85),
             DhashThreshold = Int("DHASH_THRESHOLD", 4),
         };

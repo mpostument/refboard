@@ -31,6 +31,17 @@ public sealed class FeatureRecord
 
     public string? Display { get; set; }
     public string? DisplayWebp { get; set; }
+
+    /// <summary>Bytes of the generated grid thumbnail, or 0 if the encode failed.
+    /// Null - never attempted - is what the backfill path in FeatureBuilder keys
+    /// off, the same missing-vs-zero distinction <see cref="WebpBytes"/> draws:
+    /// thumbnails arrived after display copies did, so an otherwise-cached record
+    /// written before them has no thumbnail and must get one without paying for a
+    /// full re-measure of the source.</summary>
+    public long? ThumbBytes { get; set; }
+
+    public string? Thumb { get; set; }
+    public string? ThumbWebp { get; set; }
     public string? DupGroup { get; set; }
 }
 
@@ -40,6 +51,7 @@ public sealed class FeaturesDocument
     public long Generated { get; set; }
     public string GeneratedIso { get; set; } = "";
     public int MaxPx { get; set; }
+    public int ThumbPx { get; set; }
     public int Threshold { get; set; }
     public int Featured { get; set; }
     public int Pending { get; set; }

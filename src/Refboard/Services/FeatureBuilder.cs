@@ -76,6 +76,12 @@ public static class FeatureBuilder
             var digest = Sha1Hex(rel);
             var displayPath = Path.Combine(opts.DisplayDir, digest + ".jpg");
             var webpPath = Path.Combine(opts.DisplayDir, digest + ".webp");
+            // "-t" rather than a thumbs/ subfolder of its own: the display
+            // folder is already keyed by content digest, and one flat folder
+            // keeps the single "/display/" static mapping in Program.cs
+            // covering thumbnails too, with no second prefix to serve.
+            var thumbPath = Path.Combine(opts.DisplayDir, digest + "-t.jpg");
+            var thumbWebpPath = Path.Combine(opts.DisplayDir, digest + "-t.webp");
             var mtime = new DateTimeOffset(fi.LastWriteTimeUtc).ToUnixTimeSeconds();
 
             var overBudget = opts.FeaturesBudgetSecs > 0
@@ -88,22 +94,54 @@ public static class FeatureBuilder
                 // at all (null, not 0) - re-measuring is wasted decode time when only
                 // the encode needs to run. Gated on the budget too, same reasoning
                 // as the fresh-measure path below.
-                var needsBackfill = prev.WebpBytes is null
+                var needsWebp = prev.WebpBytes is null
                     || (prev.WebpBytes > 0 && !File.Exists(webpPath));
+                // Same rule one level down for the grid thumbnail, and for the
+                // same reason: every record written before the library browser
+                // existed has none, and re-measuring the source to get one
+                // would throw away the whole point of the cache.
+                var needsThumb = prev.ThumbBytes is null
+                    || (prev.ThumbBytes > 0 && !File.Exists(thumbPath));
+                var needsBackfill = needsWebp || needsThumb;
                 if (needsBackfill && !overBudget)
                 {
+                    // One decode of the display copy covers both backfills -
+                    // it is already the resized image both of them derive
+                    // from, so re-opening it per missing artefact would double
+                    // the cost of the cheap path for no benefit.
                     try
                     {
                         using var disp = new MagickImage(displayPath);
-                        await SaveWebpAsync(disp, webpPath, opts.Quality, ct);
-                        prev.WebpBytes = new FileInfo(webpPath).Length;
-                        prev.DisplayWebp = opts.DisplayPrefix + digest + ".webp";
+                        if (needsWebp)
+                        {
+                            try
+                            {
+                                await SaveWebpAsync(disp, webpPath, opts.Quality, ct);
+                                prev.WebpBytes = new FileInfo(webpPath).Length;
+                                prev.DisplayWebp = opts.DisplayPrefix + digest + ".webp";
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.LogWarning("webp backfill failed for {Rel}: {Message}", rel, ex.Message);
+                                prev.WebpBytes = 0;
+                                prev.DisplayWebp = null;
+                            }
+                        }
+                        if (needsThumb)
+                        {
+                            var t = SaveThumb(disp, thumbPath, thumbWebpPath, opts.ThumbPx, opts.Quality);
+                            prev.ThumbBytes = t.JpegBytes;
+                            prev.Thumb = t.JpegBytes > 0 ? opts.DisplayPrefix + digest + "-t.jpg" : null;
+                            prev.ThumbWebp = t.WebpBytes > 0 ? opts.DisplayPrefix + digest + "-t.webp" : null;
+                        }
                     }
                     catch (Exception ex)
                     {
-                        logger.LogWarning("webp backfill failed for {Rel}: {Message}", rel, ex.Message);
-                        prev.WebpBytes = 0;
-                        prev.DisplayWebp = null;
+                        // The display copy itself would not open. Nothing to
+                        // backfill from; the board still has the full-size
+                        // copy's URL and falls back to it in the grid.
+                        logger.LogWarning("backfill failed for {Rel}: {Message}", rel, ex.Message);
+                        if (needsThumb) prev.ThumbBytes = 0;
                     }
                 }
                 else if (needsBackfill) skipped++;
@@ -116,7 +154,8 @@ public static class FeatureBuilder
             MeasureResult rec;
             try
             {
-                rec = Measure(path, displayPath, webpPath, opts.MaxPx, opts.Quality);
+                rec = Measure(path, displayPath, webpPath, thumbPath, thumbWebpPath,
+                    opts.MaxPx, opts.ThumbPx, opts.Quality);
             }
             catch (Exception ex)
             {
@@ -140,6 +179,9 @@ public static class FeatureBuilder
                 B = fi.Length,
                 Display = opts.DisplayPrefix + digest + ".jpg",
                 DisplayWebp = rec.WebpBytes > 0 ? opts.DisplayPrefix + digest + ".webp" : null,
+                ThumbBytes = rec.ThumbBytes,
+                Thumb = rec.ThumbBytes > 0 ? opts.DisplayPrefix + digest + "-t.jpg" : null,
+                ThumbWebp = rec.ThumbWebpBytes > 0 ? opts.DisplayPrefix + digest + "-t.webp" : null,
             };
             done++;
         }
@@ -159,6 +201,7 @@ public static class FeatureBuilder
             Generated = now.ToUnixTimeSeconds(),
             GeneratedIso = TimeFormat.Iso(now),
             MaxPx = opts.MaxPx,
+            ThumbPx = opts.ThumbPx,
             Threshold = opts.DhashThreshold,
             Featured = features.Count,
             Pending = allSrcs.Count - features.Count,
@@ -177,7 +220,10 @@ public static class FeatureBuilder
     }
 
     private sealed record MeasureResult(string Dhash, double V, double C,
-        int OrigW, int OrigH, int DispW, int DispH, long Dbytes, long WebpBytes);
+        int OrigW, int OrigH, int DispW, int DispH, long Dbytes, long WebpBytes,
+        long ThumbBytes, long ThumbWebpBytes);
+
+    private sealed record ThumbResult(long JpegBytes, long WebpBytes);
 
     /// <summary>
     /// One decode -> display copy (JPEG + WebP twin), tone stats, perceptual
@@ -207,7 +253,8 @@ public static class FeatureBuilder
     ///     happens to be - the dhash/tone-stat thresholds this whole feature
     ///     was calibrated against were measured against that exact formula.
     /// </summary>
-    private static MeasureResult Measure(string path, string displayPath, string webpPath, int maxPx, int quality)
+    private static MeasureResult Measure(string path, string displayPath, string webpPath,
+        string thumbPath, string thumbWebpPath, int maxPx, int thumbPx, int quality)
     {
         var info = new MagickImageInfo(path);
         int origW = (int)info.Width, origH = (int)info.Height;
@@ -234,11 +281,49 @@ public static class FeatureBuilder
         try { webpBytes = SaveWebp(disp, webpPath, quality); }
         catch { /* logged by the caller via the returned 0 having no WebP file behind it */ }
 
+        // Derived from the already-resized display copy rather than a second
+        // read of the source: this is a downscale of a downscale, which for a
+        // 400px thumbnail is visually indistinguishable from going back to the
+        // original and costs one clone instead of one more full decode.
+        // Non-fatal on the same grounds as the WebP twin - a grid that falls
+        // back to the display copy is slower, not broken.
+        var thumb = new ThumbResult(0, 0);
+        try { thumb = SaveThumb(disp, thumbPath, thumbWebpPath, thumbPx, quality); }
+        catch { /* no thumbnail: the grid falls back to the display copy */ }
+
         var dhash = ComputeDhash(disp);
         var (v, c) = ComputeToneStats(disp);
 
         return new MeasureResult(dhash, v, c, origW, origH, (int)disp.Width, (int)disp.Height,
-            new FileInfo(displayPath).Length, webpBytes);
+            new FileInfo(displayPath).Length, webpBytes, thumb.JpegBytes, thumb.WebpBytes);
+    }
+
+    /// <summary>Grid thumbnail, JPEG plus a WebP twin, from an already-resized
+    /// display copy. Greater=true again - a source smaller than thumbPx is
+    /// already its own thumbnail and re-encoding it larger would only cost
+    /// bytes.</summary>
+    private static ThumbResult SaveThumb(IMagickImage<byte> disp, string thumbPath,
+        string thumbWebpPath, int thumbPx, int quality)
+    {
+        using var thumb = disp.Clone();
+        thumb.FilterType = FilterType.Lanczos;
+        thumb.Resize(new MagickGeometry((uint)thumbPx, (uint)thumbPx) { Greater = true });
+        // The grid draws these at a few hundred pixels wide; colour-managed
+        // profiles and EXIF payloads can easily outweigh the pixels at this
+        // size, and nothing downstream reads either from a thumbnail.
+        thumb.Strip();
+
+        Directory.CreateDirectory(Path.GetDirectoryName(thumbPath)!);
+        var jpegTmp = thumbPath + ".tmp";
+        thumb.Quality = (uint)quality;
+        thumb.Write(jpegTmp, MagickFormat.Jpeg);
+        File.Move(jpegTmp, thumbPath, overwrite: true);
+
+        long webpBytes = 0;
+        try { webpBytes = SaveWebp(thumb, thumbWebpPath, quality); }
+        catch { /* the JPEG thumbnail stays the fallback, exactly as above */ }
+
+        return new ThumbResult(new FileInfo(thumbPath).Length, webpBytes);
     }
 
     private static async Task<long> SaveWebpAsync(IMagickImage<byte> disp, string webpPath, int quality, CancellationToken ct)

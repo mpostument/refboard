@@ -76,28 +76,177 @@
   button, select, input { font: inherit; color: inherit; }
   .hidden { display: none !important; }
 
-  /* ---------- setup ---------- */
-  #setup { height: 100%; overflow-y: auto; padding: 32px 24px 64px; }
-  .wrap { max-width: 860px; margin: 0 auto; }
-  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; letter-spacing: .01em; }
-  .sub { color: var(--dim); font-size: 13px; margin-bottom: 28px; }
-  section { margin-bottom: 28px; }
+  /* ---------- setup: the app shell ----------
+     Three columns, in the order the work actually happens: the library on the
+     left, whatever you are looking at in the middle, what you are about to do
+     with it on the right. This replaced a single centred column of form
+     sections, which was fine when the only answer to "what is in this pack?"
+     was "start a session and find out" - the middle column is the whole point
+     of the change, and the other two are what stops it from pushing the
+     session controls off the page.
+
+     Only #setup is themed. #session below stays black in both themes - see
+     its own comment for why a drawing surface cannot be a light one. */
+  #setup { height: 100%; display: flex; overflow: hidden; }
+
+  /* ---- left rail: the library ---- */
+  #sidebar {
+    width: 268px; flex: none; min-height: 0;
+    display: flex; flex-direction: column;
+    background: var(--panel); border-right: 1px solid var(--line);
+  }
+  /* Collapsed keeps the rail itself - a 46px strip holding the expand button -
+     rather than removing it: a sidebar that vanishes entirely leaves no
+     obvious way back, and an icons-only rail would need an icon per pack,
+     which a folder tree of arbitrary names cannot have. */
+  #sidebar.collapsed { width: 46px; }
+  #sidebar.collapsed .collapsible { display: none; }
+  .side-head { display: flex; align-items: center; gap: 6px; padding: 13px 10px 10px; }
+  .brand {
+    flex: 1; min-width: 0; font-weight: 600; font-size: 14px; letter-spacing: .02em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .icon-btn {
+    background: none; border: 0; color: var(--dim); cursor: pointer;
+    padding: 5px 7px; border-radius: 6px; line-height: 1; font-size: 13px;
+  }
+  .icon-btn:hover { color: var(--ink); background: var(--bg); }
+  .side-nav { display: grid; gap: 2px; padding: 0 8px 10px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+    background: none; border: 1px solid transparent; border-radius: 7px;
+    padding: 8px 10px; color: var(--ink); cursor: pointer; font-size: 13.5px;
+  }
+  .nav-item:hover { background: var(--bg); }
+  .nav-item[aria-current="true"] { background: var(--bg); border-color: var(--line-hi); }
+  .nav-item .ico { width: 15px; flex: none; text-align: center; color: var(--dim); }
+  .side-section {
+    flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 8px 8px;
+  }
+  .side-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--dim); font-weight: 600;
+    padding: 11px 6px 9px; margin-top: 2px; border-top: 1px solid var(--line);
+  }
+
+  /* ---- middle: what you are looking at ---- */
+  #main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+  #mainHead { padding: 16px 22px 14px; border-bottom: 1px solid var(--line); }
+  #mainBody { flex: 1; overflow-y: auto; padding: 18px 22px 64px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: .01em; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 20px; }
+  section { margin-bottom: 26px; }
+  .searchbar { display: flex; gap: 8px; margin-top: 13px; }
+  .searchbar input[type=search] { flex: 1; }
+
+  /* ---- right: what you are about to do with it ---- */
+  #inspector {
+    width: 302px; flex: none; overflow-y: auto;
+    background: var(--panel); border-left: 1px solid var(--line);
+    padding: 14px 16px 48px;
+  }
+  #inspector section { margin-bottom: 20px; }
+  #inspector .chip { padding: 6px 12px; font-size: 13px; }
+
+  /* Below this width three columns stop fitting, so the two side panels
+     become drawers over the grid instead of squeezing it - the middle column
+     is the one that has to stay usable. .narrow-only holds the buttons that
+     open them, which are meaningless while all three are on screen. */
+  .narrow-only { display: none; }
+  @media (max-width: 1100px) {
+    .narrow-only { display: inline-flex; }
+    #sidebar, #inspector {
+      position: fixed; top: 0; bottom: 0; z-index: 30;
+      transition: transform .18s ease; box-shadow: 0 0 40px rgba(0,0,0,.45);
+    }
+    #sidebar { left: 0; width: min(300px, 86vw); transform: translateX(-100%); }
+    #inspector { right: 0; width: min(340px, 88vw); transform: translateX(100%); }
+    #sidebar.open, #inspector.open { transform: none; }
+    /* The desktop collapse button is meaningless for a drawer that is either
+       open or absent, so a collapsed rail reopens at full width here. */
+    #sidebar.collapsed { width: min(300px, 86vw); }
+    #sidebar.collapsed .collapsible { display: revert; }
+  }
+
+  /* ---- the image grid ----
+     Square cells on a fixed track, not a masonry or aspect-preserving layout:
+     scanning a pack for "which pose do I want" is a comparison across many
+     thumbnails at once, and a ragged grid makes the eye do layout work
+     instead. object-fit:cover crops rather than letterboxes for the same
+     reason - even tiles read as one field, and the full framing is one click
+     away in the viewer. */
+  #thumbGrid { display: grid; gap: 4px; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); }
+  .cell {
+    position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 3px;
+    background: var(--panel); border: 0; padding: 0; cursor: pointer;
+    color: inherit; font: inherit;
+  }
+  .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cell:hover, .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .cell-meta {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 24px 8px 7px; text-align: left; line-height: 1.35;
+    background: linear-gradient(transparent, rgba(0,0,0,.88));
+    color: #fff; font-size: 11px; opacity: 0; transition: opacity .12s linear;
+    pointer-events: none;
+  }
+  .cell:hover .cell-meta, .cell:focus-visible .cell-meta { opacity: 1; }
+  .cell-meta .cell-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cell-meta .cell-tag {
+    display: inline-block; margin: 3px 3px 0 0; padding: 1px 5px; border-radius: 3px;
+    background: rgba(255,255,255,.16); font-size: 10px;
+  }
+  /* Dimmed rather than removed: a skipped pose still has to be findable to be
+     un-skipped, which is the whole reason the grid shows them at all. */
+  .cell.skipped img { opacity: .18; filter: grayscale(1); }
+  .cell-skip {
+    position: absolute; top: 5px; right: 5px; z-index: 1;
+    background: rgba(0,0,0,.62); border: 1px solid rgba(255,255,255,.22);
+    color: #fff; border-radius: 6px; padding: 2px 6px; font-size: 11px;
+    cursor: pointer; opacity: 0; transition: opacity .12s linear;
+  }
+  .cell:hover .cell-skip, .cell:focus-within .cell-skip, .cell.skipped .cell-skip { opacity: 1; }
+  .cell-skip:hover { background: #000; }
+  .empty { color: var(--dim); font-size: 13px; padding: 40px 0; text-align: center; }
   h2 {
     font-size: 11px; text-transform: uppercase; letter-spacing: .09em;
     color: var(--dim); font-weight: 600; margin: 0 0 10px;
     border-bottom: 1px solid var(--line); padding-bottom: 7px;
   }
-  .packs { display: grid; gap: 6px; }
-  .pack {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 7px;
-    padding: 10px 13px;
+  /* The pack list is a folder tree in the rail now, not a list of cards in a
+     form. Two independent hit targets per row, which is the whole reason the
+     rows stopped being <label>s: the checkbox picks what a session draws
+     from, the name opens that folder in the grid, and neither should do the
+     other's job. */
+  .packs {
+    flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 1px;
+    align-content: start; padding-bottom: 8px;
   }
-  .row { display: flex; align-items: center; gap: 10px; }
+  .pack { display: grid; gap: 1px; }
+  .row { display: flex; align-items: center; gap: 9px; }
   .row + .row { margin-top: 7px; }
+  .packs .row { margin-top: 0; padding: 6px 7px; border-radius: 7px; font-size: 13.5px; }
+  .packs .row:hover { background: var(--bg); }
+  .packs .row.current { background: var(--bg); box-shadow: inset 2px 0 0 var(--accent); }
   .grow { flex: 1; min-width: 0; }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* A button, so the folder name is reachable by keyboard and reads as the
+     link it is - stripped back to plain text, since a tree of underlined
+     blue links would be unreadable at this density. */
+  button.name {
+    background: none; border: 0; padding: 0; margin: 0; text-align: left;
+    color: inherit; font: inherit; cursor: pointer;
+  }
+  button.name:hover { color: var(--accent); }
   .count { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
   .sub-group { padding-left: 26px; font-size: 13px; color: var(--dim); }
+  .packs .sub-group { padding-left: 22px; }
+  .caret {
+    width: 14px; flex: none; color: var(--dim); font-size: 10px; cursor: pointer;
+    background: none; border: 0; padding: 0; line-height: 1;
+  }
+  .pack.closed .sub-group { display: none; }
   .badge {
     font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
     color: var(--accent); border: 1px solid var(--accent-dim);
@@ -153,6 +302,11 @@
     --on-accent: #17130a; --bad: #e0705f;
   }
   #session { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; }
+  /* Browse mode - the stage opened on a grid cell instead of a session. The
+     three controls that only mean something while a clock is running go
+     away; everything else in the HUD (zoom, angle, guides, tonal value,
+     skip) means exactly the same thing here. */
+  #session.browse #bar, #session.browse #clock, #session.browse #btnPause { display: none; }
   /* Always flex, even when only #paneOrig is visible: one flex:1 child fills
      100% on its own, so showing #paneValue for a tonal-value session is just
      removing .hidden from it - no separate "split" mode class needed. */
@@ -207,7 +361,7 @@
      misplaced to notice at a glance, and #angleOverlay clipping every drawn
      line the instant a drag crossed outside that corner - which, for a
      drag across the actual reference, is virtually always. */
-  #grid { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .3; }
+  #grid, #gridValue { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .3; }
   #angleOverlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #angleOverlay line { stroke: var(--accent); stroke-width: 2; }
   #angleOverlay circle { fill: var(--accent); }
@@ -234,7 +388,8 @@
     filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
   }
   #session.high-contrast #angleOverlay line { stroke-width: 2.5px; }
-  #session.high-contrast #grid {
+  #session.high-contrast #grid,
+  #session.high-contrast #gridValue {
     opacity: .8;
     filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
   }
@@ -410,68 +565,154 @@
 </head>
 <body>
 <div id="setup">
-  <div class="wrap">
-    <div class="row" style="margin-bottom:4px">
-      <h1 class="grow" style="margin:0">Reference Board</h1>
-      <button id="btnHelpSetup" class="ghost" type="button" title="What every feature does and how to use it (?)">? Help</button>
+  <!-- ------------------------------------------------- left rail: library -->
+  <aside id="sidebar">
+    <div class="side-head">
+      <span class="brand collapsible">Reference Board</span>
+      <button id="btnCollapse" class="icon-btn" type="button"
+              title="Collapse the library rail" aria-label="Collapse the library rail">&laquo;</button>
     </div>
-    <div class="row" style="margin-bottom:28px">
-      <div class="sub grow" id="summary" style="margin-bottom:0">loading index…</div>
-      <!-- Hidden until boot() confirms a backend exists at all - meaningless
-           on GitHub Pages, which has none to ask. The index pass this kicks
-           off is cheap (a directory walk, no decoding) and runs within
-           seconds; the request itself only ever needs to succeed or fail,
-           never wait for that to finish. -->
-      <button id="btnRescan" class="ghost hidden" type="button" title="Ask the container to reindex now instead of waiting for its next scheduled pass">Rescan library</button>
-    </div>
-    <div class="sub" id="sessionLog"></div>
+    <nav class="side-nav collapsible">
+      <!-- data-view is read by setView() - these three are the whole of the
+           middle column's modes, and the fourth is a dialog, not a view. -->
+      <button class="nav-item" type="button" data-view="dashboard"><span class="ico">&#9635;</span> Dashboard</button>
+      <button class="nav-item" type="button" data-view="all"><span class="ico">&#9638;</span> All images</button>
+      <button class="nav-item" type="button" data-view="drop"><span class="ico">+</span> Check your own image</button>
+      <button class="nav-item" type="button" id="btnHelpSetup"
+              title="What every feature does and how to use it (?)"><span class="ico">?</span> Help</button>
+    </nav>
 
-    <!-- First on the page, not last: checking a photo's tonal value is a
-         thirty-second thing someone reaches for before they have touched the
-         pack list below, or without ever touching it at all. Independent of
-         everything below - not from the pack library, no pool, no session.
-         Local to this browser only - createObjectURL, never uploaded anywhere
-         - so it works exactly as well offline as it does served from the
-         container, and exactly as well with no server behind it at all (see
-         boot()'s "no library" path) - this is the whole board on GitHub
-         Pages, where there never is one.
-
-         Both a single drop and several route through the exact same
-         full-screen stage a pack-based session uses (see startSession()'s
-         adHoc branch) rather than a small inline preview of their own - a
-         thumbnail a few hundred pixels wide defeats the point of checking a
-         reference at all, and the stage already has the split view, the
-         tonal-value control, zoom and the angle tool built in. One dropped
-         file starts immediately, paused, with no timer running - "look at
-         this," not a timed drill; several show a count and a button, since
-         committing to an actual timed session is worth the extra click. -->
-    <section>
-      <h2>Check your own image</h2>
-      <div id="dropZone" tabindex="0" role="button"
-           style="border:1px dashed var(--line); border-radius:8px; padding:20px; text-align:center; color:var(--dim); font-size:13px; cursor:pointer;">
-        Drop one image to view it full-screen with the tonal-value tools, or several to draw a timed session from them.
+    <div class="side-section collapsible" id="packsSection">
+      <div class="side-title">
+        <span class="grow">Your library</span>
+        <!-- Act on whatever the filter box below is currently SHOWING, not on
+             the whole library: typing "hands" and pressing All plainly means
+             "all the hands packs", and a button that quietly ticked thirty
+             hidden packs as well would be the one thing here you cannot see
+             happen. With an empty filter the two are the same thing. -->
+        <button id="btnPacksAll" class="ghost" type="button"
+                style="padding:2px 7px;font-size:11px"
+                title="Select every pack the filter is showing">All</button>
+        <button id="btnPacksNone" class="ghost" type="button"
+                style="padding:2px 7px;font-size:11px"
+                title="Deselect every pack the filter is showing">None</button>
+        <!-- Hidden until boot() confirms a backend exists at all - meaningless
+             on GitHub Pages, which has none to ask. The index pass this kicks
+             off is cheap (a directory walk, no decoding) and runs within
+             seconds; the request itself only ever needs to succeed or fail,
+             never wait for that to finish. -->
+        <button id="btnRescan" class="ghost hidden" type="button"
+                style="padding:2px 8px;font-size:11px"
+                title="Ask the container to reindex now instead of waiting for its next scheduled pass">Rescan</button>
       </div>
-      <input type="file" id="dropInput" accept="image/*" multiple class="hidden">
-      <!-- Uses the Interval/Session/Options sections below exactly as they
-           are - a dropped-file session is not a different kind of session,
-           just one whose pool came from the browser instead of the pack
-           library. -->
-      <div id="dropSessionInfo" class="row hidden" style="margin-top:12px">
-        <span class="count" id="dropSessionCount"></span>
-        <button id="startDropped" class="ghost" type="button" style="margin-left:auto">Start session with these</button>
-      </div>
-    </section>
-
-    <section id="packsSection">
-      <h2>Packs</h2>
       <!-- Filters which pack boxes are VISIBLE only - never touches a
            checkbox's checked state, so narrowing the list to find one pack
            and then widening it again never silently drops a selection made
            while it was hidden. See applyPackFilter(). -->
-      <input type="search" id="packFilter" placeholder="Filter packs by name...">
-      <div class="count" id="packFilterCount" style="margin:6px 0 0"></div>
-      <div class="packs" id="packs" style="margin-top:10px"></div>
-    </section>
+      <input type="search" id="packFilter" placeholder="Filter packs...">
+      <div class="count" id="packFilterCount" style="margin:6px 2px 0"></div>
+      <div class="packs" id="packs" style="margin-top:8px"></div>
+    </div>
+  </aside>
+
+  <!-- ------------------------------------- middle: what you are looking at -->
+  <main id="main">
+    <header id="mainHead">
+      <div class="row">
+        <button class="ghost narrow-only" type="button" id="btnOpenLibrary"
+                title="Show the library">&#9776; Library</button>
+        <h1 class="grow" id="viewTitle">Dashboard</h1>
+        <button class="ghost narrow-only" type="button" id="btnOpenSession"
+                title="Show the session controls">Session</button>
+      </div>
+      <div class="count" id="viewMeta" style="margin-top:6px"></div>
+      <!-- Browse-only: a search box over a dashboard would have nothing to
+           search. setView() shows and hides it with the grid it belongs to. -->
+      <div class="searchbar hidden" id="searchbar">
+        <input type="search" id="imgFilter" placeholder="Search images by file, folder or pack name...">
+        <button class="ghost" type="button" id="btnBrowseDraw"
+                title="Start a timed session from exactly what this grid is showing">Draw these</button>
+      </div>
+    </header>
+
+    <div id="mainBody">
+      <!-- The dashboard is what the old single-column setup screen was, minus
+           everything that moved into the rail and the inspector: what the
+           library holds, what you have drawn, and the one tool that needs no
+           library at all. -->
+      <div id="viewDashboard">
+        <div class="sub" id="summary">loading index...</div>
+        <div class="sub" id="sessionLog"></div>
+
+        <!-- Independent of everything else here - not from the pack library,
+             no pool, no session. Local to this browser only -
+             createObjectURL, never uploaded anywhere - so it works exactly as
+             well offline as it does served from the container, and exactly as
+             well with no server behind it at all (see boot()'s "no library"
+             path) - this is the whole board on GitHub Pages, where there
+             never is one.
+
+             Both a single drop and several route through the exact same
+             full-screen stage a pack-based session uses (see startSession()'s
+             adHoc branch) rather than a small inline preview of their own - a
+             thumbnail a few hundred pixels wide defeats the point of checking
+             a reference at all, and the stage already has the split view, the
+             tonal-value control, zoom and the angle tool built in. One
+             dropped file starts immediately, paused, with no timer running -
+             "look at this," not a timed drill; several show a count and a
+             button, since committing to an actual timed session is worth the
+             extra click. -->
+        <section id="dropSection">
+          <h2>Check your own image</h2>
+          <div id="dropZone" tabindex="0" role="button"
+               style="border:1px dashed var(--line); border-radius:8px; padding:26px; text-align:center; color:var(--dim); font-size:13px; cursor:pointer;">
+            Drop one image to view it full-screen with the tonal-value tools, or several to draw a timed session from them.
+          </div>
+          <input type="file" id="dropInput" accept="image/*" multiple class="hidden">
+          <!-- Uses the Interval/Schedule/Options sections in the inspector
+               exactly as they are - a dropped-file session is not a different
+               kind of session, just one whose pool came from the browser
+               instead of the pack library. -->
+          <div id="dropSessionInfo" class="row hidden" style="margin-top:12px">
+            <span class="count" id="dropSessionCount"></span>
+            <button id="startDropped" class="ghost" type="button" style="margin-left:auto">Start session with these</button>
+          </div>
+        </section>
+
+        <!-- APP_VERSION below is the source of truth on GitHub Pages, which has
+             no backend to ask - bump it there by hand on release (see the
+             project README). Everywhere else, updateFooterVersion() overwrites
+             it with whatever the running container's own /healthz reports, so a
+             container never shows a stale hand-typed number. -->
+        <footer style="margin-top:40px; padding-top:16px; border-top:1px solid var(--line); color:var(--dim); font-size:11px;">
+          <a href="https://github.com/mpostument/refboard" style="color:inherit">Refboard</a>
+          <span id="appVersion"></span>
+        </footer>
+      </div>
+
+      <!-- Rendered a page at a time by renderGrid() - a pack of several
+           thousand images would otherwise put several thousand <img> elements
+           on the page at once, which no amount of loading="lazy" makes free. -->
+      <div id="viewBrowse" class="hidden">
+        <div id="thumbGrid"></div>
+        <div class="row" id="gridMoreRow" style="margin-top:14px; justify-content:center">
+          <button class="ghost hidden" type="button" id="btnGridMore">Show more</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ------------------------------ right: what you do with what you picked -->
+  <aside id="inspector">
+    <div class="row" style="margin-bottom:14px">
+      <span class="grow" style="font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--dim); font-weight:600">Session</span>
+      <button class="icon-btn narrow-only" type="button" id="btnCloseSession" title="Close">&times;</button>
+    </div>
+
+    <!-- The pool count leads: every control below it changes this number, and
+         it is the one thing worth reading before committing to Start. -->
+    <div style="font-size:26px; font-weight:600; line-height:1.1" id="poolCount">0</div>
+    <div class="count" id="poolInfo" style="margin:4px 0 20px">select at least one pack</div>
 
     <section>
       <h2>Interval</h2>
@@ -479,12 +720,11 @@
       <div class="row" style="margin-top:10px">
         <label class="opt" for="customSecs">Custom</label>
         <input type="number" id="customSecs" min="5" max="3600" step="5" placeholder="secs">
-        <span class="count">seconds per pose</span>
       </div>
     </section>
 
     <section>
-      <h2>Session</h2>
+      <h2>Schedule</h2>
       <div class="chips" id="schedules"></div>
       <div class="count" id="scheduleHint" style="margin-top:9px"></div>
       <!-- Hidden unless the Custom chip is selected - see renderSchedules().
@@ -508,7 +748,7 @@
 
     <section>
       <h2>Options</h2>
-      <div class="opts">
+      <div class="opts" style="flex-direction:column; gap:9px">
         <label class="opt"><input type="checkbox" id="optGray"> Grayscale</label>
         <label class="opt"><input type="checkbox" id="optFlipRandom"> Randomly mirror</label>
         <label class="opt"><input type="checkbox" id="optGrid"> Grid overlay</label>
@@ -539,29 +779,18 @@
            is active - it would still change nothing, since the SVG filter
            below already forces its own grayscale, and a control that
            silently does nothing is worse than one visibly turned off. -->
-      <div class="row" style="margin-top:14px; flex-wrap:wrap">
+      <div style="margin-top:14px">
         <span style="font-size:13px">Tonal value</span>
-        <div class="chips" id="valueSteps"></div>
+        <div class="chips" id="valueSteps" style="margin-top:7px"></div>
       </div>
       <div class="count" id="valueStepsHint" style="margin-top:9px"></div>
     </section>
 
-    <div class="startbar" id="startbar">
+    <div class="startbar" id="startbar" style="flex-direction:column; align-items:stretch; gap:8px">
       <button id="start" disabled>Start drawing</button>
-      <span class="count" id="poolInfo"></span>
       <button id="copyLink" class="ghost" type="button" disabled>Copy link to this setup</button>
     </div>
-
-    <!-- APP_VERSION below is the source of truth on GitHub Pages, which has
-         no backend to ask - bump it there by hand on release (see the
-         project README). Everywhere else, updateFooterVersion() overwrites
-         it with whatever the running container's own /healthz reports, so a
-         container never shows a stale hand-typed number. -->
-    <footer style="margin-top:40px; padding-top:16px; border-top:1px solid var(--line); color:var(--dim); font-size:11px; text-align:center;">
-      <a href="https://github.com/mpostument/refboard" style="color:inherit">Refboard</a>
-      <span id="appVersion"></span>
-    </footer>
-  </div>
+  </aside>
 </div>
 
 <!-- Value-study filters (buildValueFilters() below). Not visually rendered -
@@ -591,7 +820,21 @@
          is simpler to reason about as two transforms than as one string
          rebuilt from both every time either changes. -->
     <div class="pane" id="paneOrig">
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"></div>
+      <!-- The grid lives INSIDE .zoomwrap, next to the image it divides, and
+           positionGrid() sizes it to that image's own rendered box. Two things
+           were wrong with it on #stage: in a tonal-value split it stretched
+           across BOTH panes, so a rule-of-thirds grid drew its lines at each
+           image's two-sixths and four-sixths; and even on one pane it fitted
+           the PANE, while the image inside it is letterboxed to its own aspect
+           ratio - so the lines missed the image's thirds by however much
+           gutter there was, and part of the grid sat on black.
+
+           Inside .zoomwrap it also inherits the zoom/pan transform for free,
+           which is what you want here and specifically NOT what you want for
+           #angleOverlay or #constructOverlay: a measured angle is about the
+           pose as currently framed on screen, while a composition grid is a
+           statement about the image itself. -->
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><svg id="grid" class="hidden" preserveAspectRatio="none"></svg></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -604,8 +847,9 @@
          SAME underlying file as #img (show() sets both src attributes
          together), so nothing extra is fetched: the filter is the only
          difference between the two panes. -->
-    <div class="pane hidden" id="paneValue"><div class="zoomwrap" id="zoomValue"><img id="imgValue" alt="" draggable="false"></div></div>
-    <svg id="grid" class="hidden" preserveAspectRatio="none"></svg>
+    <div class="pane hidden" id="paneValue">
+      <div class="zoomwrap" id="zoomValue"><img id="imgValue" alt="" draggable="false"><svg id="gridValue" class="hidden" preserveAspectRatio="none"></svg></div>
+    </div>
     <!-- The angle tool's drawn line(s) - see renderAngleOverlay(). Zoom
          and pan apply to the images; this deliberately does not follow them
          (no transform of its own) - a measurement is about the pose as
@@ -679,10 +923,29 @@
     </div>
 
     <section>
+      <h2>Browsing your library</h2>
+      <p>The rail on the left is your library. Clicking a pack or a folder
+        <b>name</b> opens it as a grid in the middle; clicking its
+        <b>checkbox</b> includes it in the pool a timed session draws from.
+        They are separate on purpose - browsing a pack to decide whether you
+        want it is how you end up ticking it.</p>
+      <p>In the grid, the search box matches file, folder and pack names.
+        Clicking any thumbnail opens it full-screen in the same viewer a
+        session uses - zoom, the angle tool, construction guides, the
+        tonal-value split, the eyedropper, all of it - with <b>← →</b>
+        walking that folder in order and no clock running. <b>Esc</b> returns
+        to the grid. <b>Draw these</b> above the grid starts a real timed
+        session from exactly what is on screen, search filter included.</p>
+      <p><b>Skip</b> in a thumbnail's corner (or <b>S</b> in the viewer)
+        marks a pose never to draw again. Skipped images stay in the grid,
+        dimmed, so you can undo it.</p>
+    </section>
+
+    <section>
       <h2>Timed sessions</h2>
-      <p>Pick one or more packs (or "All" / a random pool - the filter box
-        above the list narrows it by name for a large library, without
-        changing which packs are already ticked), an interval -
+      <p>Tick one or more packs in the rail (the filter box above the list
+        narrows it by name for a large library, without changing which packs
+        are already ticked), then set up the right-hand panel: an interval -
         a preset, a custom number of seconds, or a structured
         warm-up/quick/long-study schedule (or build your own under
         <b>Custom</b>: any number of steps, each its own seconds-per-pose and
@@ -841,7 +1104,7 @@
 // updateFooterVersion() below overwrites it with the real running version
 // from /healthz, so this constant drifting a little on Pages costs nothing
 // where it actually matters.
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.7.0';
 
 const INDEX_URL = 'index.json';
 
@@ -851,7 +1114,16 @@ const INDEX_URL = 'index.json';
 const FEATURES_URL = 'features.json';
 const STORE_KEY = 'refboard.settings.v1';
 
-const PRESETS = [30, 60, 120, 300, 600];
+/* 0 is "no timer": a session that runs on Next instead of a clock. Not the
+   same thing as pausing (which stops a session you meant to be timed) and not
+   the same thing as the browse viewer (which walks a folder in order) - this
+   is a real random draw from the pool with no time pressure on any one pose,
+   which is how a long study or a colour study is actually worked.
+
+   Zero rather than null/Infinity because it flows through every existing
+   consumer unchanged: currentInterval() returns it, resetClock() stores it,
+   and paint()/onTick() each need one falsy check to mean "no clock". */
+const PRESETS = [0, 30, 60, 120, 300, 600];
 
 // Standard figure-drawing class shapes. "endless" is the default because a pose
 // pack is not a class - most sessions are one interval until you stop.
@@ -1089,6 +1361,10 @@ const state = {
   ghostSrc: null,             // previous pose's src, for #ghostImg - see show()
   focalFrac: null,            // {x,y} 0..1 - see refreshValueTools(), positionFocalMarker()
   hudIdleTimer: null,
+  // Browse mode - the stage opened on a grid cell rather than on a session.
+  // Sequential instead of shuffled, no clock, no schedule, not logged. See
+  // openViewer() and browseStep().
+  browse: false,
   // Set at startSession(), read and cleared at stopSession() - see logSession.
   startedAt: null, startPacks: [],
 };
@@ -1209,6 +1485,12 @@ async function boot() {
   } catch {
     el('packsSection').classList.add('hidden');
     el('startbar').classList.add('hidden');
+    // Nothing to browse and no pool to start one from, so the whole middle
+    // column collapses to the dashboard and its drop zone - which is exactly
+    // what this page is on GitHub Pages.
+    document.querySelector('.nav-item[data-view="all"]').classList.add('hidden');
+    el('inspector').querySelector('#poolCount').classList.add('hidden');
+    el('poolInfo').textContent = '';
   }
 
   // Optional, and deliberately not fatal. A features run that has not happened,
@@ -1271,6 +1553,12 @@ async function boot() {
   renderValueSteps(saved);
   initDropZone();
   initEyedropper();
+  initShell();
+  // Last, so the tree it highlights and the grid it may draw both exist. The
+  // dashboard is the landing view either way: with no library there is
+  // nothing else to show, and with one, "what did I draw last, and what is
+  // in here" is the question you arrive with.
+  setView({ kind: 'dashboard' });
   el('valueSelect').addEventListener('change', e => {
     selectValueSteps(Number(e.target.value));
     applyOptions();
@@ -1734,13 +2022,24 @@ function renderPacks(saved) {
     // twice would be noise, so only multi-group packs get the nested rows.
     const flat = pack.groups.length === 1;
 
-    const head = document.createElement('label');
+    // Two hit targets, not one, which is why this stopped being a <label>:
+    // the checkbox picks what a session draws from, the name opens the pack
+    // in the grid, and clicking one must never do the other's job. A flat
+    // pack has no folders to expand, so it gets a spacer rather than a caret
+    // that would toggle nothing.
+    const head = document.createElement('div');
     head.className = 'row';
     head.innerHTML =
-      `<input type="checkbox" class="packToggle">` +
-      `<span class="grow name">${esc(pack.name)}</span>` +
+      (flat ? `<span class="caret" aria-hidden="true"></span>`
+            : `<button type="button" class="caret" title="Show or hide this pack's folders" aria-label="Show or hide this pack's folders">&#9656;</button>`) +
+      `<input type="checkbox" class="packToggle" title="Include this pack in the session pool">` +
+      `<button type="button" class="grow name" data-pack="${esc(pack.name)}">${esc(pack.name)}</button>` +
       `<span class="count">${pack.count.toLocaleString()}</span>`;
     box.appendChild(head);
+    // Folders start collapsed: a library of thirty packs with a dozen folders
+    // each is a scroll of several hundred rows before you have chosen
+    // anything. markCurrentInTree() opens whichever one you are looking at.
+    if (!flat) box.classList.add('closed');
 
     const kids = [];
     for (const g of pack.groups) {
@@ -1753,11 +2052,11 @@ function renderPacks(saved) {
         box.appendChild(cb);
         kids.push(cb);
       } else {
-        const row = document.createElement('label');
+        const row = document.createElement('div');
         row.className = 'row sub-group';
         row.innerHTML =
           `<input type="checkbox" class="grp" value="${esc(key)}" ${on ? 'checked' : ''}>` +
-          `<span class="grow name">${esc(g.name)}</span>` +
+          `<button type="button" class="grow name" data-pack="${esc(pack.name)}" data-group="${esc(g.name)}">${esc(g.name)}</button>` +
           (g.rotation ? `<span class="badge" title="One pose from many angles - drawn as a single pose">rotation</span>` : '') +
           `<span class="count">${g.images.length.toLocaleString()}</span>`;
         box.appendChild(row);
@@ -1782,6 +2081,7 @@ function renderPacks(saved) {
   }
   updateCopyLink();
   applyPackFilter(); // re-apply whatever was already typed - renderPacks() re-runs on Rescan too
+  markCurrentInTree(); // ...and re-mark the open folder, for the same reason
 }
 
 // Filters which .pack boxes are VISIBLE only - never touches a checkbox's
@@ -1804,6 +2104,413 @@ function applyPackFilter() {
   el('packFilterCount').textContent = q ? `${shown.toLocaleString()} of ${total.toLocaleString()} packs` : '';
 }
 el('packFilter').addEventListener('input', applyPackFilter);
+
+/* ------------------------------------------------------- library browser
+   The middle column. Everything here answers one question the board could
+   not answer before: "what is actually in this pack?" - which previously
+   could only be found out by starting a session against it and watching what
+   came up.
+
+   Nothing here builds a second image pipeline. A grid cell is a thumbnail URL
+   plus an index into gridItems; opening one hands that same list to
+   startSession() in browse mode, so the viewer is the identical stage a timed
+   session uses, with the identical zoom/angle/tonal-value tools - the only
+   difference is which frame comes next and whether a clock is running. */
+
+// Which folder the middle column is showing.
+//   'dashboard' - summary, log and the drop zone; no grid
+//   'drop'      - the same page, scrolled to and focused on the drop zone
+//   'all'       - every image the index knows about
+//   'pack'      - one pack, all of its folders
+//   'group'     - one folder inside one pack
+let view = { kind: 'dashboard', pack: null, group: null };
+
+let gridItems = [];   // what the current view resolves to, after the search box
+let viewTotal = 0;    // ...and before it, so the meta line can say "N of M"
+let gridShown = 0;    // how many of gridItems are actually in the DOM
+
+/* One page of cells at a time. A pack of several thousand images is a normal
+   size for a reference library, and putting that many <img> elements on the
+   page at once costs real layout and memory time up front no matter how lazy
+   their loading is - loading="lazy" defers the fetch, not the element. */
+const GRID_PAGE = 120;
+
+/* Ordered, best first, exactly like displayCandidates() one size up: the
+   generated thumbnail, then whatever the stage itself would load. The
+   fallback matters - a library whose feature pass has not reached these
+   images yet still browses, just at full display-copy weight, and one served
+   with no features.json at all (or with a features.json written before
+   thumbnails existed) browses off the originals. */
+function thumbCandidates(src) {
+  const f = FEATURES && FEATURES.images[src];
+  const out = [];
+  if (f) {
+    if (supportsWebp && f.thumbWebp) out.push(f.thumbWebp);
+    if (f.thumb) out.push(f.thumb);
+  }
+  return out.concat(displayCandidates(src));
+}
+
+/* The file's own name, which is what a pose pack's numbering lives in
+   ("Pose_014.jpg"). decodeURIComponent because src is a URL path - a folder
+   with a space in it arrives here as %20 and would otherwise be searched and
+   displayed that way. */
+function baseName(src) {
+  const last = src.split('/').pop() || src;
+  try { return decodeURIComponent(last); } catch { return last; }
+}
+
+/* Every image the current view covers, in index order. Deliberately not
+   filtered by the pack checkboxes: those choose what a SESSION draws from,
+   and browsing a pack you have not ticked - to decide whether to tick it - is
+   the normal way to arrive at one. */
+function viewImages() {
+  if (!INDEX || view.kind === 'dashboard' || view.kind === 'drop') return [];
+  const out = [];
+  for (const pack of INDEX.packs) {
+    if (view.kind !== 'all' && pack.name !== view.pack) continue;
+    for (const g of pack.groups) {
+      if (view.kind === 'group' && g.name !== view.group) continue;
+      for (const img of g.images) {
+        out.push({
+          src: img.src, pack: pack.name, group: g.name,
+          rotation: !!g.rotation, name: baseName(img.src),
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/* Matches the file name, its folder and its pack, not just the file name: in
+   a flat "all images" view the folder is the only thing that distinguishes
+   two identically-numbered poses from different packs, and it is what you
+   actually remember about them. */
+function filterImages(list) {
+  const q = el('imgFilter').value.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(i =>
+    i.name.toLowerCase().includes(q) ||
+    i.group.toLowerCase().includes(q) ||
+    i.pack.toLowerCase().includes(q));
+}
+
+/* The order the grid draws its images in.
+ *
+ * The index hands them over already naturally sorted (Pose2 before Pose10)
+ * within each folder, and folder by folder within a pack - which is the order
+ * they were named in, and in a numbered pose pack that numbering usually
+ * means something. So "leave it alone" is the default.
+ *
+ * Other orders are defensible and this is the one place to put them: brightest
+ * to darkest (FEATURES.images[src].v) turns a pack into a value ramp, and
+ * shuffling makes browsing itself a random draw. See the note in the README.
+ */
+function gridSort(list) {
+  return list;
+}
+
+function refreshGrid() {
+  const all = viewImages();
+  viewTotal = all.length;
+  gridItems = gridSort(filterImages(all));
+  gridShown = 0;
+  el('thumbGrid').innerHTML = '';
+  renderGridPage();
+  updateViewMeta();
+}
+
+function renderGridPage() {
+  const host = el('thumbGrid');
+  const more = el('btnGridMore');
+  if (!gridItems.length) {
+    host.innerHTML = `<div class="empty">${
+      viewTotal ? 'Nothing in this folder matches that search.' : 'No images here yet.'
+    }</div>`;
+    more.classList.add('hidden');
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  const end = Math.min(gridItems.length, gridShown + GRID_PAGE);
+  for (let i = gridShown; i < end; i++) frag.appendChild(gridCell(gridItems[i], i));
+  host.appendChild(frag);
+  gridShown = end;
+  const left = gridItems.length - gridShown;
+  more.classList.toggle('hidden', left <= 0);
+  more.textContent = `Show more (${left.toLocaleString()} left)`;
+}
+
+/* A div with role=button rather than a real <button>: the skip toggle sits
+   inside the cell and is itself a button, and a button inside a button is
+   invalid markup that browsers resolve by dropping one of them. */
+function gridCell(item, i) {
+  const cell = document.createElement('div');
+  cell.className = 'cell' + (isSkipped(item.src) ? ' skipped' : '');
+  cell.dataset.i = i;
+  cell.tabIndex = 0;
+  cell.setAttribute('role', 'button');
+  cell.title = item.name;
+
+  const img = document.createElement('img');
+  img.alt = '';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  const chain = thumbCandidates(item.src);
+  let stage = 0;
+  img.onerror = () => { if (++stage < chain.length) img.src = chain[stage]; };
+  img.src = chain[0];
+  cell.appendChild(img);
+
+  const skip = document.createElement('button');
+  skip.type = 'button';
+  skip.className = 'cell-skip';
+  skip.textContent = isSkipped(item.src) ? 'Unskip' : 'Skip';
+  skip.title = 'Never draw this pose in a session (it stays here so you can undo it)';
+  cell.appendChild(skip);
+
+  const meta = document.createElement('span');
+  meta.className = 'cell-meta';
+  meta.innerHTML =
+    `<span class="cell-name">${esc(item.name)}</span>` +
+    (view.kind === 'group' ? '' : `<span class="cell-tag">${esc(item.group)}</span>`) +
+    (item.rotation ? '<span class="cell-tag">rotation</span>' : '');
+  cell.appendChild(meta);
+
+  return cell;
+}
+
+/* Toggled in place rather than by re-rendering the grid: a re-render resets
+   the pagination, and un-skipping something 400 cells down should not throw
+   away the 400 cells you scrolled past to reach it. */
+function toggleCellSkip(i, cell) {
+  const item = gridItems[i];
+  if (!item) return;
+  const now = !isSkipped(item.src);
+  setSkipped(item.src, now);  // persists on its own - see setSkipped()
+  cell.classList.toggle('skipped', now);
+  cell.querySelector('.cell-skip').textContent = now ? 'Unskip' : 'Skip';
+  renderSkipInfo();
+  refreshPool();
+  updateViewMeta();
+}
+
+/* The grid's own skip marks after a session that skipped things from inside
+   the stage - same in-place update, same reason. */
+function syncGridSkips() {
+  for (const cell of document.querySelectorAll('#thumbGrid .cell')) {
+    const item = gridItems[Number(cell.dataset.i)];
+    if (!item) continue;
+    const on = isSkipped(item.src);
+    cell.classList.toggle('skipped', on);
+    cell.querySelector('.cell-skip').textContent = on ? 'Unskip' : 'Skip';
+  }
+  updateViewMeta();
+}
+
+function updateViewMeta() {
+  const m = el('viewMeta');
+  if (view.kind === 'dashboard') { m.textContent = ''; return; }
+  if (view.kind === 'drop') {
+    m.textContent = 'Stays in this browser - nothing is uploaded anywhere.';
+    return;
+  }
+  const parts = [gridItems.length === viewTotal
+    ? `${viewTotal.toLocaleString()} image${viewTotal === 1 ? '' : 's'}`
+    : `${gridItems.length.toLocaleString()} of ${viewTotal.toLocaleString()} images`];
+  if (view.kind === 'group') parts.push(view.pack);
+  const sk = gridItems.reduce((n, i) => n + (isSkipped(i.src) ? 1 : 0), 0);
+  if (sk) parts.push(`${sk.toLocaleString()} skipped`);
+  m.textContent = parts.join('  ·  ');
+  el('btnBrowseDraw').disabled = !gridItems.length;
+}
+
+function viewTitle() {
+  switch (view.kind) {
+    case 'all':   return 'All images';
+    case 'pack':  return view.pack;
+    case 'group': return view.group;
+    case 'drop':  return 'Check your own image';
+    default:      return 'Dashboard';
+  }
+}
+
+function setView(next) {
+  view = { kind: next.kind, pack: next.pack || null, group: next.group || null };
+  const browsing = view.kind === 'all' || view.kind === 'pack' || view.kind === 'group';
+
+  el('viewBrowse').classList.toggle('hidden', !browsing);
+  el('viewDashboard').classList.toggle('hidden', browsing);
+  el('searchbar').classList.toggle('hidden', !browsing);
+  el('viewTitle').textContent = viewTitle();
+
+  for (const b of document.querySelectorAll('.nav-item[data-view]')) {
+    b.setAttribute('aria-current', String(b.dataset.view === view.kind));
+  }
+  markCurrentInTree();
+
+  if (browsing) refreshGrid(); else updateViewMeta();
+  el('mainBody').scrollTop = 0;
+
+  // The drop zone is on the dashboard page rather than a view of its own -
+  // it is three lines of UI, and a whole screen for it would be mostly empty.
+  // The nav item scrolls to it and focuses it instead, which is the whole of
+  // what a separate screen would have achieved.
+  if (view.kind === 'drop') {
+    const zone = el('dropZone');
+    zone.scrollIntoView({ block: 'center' });
+    zone.focus();
+  }
+  closeDrawers();
+}
+
+/* Highlights whichever tree row the middle column is showing, and opens the
+   pack it lives in - a highlighted row inside a collapsed pack is invisible,
+   which is the one state that would make the highlight worse than nothing. */
+function markCurrentInTree() {
+  for (const box of document.querySelectorAll('#packs .pack')) {
+    let inPack = false;
+    for (const row of box.querySelectorAll('.row')) {
+      const btn = row.querySelector('button.name');
+      const on = !!btn && btn.dataset.pack === view.pack &&
+        (view.kind === 'group' ? btn.dataset.group === view.group : !btn.dataset.group);
+      row.classList.toggle('current', on);
+      if (on) inPack = true;
+    }
+    if (inPack && view.kind === 'group') box.classList.remove('closed');
+  }
+}
+
+/* Ticks or clears every group checkbox in the packs the filter is currently
+   showing - see the comment on the buttons themselves for why it is scoped to
+   the visible ones. Drives the boxes directly rather than firing a change
+   event per checkbox: the per-checkbox handler saves and rebuilds the pool
+   each time it runs, which for a library of a few thousand groups is a few
+   thousand pool rebuilds for one click. The three things that handler does
+   are done once, at the end, instead. */
+function setAllPacks(on) {
+  const boxes = [...document.querySelectorAll('#packs .pack')]
+    .filter(b => !b.classList.contains('hidden'));
+  for (const box of boxes) {
+    for (const cb of box.querySelectorAll('.grp')) cb.checked = on;
+    const head = box.querySelector('.packToggle');
+    if (head) { head.checked = on; head.indeterminate = false; }
+  }
+  refreshPool();
+  saveSettings();
+  updateCopyLink();
+}
+
+/* -------------------------------------------------------------- the shell */
+
+function closeDrawers() {
+  el('sidebar').classList.remove('open');
+  el('inspector').classList.remove('open');
+}
+
+function initShell() {
+  for (const b of document.querySelectorAll('.nav-item[data-view]')) {
+    b.addEventListener('click', () => setView({ kind: b.dataset.view }));
+  }
+
+  el('btnCollapse').addEventListener('click', () => {
+    const side = el('sidebar');
+    const collapsed = side.classList.toggle('collapsed');
+    el('btnCollapse').innerHTML = collapsed ? '&raquo;' : '&laquo;';
+    el('btnCollapse').title = collapsed ? 'Show the library rail' : 'Collapse the library rail';
+  });
+
+  el('btnOpenLibrary').addEventListener('click', () => {
+    el('inspector').classList.remove('open');
+    el('sidebar').classList.toggle('open');
+  });
+  el('btnOpenSession').addEventListener('click', () => {
+    el('sidebar').classList.remove('open');
+    el('inspector').classList.toggle('open');
+  });
+  el('btnCloseSession').addEventListener('click', closeDrawers);
+
+  // Delegated: the tree is rebuilt from scratch on every Rescan, and
+  // per-row listeners would have to be rebound with it every time.
+  el('packs').addEventListener('click', e => {
+    const caret = e.target.closest('.caret');
+    if (caret) {
+      const box = caret.closest('.pack');
+      const closed = box.classList.toggle('closed');
+      caret.innerHTML = closed ? '&#9656;' : '&#9662;';
+      return;
+    }
+    const name = e.target.closest('button.name');
+    if (!name) return;
+    setView(name.dataset.group
+      ? { kind: 'group', pack: name.dataset.pack, group: name.dataset.group }
+      : { kind: 'pack', pack: name.dataset.pack });
+  });
+
+  el('thumbGrid').addEventListener('click', e => {
+    const cell = e.target.closest('.cell');
+    if (!cell) return;
+    const i = Number(cell.dataset.i);
+    if (e.target.closest('.cell-skip')) { toggleCellSkip(i, cell); return; }
+    openViewer(i);
+  });
+  // role=button carries no implicit keyboard activation of its own.
+  el('thumbGrid').addEventListener('keydown', e => {
+    const cell = e.target.closest('.cell');
+    if (!cell || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    openViewer(Number(cell.dataset.i));
+  });
+
+  el('btnPacksAll').addEventListener('click', () => setAllPacks(true));
+  el('btnPacksNone').addEventListener('click', () => setAllPacks(false));
+
+  el('btnGridMore').addEventListener('click', renderGridPage);
+  el('imgFilter').addEventListener('input', refreshGrid);
+  el('btnBrowseDraw').addEventListener('click', () => {
+    if (gridItems.length) startSession(gridItems.map(browseUnit));
+  });
+}
+
+/* One image per unit, in grid order. A rotation folder is deliberately NOT
+   collapsed to one frame here the way buildPool() collapses it for a timed
+   session: browsing a turnaround is exactly when you want to see all of its
+   angles, which is the opposite of what the session wants from it. */
+function browseUnit(item) {
+  return { frames: [item.src], pack: item.pack, group: item.group };
+}
+
+/* Opens the full stage on one grid cell - same viewer, same tools, no clock.
+   The whole visible grid goes in, so Prev/Next walks the folder you were
+   looking at rather than one image in isolation. */
+function openViewer(i) {
+  if (!gridItems.length) return;
+  startSession(gridItems.map(browseUnit), { browse: true, startAt: i });
+}
+
+/* Sequential, wrapping, and no timer - the two ways browse mode differs from
+   a session at all. Everything else about the frame (zoom reset, angle lines,
+   ghost, value tools) is show()'s job and is identical either way. */
+function browseStep(delta) {
+  const n = state.pool.length;
+  if (!n) return;
+  state.cursor = ((state.cursor + delta) % n + n) % n;
+  browseShow();
+}
+
+function browseShow() {
+  const n = state.pool.length;
+  const unit = state.pool[state.cursor];
+  if (!unit) return;
+  const src = unit.frames[0];
+  state.history = [src];
+  state.histPos = 0;
+  show(src);
+  // Warms the frame Next would land on. One ahead only, same as
+  // preloadNext() - browsing is a slower loop than a 30-second timer, so
+  // reading further ahead would mostly fetch images nobody looks at.
+  const next = state.pool[(state.cursor + 1) % n];
+  if (next) new Image().src = displayCandidates(next.frames[0])[0];
+}
 
 /* The pack hash claims exactly one pack (see applyPackHash), so the link this
    button builds only makes sense under the same constraint - one distinct
@@ -1895,11 +2602,16 @@ function applyPackHash(saved) {
 function renderIntervals(saved) {
   const host = el('intervals');
   host.innerHTML = '';
-  state.secs = saved.interval || 30;
+  // ?? not ||: 0 is a real, selectable interval now (no timer), and || would
+  // silently rewrite it to 30 on every load.
+  state.secs = saved.interval ?? 30;
 
   for (const s of PRESETS) {
     const b = document.createElement('button');
-    b.className = 'chip'; b.type = 'button'; b.textContent = fmt(s);
+    b.className = 'chip'; b.type = 'button';
+    b.textContent = s ? fmt(s) : 'No timer';
+    if (!s) b.title = 'Draw at your own pace - a random pose from the pool, ' +
+      'and nothing changes it until you press Next.';
     b.setAttribute('aria-pressed', String(s === state.secs));
     b.addEventListener('click', () => {
       state.secs = s; el('customSecs').value = '';
@@ -2068,6 +2780,9 @@ function buildPool(ignoreFilters) {
 function refreshPool() {
   const pool = buildPool();
   el('start').disabled = pool.length === 0;
+  // The big number at the top of the inspector - the same figure poolInfo
+  // spells out below it, kept readable from across the room.
+  el('poolCount').textContent = pool.length.toLocaleString();
 
   // When a filter is on, show what it costs. This is the whole reason the dedup
   // option is safe to offer despite its measured unreliability: the number of
@@ -2178,15 +2893,26 @@ function toggleSimilar() {
    (see initDropZone()) rather than the checked packs - Array.isArray() tells
    the two apart because the no-argument call from the "Start drawing" button
    below passes nothing, not because a falsy pool means anything on its own. */
-function startSession(pool) {
+/* opts.browse opens the stage as a VIEWER over an ordered list instead of a
+   timed session over a shuffled one: same stage, same tools, sequential
+   frames, no clock and nothing logged. Everything below that is shared is
+   shared on purpose - a browse viewer that reimplemented zoom, the angle
+   tool or the tonal-value split would be a second copy of the hard part. */
+function startSession(pool, opts = {}) {
   const adHoc = Array.isArray(pool);
   state.pool = adHoc ? pool : buildPool();
   if (!state.pool.length) return;
+  state.browse = !!opts.browse;
 
-  state.order = shuffle([...Array(state.pool.length).keys()]);
+  state.order = state.browse
+    ? [...Array(state.pool.length).keys()]
+    : shuffle([...Array(state.pool.length).keys()]);
   state.cursor = 0; state.history = []; state.histPos = -1; state.drawn = 0;
   state.errors = 0; state.current = null;
-  state.startedAt = Math.floor(Date.now() / 1000);
+  // Browsing is not drawing. Left null, stopSession() logs nothing - a
+  // "session" of forty poses that were flicked past in the grid viewer would
+  // make the practice log lie about what was actually drawn.
+  state.startedAt = state.browse ? null : Math.floor(Date.now() / 1000);
   // Logged alongside packs so a session record could rebuild
   // #pack=<name>&secs=<n> exactly, the same link applyPackHash() already
   // knows how to read. Kept for copyLink and any future consumer. There is
@@ -2201,12 +2927,18 @@ function startSession(pool) {
   // whether the library behind this page does.
   el('btnSimilar').classList.toggle('hidden', !FEATURES || adHoc);
 
+  // No schedule in browse mode: a schedule ends the session after N poses,
+  // and "you have looked at twelve images, that is enough" is not a thing a
+  // folder viewer gets to decide.
   const key = document.querySelector('#schedules .chip[aria-pressed="true"]')?.dataset.key || 'endless';
-  state.schedule = SCHEDULES[key].steps;
+  state.schedule = state.browse ? null : SCHEDULES[key].steps;
   state.step = 0; state.doneInStep = 0;
 
   el('setup').classList.add('hidden');
   el('session').classList.remove('hidden');
+  // Hides the timer bar, the clock and Pause - see #session.browse in the
+  // stylesheet. Everything else in the HUD means the same thing either way.
+  el('session').classList.toggle('browse', state.browse);
   applyOptions();
 
   if (el('optFull').checked && document.documentElement.requestFullscreen) {
@@ -2214,6 +2946,16 @@ function startSession(pool) {
   }
   requestWakeLock();
   armHudIdle();
+
+  if (state.browse) {
+    // No interval timer at all, rather than one started and immediately
+    // paused: nothing in browse mode can un-pause it, so a live tick would
+    // only be a way for the clock to start running by accident.
+    state.cursor = Math.min(Math.max(opts.startAt | 0, 0), state.pool.length - 1);
+    state.paused = true;
+    browseShow();
+    return;
+  }
 
   advance(true);
   state.tick = setInterval(onTick, 250);
@@ -2234,6 +2976,11 @@ function stopSession() {
   // must not keep showing the count from before it started.
   renderSkipInfo();
   refreshPool();
+  // ...and neither must the grid, which is very likely the thing this
+  // returned to and is showing those exact images.
+  state.browse = false;
+  el('session').classList.remove('browse');
+  syncGridSkips();
 }
 
 /* ------------------------------------------------------------- HUD auto-hide
@@ -2382,7 +3129,14 @@ function show(src) {
   // the CSS filter differs - so it needs no onload/onerror of its own: by
   // the time #img's onload fires the identical URL is already resolved (and
   // very likely browser-cached from preloadNext() besides).
-  img.onload = () => { img.style.opacity = '1'; imgValue.style.opacity = '1'; state.errors = 0; refreshValueTools(); };
+  img.onload = () => {
+    img.style.opacity = '1'; imgValue.style.opacity = '1';
+    state.errors = 0;
+    // A new pose is a new box - a portrait after a landscape changes the
+    // rendered size of both panes' images, and with it where the grid goes.
+    positionGrid();
+    refreshValueTools();
+  };
   img.onerror = () => {
     // A display copy can be absent - or the WebP twin specifically can be,
     // since features runs are budgeted and resume across nights - while a
@@ -2415,8 +3169,12 @@ function show(src) {
   img.classList.toggle('flip', flip);
   imgValue.classList.toggle('flip', flip);
 
-  el('pos').textContent = `#${state.drawn}` +
-    (state.schedule ? `  ·  ${fmt(currentInterval())} × ${state.schedule[state.step][1] - state.doneInStep} left` : '');
+  // Browsing knows exactly where it is in a fixed list, which a shuffled
+  // draw never does - so it says so, in place of the running pose count.
+  el('pos').textContent = state.browse
+    ? `${(state.cursor + 1).toLocaleString()} / ${state.pool.length.toLocaleString()}`
+    : `#${state.drawn}` +
+      (state.schedule ? `  ·  ${fmt(currentInterval())} × ${state.schedule[state.step][1] - state.doneInStep} left` : '');
 
   // A new pose is a new framing - a zoom level or a measured angle from the
   // last one describes nothing about this one, and would be actively
@@ -2472,7 +3230,10 @@ function resetClock() {
 }
 
 function onTick() {
-  if (state.paused) return;
+  // No timer: the tick still runs (Pause, the HUD and the schedule all read
+  // from the same loop) but nothing counts down, so a pose only ever changes
+  // because Next was pressed.
+  if (state.paused || !currentInterval()) return;
   state.remain -= 0.25;
   if (state.remain <= 0) {
     if (el('optBell').checked) bell();
@@ -2501,6 +3262,16 @@ function flashExpired() {
 
 function paint() {
   const total = currentInterval();
+  // A bar that would sit at 0% forever, and a clock counting down from
+  // nothing, both say the wrong thing about an untimed session - so it gets
+  // a full bar and a mark that means "this is not running out".
+  if (!total) {
+    el('fill').style.width = '100%';
+    el('clock').textContent = '∞';
+    el('fill').classList.remove('warn');
+    el('clock').classList.remove('warn');
+    return;
+  }
   const pct = Math.max(0, state.remain / total * 100);
   el('fill').style.width = pct + '%';
   const secs = Math.ceil(state.remain);
@@ -2511,6 +3282,10 @@ function paint() {
 }
 
 function stepHistory(delta) {
+  // Browsing has no history to step through - the list IS the order, and
+  // Prev/Next walk it directly. Wrapping, so the end of a folder is not a
+  // dead end you have to leave the viewer to get out of.
+  if (state.browse) { browseStep(delta); return; }
   const target = state.histPos + delta;
   if (target < 0 || target >= state.history.length) {
     if (delta > 0) advance(false);
@@ -2543,7 +3318,11 @@ function applyOptions() {
   el('btnSquint').disabled = splitting;
   if (splitting) el('img').classList.remove('squint');
   state.gridStyle = el('gridStyle').value;
-  el('grid').classList.toggle('hidden', !el('optGrid').checked);
+  const wantGrid = el('optGrid').checked;
+  el('grid').classList.toggle('hidden', !wantGrid);
+  // The value pane's copy follows the same checkbox - see the comment on
+  // #grid in the markup for why there are two.
+  el('gridValue').classList.toggle('hidden', !wantGrid);
   if (el('optGrid').checked) drawGrid();
   // Read by renderAngleOverlay() for its per-line dash pattern; the actual
   // black-outlined-white recolor is pure CSS (#session.high-contrast), see
@@ -2558,6 +3337,10 @@ function applyOptions() {
   el('ghostImg').classList.toggle('hidden', !el('optGhost').checked || !state.ghostSrc);
   el('focalMarker').classList.toggle('hidden', !el('optFocalPoint').checked || !state.focalFrac);
   if (state.focalFrac) positionFocalMarker();
+  // ...and the grids, which have to be re-fitted whenever the split view
+  // opens or closes: #paneValue's image only gets a rendered box once its
+  // pane is visible.
+  positionGrid();
 }
 
 /* Keyboard-only now: 'v' cycles Off -> 2 -> 3 -> 4 -> 5 -> 6 -> Off, which is
@@ -2598,12 +3381,17 @@ const GRID_STYLES = {
 };
 
 function drawGrid() {
-  const g = el('grid');
-  g.setAttribute('viewBox', '0 0 100 100');
   const style = GRID_STYLES[state.gridStyle] ? state.gridStyle : 'thirds';
-  g.innerHTML = GRID_STYLES[style]() +
+  const markup = GRID_STYLES[style]() +
     `<line x1="50" y1="0" x2="50" y2="100" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>` +
     `<line x1="0" y1="50" x2="100" y2="50" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>`;
+  // Both panes, identically: each grid is stretched over its own pane, which
+  // is the whole reason the split view needed two of them.
+  for (const id of ['grid', 'gridValue']) {
+    const g = el(id);
+    g.setAttribute('viewBox', '0 0 100 100');
+    g.innerHTML = markup;
+  }
 }
 
 /* Synthesised so the page stays a single file with no audio asset to ship. */
@@ -3292,6 +4080,10 @@ function refreshValueTools() {
   state.focalFrac = sumW > 0 ? { x: sumX / sumW / ANALYSIS_SIZE, y: sumY / sumW / ANALYSIS_SIZE } : null;
   el('focalMarker').classList.toggle('hidden', !el('optFocalPoint').checked || !state.focalFrac);
   if (state.focalFrac) positionFocalMarker();
+  // ...and the grids, which have to be re-fitted whenever the split view
+  // opens or closes: #paneValue's image only gets a rendered box once its
+  // pane is visible.
+  positionGrid();
 }
 
 // Converts state.focalFrac (0..1 across the image) into a px position
@@ -3301,6 +4093,31 @@ function refreshValueTools() {
 // letterbox gutter instead of on the actual image content. Read fresh each
 // call rather than cached, since the pane's own size can change (a window
 // resize) between poses.
+/* Sizes each pane's grid to that pane's image, the same problem
+   positionFocalMarker() solves just below and for the same reason: #img is
+   letterboxed inside its pane, so anything laid out against the PANE misses
+   the image by however much gutter there is.
+   offsetLeft/Top/Width/Height rather than getBoundingClientRect(): the grid
+   is a sibling of the image inside .zoomwrap, which is the offset parent of
+   both, so these are already in exactly the coordinate space the inline
+   styles below are written in - and, unlike a client rect, they are the
+   pre-transform values, which is what a positioned child inside the
+   transformed wrapper needs. */
+function positionGrid() {
+  for (const [gridId, imgId] of [['grid', 'img'], ['gridValue', 'imgValue']]) {
+    const g = el(gridId), im = el(imgId);
+    if (!im.naturalWidth) continue;   // nothing decoded yet - show()'s onload calls back
+    g.style.left = im.offsetLeft + 'px';
+    g.style.top = im.offsetTop + 'px';
+    // The stylesheet's own 100%/100% stays as the fallback the sizing check
+    // wants to see; right/bottom are cleared so its inset:0 cannot fight the
+    // explicit width set here.
+    g.style.right = g.style.bottom = 'auto';
+    g.style.width = im.offsetWidth + 'px';
+    g.style.height = im.offsetHeight + 'px';
+  }
+}
+
 function positionFocalMarker() {
   const pane = el('paneOrig').getBoundingClientRect();
   const img = el('img').getBoundingClientRect();
@@ -3345,10 +4162,17 @@ el('btnSkip').addEventListener('click', skipCurrent);
 function skipCurrent() {
   if (!state.current) return;
   setSkipped(state.current, true);
+  // Browsing steps to the next image rather than drawing a new one, and the
+  // skipped frame stays in the list: the grid keeps showing skipped images
+  // precisely so they can be un-skipped, and the viewer over that same list
+  // has to agree with it.
+  if (state.browse) { browseStep(1); return; }
   advance(false);
 }
 
 function togglePause() {
+  // Nothing to pause - there is no clock in browse mode.
+  if (state.browse) return;
   state.paused = !state.paused;
   el('btnPause').textContent = state.paused ? 'Resume' : 'Pause';
   // Held fully visible while paused (armHudIdle no-ops the timer in that
@@ -3360,6 +4184,15 @@ function togglePause() {
 // bubbles a pointerdown up through it, so this needs no listener of its own
 // on any of them, and it still fires for a tap or mouse-move anywhere over
 // the stage itself, not just the bar.
+/* Both overlays that are laid out against an image's rendered box, rather
+   than against a pane, have to be recomputed when that box changes size -
+   which a window resize or a rotated tablet does without any pose changing. */
+window.addEventListener('resize', () => {
+  if (el('session').classList.contains('hidden')) return;
+  positionGrid();
+  if (state.focalFrac) positionFocalMarker();
+});
+
 el('session').addEventListener('pointerdown', armHudIdle);
 el('session').addEventListener('pointermove', armHudIdle);
 el('session').addEventListener('touchstart', armHudIdle, { passive: true });
