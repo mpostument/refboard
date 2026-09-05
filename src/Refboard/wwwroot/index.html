@@ -134,11 +134,70 @@
   #main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
   #mainHead { padding: 16px 22px 14px; border-bottom: 1px solid var(--line); }
   #mainBody { flex: 1; overflow-y: auto; padding: 18px 22px 64px; }
+  /* Capped, unlike the grid beside it: the dashboard is a document, and at
+     full column width its session list becomes a thin ribbon with the pose
+     counts a screen away from the dates they belong to. */
+  #viewDashboard { max-width: 880px; }
   h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: .01em; }
   .sub { color: var(--dim); font-size: 13px; margin-bottom: 20px; }
   section { margin-bottom: 26px; }
+  /* ---- the practice panel on the dashboard ---- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 10px; }
+  .stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 11px 13px;
+  }
+  .stat b { display: block; font-size: 21px; font-weight: 600; line-height: 1.25; }
+  .stat span {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim);
+  }
+  /* Column-first, seven rows: one column is one week, one row one weekday -
+     which is the only reason the cells can be emitted as a flat list in date
+     order and still land in the right place. */
+  .cal, .cal-months {
+    display: grid; grid-auto-flow: column; grid-auto-columns: 12px;
+    justify-content: start; gap: 3px;
+  }
+  .cal {
+    grid-template-rows: repeat(7, 12px);
+    margin: 3px 0 8px; overflow-x: auto; padding-bottom: 3px;
+  }
+  /* One cell per week, same track sizing as the calendar below it, so a label
+     lands over the week it names. The label itself is wider than its 12px
+     column and is allowed to spill - clipping a month to one week's width
+     would leave "S". */
+  .cal-months {
+    margin-top: 20px; height: 13px; font-size: 10px; color: var(--dim);
+  }
+  .cal-months span { white-space: nowrap; }
+  .cal i { width: 12px; height: 12px; border-radius: 3px; background: var(--btn-off); }
+  /* One colour at four opacities rather than four colours: the scale then
+     holds up in the light theme without a second set of tokens for it. */
+  .cal i.l1 { background: var(--accent); opacity: .3; }
+  .cal i.l2 { background: var(--accent); opacity: .52; }
+  .cal i.l3 { background: var(--accent); opacity: .76; }
+  .cal i.l4 { background: var(--accent); }
+  /* Days after today. Kept in the grid rather than left out, so the last
+     column is the current week in its real shape instead of a short one. */
+  .cal i.future { background: transparent; }
+  .runs { margin-top: 22px; }
+  .run {
+    display: flex; gap: 12px; align-items: baseline;
+    padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px;
+  }
+  .run .when { width: 132px; flex: none; color: var(--dim); }
+  .run .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .run .num { color: var(--dim); font-variant-numeric: tabular-nums; }
+
   .searchbar { display: flex; gap: 8px; margin-top: 13px; }
   .searchbar input[type=search] { flex: 1; }
+  /* Deliberately not flex:1 alongside the search box - a sort control that
+     changes width with the window is harder to hit twice in a row than one
+     that stays where it was. */
+  .searchbar select {
+    flex: none; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 7px; padding: 7px 10px; color: var(--ink);
+  }
 
   /* ---- right: what you are about to do with it ---- */
   #inspector {
@@ -183,7 +242,7 @@
     color: inherit; font: inherit;
   }
   .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .cell:hover, .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .cell:hover, .cell:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
   .cell-meta {
     position: absolute; left: 0; right: 0; bottom: 0;
     padding: 24px 8px 7px; text-align: left; line-height: 1.35;
@@ -191,7 +250,7 @@
     color: #fff; font-size: 11px; opacity: 0; transition: opacity .12s linear;
     pointer-events: none;
   }
-  .cell:hover .cell-meta, .cell:focus-visible .cell-meta { opacity: 1; }
+  .cell:hover .cell-meta, .cell:focus .cell-meta { opacity: 1; }
   .cell-meta .cell-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cell-meta .cell-tag {
     display: inline-block; margin: 3px 3px 0 0; padding: 1px 5px; border-radius: 3px;
@@ -630,6 +689,16 @@
            search. setView() shows and hides it with the grid it belongs to. -->
       <div class="searchbar hidden" id="searchbar">
         <input type="search" id="imgFilter" placeholder="Search images by file, folder or pack name...">
+        <!-- The two brightness orders are dropped by initShell() when there is
+             no features.json behind this page to read a value out of - an
+             order that silently does nothing is worse than an absent one. -->
+        <select id="gridOrder" title="What order the thumbnails are drawn in">
+          <option value="index">Folder order</option>
+          <option value="name">Name A-Z</option>
+          <option value="bright" data-needs-features>Lightest first</option>
+          <option value="dark" data-needs-features>Darkest first</option>
+          <option value="random">Shuffle</option>
+        </select>
         <button class="ghost" type="button" id="btnBrowseDraw"
                 title="Start a timed session from exactly what this grid is showing">Draw these</button>
       </div>
@@ -642,7 +711,23 @@
            library at all. -->
       <div id="viewDashboard">
         <div class="sub" id="summary">loading index...</div>
-        <div class="sub" id="sessionLog"></div>
+
+        <!-- Everything in here is derived from the same `sessions` array the
+             one-line summary used to be: no new store, no backend, and nothing
+             logged that was not already being logged. Browse-mode viewing is
+             deliberately absent from it - see startSession(), which leaves
+             startedAt null - so this counts drawing, not looking.
+
+             Hidden until something has actually been drawn. Four zeroes and an
+             empty calendar is a worse first screen than no panel at all. -->
+        <section id="practice" class="hidden">
+          <h2>Your practice</h2>
+          <div class="stats" id="practiceStats"></div>
+          <div class="cal-months" id="practiceCalMonths"></div>
+          <div class="cal" id="practiceCal"></div>
+          <div class="count" id="practiceCalHint"></div>
+          <div class="runs" id="practiceRuns"></div>
+        </section>
 
         <!-- Independent of everything else here - not from the pack library,
              no pool, no session. Local to this browser only -
@@ -929,13 +1014,21 @@
         <b>checkbox</b> includes it in the pool a timed session draws from.
         They are separate on purpose - browsing a pack to decide whether you
         want it is how you end up ticking it.</p>
-      <p>In the grid, the search box matches file, folder and pack names.
-        Clicking any thumbnail opens it full-screen in the same viewer a
+      <p>In the grid, the search box matches file, folder and pack names, and
+        the box beside it sets the order: the folder's own (numbered poses are
+        usually numbered for a reason), by name across folders, lightest or
+        darkest first to pull a value study out of a pack, or shuffled -
+        picking <b>Shuffle</b> again deals a new order.</p>
+      <p>Clicking any thumbnail opens it full-screen in the same viewer a
         session uses - zoom, the angle tool, construction guides, the
         tonal-value split, the eyedropper, all of it - with <b>← →</b>
         walking that folder in order and no clock running. <b>Esc</b> returns
-        to the grid. <b>Draw these</b> above the grid starts a real timed
-        session from exactly what is on screen, search filter included.</p>
+        to the grid, on the image you stopped at. <b>Draw these</b> above the
+        grid starts a real timed session from exactly what is on screen, search
+        filter included.</p>
+      <p>The grid takes the keyboard too: <b>arrow keys</b> move between
+        thumbnails, <b>Home</b> / <b>End</b> jump to the first and last,
+        <b>Enter</b> opens one and <b>S</b> skips it.</p>
       <p><b>Skip</b> in a thumbnail's corner (or <b>S</b> in the viewer)
         marks a pose never to draw again. Skipped images stay in the grid,
         dimmed, so you can undo it.</p>
@@ -1066,6 +1159,20 @@
     </section>
 
     <section>
+      <h2>Your practice</h2>
+      <p>The dashboard counts what you have actually drawn: poses, time,
+        sessions, and the run of consecutive days you are currently on - a day
+        you have not started yet does not break it. The calendar under them is
+        the last thirteen weeks, one square per day, brighter for a heavier
+        day, measured against your own busiest one rather than a fixed number.
+        Hover a square for the date and count.</p>
+      <p>Only timed sessions count. Browsing the grid is looking, not drawing,
+        and is deliberately never logged. The most recent 50 sessions are kept
+        - enough for months of practice - and they sync between your devices
+        along with the rest of the setup where that is configured.</p>
+    </section>
+
+    <section>
       <h2>Check your own image</h2>
       <p>The drop zone on the setup screen works with no library at all -
         it's the whole of what runs on the
@@ -1104,7 +1211,7 @@
 // updateFooterVersion() below overwrites it with the real running version
 // from /healthz, so this constant drifting a little on Pages costs nothing
 // where it actually matters.
-const APP_VERSION = '0.7.0';
+const APP_VERSION = '0.8.0';
 
 const INDEX_URL = 'index.json';
 
@@ -1271,7 +1378,7 @@ function syncSkipped() {
    last write wins) and skipped (a tombstone per key), this merges as a UNION
    keyed by session id - closer to how whatsnew.py's own event log is never
    edited, only appended to and capped. */
-let sessions = [];       // newest first: { id, start, end, poses, packs }
+let sessions = [];       // newest first: { id, start, end, poses, packs, secs }
 const SESSIONS_KEY = 'refboard.sessions.v1';
 const SESSION_CAP = 50;  // enough for months of practice without an unbounded doc
 
@@ -1327,16 +1434,166 @@ function relTime(ts) {
   return Math.round(secs / 86400) + ' d ago';
 }
 
-// Quiet by default: nothing to say until there is something logged, and even
-// then this is one line, not a panel - a practice log is context for the
-// setup screen, not its subject.
+/* Local calendar days, not UTC. "Did I draw today" is a question about the
+   clock on the wall, and a UTC key would move the boundary by hours - far
+   enough to break a streak for someone who draws in the evening. */
+function dayKey(d) {
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+
+/* poses per calendar day, keyed by dayKey. */
+function posesByDay() {
+  const by = new Map();
+  for (const s of sessions) {
+    const k = dayKey(new Date(s.start * 1000));
+    by.set(k, (by.get(k) || 0) + (s.poses || 0));
+  }
+  return by;
+}
+
+/* Consecutive days drawn, counting back from today.
+   A day with no session yet does not end the streak if it is TODAY: the day
+   is not over, and a counter that reads 0 every morning until you sit down
+   measures the time of day rather than the habit. Any earlier gap does. */
+function currentStreak(by) {
+  const d = new Date();
+  if (!by.has(dayKey(d))) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while (by.has(dayKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+/* Coarse on purpose - this is a total across sessions, not a stopwatch, and
+   "4h 12m" is the useful precision for it.
+
+   NaN-hardened at the bottom rather than at each call site: an entry merged
+   from another device (or written by a version that had no `end`) yields
+   end - start === NaN, and a run that renders as "NaNm" is a worse answer to
+   "how long was that" than one that renders as "<1m". */
+function fmtSpan(secs) {
+  secs = Math.max(0, Math.round(secs) || 0);
+  const h = Math.floor(secs / 3600), m = Math.round((secs % 3600) / 60);
+  if (h) return m ? `${h}h ${m}m` : `${h}h`;
+  return secs < 60 ? '<1m' : `${m}m`;
+}
+
+const CAL_WEEKS = 13;
+
+/* Thirteen weeks of day cells, oldest week first, Monday at the top.
+   Emitted as one flat list in date order because the grid is column-first
+   with seven rows - see .cal in the stylesheet. */
+function renderCalendar(by) {
+  const host = el('practiceCal');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  // Monday of the current week, then back to the start of the window.
+  const start = new Date(today);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - (CAL_WEEKS - 1) * 7);
+  const max = Math.max(1, ...by.values());
+
+  // One label per week column, drawn only where the month turns over - the
+  // calendar is otherwise thirteen unlabelled columns and the reader has to
+  // hover a square to find out where in the year they are.
+  const months = document.createDocumentFragment();
+  let lastMonth = -1;
+  for (let w = 0; w < CAL_WEEKS; w++) {
+    // Named for the month the week ENDS in, not the one it starts in: a week
+    // that runs 31 Aug - 6 Sep is the first week of September, and keying off
+    // its Monday would leave the current month unlabelled all week.
+    const sunday = new Date(start);
+    sunday.setDate(sunday.getDate() + w * 7 + 6);
+    const label = document.createElement('span');
+    if (sunday.getMonth() !== lastMonth) {
+      lastMonth = sunday.getMonth();
+      // Suppressed on the first column unless the month really does begin
+      // inside it - otherwise the leftmost label names a month whose earlier
+      // weeks are not on screen.
+      if (w > 0 || sunday.getDate() <= 7) {
+        label.textContent = sunday.toLocaleDateString(undefined, { month: 'short' });
+      }
+    }
+    months.appendChild(label);
+  }
+  el('practiceCalMonths').innerHTML = '';
+  el('practiceCalMonths').appendChild(months);
+
+  const frag = document.createDocumentFragment();
+  const d = new Date(start);
+  let drawnDays = 0;
+  for (let i = 0; i < CAL_WEEKS * 7; i++) {
+    const cell = document.createElement('i');
+    const poses = by.get(dayKey(d)) || 0;
+    const when = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    if (d > today) {
+      cell.className = 'future';
+    } else {
+      // Against the busiest day rather than a fixed pose count: a warm-up
+      // habit of twelve gestures a day and a two-hour study habit should
+      // both read as a filled calendar.
+      const r = poses / max;
+      cell.className = poses ? (r >= .75 ? 'l4' : r >= .5 ? 'l3' : r >= .25 ? 'l2' : 'l1') : '';
+      cell.title = poses ? `${poses.toLocaleString()} pose${poses === 1 ? '' : 's'} on ${when}` : `nothing on ${when}`;
+      if (poses) drawnDays++;
+    }
+    frag.appendChild(cell);
+    d.setDate(d.getDate() + 1);
+  }
+  host.innerHTML = '';
+  host.appendChild(frag);
+  el('practiceCalHint').textContent =
+    `${drawnDays} day${drawnDays === 1 ? '' : 's'} drawn in the last ${CAL_WEEKS} weeks · ` +
+    // Said out loud because the window is longer than the store: with the cap
+    // reached, the empty left-hand columns mean "not kept", not "not drawn".
+    `only the most recent ${SESSION_CAP} sessions are kept`;
+}
+
+function renderRuns() {
+  const host = el('practiceRuns');
+  const frag = document.createDocumentFragment();
+  for (const s of sessions.slice(0, 8)) {
+    const row = document.createElement('div');
+    row.className = 'run';
+    const when = new Date(s.start * 1000);
+    const packs = (s.packs || []).join(', ') || 'Unknown';
+    row.innerHTML =
+      `<span class="when">${esc(when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))}, ` +
+      `${esc(when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}</span>` +
+      `<span class="what">${esc(packs)}</span>` +
+      `<span class="num">${(s.poses || 0).toLocaleString()} pose${s.poses === 1 ? '' : 's'}` +
+      // The interval a session ran at is the difference between a gesture
+      // drill and a long study, and the pose count alone hides it.
+      `${s.secs ? ' · ' + fmt(s.secs) : ''} · ${fmtSpan(s.end - s.start)}</span>`;
+    frag.appendChild(row);
+  }
+  host.innerHTML = '';
+  host.appendChild(frag);
+}
+
+// Quiet until there is something to say - see the panel's own comment in the
+// markup for why an empty one is worse than none.
 function renderSessionLog() {
-  const host = el('sessionLog');
+  const host = el('practice');
   if (!host) return;
-  if (!sessions.length) { host.textContent = ''; return; }
+  host.classList.toggle('hidden', !sessions.length);
+  if (!sessions.length) return;
+
   const poses = sessions.reduce((a, s) => a + (s.poses || 0), 0);
-  host.textContent = `${sessions.length.toLocaleString()} session${sessions.length === 1 ? '' : 's'} logged · ` +
-    `${poses.toLocaleString()} pose${poses === 1 ? '' : 's'} drawn · last ${relTime(sessions[0].start)}`;
+  const secs = sessions.reduce((a, s) => a + Math.max(0, (s.end || s.start) - s.start), 0);
+  const by = posesByDay();
+  const streak = currentStreak(by);
+  const stats = [
+    [poses.toLocaleString(), 'Poses drawn'],
+    [fmtSpan(secs), 'Time drawn'],
+    [sessions.length.toLocaleString(), 'Sessions'],
+    // With no streak running, the useful fact in this slot is when you last
+    // sat down - an em-dash would just be a smaller way of saying zero.
+    streak
+      ? [`${streak} day${streak === 1 ? '' : 's'}`, 'Current streak']
+      : [relTime(sessions[0].start), 'Last drawn'],
+  ];
+  el('practiceStats').innerHTML = stats
+    .map(([v, k]) => `<div class="stat"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('');
+  renderCalendar(by);
+  renderRuns();
 }
 const state = {
   pool: [], order: [], cursor: 0, history: [], histPos: -1,
@@ -1403,6 +1660,7 @@ function saveSettings() {
     grid: el('optGrid').checked, bell: el('optBell').checked, full: el('optFull').checked,
     highContrast: el('optHighContrast').checked,
     gridStyle: el('gridStyle').value,
+    gridOrder,
     ghost: el('optGhost').checked, focalPoint: el('optFocalPoint').checked,
     // When this setup was last changed, so the merge in syncSettings() can tell
     // two devices' panels apart - see syncSettings() for why this is a
@@ -1553,7 +1811,7 @@ async function boot() {
   renderValueSteps(saved);
   initDropZone();
   initEyedropper();
-  initShell();
+  initShell(saved);
   // Last, so the tree it highlights and the grid it may draw both exist. The
   // dashboard is the landing view either way: with no library there is
   // nothing else to show, and with one, "what did I draw last, and what is
@@ -2195,19 +2453,61 @@ function filterImages(list) {
     i.pack.toLowerCase().includes(q));
 }
 
-/* The order the grid draws its images in.
+/* The order the grid draws its images in - whatever #gridOrder is set to,
+ * persisted with the rest of the panel.
  *
- * The index hands them over already naturally sorted (Pose2 before Pose10)
- * within each folder, and folder by folder within a pack - which is the order
- * they were named in, and in a numbered pose pack that numbering usually
- * means something. So "leave it alone" is the default.
+ * 'index' is the default and stays first, because the index hands images over
+ * already naturally sorted (Pose2 before Pose10) within each folder, and
+ * folder by folder within a pack - which is the order they were named in, and
+ * in a numbered pose pack that numbering usually means something.
  *
- * Other orders are defensible and this is the one place to put them: brightest
- * to darkest (FEATURES.images[src].v) turns a pack into a value ramp, and
- * shuffling makes browsing itself a random draw. See the note in the README.
- */
+ * The rest earn their place by answering a question the folder order cannot:
+ * name ignores which folder a pose came from, brightness turns a pack into a
+ * value ramp to pick a light or a dark study out of, and shuffle makes
+ * browsing itself a random draw without committing to a timed session. */
+let gridOrder = 'index';
+
+const NAT = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+/* A random key per image rather than a shuffle of the list, so the order is
+   stable across re-sorts: refreshGrid() runs on every keystroke in the search
+   box, and a shuffle that reshuffled as you typed would move the thumbnail you
+   were reaching for out from under the pointer. Cleared - so the next sort
+   draws fresh keys - only when the reader asks for a new shuffle, or when the
+   view changes to a different set of images. */
+let shuffleKeys = new Map();
+function reshuffle() { shuffleKeys = new Map(); }
+function shuffleKey(src) {
+  let k = shuffleKeys.get(src);
+  if (k === undefined) { k = Math.random(); shuffleKeys.set(src, k); }
+  return k;
+}
+
+/* Mean brightness, or null for an image the feature pass has not reached yet.
+   Those sort to the end in both directions rather than to one end or the
+   other: "not measured" is not a brightness, and pretending it is 0 would
+   bury unmeasured images among the genuinely dark ones. */
+function brightness(src) {
+  const f = FEATURES && FEATURES.images[src];
+  return f && typeof f.v === 'number' ? f.v : null;
+}
+
 function gridSort(list) {
-  return list;
+  if (gridOrder === 'index') return list;
+  const out = [...list];
+  if (gridOrder === 'name') {
+    out.sort((a, b) => NAT.compare(a.name, b.name) || NAT.compare(a.group, b.group));
+  } else if (gridOrder === 'random') {
+    out.sort((a, b) => shuffleKey(a.src) - shuffleKey(b.src));
+  } else {
+    const dir = gridOrder === 'bright' ? -1 : 1;
+    out.sort((a, b) => {
+      const x = brightness(a.src), y = brightness(b.src);
+      if (x === null || y === null) return (x === null) - (y === null);
+      return (x - y) * dir;
+    });
+  }
+  return out;
 }
 
 function refreshGrid() {
@@ -2279,6 +2579,34 @@ function gridCell(item, i) {
   return cell;
 }
 
+/* How many cells the current window width fits on one row. Measured off the
+   DOM rather than read from the stylesheet: the grid is auto-fill, so that
+   number is whatever the window made it and changes with every resize. */
+function cellsPerRow() {
+  const cells = document.querySelectorAll('#thumbGrid .cell');
+  if (!cells.length) return 1;
+  const top = cells[0].offsetTop;
+  let n = 0;
+  while (n < cells.length && cells[n].offsetTop === top) n++;
+  return n || 1;
+}
+
+/* Moves focus to one cell, rendering however many pages it takes to reach it
+   first - paging is a display detail, and arrow keys stopping dead at cell 120
+   of 900 would make it one the reader has to know about.
+
+   Clamped rather than wrapped: ArrowRight off the last image landing back on
+   the first reads as the grid having jumped somewhere else entirely. */
+function focusCell(i) {
+  if (!gridItems.length) return;
+  i = Math.min(Math.max(i, 0), gridItems.length - 1);
+  while (i >= gridShown && gridShown < gridItems.length) renderGridPage();
+  const cell = el('thumbGrid').querySelector(`.cell[data-i="${i}"]`);
+  if (!cell) return;
+  cell.focus();
+  cell.scrollIntoView({ block: 'nearest' });
+}
+
 /* Toggled in place rather than by re-rendering the grid: a re-render resets
    the pagination, and un-skipping something 400 cells down should not throw
    away the 400 cells you scrolled past to reach it. */
@@ -2335,7 +2663,12 @@ function viewTitle() {
 }
 
 function setView(next) {
+  const changed = view.kind !== next.kind || view.pack !== (next.pack || null) ||
+    view.group !== (next.group || null);
   view = { kind: next.kind, pack: next.pack || null, group: next.group || null };
+  // A different folder is a different draw. Same folder re-opened keeps the
+  // order it had, so coming back to a shuffled pack finds it as you left it.
+  if (changed && gridOrder === 'random') reshuffle();
   const browsing = view.kind === 'all' || view.kind === 'pack' || view.kind === 'group';
 
   el('viewBrowse').classList.toggle('hidden', !browsing);
@@ -2407,7 +2740,24 @@ function closeDrawers() {
   el('inspector').classList.remove('open');
 }
 
-function initShell() {
+function initShell(saved = {}) {
+  // Brightness needs a measured value per image; with no features.json there
+  // is none, and both orders would quietly leave the grid exactly as it was.
+  if (!FEATURES) {
+    for (const o of document.querySelectorAll('#gridOrder option[data-needs-features]')) o.remove();
+  }
+  const order = el('gridOrder');
+  if ([...order.options].some(o => o.value === saved.gridOrder)) order.value = saved.gridOrder;
+  gridOrder = order.value;
+  order.addEventListener('change', () => {
+    // Re-picking Shuffle while already shuffled is the only way to ask for a
+    // different draw, so it has to mean "shuffle again" rather than nothing.
+    if (order.value === 'random') reshuffle();
+    gridOrder = order.value;
+    saveSettings();
+    refreshGrid();
+  });
+
   for (const b of document.querySelectorAll('.nav-item[data-view]')) {
     b.addEventListener('click', () => setView({ kind: b.dataset.view }));
   }
@@ -2453,12 +2803,25 @@ function initShell() {
     if (e.target.closest('.cell-skip')) { toggleCellSkip(i, cell); return; }
     openViewer(i);
   });
-  // role=button carries no implicit keyboard activation of its own.
+  // role=button carries no implicit keyboard activation of its own, and a
+  // grid of tiles carries no implicit arrow-key navigation either - both are
+  // things a real <button> in a real list would have given us for free.
   el('thumbGrid').addEventListener('keydown', e => {
     const cell = e.target.closest('.cell');
-    if (!cell || (e.key !== 'Enter' && e.key !== ' ')) return;
+    if (!cell || e.altKey || e.ctrlKey || e.metaKey) return;
+    const i = Number(cell.dataset.i);
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openViewer(i); return; }
+    // Same key as the viewer's own skip toggle, on purpose.
+    if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleCellSkip(i, cell); return; }
+    const per = cellsPerRow();
+    const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: per, ArrowUp: -per }[e.key];
+    let target;
+    if (step !== undefined) target = i + step;
+    else if (e.key === 'Home') target = 0;
+    else if (e.key === 'End') target = gridItems.length - 1;
+    else return;
     e.preventDefault();
-    openViewer(Number(cell.dataset.i));
+    focusCell(target);
   });
 
   el('btnPacksAll').addEventListener('click', () => setAllPacks(true));
@@ -2978,9 +3341,16 @@ function stopSession() {
   refreshPool();
   // ...and neither must the grid, which is very likely the thing this
   // returned to and is showing those exact images.
+  //
+  // state.cursor indexes state.pool, which in browse mode IS gridItems (see
+  // openViewer) - the grid cannot have been re-sorted underneath it while the
+  // stage was covering the screen. Closing the viewer on image 300 and landing
+  // on a grid still scrolled to image 12 leaves no way back but scrolling.
+  const returnTo = state.browse ? state.cursor : -1;
   state.browse = false;
   el('session').classList.remove('browse');
   syncGridSkips();
+  if (returnTo >= 0) focusCell(returnTo);
 }
 
 /* ------------------------------------------------------------- HUD auto-hide
