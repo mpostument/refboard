@@ -89,6 +89,23 @@ Two, deliberately kept separate:
 
 ## Features
 
+- **A studio layout** - dark throughout, an icon rail down the left for the
+  sections, and the library and session controls as panels either side that
+  fold away, so the image gets the screen. The session panel and the 3D
+  panel are tabbed, with Start always in reach. The viewer's controls are icons,
+  each named on hover.
+- **Train** - short scored drills, ten tasks a round, the answer and the
+  reason shown after each: **value** (a patch against surrounds built to
+  fool you, then in colour), **colour** (mix a target by hue, chroma and
+  value, told which was off), **anatomy** (landmarks on an eight-heads
+  figure and on the head), **angles and proportions**, **lines and
+  ellipses** (one stroke, scored on how far it strays) and **perspective**
+  (find a vanishing point, find eye level), then **gesture** (a timed random
+  pose on the 3D figure), **negative space** (pick the true empty shape),
+  **tone map** (value on real pictures, squinted), **colour temperature**,
+  **edges** (hard and soft, contrast set to fool you) and **ellipses and
+  centres** (a cylinder's ellipse, the middle of a rectangle in perspective).
+  Best and recent scores are kept.
 - **Browse your library** - the app is three columns: your packs and their
   folders on the left, whatever you are looking at in the middle, the session
   controls on the right. Clicking a folder's *name* opens it as a thumbnail
@@ -197,6 +214,13 @@ Two, deliberately kept separate:
     channels. The last few samples stay listed as swatches to click-to-copy,
     for comparing two spots (skin vs. background) without re-aiming at
     either one again.
+- **Compare your drawing** (`d`) - photograph or scan what you drew and lay
+  it over the reference: its lines in red (pulled off the paper against a
+  blurred copy of the photo, so uneven phone lighting drops out), a
+  see-through photo, or blinking between the two. **Line up 2 points** -
+  two landmarks on the reference, the same two on the drawing - scales,
+  turns and moves it so they meet, leaving only what differs between them:
+  your proportions and angles. Drop or paste works too; nothing is uploaded.
 - **Pack filter** - a text box above the library tree narrows it by name for a
   large library, without changing which packs are already ticked. The All /
   None buttons act on exactly what it is showing, so "all the hands packs"
@@ -205,8 +229,10 @@ Two, deliberately kept separate:
   perspective exercises every drawing course starts with.
   - *Forms:* cube, sphere, cylinder, cone, pyramid, prism, torus, capsule and
     egg, up to six on the floor at once casting shadows on each other, or your
-    own **.glb / .gltf / .obj** model (a mannequin, a planes-of-the-head bust)
-    loaded in the browser. Each with its own placement, proportions, rotation,
+    own **.glb / .gltf / .obj** model (a planes-of-the-head bust, a skull)
+    loaded in the browser - or a jointed wooden **figure**: pick a joint by its
+    dot and bend it with rings, R or sliders, from classic poses (contrapposto,
+    walk, kneel...), random ones, or a mirror of the last. Each with its own placement, proportions, rotation,
     colour and surface: matte, satin, glossy, metal, glass or velvet.
   - *Posed in the view, Blender-style:* move, rotate and scale handles on the
     selected form (click a form to select it; Z lifts it off the floor), and
@@ -230,7 +256,10 @@ Two, deliberately kept separate:
   - *Using it:* **Open in viewer** puts the render in the same full-screen
     viewer as everything else (tonal split, grid, angle tool, eyedropper),
     **Save PNG**, **Draw random forms** starts a timed session of random
-    poses and lighting, a **memory drill** hides a scene while you draw it,
+    poses and lighting, a **memory drill** hides a scene while you draw it, a
+    **view drill** asks for it from another side, height, light or lens and
+    then swings round to the answer, **Clean** (Shift+Alt+Z) hides every
+    handle and guide,
     and scenes can be saved by name or shared as a link.
 
   Rendered with [three.js](https://threejs.org/), loaded from jsDelivr only
