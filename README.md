@@ -201,6 +201,40 @@ Two, deliberately kept separate:
   large library, without changing which packs are already ticked. The All /
   None buttons act on exactly what it is showing, so "all the hands packs"
   is one click after typing `hands`.
+- **3D forms** - simple forms under light you control, for the shading and
+  perspective exercises every drawing course starts with.
+  - *Forms:* cube, sphere, cylinder, cone, pyramid, prism, torus, capsule and
+    egg, up to six on the floor at once casting shadows on each other, or your
+    own **.glb / .gltf / .obj** model (a mannequin, a planes-of-the-head bust)
+    loaded in the browser. Each with its own placement, proportions, rotation,
+    colour and surface: matte, satin, glossy, metal, glass or velvet.
+  - *Posed in the view, Blender-style:* move, rotate and scale handles on the
+    selected form (click a form to select it; Z lifts it off the floor), and
+    Blender's keys - **G / R / S**, then **X / Y / Z** to
+    lock an axis, a typed number, Ctrl to snap, click or Esc to keep or
+    cancel - plus Shift+D, Delete, Alt+G/R/S, undo, and Blender's axis ball
+    and numpad keys for front, side and top views.
+  - *Light, aimed in the view:* click the selected form to light that spot, click the
+    floor to throw the shadow there, drag the light handle and a lamp follows
+    the pointer, scroll over it (or Shift+scroll) to move it nearer or further -
+    from the sun's parallel rays to a close lamp with falloff across the form
+    and a shadow that fans out. The lights stay put while you orbit. Plus
+    height, strength, colour and softness, presets, a second fill or rim
+    light, and separate fill and floor-coloured bounce light.
+  - *Seeing it:* a light-and-shadow zones view that paints highlight, light,
+    halftone, terminator, core shadow, reflected light and cast shadow onto the
+    forms from the actual lighting; 1-, 2- and 3-point camera presets and a
+    lens in millimetres (the camera dollies, so only convergence changes);
+    vanishing points of the box around a form, cross-section ellipses and their
+    axis, cross-contour lines, a floor grid and an eye-level line.
+  - *Using it:* **Open in viewer** puts the render in the same full-screen
+    viewer as everything else (tonal split, grid, angle tool, eyedropper),
+    **Save PNG**, **Draw random forms** starts a timed session of random
+    poses and lighting, a **memory drill** hides a scene while you draw it,
+    and scenes can be saved by name or shared as a link.
+
+  Rendered with [three.js](https://threejs.org/), loaded from jsDelivr only
+  when this view is first opened - see *What this isn't* below.
 - **Practice log** - the dashboard counts poses, time, sessions and the run of
   consecutive days you are currently on (a day you have not started yet does
   not break it), over a thirteen-week calendar of one square per day, brighter
@@ -298,7 +332,9 @@ commit to main beyond `:latest`.
 ## What this isn't
 
 There's no user accounts, no server-side session, no telemetry, and no
-network calls out. Everything about a session is `localStorage` in whatever
+network calls out - with one exception: opening the **3D forms** view fetches
+three.js (pinned to an exact version) from `cdn.jsdelivr.net`. Nothing is sent
+there beyond that request, and every other view keeps working offline. Everything about a session is `localStorage` in whatever
 browser opened the page - open it from a different device and it starts
 fresh, on purpose, for a tool this small.
 
