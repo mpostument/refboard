@@ -498,7 +498,7 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
    misplaced to notice at a glance, and #angleOverlay clipping every drawn
    line the instant a drag crossed outside that corner - which, for a
    drag across the actual reference, is virtually always. */
-#grid, #gridValue { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .3; }
+#grid, #gridValue { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: var(--layer-op, .3); }
 #angleOverlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #angleOverlay line { stroke: var(--accent); stroke-width: 2; }
 #angleOverlay circle { fill: var(--accent); }
@@ -527,7 +527,7 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #session.high-contrast #angleOverlay line { stroke-width: 2.5px; }
 #session.high-contrast #grid,
 #session.high-contrast #gridValue {
-  opacity: .8;
+  opacity: var(--layer-op, .8);
   filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
 }
 
@@ -578,7 +578,7 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #ghostImg {
   position: absolute; inset: 0; margin: auto; display: block;
   max-width: 100%; max-height: 100%; object-fit: contain;
-  pointer-events: none; opacity: .35; filter: url(#ghostFilter);
+  pointer-events: none; opacity: var(--layer-op, .35); filter: url(#ghostFilter);
   -webkit-user-drag: none; user-select: none;
 }
 
@@ -593,7 +593,7 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #focalMarker {
   position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;
   border: 2px solid #fff; border-radius: 50%; pointer-events: none;
-  box-shadow: 0 0 0 2px rgba(0,0,0,.6); opacity: .75;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.6); opacity: var(--layer-op, .75);
 }
 
 /* Your drawing laid over the reference - see openCompare(). The wrapper is
@@ -666,7 +666,18 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
   width: 18px; height: 18px; border-radius: 4px; display: inline-block;
   border: 1px solid rgba(255,255,255,.15); vertical-align: middle;
 }
-#valueLegend .palette-swatch { width: 14px; height: 14px; border-radius: 3px; }
+#valueLegend .palette-swatch, #paneLegend .palette-swatch { width: 14px; height: 14px; border-radius: 3px; flex: none; }
+/* Each value step with its name in your medium - see drawLegend(). */
+.legend-step { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--dim); }
+#paneLegend {
+  position: absolute; left: 10px; bottom: 10px; z-index: 3; display: flex; flex-direction: column-reverse; gap: 3px;
+  padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.66); pointer-events: none; max-width: calc(100% - 20px);
+}
+#paneLegend:empty { display: none; }
+#paneLegend .legend-step { color: #e9e9ee; }
+#stage.overlays-off #paneLegend { visibility: hidden; }
+.mix-step { display: block; font-size: 12px; margin-bottom: 4px; color: var(--dim); }
+.mix-step b { color: var(--ink); font-weight: 600; }
 #eyedropperReadout { display: flex; align-items: center; gap: 6px; color: var(--ink); }
 /* Mixing recipes - see paintRecipes(). Each: the colour the mix gives, the
    recipe, how close it lands. A line of its own under the eyedropper. */
@@ -718,6 +729,85 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #clock.warn { color: var(--bad); }
 #pos { font-variant-numeric: tabular-nums; }
 #hud.idle { opacity: 0; transition: opacity .4s; }
+/* How many layers are on, on the Layers button - see syncLayers(). */
+#btnLayers { position: relative; }
+#btnLayers[data-count]:not([data-count=""])::after {
+  content: attr(data-count); position: absolute; top: -6px; right: -6px;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; box-sizing: border-box;
+  background: var(--accent); color: var(--on-accent); font: 700 10px/16px system-ui, sans-serif;
+}
+#btnLayers[aria-pressed="true"][data-count]::after { background: var(--ink); color: #000; }
+
+/* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
+   it only once its slider has been moved; until then the stylesheet's own
+   value (the var() fallback) holds. */
+#poseOverlay, #headOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #angleOverlay,
+  #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
+#peekBadge {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
+  padding: 5px 12px; border-radius: 6px; background: rgba(0,0,0,.66); color: #fff;
+  font-size: 13px; pointer-events: none; white-space: nowrap;
+}
+#peekBadge kbd, #layersPanel kbd, #wsPanel kbd {
+  font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid var(--line-hi); border-radius: 4px; color: var(--dim);
+}
+#layersPanel, #wsPanel {
+  position: absolute; top: 12px; right: 12px; z-index: 6; width: 300px; max-width: calc(100% - 24px);
+  max-height: calc(100% - 90px); overflow: auto; box-sizing: border-box;
+  background: rgba(14, 14, 18, .94); border: 1px solid var(--line-hi); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5); padding: 8px; color: var(--ink); font-size: 13px;
+}
+.layers-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 8px; }
+.layers-head b { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+#layersCount { color: var(--dim); margin-left: auto; font-size: 12px; }
+#layersClose, #wsClose { background: none; border: 0; color: var(--dim); cursor: pointer; padding: 2px; display: grid; }
+#layersClose:hover, #wsClose:hover { color: var(--ink); }
+#layersClose svg, #wsClose svg { width: 16px; height: 16px; }
+.layer-row { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 4px; border-radius: 6px; }
+.layer-row:hover { background: rgba(255,255,255,.05); }
+.layer-row label { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
+.layer-row label span { display: flex; flex-direction: column; line-height: 1.25; }
+.layer-row small { color: var(--dim); font-size: 11px; }
+.layer-row small:empty { display: none; }
+.layer-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+.layer-row input[type=range] { width: 84px; accent-color: var(--accent); }
+.layer-row output { width: 34px; text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; font-size: 11px; }
+/* A layer that is off keeps its slider - you can set how strong it will
+   be before turning it on - only quieter. */
+.layer-row.off label span, .layer-row.off output { color: var(--dim); }
+.layer-row.off input[type=range] { opacity: .45; }
+/* The workspace: tabs by question, then the question itself, then the
+   tools that answer it - each lit while it is on. */
+#wsPanel { width: 372px; }
+#wsPanel .layers-head b { margin-right: auto; }
+#wsTabs { display: flex; flex-wrap: wrap; gap: 3px; padding: 0 2px 6px; border-bottom: 1px solid var(--line); }
+#wsTabs button { background: none; border: 1px solid transparent; border-radius: 6px; padding: 4px 7px;
+  color: var(--dim); cursor: pointer; font: inherit; font-size: 12px; }
+#wsTabs button:hover { color: var(--ink); }
+#wsTabs button[aria-selected="true"] { color: var(--ink); background: #1f1f26; border-color: var(--line-hi); }
+#wsQuestion { margin: 8px 4px 6px; font-size: 12.5px; color: var(--ink); font-style: italic; }
+.ws-row { display: flex; align-items: center; gap: 9px; width: 100%; padding: 6px; border-radius: 7px;
+  box-sizing: border-box; text-align: left; font: inherit; color: var(--ink); }
+.ws-tool { background: none; border: 1px solid transparent; cursor: pointer; }
+.ws-tool:hover, .ws-tool:focus-visible { background: rgba(255,255,255,.05); }
+.ws-tool [data-icon] { color: var(--dim); flex: none; }
+.ws-tool[aria-pressed="true"] { border-color: var(--accent); }
+.ws-tool[aria-pressed="true"] [data-icon] { color: var(--accent); }
+.ws-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.ws-text b { font-weight: 600; font-size: 12.5px; }
+.ws-text small { color: var(--dim); font-size: 11px; }
+.ws-row select { flex: none; max-width: 120px; }
+.ws-row:disabled { cursor: default; opacity: .45; }
+.ws-row:disabled:hover { background: none; }
+.layers-foot { display: flex; align-items: center; gap: 10px; margin-top: 6px; padding: 8px 4px 2px; border-top: 1px solid var(--line); }
+#layersPeek {
+  background: #17171c; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px;
+  color: var(--ink); cursor: pointer; font: inherit;
+}
+#layersPeek[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.layers-foot label { display: flex; align-items: center; gap: 6px; margin-left: auto; cursor: pointer; }
+.layers-foot input { accent-color: var(--accent); }
 #session:hover #hud.idle { opacity: 1; }
 /* Memory drawing - see beginMemoryStudy(). Study: a badge over the still-
    visible pose. Draw: the pose is covered and the cover is the reveal
@@ -815,7 +905,6 @@ body { font-size: 13px; }
   z-index: 31;
 }
 #rail .rail-brand { width: 30px; height: 30px; margin-bottom: 10px; opacity: .9; }
-#rail .rail-sep { width: 26px; height: 1px; background: var(--line); margin: 6px 0; }
 #rail button {
   position: relative; width: 38px; height: 38px; display: grid; place-items: center;
   background: none; border: 0; border-radius: 8px; color: var(--dim); cursor: pointer; padding: 0;
@@ -827,6 +916,29 @@ body { font-size: 13px; }
   border-radius: 2px; background: var(--accent);
 }
 #rail .grow { flex: 1; }
+/* The stages of the work: a small name over each group, which is the
+   separator too. The stage you are in has its name in the accent. */
+#rail .rail-stage { display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding-top: 7px; margin-top: 3px; border-top: 1px solid var(--line); width: 44px; }
+#rail .rail-stage-name { font-size: 8.5px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--dim); opacity: .8; line-height: 1; user-select: none; }
+#rail .rail-stage:has([aria-current="true"]) .rail-stage-name { color: var(--accent); opacity: 1; }
+
+/* The dashboard's cards: the same four stages, with what is in each. */
+#stages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 14px 0 26px; }
+@media (max-width: 600px) { #stages { grid-template-columns: 1fr; } }
+.stage-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 10px;
+  display: flex; flex-direction: column; }
+.stage-card h2 { margin: 0 0 2px; font-size: 14px; border: 0; }
+.stage-card > p { margin: 0 0 8px; color: var(--dim); font-size: 12px; }
+.stage-tools { display: flex; flex-direction: column; gap: 2px; }
+.stage-tool { display: flex; gap: 9px; align-items: flex-start; text-align: left; width: 100%;
+  background: none; border: 1px solid transparent; border-radius: 7px; padding: 6px; color: var(--ink); cursor: pointer; }
+.stage-tool:hover, .stage-tool:focus-visible { background: var(--panel-2); border-color: var(--line); }
+.stage-tool [data-icon] { color: var(--accent); margin-top: 1px; }
+.stage-tool b { display: block; font-weight: 600; font-size: 12.5px; }
+.stage-tool small { display: block; color: var(--dim); font-size: 11.5px; line-height: 1.35; }
+.stage-card .stage-note { margin: auto 0 0; padding-top: 8px; font-size: 11.5px; color: var(--dim); }
 /* The rail's names: a label that slides out on hover or focus. */
 #rail [data-tip]::after {
   content: attr(data-tip); position: absolute; left: 46px; top: 50%; transform: translateY(-50%);
@@ -935,6 +1047,43 @@ section { margin-bottom: 20px; }
 #hud #btnZoomReset { font-size: 12px; font-variant-numeric: tabular-nums; min-width: 46px; }
 #hud .keys { display: none; }
 #hud #pos { margin-left: auto; font-size: 12px; }
+/* Pinned tools - see js/pins.js. Each group of pinned tools is its own
+   span; a line between two groups replaces the old fixed separators, so an
+   emptied group leaves no stray line behind. */
+#hud { position: relative; }
+#hudTools { display: contents; }
+.hud-group { display: inline-flex; align-items: center; gap: 4px; }
+.hud-group + .hud-group { border-left: 1px solid #2c2c31; padding-left: 9px; margin-left: 5px; }
+#hudTools:not(:empty) + #btnMoreTools { margin-left: 5px; }
+#btnMoreTools { position: relative; }
+#btnMoreTools[aria-expanded="true"] { background: #26262a; }
+#hudMore {
+  position: absolute; bottom: calc(100% + 8px); right: 10px; z-index: 7;
+  width: 320px; max-width: calc(100vw - 20px); max-height: min(70vh, 560px); overflow: auto; box-sizing: border-box;
+  background: rgba(14, 14, 18, .97); border: 1px solid var(--line-hi); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5); padding: 6px; color: var(--ink); font-size: 13px;
+}
+.more-row { display: flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 4px; border-radius: 6px; }
+.more-row:hover { background: rgba(255,255,255,.04); }
+/* Similar, without the backend's features, is hidden in the toolbar and
+   so leaves More too, rather than a name with no button. */
+.more-row:has(> .hidden:first-child) { display: none; }
+.more-name { margin-left: 6px; color: var(--ink); }
+.more-name kbd, .more-pins kbd {
+  font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid var(--line-hi); border-radius: 4px; color: var(--dim);
+}
+#hudMoreEmpty { margin: 8px 6px; color: var(--dim); }
+.more-pins { border-top: 1px solid var(--line); margin-top: 6px; padding: 8px 4px 4px; }
+.more-pins-head { display: flex; align-items: center; margin-bottom: 8px; }
+.more-pins-head b { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+#hud .more-reset { margin-left: auto; height: 24px; font-size: 12px; color: var(--dim); }
+#hudPinList { display: flex; flex-wrap: wrap; gap: 5px; }
+#hud .pin-chip {
+  height: 28px; padding: 0 10px; border-radius: 14px; font-size: 12px;
+  border: 1px solid #34343b; color: var(--dim); display: inline-flex;
+}
+#hud .pin-chip[aria-pressed="true"] { background: var(--accent-dim); border-color: var(--accent); color: var(--ink); font-weight: 400; }
+.more-pins small { display: block; margin-top: 8px; color: var(--dim); font-size: 11px; }
 #compareBar, #valueTools { background: #141416; }
 
 /* ---- Train: a grid of trainers, then one task at a time. */
@@ -1102,3 +1251,91 @@ section { margin-bottom: 20px; }
 #themeMenu button[aria-checked="true"] { border-color: var(--accent); }
 .theme-strip { display: flex; width: 58px; height: 22px; border-radius: 5px; overflow: hidden; flex: none; border: 1px solid rgb(128 128 128 / .3); }
 .theme-strip i { flex: 1; }
+
+/* Find a tool (Ctrl+K) - see js/command.js. Above everything, the session
+   included, so it takes the theme even there: it is a control, not part of
+   the stage. */
+#cmdk {
+  position: fixed; inset: 0; z-index: 70; background: rgb(0 0 0 / .45);
+  display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px 16px;
+}
+#cmdkBox {
+  width: min(560px, 100%); background: var(--panel); color: var(--ink);
+  border: 1px solid var(--line-hi); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 24px 64px rgb(0 0 0 / .45);
+}
+#cmdkInput {
+  width: 100%; height: 52px; padding: 0 18px; border: 0; border-bottom: 1px solid var(--line);
+  background: none; color: var(--ink); font: inherit; font-size: 16px; outline: none;
+}
+#cmdkList { list-style: none; margin: 0; padding: 6px; max-height: min(420px, 55vh); overflow: auto; }
+#cmdkList li {
+  display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px;
+  border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+#cmdkList li span { flex: 1; }
+#cmdkList li[aria-selected="true"] { background: var(--panel-2); }
+#cmdkList li:hover { background: var(--hover); }
+#cmdkList kbd {
+  font: 11px ui-monospace, monospace; color: var(--dim); border: 1px solid var(--line-hi);
+  border-radius: 4px; padding: 1px 6px;
+}
+#cmdkList .cmdk-none { color: var(--dim); cursor: default; }
+.cmdk-foot { padding: 8px 16px; font-size: 11px; color: var(--dim); border-top: 1px solid var(--line); }
+
+/* The theme editor - see js/theme-editor.js. */
+#themeEditor {
+  position: fixed; inset: 0; z-index: 70; background: rgb(0 0 0 / .35);
+  display: flex; justify-content: flex-start; align-items: flex-end; padding: 16px 16px 16px 64px;
+}
+#themeEditorBox {
+  width: min(400px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line-hi);
+  border-radius: 12px; padding: 16px 18px; box-shadow: 0 24px 64px rgb(0 0 0 / .45);
+  display: flex; flex-direction: column; gap: 12px;
+}
+#themeEditorBox h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.te-name { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); }
+.te-name input { flex: 1; }
+.te-row { display: flex; align-items: center; gap: 12px; min-height: 40px; cursor: pointer; }
+.te-row input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line-hi); border-radius: 6px; background: none; cursor: pointer; }
+.te-row span { flex: 1; display: flex; flex-direction: column; }
+.te-row b { font-weight: 500; font-size: 13px; }
+.te-row small { color: var(--dim); font-size: 11px; }
+.te-row code { font: 12px ui-monospace, monospace; color: var(--dim); }
+#themeContrast { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: var(--bg); }
+.te-ratio { display: flex; gap: 8px; font-size: 12px; align-items: baseline; }
+.te-ratio span { flex: 1; }
+.te-ratio b { font-variant-numeric: tabular-nums; }
+.te-ratio i { font-style: normal; color: var(--dim); min-width: 78px; text-align: right; }
+.te-ratio.bad i { color: var(--bad); font-weight: 600; }
+.te-note { margin: 0; font-size: 12px; color: var(--dim); line-height: 1.5; }
+#themeEditorMsg:empty { display: none; }
+#themeEditorMsg { font-size: 12px; }
+.te-actions { gap: 8px; flex-wrap: wrap; }
+#themeSave { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 6px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+#themeMenu .theme-edit { border-top: 1px solid var(--line); border-radius: 0 0 7px 7px; margin-top: 4px; padding-top: 10px; color: var(--dim); }
+
+/* My materials - see js/materials.js. Opens beside the rail, like the
+   theme editor. */
+#materials {
+  position: fixed; inset: 0; z-index: 70; background: rgb(0 0 0 / .35);
+  display: flex; justify-content: flex-start; align-items: flex-end; padding: 16px 16px 16px 64px;
+}
+#materialsBox {
+  width: min(420px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line-hi);
+  border-radius: 12px; padding: 16px 18px; box-shadow: 0 24px 64px rgb(0 0 0 / .45);
+  display: flex; flex-direction: column; gap: 12px;
+}
+#materialsBox h2 { margin: 0; font-size: 16px; font-weight: 600; }
+#materialsList fieldset { border: 0; margin: 0 0 8px; padding: 0; }
+#materialsList legend { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); padding: 0 0 4px; }
+.mat-row { display: flex; align-items: center; min-height: 36px; padding: 0 6px; border-radius: 6px; }
+.mat-row:hover { background: var(--hover); }
+.mat-have { flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
+.mat-main { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dim); cursor: pointer; }
+.mat-row.off .mat-main { visibility: hidden; }
+#materialsBox input { accent-color: var(--accent); width: 16px; height: 16px; }
+#materialsNow span { color: var(--ink); }
+@media (max-width: 700px) { #materials { padding: 12px; } }

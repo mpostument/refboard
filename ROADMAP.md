@@ -14,39 +14,37 @@ kind of control. The interface is never left for a big redesign at the end.
 
 Fifty-odd more features will not fit the present layout, where each tool
 lives in the one place it was first built (the pose skeleton and the
-eyedropper only in a session, palettes only in the Colour studio). Worth a
-clickable mock-up before any code.
+eyedropper only in a session, palettes only in the Colour studio). A
+clickable mock-up of it - workspace, easel mode, settings - is agreed.
 
 - **One workspace for an image.** Any picture - from a session, the
   library, a museum, a photo of your own work - opens in one place, and
-  every tool works on it. A side panel in tabs by the question asked of
-  the picture: Value (levels, notan, the paper's range, edges), Colour
-  (palette, wheel, temperature, recipes), Construction (perspective,
-  proportion, grids, tangents), Figure and head (pose, Loomis, eyes,
-  rhythms), My work (compare, painting check, likeness).
-- **Overlays as layers.** Skeleton, grid, edge map, palette highlight...
-  each a layer in a list, with on/off and opacity, as in Photoshop - so
-  the pose and the colour temperature can be seen together.
-- **Navigation by the stage of work**, not by technical section: Prepare
-  (references, board, simplify, layer plan, transfer), Practise
-  (sessions, trainers, 3D), Paint (the timed session, the camera
-  eyedropper), Check (compare, critique, framed).
-- **Command palette (Ctrl+K).** Type "green" or "Loomis" and go straight
-  to the tool - what makes a large app usable.
+  every tool works on it. The panel is in place in a session (`w`,
+  `js/workspace.js`): tabs by the question asked of the picture - Value,
+  Colour, Construction, Figure, My work - each row the toolbar's own tool.
+  Still to come: opening the Colour studio's picture, a library image or a
+  photo of your work straight into it, and the tools the tabs are waiting
+  for - the paper's range and edges (Value), temperature (Colour),
+  tangents (Construction), eyes and rhythms (Figure), a painting check and
+  likeness (My work).
 - **Easel mode for a tablet.** Big controls, gestures, one hand, the
   screen kept awake; a left-handed layout.
-- **Pinned tools.** Your five or six favourites always to hand; the rest
-  through Ctrl+K.
-- **Medium-aware.** The materials profile (see Materials) shapes what
-  each tool suggests.
 
-Themes are in: the four Catppuccin flavours (Mocha by default), Studio
-dark and Daylight, from the rail - `js/theme.js`.
-
-- **Theme editor.** Change any of a theme's colours and save it as your
-  own; export and import it as a file. Colours that carry meaning (the
-  value scale, the swatches, the image itself) are never themed - a theme
-  must not change what a grey reads as.
+In place: themes - the four Catppuccin flavours (Mocha by default), Studio
+dark and Daylight - with a theme editor that saves, exports and imports
+your own (`js/theme.js`, `js/theme-editor.js`); and Find a tool, Ctrl+K,
+over every section, trainer, theme and session tool (`js/command.js`);
+and layers - every session overlay in one list with on/off and opacity,
+"o" to hide them all for a moment (`js/layers.js`). Each new overlay
+(the edge map, colour temperature, a palette highlight) joins that list;
+and pinned tools - the session toolbar holds what you pin, the rest wait
+under More with their keys and in Ctrl+K (`js/pins.js`); and My materials
+(`js/materials.js`) - see Materials; and navigation by the stage of work -
+the rail grouped as Prepare, Practise, Paint and Check, with the same four
+as cards on the dashboard, built from the rail's groups (`js/stages.js`).
+Each new section joins the stage it is for: the board, simplify, layer plan
+and transfer under Prepare; the camera eyedropper under Paint; critique
+and the framed view under Check.
 
 - **A tour.** A short tour the first time the new interface opens: where
   things are, and how Ctrl+K works.
@@ -294,6 +292,11 @@ The medium becomes a setting for the whole app, not only the eyedropper's
 watercolour / oil switch: each medium gets lighter and darker in its own
 way, so its advice is different. The painter's materials go in a profile
 ("My materials") that every tool reads.
+
+In place: the My materials profile - what you have, what you are using
+now - with each medium's tone ladder (a wash, a layer of hatching, a
+pencil grade), read by the value split's legend and the eyedropper. Every
+item below reads the same profile.
 
 Ink (bottle ink, liners, ballpoint pen):
 

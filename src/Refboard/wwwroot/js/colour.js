@@ -434,7 +434,6 @@ function initColour() {
     if (!b) return;
     col.medium = b.dataset.colMedium;
     setPaintMedium(col.medium);
-    el('mediumSelect').value = col.medium;
     colourRender();
   });
   el('colPaints').addEventListener('click', e => {

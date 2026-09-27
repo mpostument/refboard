@@ -47,18 +47,88 @@ const THEMES = {
 const THEME_KEY = 'refboard.theme.v1';
 const THEME_DEFAULT = 'mocha';
 
+/* ---- your own themes, from the theme editor (js/theme-editor.js). Kept
+   as the six colours the editor shows; every other variable is worked out
+   from them by themeFromColours(). */
+const THEME_CUSTOM_KEY = 'refboard.customThemes.v1';
+const THEME_COLOURS = ['bg', 'panel', 'panel-2', 'ink', 'dim', 'accent'];
+const HEX = /^#[0-9a-f]{6}$/i;
+
+function hexLuminance(hex) {
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const contrastRatio = (a, b) => {
+  const [x, y] = [hexLuminance(a), hexLuminance(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+};
+
+// Only well-formed colours ever get through: they end up in style
+// attributes, and an imported file is someone else's.
+function validColours(c) {
+  return c && typeof c === 'object' && THEME_COLOURS.every(k => HEX.test(c[k]));
+}
+
+function themeFromColours(label, c) {
+  const light = hexLuminance(c.bg) > 0.4;
+  return {
+    label, light, custom: true, colours: { ...c },
+    vars: {
+      bg: c.bg, panel: c.panel, 'panel-2': c['panel-2'], line: c['panel-2'],
+      'line-hi': `color-mix(in srgb, ${c['panel-2']} 80%, ${c.ink})`,
+      ink: c.ink, dim: c.dim, accent: c.accent,
+      'accent-dim': `color-mix(in srgb, ${c.accent} 38%, ${c.bg})`,
+      // Whichever of black and white reads better on the accent.
+      'on-accent': contrastRatio(c.accent, '#000000') >= contrastRatio(c.accent, '#ffffff') ? '#11111b' : '#ffffff',
+      'btn-off': c['panel-2'], bad: light ? '#d20f39' : '#f38ba8',
+      hover: `color-mix(in srgb, ${c.ink} 7%, transparent)`,
+    },
+  };
+}
+
+function customThemes() {
+  let raw;
+  try { raw = JSON.parse(localStorage.getItem(THEME_CUSTOM_KEY)) || {}; } catch { raw = {}; }
+  const out = {};
+  for (const [id, t] of Object.entries(raw)) {
+    if (/^custom-[a-z0-9-]{1,40}$/.test(id) && t && typeof t.label === 'string' && validColours(t.colours)) {
+      out[id] = themeFromColours(t.label.slice(0, 40), t.colours);
+    }
+  }
+  return out;
+}
+function saveCustomThemes(themes) {
+  const raw = {};
+  for (const [id, t] of Object.entries(themes)) raw[id] = { label: t.label, colours: t.colours };
+  try { localStorage.setItem(THEME_CUSTOM_KEY, JSON.stringify(raw)); } catch { /* private mode */ }
+}
+const allThemes = () => ({ ...THEMES, ...customThemes() });
+
+// The six editable colours of any theme, built in or your own.
+function themeColours(t) {
+  return t.colours || Object.fromEntries(THEME_COLOURS.map(k => [k, t.vars[k]]));
+}
+
 function themeId() {
-  try { const id = localStorage.getItem(THEME_KEY); return THEMES[id] ? id : THEME_DEFAULT; }
+  try { const id = localStorage.getItem(THEME_KEY); return allThemes()[id] ? id : THEME_DEFAULT; }
   catch { return THEME_DEFAULT; }
 }
 
-function applyTheme(id) {
-  const t = THEMES[id] || THEMES[THEME_DEFAULT], root = document.documentElement;
+// Paints the page with a theme without choosing it - the editor's live
+// preview uses this directly.
+function paintTheme(t) {
+  const root = document.documentElement;
   for (const [k, v] of Object.entries(t.vars)) root.style.setProperty('--' + k, v);
   // Native controls - a <select>'s open list above all - follow this.
   root.style.colorScheme = t.light ? 'light' : 'dark';
-  root.dataset.theme = THEMES[id] ? id : THEME_DEFAULT;
   document.dispatchEvent(new CustomEvent('refboard:theme'));
+}
+
+function applyTheme(id) {
+  const all = allThemes(), known = all[id] ? id : THEME_DEFAULT;
+  document.documentElement.dataset.theme = known;
+  paintTheme(all[known]);
 }
 
 function setTheme(id) {

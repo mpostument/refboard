@@ -93,12 +93,13 @@ function initThemeMenu() {
   const btn = el('btnTheme'), menu = el('themeMenu');
   const render = () => {
     const now = themeId();
-    menu.innerHTML = Object.entries(THEMES).map(([id, t]) => {
-      const v = t.vars;
+    // Labels escaped: your own themes' names can come from an imported file.
+    menu.innerHTML = Object.entries(allThemes()).map(([id, t]) => {
+      const c = themeColours(t);
       return `<button type="button" role="menuitemradio" aria-checked="${id === now}" data-theme="${id}">` +
-        `<span class="theme-strip">${[v.bg, v.panel, v['panel-2'], v.accent, v.ink].map(c => `<i style="background:${c}"></i>`).join('')}</span>` +
-        `${t.label}</button>`;
-    }).join('');
+        `<span class="theme-strip">${[c.bg, c.panel, c['panel-2'], c.accent, c.ink].map(x => `<i style="background:${x}"></i>`).join('')}</span>` +
+        `${esc(t.label)}</button>`;
+    }).join('') + '<button type="button" role="menuitem" class="theme-edit" data-theme-edit>Edit colours...</button>';
   };
   const open = show => {
     menu.classList.toggle('hidden', !show);
@@ -107,6 +108,7 @@ function initThemeMenu() {
   };
   btn.addEventListener('click', e => { e.stopPropagation(); open(menu.classList.contains('hidden')); });
   menu.addEventListener('click', e => {
+    if (e.target.closest('[data-theme-edit]')) { open(false); openThemeEditor(); return; }
     const b = e.target.closest('[data-theme]');
     if (!b) return;
     setTheme(b.dataset.theme);
@@ -467,15 +469,25 @@ function buildValueFilter() {
 function drawLegend() {
   const host = el('valueLegend');
   host.innerHTML = '';
+  el('paneLegend').innerHTML = '';
   if (!state.valueSteps || state.valueScheme === 'edges') return;
   const n = state.valueSteps;
   const stops = VALUE_SCHEMES[state.valueScheme].stops;
+  // Each step named in the medium you are using - js/materials.js.
+  const names = materialTones(n).reverse();
   for (let i = 0; i < n; i++) {
     const [r, g, b] = sampleGradient(stops, i / (n - 1));
-    const sw = document.createElement('div');
+    const step = document.createElement('span');
+    step.className = 'legend-step';
+    const sw = document.createElement('span');
     sw.className = 'palette-swatch';
     sw.style.background = `rgb(${r},${g},${b})`;
-    host.appendChild(sw);
+    step.append(sw, names[i]);
+    el('paneLegend').appendChild(step);
+    // The drawer keeps the bare swatches; the names are on the pane.
+    const bare = sw.cloneNode();
+    bare.title = names[i];
+    host.appendChild(bare);
   }
 }
 

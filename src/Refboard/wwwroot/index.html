@@ -39,24 +39,47 @@
 -->
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
-<script src="js/theme.js?v=579237fe"></script>
-<link rel="stylesheet" href="css/app.css?v=5fec9cfb">
+<script src="js/theme.js?v=16e8d197"></script>
+<link rel="stylesheet" href="css/app.css?v=c3704dd0">
 </head>
 <body>
 <div id="setup">
-  <!-- ---------------------------------------------- the rail: every section.
-       data-view is read by setView(); Library opens the folder panel beside
-       it rather than being a view of its own - browsing a folder is. -->
+  <!-- ---------------------------------------------- the rail: every section,
+       grouped by the stage of work it is for - Prepare, Practise, Paint,
+       Check - rather than by how it was built. data-view is read by
+       setView(); Library opens the folder panel beside it rather than being
+       a view of its own - browsing a folder is. The dashboard's stage cards
+       are built from these groups (js/stages.js): add a button to a group
+       and it is on its card too. -->
   <nav id="rail" aria-label="Sections">
     <img class="rail-brand" src="icon-refboard.svg" alt="Refboard">
+    <button type="button" id="btnFind" data-icon="search" data-tip="Find a tool (Ctrl+K)" aria-label="Find a tool"></button>
     <button class="nav-item" type="button" data-view="dashboard" data-icon="home" data-tip="Dashboard" aria-label="Dashboard"></button>
-    <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
-    <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images" aria-label="All images"></button>
-    <button class="nav-item" type="button" data-view="drop" data-icon="eye" data-tip="Check your own image" aria-label="Check your own image"></button>
-    <span class="rail-sep"></span>
-    <button class="nav-item" type="button" data-view="forms" data-icon="cube" data-tip="3D forms" aria-label="3D forms"></button>
-    <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
-    <button class="nav-item" type="button" data-view="train" data-icon="target" data-tip="Train - value, colour, anatomy, lines, perspective" aria-label="Train"></button>
+    <div class="rail-stage" role="group" aria-label="Prepare" data-stage="Prepare"
+         data-blurb="Find your references and plan the colours.">
+      <span class="rail-stage-name" aria-hidden="true">Prepare</span>
+      <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
+      <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images - browse and search" aria-label="All images"></button>
+      <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
+    </div>
+    <div class="rail-stage" role="group" aria-label="Practise" data-stage="Practise"
+         data-blurb="The basics, a little every day.">
+      <span class="rail-stage-name" aria-hidden="true">Practise</span>
+      <button class="nav-item" type="button" data-view="train" data-icon="target" data-tip="Train - value, colour, anatomy, lines, perspective" aria-label="Train"></button>
+      <button class="nav-item" type="button" data-view="forms" data-icon="cube" data-tip="3D forms - light on simple forms and heads" aria-label="3D forms"></button>
+    </div>
+    <div class="rail-stage" role="group" aria-label="Paint" data-stage="Paint"
+         data-blurb="Draw from the references, in your own medium.">
+      <span class="rail-stage-name" aria-hidden="true">Paint</span>
+      <button type="button" id="btnPaint" data-icon="play" data-tip="Start drawing - a timed session from the packs you ticked"
+              data-about="a timed session from the packs you ticked" aria-label="Start drawing"></button>
+      <button type="button" id="btnMaterials" data-icon="brush" data-tip="My materials - what you draw and paint with" aria-label="My materials"></button>
+    </div>
+    <div class="rail-stage" role="group" aria-label="Check" data-stage="Check"
+         data-blurb="Look again - at a reference or at your own work.">
+      <span class="rail-stage-name" aria-hidden="true">Check</span>
+      <button class="nav-item" type="button" data-view="drop" data-icon="eye" data-tip="Check an image - a reference or a photo of your drawing" aria-label="Check your own image"></button>
+    </div>
     <span class="grow"></span>
     <button type="button" id="btnTheme" data-icon="moon" data-tip="Theme" aria-label="Theme"
             aria-haspopup="menu" aria-expanded="false" aria-controls="themeMenu"></button>
@@ -149,6 +172,10 @@
            library at all. -->
       <div id="viewDashboard">
         <div class="sub" id="summary">loading index...</div>
+
+        <!-- The four stages of the work, as on the rail - built from the
+             rail's groups by initStages(), so the two never disagree. -->
+        <section id="stages" aria-label="Stages of the work"></section>
 
         <!-- Everything in here is derived from the same `sessions` array the
              one-line summary used to be: no new store, no backend, and nothing
@@ -511,6 +538,8 @@
          difference between the two panes. -->
     <div class="pane hidden" id="paneValue">
       <div class="zoomwrap" id="zoomValue"><img id="imgValue" alt="" draggable="false"><svg id="gridValue" class="hidden" preserveAspectRatio="none"></svg></div>
+      <!-- The steps, named in your medium - see drawLegend(). -->
+      <div id="paneLegend" aria-label="Value steps"></div>
     </div>
     <!-- The angle tool's drawn line(s) - see renderAngleOverlay(). Zoom
          and pan apply to the images; this deliberately does not follow them
@@ -530,6 +559,32 @@
     <div id="stageBadge" class="hidden"></div>
     <!-- What the pose skeleton found - see runPose(). -->
     <div id="poseNote" class="hidden"></div>
+    <!-- While "o" has every overlay out of the way - see toggleLayersPeek(). -->
+    <div id="peekBadge" class="hidden">Overlays hidden · <kbd>o</kbd> brings them back</div>
+  </div>
+  <!-- Every overlay as a layer - see js/layers.js. Outside #stage, whose
+       pointer handlers (pan, the angle tool) would take its clicks. -->
+  <!-- The workspace panel - see js/workspace.js. Its rows press the
+       toolbar's own controls, so it holds no tools of its own. -->
+  <div id="wsPanel" class="hidden" role="dialog" aria-label="Workspace">
+    <div class="layers-head">
+      <b>Workspace</b>
+      <button type="button" id="wsClose" data-icon="close" title="Close (Esc)" aria-label="Close workspace"></button>
+    </div>
+    <div id="wsTabs" role="tablist" aria-label="Questions"></div>
+    <p id="wsQuestion"></p>
+    <div id="wsList" role="tabpanel"></div>
+  </div>
+  <div id="layersPanel" class="hidden" role="dialog" aria-label="Layers">
+    <div class="layers-head">
+      <b>Layers</b><span id="layersCount"></span>
+      <button type="button" id="layersClose" data-icon="close" title="Close (Esc)" aria-label="Close layers"></button>
+    </div>
+    <div id="layersList"></div>
+    <div class="layers-foot">
+      <button type="button" id="layersPeek" aria-pressed="false" title="Every overlay out of the way, nothing turned off (o)">Hide all <kbd>o</kbd></button>
+      <label title="White lines outlined in black, for a busy or light picture (h)"><input type="checkbox" id="layersHC"> Bold lines <kbd>h</kbd></label>
+    </div>
   </div>
   <div id="bar"><div id="fill"></div></div>
   <!-- Collapsed by default - see toggleValueTools(). Everything in here is
@@ -544,7 +599,7 @@
     <label class="opt">Blur <select id="blurSelect"></select></label>
     <div id="valueLegend" title="The current scheme's tone steps, dark to light - what each posterized level actually maps to"></div>
     <span id="eyedropperReadout"></span>
-    <label class="opt" title="Watercolour: lighter means more water, and white is the paper. Oil and acrylic: lighter means white paint.">Medium <select id="mediumSelect"></select></label>
+    <label class="opt" title="What you are using now - the value steps and the eyedropper speak in its terms. My materials... to change the list.">Medium <select id="mediumSelect"></select></label>
     <label class="opt" title="The paints the mixing recipes may use">Paints <select id="paintSelect"></select></label>
     <div id="mixGuide" title="Ways to mix the sampled colour from real paint - see Help, Eyedropper"></div>
     <div id="eyedropperHistory" title="Last few sampled colours - click to copy the hex"></div>
@@ -596,14 +651,30 @@
     <button id="btnPose" data-icon="person" title="Pose skeleton (p): the gesture, the tilt of shoulders and hips, and where the weight is - found by a pose model that runs in this browser" aria-label="Pose skeleton"></button>
     <button id="btnHead" data-icon="head" title="Loomis head (l): the ball, side plane and thirds of the face, turned to match each head in the picture - found by a face model that runs in this browser" aria-label="Loomis head"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
+    <button id="btnWorkspace" data-icon="sliders" title="Workspace (w): the tools sorted by the question you ask of the picture - value, colour, construction, figure, your own work" aria-label="Workspace" aria-pressed="false"></button>
+    <button id="btnLayers" data-icon="layers" title="Layers: every overlay in one list, each on or off and with its own opacity" aria-label="Layers" aria-pressed="false"></button>
     <span class="hud-sep"></span>
     <button id="btnInfo" data-icon="info" title="Show this pose's brightness histogram and dominant colours (i)" aria-label="Info"></button>
     <button id="btnSimilar" class="hidden" data-icon="similar" title="Similar poses next (m)" aria-label="Similar"></button>
     <button id="btnSkip" data-icon="ban" title="Never show this pose again (s)" aria-label="Skip"></button>
+    <!-- The pinned tools, in groups, and the rest under More - see
+         js/pins.js, which moves the buttons above into one or the other. -->
+    <span id="hudTools"></span>
+    <button id="btnMoreTools" data-icon="more" title="More tools - and which ones stay in the toolbar" aria-label="More tools" aria-haspopup="true" aria-expanded="false"></button>
+    <div id="hudMore" class="hidden" role="group" aria-label="More tools">
+      <div id="hudMoreList"></div>
+      <p id="hudMoreEmpty" class="hidden">Every tool is pinned to the toolbar.</p>
+      <div class="more-pins">
+        <div class="more-pins-head"><b>In the toolbar</b><button type="button" id="hudPinReset" class="more-reset">Reset</button></div>
+        <div id="hudPinList"></div>
+        <small>Unpinned tools keep their keys, and Ctrl+K finds them.</small>
+      </div>
+    </div>
+    <button id="btnFindHud" data-icon="search" title="Find a tool (Ctrl+K)" aria-label="Find a tool"></button>
     <button id="btnHelpHud" data-icon="help" title="What every feature does and how to use it (?)" aria-label="Help"></button>
     <button id="btnStop" data-icon="stop" title="Stop (Esc)" aria-label="Stop"></button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · d compare · i info · r grid · m similar · s skip · esc stop · ? help</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
   </div>
 </div>
 
@@ -612,6 +683,57 @@
      theming (see #session's own comment on the same trick) rather than
      inheriting whichever of light/dark #setup happens to be in - a help
      card is read the same way regardless of which screen opened it from. -->
+<!-- Find a tool (Ctrl+K) - see js/command.js. Outside #setup and #session
+     so it opens over either. -->
+<div id="cmdk" class="hidden" role="dialog" aria-modal="true" aria-label="Find a tool">
+  <div id="cmdkBox">
+    <input id="cmdkInput" type="text" role="combobox" aria-expanded="true" aria-controls="cmdkList"
+           aria-autocomplete="list" autocomplete="off" spellcheck="false" aria-label="Find a tool"
+           placeholder="Find a tool - try &ldquo;green&rdquo;, &ldquo;flip&rdquo; or &ldquo;Loomis&rdquo;">
+    <ul id="cmdkList" role="listbox" aria-label="Tools"></ul>
+    <div class="cmdk-foot">&uarr; &darr; to choose · Enter to use · Esc to close</div>
+  </div>
+</div>
+
+<!-- The theme editor - see js/theme-editor.js. -->
+<div id="themeEditor" class="hidden" role="dialog" aria-modal="true" aria-labelledby="themeEditorTitle">
+  <div id="themeEditorBox">
+    <div class="row">
+      <h2 id="themeEditorTitle" class="grow">Theme editor</h2>
+      <button type="button" class="ghost" id="themeEditorClose" title="Close without saving (Esc)">Close</button>
+    </div>
+    <label class="te-name">Name <input type="text" id="themeName" maxlength="40" autocomplete="off"></label>
+    <div id="themeRows"></div>
+    <div id="themeContrast"></div>
+    <p class="te-note">Changes show on the whole app as you make them. The picture, a
+      session's stage, value scales and paint swatches never take a theme's colours.</p>
+    <div id="themeEditorMsg" role="status"></div>
+    <div class="row te-actions">
+      <button type="button" id="themeSave">Save</button>
+      <button type="button" class="ghost" id="themeExport">Export file</button>
+      <button type="button" class="ghost" id="themeImport">Import file</button>
+      <button type="button" class="ghost hidden" id="themeDelete">Delete</button>
+    </div>
+    <input type="file" id="themeImportInput" accept=".json,application/json" class="hidden">
+  </div>
+</div>
+
+<!-- My materials - see js/materials.js. -->
+<div id="materials" class="hidden" role="dialog" aria-modal="true" aria-labelledby="materialsTitle">
+  <div id="materialsBox">
+    <div class="row">
+      <h2 id="materialsTitle" class="grow">My materials</h2>
+      <button type="button" class="ghost" id="materialsClose" title="Close (Esc)">Close</button>
+    </div>
+    <p class="te-note">Tick what you have; the dot is what you are using now. The value
+      split's steps and the eyedropper then speak in its terms - a wash, a layer
+      of hatching, a pencil grade. The medium select in the info drawer switches
+      between the ones you have.</p>
+    <div id="materialsList"></div>
+    <p id="materialsNow" class="te-note"></p>
+  </div>
+</div>
+
 <div id="helpOverlay" class="hidden" role="dialog" aria-modal="true" aria-label="Help">
   <div id="helpModal">
     <div class="row" style="margin-bottom:18px">
@@ -621,17 +743,41 @@
 
     <section>
       <h2>Browsing your library</h2>
-      <p>The icons down the far left are the sections - hover one for its
-        name: Dashboard, <b>Library</b> (shows or hides the folder panel),
-        All images, Check your own image, 3D forms and <b>Train</b>. The
+      <p>The icons down the far left are the sections, grouped by the
+        stage of the work they are for - hover one for its name.
+        <b>Prepare</b>: the <b>Library</b> (shows or hides the folder panel),
+        All images and the Colour studio. <b>Practise</b>: <b>Train</b> and
+        3D forms. <b>Paint</b>: Start drawing - a timed session from the
+        packs you ticked - and My materials. <b>Check</b>: open any image,
+        a reference or a photo of your drawing, with the value tools. The
+        dashboard has the same four stages as cards, each with what is in
+        it. The
         sliders icon top right shows or hides the session panel - its tabs are
         <b>Timing</b>, <b>Filter</b> and <b>Display</b>, with the pose count
         and Start always at the bottom. Both panels stay the way you leave
         them. The 3D panel has tabs too: Object, Light, View and Use.</p>
+      <p><b>Find a tool</b> - <b>Ctrl+K</b>, or the magnifier at the top of
+        the rail and in a session's toolbar: type a few letters of what you
+        want - "loomis", "flip", "green", "perspective" - and Enter. It finds
+        every section, every trainer and theme, and in a session every tool
+        and guide in the toolbar, also by the other words they go by. With
+        nothing typed, the ones you used last come first.</p>
+      <p>The <b>brush</b> near the bottom of the rail is <b>My materials</b>:
+        tick what you draw and paint with - watercolour, oil or gouache,
+        bottle ink, liners, ballpoint, watercolour pencils and markers,
+        graphite - and which one you are using now. Each gets darker in its
+        own way, so the tools speak in its terms: the value split names its
+        steps ("a light wash", "cross-hatching", "2B"), and the eyedropper
+        says which step a colour is, then, for paint, how to mix it. The
+        info drawer's <b>Medium</b> switches between your materials.</p>
       <p>The <b>moon</b> near the bottom of the rail picks a theme:
         Catppuccin Mocha (the default), Macchiato, Frappé and Latte, the
         original Studio dark, and Daylight - black on white, for a tablet
-        outdoors. A theme colours the panels and controls only: a session's
+        outdoors. <b>Edit colours...</b> at the bottom of that menu opens the
+        theme editor: six colours, shown live on the whole app, with how
+        readable the text is on them; Save keeps it as your own theme, and
+        Export and Import pass it on as a small file. A theme colours the
+        panels and controls only: a session's
         stage stays black, and the picture, value scales and swatches look
         the same in every theme, so none of them changes how dark something
         reads.</p>
@@ -686,6 +832,29 @@
         <b>F</b> flip horizontally · <b>G</b> grayscale · <b>Q</b> squint ·
         <b>S</b> skip this pose for good · <b>Esc</b> stop. The HUD's own
         buttons do the same thing for a mouse.</p>
+      <p><b>Your toolbar</b> - the session toolbar holds the tools you
+        pin; the rest are under <b>More</b> (the three dots), one click
+        away. At the bottom of More, every tool is listed: a lit one is in
+        the toolbar, and clicking it moves it to More or back. An unpinned
+        tool keeps its key, and Ctrl+K still finds it. <b>Reset</b> puts
+        back the first set.</p>
+      <p><b>Workspace</b> - <b>w</b>, or the sliders in the toolbar: the
+        session's tools sorted by the question you are asking of the
+        picture. <b>Value</b> - how light or dark; <b>Colour</b> - what
+        colour and how to mix it; <b>Construction</b> - where things are and
+        at what angle; <b>Figure</b> - how the body is built; <b>My work</b> -
+        whether your drawing is right. Each row is the toolbar's own tool,
+        on or off the same as from its key.</p>
+      <p><b>Layers</b> - the stack icon in the toolbar lists every overlay
+        that can lie over the picture: construction guides, angle lines, the
+        focal point, the ghost of the last pose, the Loomis head, the pose
+        skeleton, the grid and your drawing, top to bottom as they stack.
+        Each has a checkbox - the same as its own button or key - and its own
+        opacity, kept for next time, so several can be on at once without
+        drowning the picture: a faint grid under a strong skeleton. The
+        number on the icon is how many are on. <b>O</b> hides them all at
+        once without turning any off - a clean look at the picture - and
+        <b>O</b> again brings them back.</p>
     </section>
 
     <section>
@@ -1142,18 +1311,25 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=07bac79f"></script>
-<script src="js/setup.js?v=4a7b32c4"></script>
-<script src="js/session.js?v=767c07cd"></script>
+<script src="js/core.js?v=cef4b061"></script>
+<script src="js/setup.js?v=65bd6fa9"></script>
+<script src="js/session.js?v=601473ba"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0bc3b11f"></script>
-<script src="js/tools.js?v=ff83cce3"></script>
+<script src="js/tools.js?v=859c8bec"></script>
+<script src="js/materials.js?v=ee1ed197"></script>
 <script src="js/vision.js?v=86d4847f"></script>
-<script src="js/study.js?v=3fb1f07e"></script>
+<script src="js/study.js?v=4ac85720"></script>
+<script src="js/layers.js?v=fdaf2ff2"></script>
+<script src="js/stages.js?v=34375c3f"></script>
+<script src="js/pins.js?v=9cc64b70"></script>
+<script src="js/workspace.js?v=2589d7ca"></script>
 <script src="js/forms-models.js?v=2ce0b537"></script>
 <script src="js/forms.js?v=b129bd90"></script>
 <script src="js/train.js?v=087d7106"></script>
-<script src="js/colour.js?v=821b03cc"></script>
+<script src="js/theme-editor.js?v=eb90793b"></script>
+<script src="js/command.js?v=3c8a0ec3"></script>
+<script src="js/colour.js?v=de8f64eb"></script>
 <script src="js/main.js?v=f703cd1f"></script>
 </body>
 </html>

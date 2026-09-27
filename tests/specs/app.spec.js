@@ -56,7 +56,13 @@ test('a dropped image opens a session, and the eyedropper gives recipes', async 
   await expect(rows.filter({ hasText: /white/i })).toHaveCount(0);
 
   // In oil or acrylic a light skin tone needs white.
-  await page.selectOption('#mediumSelect', 'opaque');
+  // Not one of the materials yet: added from the select's My materials...
+  await page.selectOption('#mediumSelect', 'edit');
+  await page.check('#materialsList [data-have="opaque"]');
+  await page.check('#materialsList [data-main="opaque"]');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#materials')).toBeHidden();
+  await expect(page.locator('#mediumSelect')).toHaveValue('opaque');
   await expect(rows.filter({ hasText: /white/i }).first()).toBeVisible();
 
   await page.keyboard.press('Escape');

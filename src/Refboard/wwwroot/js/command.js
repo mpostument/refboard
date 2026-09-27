@@ -1,0 +1,195 @@
+/* refboard - Find a tool (Ctrl+K). Type a few letters of what you want -
+   "loomis", "green", "flip" - and go straight to it, from anywhere.
+
+   Most commands are not listed here but read off the page when the box
+   opens: in a session, every button and every choice in the HUD; outside
+   one, every section on the rail. A new button in either place is findable
+   with no change to this file. What is listed here is what has no button:
+   the trainers, the themes, and the extra words a tool is known by. */
+"use strict";
+
+// Other words a tool is looked for by, keyed by its element's id.
+const COMMAND_WORDS = {
+  btnHead: 'face construction ball thirds anime',
+  btnPose: 'skeleton gesture figure body weight',
+  btnEyedropper: 'colour color picker sample pipette mix recipe paint watercolour',
+  btnCompare: 'overlay my drawing check photo',
+  btnAngle: 'measure proportion line',
+  btnGray: 'greyscale value black white',
+  btnSquint: 'blur big shapes',
+  btnInfo: 'histogram dominant colours palette',
+  btnSkip: 'never again hide',
+  btnStop: 'end quit exit',
+  btnPause: 'resume timer',
+  constructSelect: 'guide perspective',
+  valueSelect: 'notan tone value levels',
+  'view-dashboard': 'home start',
+  'view-all': 'browse grid images search',
+  'view-drop': 'open file upload photo check own image video',
+  'view-forms': '3d model mannequin head asaro planes light shadow',
+  'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
+  'view-train': 'drill practice exercise test',
+  btnLibrary: 'folders packs',
+  btnPaint: 'session timed timer draw go begin',
+  btnMaterials: 'medium media watercolour ink liner ballpoint pen pencil marker graphite gouache oil acrylic',
+  btnMoreTools: 'pin toolbar customise',
+  btnWorkspace: 'panel tabs value colour construction figure my work question',
+  btnLayers: 'overlays opacity visibility stack ghost focal grid',
+};
+
+const COMMAND_RECENT_KEY = 'refboard.commandRecent.v1';
+let commandList = [], commandSel = 0;
+
+function commandRecent() {
+  try { return JSON.parse(localStorage.getItem(COMMAND_RECENT_KEY)) || []; } catch { return []; }
+}
+
+// A button's own name, and the shortcut from its title: "Flip (f)" -> f.
+const commandKey = title => ((title || '').match(/\(([^)]{1,9})\)/) || [])[1] || '';
+
+/* Everything that can be done from where you are now, as
+   { id, label, hint, words, run }. */
+function collectCommands() {
+  const out = [], inSession = !el('session').classList.contains('hidden');
+  // Shown, or waiting under More (js/pins.js) - an unpinned tool is still
+  // one to find.
+  const visible = n => !n.disabled && !n.classList.contains('hidden')
+    && (n.offsetParent !== null || !!n.closest('#hudMoreList'));
+  if (inSession) {
+    for (const b of el('hud').querySelectorAll('button[id]')) {
+      if (!visible(b) || ['btnHelpHud', 'btnFindHud', 'hudPinReset'].includes(b.id)) continue;
+      // A button's name; failing that, its title up to the shortcut - the
+      // zoom reset's text is only "100%".
+      const label = b.getAttribute('aria-label') || b.title.split(/[(:]/)[0].trim() || b.textContent.trim();
+      out.push({ id: b.id, label, hint: commandKey(b.title), words: COMMAND_WORDS[b.id] || '', run: () => b.click() });
+    }
+    for (const s of el('hud').querySelectorAll('select[id]')) {
+      if (!visible(s)) continue;
+      for (const o of s.options) {
+        if (o.value === s.value) continue;
+        out.push({
+          id: `${s.id}:${o.value}`, label: o.textContent.trim(), hint: commandKey(s.title),
+          words: COMMAND_WORDS[s.id] || '',
+          run: () => { s.value = o.value; s.dispatchEvent(new Event('change')); },
+        });
+      }
+    }
+    out.push(...layerCommands());
+    out.push({ id: 'btnMaterials', label: 'My materials', hint: 'Medium', words: COMMAND_WORDS.btnMaterials, run: openMaterials });
+  } else {
+    for (const b of el('rail').querySelectorAll('button')) {
+      if (!visible(b) || b.id === 'btnFind') continue;
+      const id = b.dataset.view ? 'view-' + b.dataset.view : b.id;
+      // Its stage is its hint, and a word it is found by: "paint" lists the Paint group.
+      const stage = b.closest('.rail-stage')?.dataset.stage;
+      out.push({
+        id, label: b.dataset.tip || b.getAttribute('aria-label'), hint: stage || 'Section',
+        words: `${COMMAND_WORDS[id] || ''} ${stage || ''}`, run: () => b.click(),
+      });
+    }
+    for (const t of TRAINERS) {
+      out.push({
+        id: 'train-' + t.id, label: t.title + ' trainer', hint: 'Train', words: 'drill practice ' + (t.blurb || ''),
+        run: () => { setView({ kind: 'train' }); startTrainer(t.id); },
+      });
+    }
+  }
+  for (const [id, t] of Object.entries(allThemes())) {
+    if (id !== themeId()) out.push({ id: 'theme-' + id, label: 'Theme: ' + t.label, hint: 'Appearance', words: 'colours dark light', run: () => setTheme(id) });
+  }
+  out.push({ id: 'theme-editor', label: 'Theme editor', hint: 'Appearance', words: 'colours customise custom own import export', run: openThemeEditor });
+  out.push({ id: 'help', label: 'Help - how everything works', hint: '?', words: 'manual guide', run: toggleHelp });
+  return out;
+}
+
+/* Best first: the name starting with what was typed, then a word in the
+   name starting with it, then anywhere in the name, then only in the extra
+   words. Every typed word has to be found somewhere. With nothing typed,
+   the ones used last come first. */
+function rankCommands(all, query) {
+  const recent = commandRecent();
+  const q = query.trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean);
+  if (!words.length) {
+    const r = id => { const i = recent.indexOf(id); return i < 0 ? recent.length : i; };
+    return [...all].sort((a, b) => r(a.id) - r(b.id));
+  }
+  const scored = [];
+  for (const c of all) {
+    const label = c.label.toLowerCase(), hay = `${label} ${c.hint} ${c.words}`.toLowerCase();
+    if (!words.every(w => hay.includes(w))) continue;
+    const score = label.startsWith(q) ? 0 : label.split(/[^a-z0-9]+/).some(w => w.startsWith(words[0])) ? 1 : label.includes(q) ? 2 : 3;
+    scored.push([score, c]);
+  }
+  return scored.sort((a, b) => a[0] - b[0]).map(s => s[1]);
+}
+
+function renderCommands() {
+  commandList = rankCommands(collectCommands(), el('cmdkInput').value).slice(0, 12);
+  commandSel = Math.min(commandSel, Math.max(0, commandList.length - 1));
+  el('cmdkList').innerHTML = commandList.length ? commandList.map((c, i) =>
+    `<li role="option" id="cmdk-${i}" data-i="${i}" aria-selected="${i === commandSel}">` +
+    `<span>${esc(c.label)}</span>${c.hint ? `<kbd>${esc(c.hint)}</kbd>` : ''}</li>`).join('')
+    : '<li class="cmdk-none">Nothing by that name here.</li>';
+  el('cmdkInput').setAttribute('aria-activedescendant', commandList.length ? `cmdk-${commandSel}` : '');
+  el('cmdk-' + commandSel)?.scrollIntoView({ block: 'nearest' });
+}
+
+let commandReturnFocus = null;
+function openCommands() {
+  if (!el('helpOverlay').classList.contains('hidden')) toggleHelp();
+  commandReturnFocus = document.activeElement;
+  el('cmdk').classList.remove('hidden');
+  el('cmdkInput').value = '';
+  commandSel = 0;
+  renderCommands();
+  el('cmdkInput').focus();
+}
+
+function closeCommands() {
+  el('cmdk').classList.add('hidden');
+  commandReturnFocus?.focus?.();
+}
+
+function runCommand(c) {
+  if (!c) return;
+  const recent = commandRecent().filter(id => id !== c.id);
+  recent.unshift(c.id);
+  try { localStorage.setItem(COMMAND_RECENT_KEY, JSON.stringify(recent.slice(0, 8))); } catch { /* private mode */ }
+  commandReturnFocus = null;
+  closeCommands();
+  c.run();
+}
+
+function initCommands() {
+  const input = el('cmdkInput');
+  input.addEventListener('input', () => { commandSel = 0; renderCommands(); });
+  // Every key typed here stays here: the session, the 3D view and the
+  // trainers all listen on the document for single letters, and "flip"
+  // typed into this box must not also flip the picture.
+  input.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); closeCommands(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!commandList.length) return;
+      commandSel = (commandSel + (e.key === 'ArrowDown' ? 1 : commandList.length - 1)) % commandList.length;
+      renderCommands();
+    } else if (e.key === 'Enter') { e.preventDefault(); runCommand(commandList[commandSel]); }
+  });
+  el('cmdkList').addEventListener('click', e => {
+    const li = e.target.closest('[data-i]');
+    if (li) runCommand(commandList[Number(li.dataset.i)]);
+  });
+  el('cmdk').addEventListener('pointerdown', e => { if (e.target === el('cmdk')) closeCommands(); });
+  el('btnFind').addEventListener('click', openCommands);
+  el('btnFindHud').addEventListener('click', openCommands);
+  // Capture phase, so it is seen before any other shortcut handler. By
+  // e.code, the physical key: on a Ukrainian layout e.key is 'л'.
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === 'KeyK') {
+      e.preventDefault(); e.stopPropagation();
+      if (el('cmdk').classList.contains('hidden')) openCommands(); else closeCommands();
+    }
+  }, true);
+}
+initCommands();
