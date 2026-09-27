@@ -202,6 +202,13 @@ function paintRecipes(rgb, paletteKey = paintPaletteKey(), count = 4, medium = p
     out.push(r);
     if (out.length >= count) break;
   }
+  // Always a choice. Near a single paint (white, in oil) every other recipe
+  // is that paint plus a touch of something, and the rule above drops them
+  // all - but "white and a touch of ochre" is a real alternative to offer.
+  for (const r of ranked) {
+    if (out.length >= Math.min(3, count)) break;
+    if (!out.includes(r)) out.push(r);
+  }
   // Chosen with simplicity in the scales; shown closest first.
   return out.sort((a, b) => a.dE - b.dE);
 }

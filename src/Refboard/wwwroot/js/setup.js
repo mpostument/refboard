@@ -54,8 +54,42 @@ function updateFooterVersion() {
     .catch(() => { /* no backend, or it's down - the fallback already covers this */ });
 }
 
+/* A tab left open for days - a tablet by the easel - never sees a deploy.
+   When it comes back into view, fetch index.html afresh and compare the
+   ?v= stamps of its scripts and stylesheet (scripts/stamp-assets.js) with
+   the ones this page was loaded with: any difference means new code. Works
+   the same on GitHub Pages and behind a container, since it needs nothing
+   but the page itself. At most every ten minutes, and never on file://. */
+const UPDATE_CHECK_MS = 10 * 60 * 1000;
+let lastUpdateCheck = Date.now();
+const assetStamps = text => [...text.matchAll(/(?:js|css)\/[^"?]+\?v=[0-9a-f]+/g)].map(m => m[0]).sort().join(' ');
+// Read in initUpdateCheck(), not here: while this file runs, the parser
+// has not reached the script tags after it yet.
+let loadedStamps = '';
+
+async function checkForUpdate() {
+  if (location.protocol === 'file:' || !loadedStamps || Date.now() - lastUpdateCheck < UPDATE_CHECK_MS) return;
+  lastUpdateCheck = Date.now();
+  try {
+    const res = await fetch('index.html', { cache: 'no-store' });
+    if (!res.ok) return;
+    const latest = assetStamps(await res.text());
+    if (latest && latest !== loadedStamps) el('updateReady').classList.remove('hidden');
+  } catch { /* offline - the next visit will ask again */ }
+}
+
+function initUpdateCheck() {
+  loadedStamps = assetStamps(
+    [...document.querySelectorAll('script[src], link[rel="stylesheet"]')].map(n => `"${n.getAttribute('src') || n.getAttribute('href')}"`).join(''));
+  el('updateReady').addEventListener('click', () => location.reload());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
+}
+
 async function boot() {
   updateFooterVersion();
+  initUpdateCheck();
 
   // No library is a real, expected state here - not just "the fetch failed
   // once" - it's the whole of what this page is on GitHub Pages, which has

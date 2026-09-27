@@ -350,6 +350,38 @@ Or build the container image directly:
 docker build -t refboard .
 ```
 
+## Tests
+
+Browser tests for the frontend live in `tests/` (Playwright). They serve
+`src/Refboard/wwwroot` as GitHub Pages does - no backend - and fail on any
+uncaught error or `console.error`, as well as on their own checks: every
+section opens, a dropped image reaches the eyedropper's recipes, the colour
+studio finds a palette, and the paint engine keeps its rules. CI runs them
+on every push.
+
+```bash
+cd tests
+npm ci
+npx playwright install chromium
+npx playwright test
+```
+
+After changing anything under `wwwroot/js/` or `wwwroot/css/`, re-stamp
+`index.html` - every script and stylesheet it loads carries a hash of its
+contents (`js/paint.js?v=1a2b3c4d`), so browsers never mix old and new files
+from their cache, and the container can let them cache those for good:
+
+```bash
+node scripts/stamp-assets.js
+```
+
+CI fails when a stamp is out of date, and so do the tests. A tab left open
+across a deploy notices the new stamps when it comes back into view and
+offers to reload.
+
+`tests/specs/paint.spec.js` has a `KNOWN_MIXES` table of mixes a painter
+knows to be right - add to it when a recipe looks wrong.
+
 ## Releasing
 
 Images are tagged by version, not by commit SHA. `main` always gets

@@ -3,3 +3,6 @@ obj/
 .vs/
 *.user
 .smoketest/
+node_modules/
+tests/test-results/
+tests/playwright-report/

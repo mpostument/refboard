@@ -33,7 +33,22 @@ Directory.CreateDirectory(options.DisplayDir);
 // wwwroot/index.html is refboard.html under a conventional name, so it is
 // served at "/" with no extra configuration.
 app.UseDefaultFiles();
-app.UseStaticFiles();
+// index.html is always revalidated (a cheap 304 when unchanged), and every
+// js/ and css/ file it loads carries a hash of its contents (?v=..., see
+// scripts/stamp-assets.js) - so those can be cached for good: a changed
+// file is a new URL. Together a browser never runs a new page with an old
+// script, or an old page with a new one.
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var req = ctx.Context.Request;
+        if (req.Query.ContainsKey("v"))
+            ctx.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        else if (req.Path.Value?.EndsWith(".html", StringComparison.OrdinalIgnoreCase) == true)
+            ctx.Context.Response.Headers.CacheControl = "no-cache";
+    },
+});
 
 // The generated index.json, features.json and display/* copies - the whole
 // of DataDir served at the site root, exactly where refboard.html's own

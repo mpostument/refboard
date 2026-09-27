@@ -26,6 +26,40 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: node scripts/check-replaced-element-sizing.js
+      # Every js/ and css/ file index.html loads carries a hash of its
+      # contents (?v=...); a file changed without re-running the stamper
+      # would reach browsers under its old, cached-for-a-year URL.
+      - run: node scripts/stamp-assets.js --check
+
+  # The frontend in a real browser, served as GitHub Pages serves it (no
+  # backend): every section opens, a dropped image reaches the eyedropper's
+  # recipes, the colour studio finds a palette - and any uncaught error or
+  # console.error fails the run. See tests/. Parallel with `build`, like
+  # static-checks: nothing here needs the image.
+  browser-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - name: Keep the report of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            tests/playwright-report
+            tests/test-results
+          retention-days: 14
 
   build:
     runs-on: ubuntu-latest
