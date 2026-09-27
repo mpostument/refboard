@@ -21,7 +21,11 @@ const check = process.argv.includes('--check');
 const html = fs.readFileSync(INDEX, 'utf8');
 const stale = [];
 const out = html.replace(/((?:src|href)=")((?:js|css)\/[^"?]+)(?:\?v=([0-9a-f]+))?"/g, (all, attr, file, old) => {
-  const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, file))).digest('hex').slice(0, 8);
+  // Line endings normalised first: git stores these files with LF, but a
+  // Windows checkout (core.autocrlf) has CRLF on disk - the same file must
+  // get the same stamp on every machine, CI and the Docker build included.
+  const text = fs.readFileSync(path.join(ROOT, file), 'utf8').replace(/\r\n/g, '\n');
+  const hash = crypto.createHash('sha256').update(text).digest('hex').slice(0, 8);
   if (hash !== old) stale.push(`${file}: ${old || 'none'} -> ${hash}`);
   return `${attr}${file}?v=${hash}"`;
 });
