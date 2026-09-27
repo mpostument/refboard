@@ -40,7 +40,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=c3704dd0">
+<link rel="stylesheet" href="css/app.css?v=2b72423a">
 </head>
 <body>
 <div id="setup">
@@ -176,6 +176,12 @@
         <!-- The four stages of the work, as on the rail - built from the
              rail's groups by initStages(), so the two never disagree. -->
         <section id="stages" aria-label="Stages of the work"></section>
+        <details id="sectionsEdit">
+          <summary>Sections you use</summary>
+          <p class="count">Untick what you never open: it leaves the rail and its card, and the
+            interface gets simpler. Hidden ones are still in Find a tool (Ctrl+K).</p>
+          <div id="sectionsList"></div>
+        </details>
 
         <!-- Everything in here is derived from the same `sessions` array the
              one-line summary used to be: no new store, no backend, and nothing
@@ -285,6 +291,7 @@
             <div class="row col-bar">
               <button class="ghost" type="button" id="colPick">Choose image...</button>
               <button class="ghost hidden" type="button" id="colRandom" title="A random image from your library">Random from library</button>
+              <button class="ghost hidden" type="button" id="colWorkspace" data-tip="Open in the workspace - this picture with every session tool: value, construction, the figure">Open in workspace</button>
               <div class="chips" id="colModes" role="group" aria-label="How the image is shown">
                 <button class="chip" type="button" data-col-mode="colour" title="The image as it is">Colour</button>
                 <button class="chip" type="button" data-col-mode="value" title="Its values alone - the lightness every colour in it has, as grey">Value</button>
@@ -1312,7 +1319,7 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=cef4b061"></script>
-<script src="js/setup.js?v=65bd6fa9"></script>
+<script src="js/setup.js?v=6b96ebbd"></script>
 <script src="js/session.js?v=601473ba"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0bc3b11f"></script>
@@ -1321,15 +1328,15 @@
 <script src="js/vision.js?v=86d4847f"></script>
 <script src="js/study.js?v=4ac85720"></script>
 <script src="js/layers.js?v=fdaf2ff2"></script>
-<script src="js/stages.js?v=34375c3f"></script>
+<script src="js/stages.js?v=c7fb5944"></script>
 <script src="js/pins.js?v=9cc64b70"></script>
-<script src="js/workspace.js?v=2589d7ca"></script>
+<script src="js/workspace.js?v=24f8d0a0"></script>
 <script src="js/forms-models.js?v=2ce0b537"></script>
 <script src="js/forms.js?v=b129bd90"></script>
 <script src="js/train.js?v=087d7106"></script>
 <script src="js/theme-editor.js?v=eb90793b"></script>
-<script src="js/command.js?v=3c8a0ec3"></script>
-<script src="js/colour.js?v=de8f64eb"></script>
+<script src="js/command.js?v=818a8410"></script>
+<script src="js/colour.js?v=645241e3"></script>
 <script src="js/main.js?v=f703cd1f"></script>
 </body>
 </html>

@@ -22,9 +22,10 @@ clickable mock-up of it - workspace, easel mode, settings - is agreed.
   every tool works on it. The panel is in place in a session (`w`,
   `js/workspace.js`): tabs by the question asked of the picture - Value,
   Colour, Construction, Figure, My work - each row the toolbar's own tool.
-  Still to come: opening the Colour studio's picture, a library image or a
-  photo of your work straight into it, and the tools the tabs are waiting
-  for - the paper's range and edges (Value), temperature (Colour),
+  A library image opens there from the grid, a dropped photo opens with
+  the panel at Value, and the Colour studio's picture with "Open in
+  workspace", at Colour (`openInWorkspace()`). Still to come: the tools
+  the tabs are waiting for - the paper's range and edges (Value), temperature (Colour),
   tangents (Construction), eyes and rhythms (Figure), a painting check and
   likeness (My work).
 - **Easel mode for a tablet.** Big controls, gestures, one hand, the
@@ -44,14 +45,15 @@ the rail grouped as Prepare, Practise, Paint and Check, with the same four
 as cards on the dashboard, built from the rail's groups (`js/stages.js`).
 Each new section joins the stage it is for: the board, simplify, layer plan
 and transfer under Prepare; the camera eyedropper under Paint; critique
-and the framed view under Check.
+and the framed view under Check. And hiding what you do not use - "Sections you use" under the
+dashboard's cards: a section unticked leaves the rail and its card (a stage
+with nothing left goes too), and is still in Ctrl+K. Each new section (oil
+paint, manga...) is one more tick there.
 
 - **A tour.** A short tour the first time the new interface opens: where
   things are, and how Ctrl+K works.
 - **What's new.** After an update, a short panel of the new features with
   a "try it" button - so new things are not lost among a hundred others.
-- **Hide what you do not use.** Switch off sections you never open (oil
-  paint, manga...) and the interface gets simpler for you.
 
 ## Keeping it fast and working
 

@@ -78,12 +78,14 @@ function collectCommands() {
     out.push({ id: 'btnMaterials', label: 'My materials', hint: 'Medium', words: COMMAND_WORDS.btnMaterials, run: openMaterials });
   } else {
     for (const b of el('rail').querySelectorAll('button')) {
-      if (!visible(b) || b.id === 'btnFind') continue;
+      // A section you hid (js/stages.js) is off the rail, not out of reach.
+      const hid = b.classList.contains('user-hidden') && !b.classList.contains('hidden');
+      if ((!hid && !visible(b)) || b.id === 'btnFind') continue;
       const id = b.dataset.view ? 'view-' + b.dataset.view : b.id;
       // Its stage is its hint, and a word it is found by: "paint" lists the Paint group.
       const stage = b.closest('.rail-stage')?.dataset.stage;
       out.push({
-        id, label: b.dataset.tip || b.getAttribute('aria-label'), hint: stage || 'Section',
+        id, label: b.dataset.tip || b.getAttribute('aria-label'), hint: (stage || 'Section') + (hid ? ' · hidden' : ''),
         words: `${COMMAND_WORDS[id] || ''} ${stage || ''}`, run: () => b.click(),
       });
     }

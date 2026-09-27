@@ -923,6 +923,9 @@ body { font-size: 13px; }
 #rail .rail-stage-name { font-size: 8.5px; letter-spacing: .04em; text-transform: uppercase;
   color: var(--dim); opacity: .8; line-height: 1; user-select: none; }
 #rail .rail-stage:has([aria-current="true"]) .rail-stage-name { color: var(--accent); opacity: 1; }
+/* Sections you hid; a stage with none left loses its name and line too. */
+#rail .user-hidden { display: none; }
+#rail .rail-stage:not(:has(button:not(.hidden):not(.user-hidden))) { display: none; }
 
 /* The dashboard's cards: the same four stages, with what is in each. */
 #stages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 14px 0 26px; }
@@ -938,6 +941,12 @@ body { font-size: 13px; }
 .stage-tool [data-icon] { color: var(--accent); margin-top: 1px; }
 .stage-tool b { display: block; font-weight: 600; font-size: 12.5px; }
 .stage-tool small { display: block; color: var(--dim); font-size: 11.5px; line-height: 1.35; }
+#sectionsEdit { margin: -16px 0 24px; font-size: 12.5px; }
+#sectionsEdit summary { cursor: pointer; color: var(--dim); width: max-content; }
+#sectionsEdit summary:hover { color: var(--ink); }
+#sectionsList { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+#sectionsList fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+#sectionsList legend { padding: 0; margin-bottom: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--dim); }
 .stage-card .stage-note { margin: auto 0 0; padding-top: 8px; font-size: 11.5px; color: var(--dim); }
 /* The rail's names: a label that slides out on hover or focus. */
 #rail [data-tip]::after {

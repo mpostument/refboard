@@ -38,3 +38,27 @@ test('Ctrl+K finds a stage by its name', async ({ page }) => {
   await expect(opts.filter({ hasText: 'Start drawing' })).toHaveCount(1);
   await expect(opts.filter({ hasText: 'My materials' })).toHaveCount(1);
 });
+
+test('a section you never open can be hidden - off the rail and its card, not out of Ctrl+K', async ({ page }) => {
+  await openApp(page);
+  await page.locator('#sectionsEdit summary').click();
+  await page.locator('#sectionsList').getByLabel('3D forms').uncheck();
+  await expect(page.locator('.nav-item[data-view="forms"]')).toBeHidden();
+  await expect(card(page, 'Practise').getByRole('button', { name: /3D forms/ })).toHaveCount(0);
+
+  // A stage with nothing left goes, name and card.
+  await page.locator('#sectionsList').getByLabel('Train', { exact: true }).uncheck();
+  await expect(page.locator('#rail .rail-stage[data-stage="Practise"]')).toBeHidden();
+  await expect(card(page, 'Practise')).toHaveCount(0);
+
+  // Still findable, marked as hidden; and still hidden after a reload.
+  await page.keyboard.press('Control+k');
+  await page.locator('#cmdkInput').fill('3d forms');
+  await expect(page.locator('#cmdkList [role="option"]').first()).toContainText('hidden');
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await expect(page.locator('.nav-item[data-view="forms"]')).toBeHidden();
+  await page.locator('#sectionsEdit summary').click();
+  await page.locator('#sectionsList').getByLabel('Train', { exact: true }).check();
+  await expect(page.locator('#rail .rail-stage[data-stage="Practise"]')).toBeVisible();
+});

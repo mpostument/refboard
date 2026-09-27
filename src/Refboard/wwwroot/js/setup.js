@@ -648,6 +648,8 @@ function initDropZone() {
     // "Look at this," not a timed drill - startSession() always starts
     // unpaused, so this is the one place that immediately reverses it.
     if (!state.paused) togglePause();
+    // Split into values already - the panel opens at that question.
+    showWorkspaceAt('value');
   }
 
   function showMany(files) {
