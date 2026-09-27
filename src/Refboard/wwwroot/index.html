@@ -260,7 +260,12 @@
             <h4>Gamut mask</h4>
             <div class="chips" id="colMasks"></div>
             <div class="count" id="colMaskHint"></div>
-            <h4>Palette - colour and value</h4>
+            <h4>Paints</h4>
+            <div class="chips" id="colMedium" role="group" aria-label="Medium"></div>
+            <div class="chips" id="colPaints"></div>
+            <div class="count" id="colPaintHint"></div>
+            <h4>Palette - colour, value and how to mix it</h4>
+            <div class="count">Point at a colour to see where it is in the picture; click to keep it.</div>
             <div id="colPalette" class="count">No image yet.</div>
             <div class="count" id="colValueNote"></div>
           </div>
@@ -524,7 +529,9 @@
     <label class="opt">Blur <select id="blurSelect"></select></label>
     <div id="valueLegend" title="The current scheme's tone steps, dark to light - what each posterized level actually maps to"></div>
     <span id="eyedropperReadout"></span>
-    <span id="mixGuide" title="A rough paint-mixing starting point for the sampled colour - not a precise pigment match, real paint mixes differently than a screen's RGB."></span>
+    <label class="opt" title="Watercolour: lighter means more water, and white is the paper. Oil and acrylic: lighter means white paint.">Medium <select id="mediumSelect"></select></label>
+    <label class="opt" title="The paints the mixing recipes may use">Paints <select id="paintSelect"></select></label>
+    <div id="mixGuide" title="Ways to mix the sampled colour from real paint - see Help, Eyedropper"></div>
     <div id="eyedropperHistory" title="Last few sampled colours - click to copy the hex"></div>
     <canvas id="histoCanvas" width="120" height="32" title="This pose's brightness distribution, dark to light"></canvas>
     <div id="paletteSwatches" title="This pose's dominant colours"></div>
@@ -688,11 +695,20 @@
       </ul>
       <p><b>Eyedropper</b> (<b>E</b>, its own HUD button) - click anywhere on
         the reference to read the exact hex colour and brightness percent
-        under the cursor, plus a rough paint-mixing starting point (which two
-        of Yellow/Blue/Magenta, roughly what ratio, and how much to dilute
-        for the value) - useful for watercolour, not a precise pigment match,
-        since real paint mixes by absorption across the whole spectrum, not
-        a screen's three colour channels. The last few samples stay listed
+        under the cursor, and several ways to <b>mix it from real paint</b> -
+        burnt sienna and ultramarine, white and phthalo blue - in parts by
+        volume, each with the colour that mix gives and how close it lands.
+        <b>Medium</b> says how you paint: in <b>watercolour</b> there is no
+        white - a recipe says how strong a wash to make (from barely diluted
+        to a pale tint), and white means leaving the paper; in <b>oil or
+        acrylic</b> lighter means white paint. <b>Paints</b> picks the tubes
+        they may use: a full palette, a split
+        primary, three primaries, Zorn's four, the earths. The mixing is
+        worked out the way paint mixes - by what each pigment absorbs across
+        the spectrum (Kubelka-Munk, via spectral.js) - so blue and yellow
+        make green and complements make greys, as on a real palette. Brands
+        differ and screens differ: take it as where to start, then judge by
+        eye. The last few samples stay listed
         as small swatches next to the reading - click one to copy its hex,
         to compare two earlier spots (skin vs. background, say) without
         re-aiming at either one again.</p>
@@ -865,7 +881,16 @@
         it to turn it to other hues, drag a corner to reshape it, and
         <b>In gamut</b> repaints the image with only the colours inside it,
         its values untouched - try a palette on a picture before committing
-        paint to it. The image never leaves this browser.</p>
+        paint to it.</p>
+      <p><b>Paints</b> chooses a palette of real tubes - the same choice as
+        the eyedropper's. The dashed outline on the wheel is every colour
+        those paints can mix, and the note says how much of the picture lies
+        inside it: Zorn's four reach flesh and warm greys but no true blue or
+        green, so a sky has to become a cool grey - which is the point of a
+        limited palette. Under each palette colour is how to mix it from
+        them; click it for other ways. Point at a palette colour and the
+        picture shows only where it is used, the rest dimmed; click to keep
+        it that way. The image never leaves this browser.</p>
     </section>
 
     <section>
@@ -917,11 +942,16 @@
         lowest, so a kneeling figure kneels. A model file stays in
         the browser, and only until the page is reloaded. Contour lines on a
         model need texture coordinates in the file.</p>
-      <p><b>Head</b> is the Loomis head - a ball with its sides planed off
-        and the face hung below it in thirds, brow, nose, mouth and chin as
-        big masses - and <b>Head planes</b> is the same head cut into flat
-        facets, the plaster planes head, where each turn of the form is one
-        value. <b>Hand</b> poses like the figure, joint by joint - the wrist,
+      <p><b>Head</b> is a real head - a 3D scan - and <b>Head planes</b> is
+        the same head cut into a few hundred flat facets, the way the Asaro
+        planes head is: each turn of the form is one plane and one value, so
+        it shows where the light turns into shadow on a face and why. The
+        scan is fetched the first time you pick a head (about 400 KB, once);
+        until then, or offline, a simpler sculpted head stands in. Contour
+        lines on both run round the head and up it, like calliper lines on a
+        sculpture. Head scan: Lee Perry-Smith, Infinite-Realities
+        (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>),
+        via the three.js examples. <b>Hand</b> poses like the figure, joint by joint - the wrist,
         three joints on each finger and the thumb - with its own poses:
         relaxed, spread, fist, pointing, pinching, gripping. In <b>Draw random
         forms</b> a head nods, tilts and turns and a hand takes a new pose,
@@ -1093,6 +1123,8 @@
 <script src="js/core.js"></script>
 <script src="js/setup.js"></script>
 <script src="js/session.js"></script>
+<script src="js/vendor/spectral.js"></script>
+<script src="js/paint.js"></script>
 <script src="js/tools.js"></script>
 <script src="js/vision.js"></script>
 <script src="js/study.js"></script>

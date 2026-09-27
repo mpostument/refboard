@@ -17,6 +17,12 @@
    touches paint. The wheel is OKLCH at one lightness: hue round it, chroma
    out from the grey centre. Chroma past COL_CMAX sits on the rim.
 
+   And the paints: a palette of real tubes (paint.js - a full palette, Zorn's
+   four, the earths...) drawn on the wheel as the outline of every colour it
+   can mix, so what it cannot reach in this picture is plain to see before
+   the picture is started; and under each colour of the image, how to mix it
+   from those tubes.
+
    Everything happens here in the browser; the image never leaves it. */
 const COLOUR_KEY = 'refboard.colour.v1';
 const COL_CMAX = 0.25;      // OKLCH chroma at the wheel's rim
@@ -109,8 +115,9 @@ function mapIntoGamut(pt, poly) {
    as is every cluster would be a value step, not a colour. Seeded by
    farthest-point from the sample nearest the average, so the same image
    always gives the same palette. */
+const COL_CHROMA_W = 2;
 function colKmeans(pts, k) {
-  const W = 2; // chroma weight
+  const W = COL_CHROMA_W;
   const d2 = (p, q) => (p[0] - q[0]) ** 2 + W * ((p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2);
   const n = pts.length, mean = [0, 0, 0];
   for (const p of pts) for (let c = 0; c < 3; c++) mean[c] += p[c] / n;
@@ -145,6 +152,23 @@ function colKmeans(pts, k) {
   }).filter(p => p.share >= 0.005).sort((a, b) => b.share - a.share);
 }
 
+/* Which palette colour every pixel belongs to - the nearest, by the same
+   measure the palette was found with - so the picture can show where each
+   one is used. */
+function colAssign(lab, palette) {
+  const n = lab.length / 3, out = new Uint8Array(n), W = COL_CHROMA_W;
+  for (let i = 0, j = 0; i < n; i++, j += 3) {
+    let bc = 0, bd = Infinity;
+    for (let c = 0; c < palette.length; c++) {
+      const q = palette[c].lab;
+      const d = (lab[j] - q[0]) ** 2 + W * ((lab[j + 1] - q[1]) ** 2 + (lab[j + 2] - q[2]) ** 2);
+      if (d < bd) { bd = d; bc = c; }
+    }
+    out[i] = bc;
+  }
+  return out;
+}
+
 const colHex = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
 const colChromaWord = C => C < 0.03 ? 'grey' : C < 0.08 ? 'muted' : C < 0.15 ? 'clear' : 'vivid';
 
@@ -171,7 +195,8 @@ async function colourLoad(src) {
     const p = (y * w + x), q = p * 3;
     samples.push([lab[q], lab[q + 1], lab[q + 2], data[p * 4], data[p * 4 + 1], data[p * 4 + 2]]);
   }
-  Object.assign(col, { w, h, data, lab, samples, palette: colKmeans(samples, COL_K), mapped: null, hover: null });
+  const palette = colKmeans(samples, COL_K);
+  Object.assign(col, { w, h, data, lab, samples, palette, assign: colAssign(lab, palette), mapped: null, hover: null, focus: null, pin: null });
   el('colEmpty').classList.add('hidden');
   el('colImg').classList.remove('hidden');
   el('colReadout').textContent = 'Point at the image to find a colour on the wheel.';
@@ -207,6 +232,16 @@ function colourRenderImage() {
       col.mapped = m; col.mappedKey = key;
     }
     o.set(col.mapped);
+  }
+  // One palette colour in focus: everywhere else sinks to a dark grey, so
+  // what is left in colour is exactly where that colour is used.
+  if (col.focus !== null && col.assign) {
+    const f = col.focus, a = col.assign;
+    for (let i = 0, p = 0; p < a.length; i += 4, p++) {
+      if (a[p] === f) continue;
+      const g = (o[i] * 0.3 + o[i + 1] * 0.59 + o[i + 2] * 0.11) * 0.35;
+      o[i] = o[i + 1] = o[i + 2] = g;
+    }
   }
   ctx.putImageData(out, 0, 0);
 }
@@ -258,6 +293,16 @@ function colourRenderWheel() {
       ctx.fillRect(x - 1.2 * dpr, y - 1.2 * dpr, 2.4 * dpr, 2.4 * dpr);
     }
   }
+  // What the chosen paints can mix: a dashed outline.
+  const reach = colReach();
+  if (reach) {
+    ctx.save();
+    ctx.beginPath();
+    reach.map(q => toXY([q[0] / COL_CMAX, q[1] / COL_CMAX])).forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+    ctx.closePath();
+    ctx.setLineDash([5 * dpr, 4 * dpr]); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+    ctx.restore();
+  }
   // The mask: everything outside it darkened, its edge and its corners.
   if (col.mask) {
     const pts = col.mask.map(toXY);
@@ -279,7 +324,7 @@ function colourRenderWheel() {
     const [x, y] = toXY([p.lab[1] / COL_CMAX, p.lab[2] / COL_CMAX]), r = (6 + 10 * Math.sqrt(p.share)) * dpr;
     ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
     ctx.fillStyle = rgbCss(p.rgb); ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = (col.focus === i ? 3.5 : 1.5) * dpr; ctx.stroke();
     ctx.fillStyle = p.lab[0] > 0.62 ? '#111' : '#fff'; ctx.fillText(String(i + 1), x, y + 0.5 * dpr);
   });
   if (col.hover) {
@@ -298,10 +343,10 @@ function colourRenderPalette() {
   if (!pal) return;
   el('colPalette').innerHTML = pal.map((p, i) => {
     const L = lstar(p.rgb), [, C, h] = rgbOklch(p.rgb);
-    return `<div class="col-sw"><b>${i + 1}</b><i style="background:${rgbCss(p.rgb)}" title="${colHex(p.rgb)}"></i>` +
+    return `<div class="col-sw${col.pin === i ? ' pinned' : ''}" data-i="${i}" title="Where this colour is in the picture - click to keep it shown"><b>${i + 1}</b><i style="background:${rgbCss(p.rgb)}" title="${colHex(p.rgb)}"></i>` +
       `<i style="background:${rgbCss(greyOfLstar(L))}" title="Its value as grey"></i>` +
       `<span>${colHex(p.rgb)} · ${colChromaWord(C)}${C >= 0.03 ? ' ' + hueName(h) : ''}</span>` +
-      `<b>L* ${Math.round(L)} <span>· ${Math.round(p.share * 100)}%</span></b></div>`;
+      `<b>L* ${Math.round(L)} <span>· ${Math.round(p.share * 100)}%</span></b></div>` + colMixHtml(p);
   }).join('');
   const same = [];
   for (let i = 0; i < pal.length; i++) for (let j = i + 1; j < pal.length; j++) {
@@ -315,8 +360,43 @@ function colourRenderPalette() {
     : 'Every palette colour has a value of its own - the picture reads in black and white too.';
 }
 
+/* ---- the paints. The reach outline and the recipes both depend only on
+   the palette of tubes (and the recipes on the image's colours), so both are
+   worked out once per choice and kept - colourRender() runs on every step
+   of dragging the mask. */
+const colReachCache = {};
+function colReach() {
+  const k = col.paints + '|' + col.medium;
+  if (!(k in colReachCache)) colReachCache[k] = paintReach(col.paints, col.medium);
+  return colReachCache[k];
+}
+function colMixHtml(p) {
+  const key = col.paints + '|' + col.medium;
+  if (!p.mix || p.mix.key !== key) p.mix = { key, recipes: paintRecipes(p.rgb, col.paints, 3, col.medium) };
+  const [best, ...more] = p.mix.recipes;
+  if (!best) return '';
+  if (!more.length) return `<div class="col-mix">${paintRecipeHtml(best)}</div>`;
+  return `<details class="col-mix"><summary>${paintRecipeHtml(best)} <span>· ${more.length} more</span></summary>${more.map(paintRecipeHtml).join('')}</details>`;
+}
+function colourRenderPaints() {
+  for (const b of document.querySelectorAll('[data-col-paints]')) b.setAttribute('aria-pressed', String(b.dataset.colPaints === col.paints));
+  for (const b of document.querySelectorAll('[data-col-medium]')) b.setAttribute('aria-pressed', String(b.dataset.colMedium === col.medium));
+  let note = PAINT_PALETTES[col.paints].hint;
+  // How much of the picture these paints can reach - by pixel, on the wheel.
+  const reach = colReach();
+  if (reach && col.samples) {
+    const poly = reach.map(q => [q[0] / COL_CMAX, q[1] / COL_CMAX]);
+    const inside = col.samples.filter(s => pointInPolygon([s[1] / COL_CMAX, s[2] / COL_CMAX], poly)).length;
+    const pct = Math.round(100 * inside / col.samples.length);
+    note += ` Dashed on the wheel: all they can mix. ${pct}% of this picture is inside it` +
+      (pct < 90 ? ' - the rest is too intense, or a hue these paints cannot make.' : '.');
+  }
+  el('colPaintHint').textContent = note;
+}
+
 function colourRender() {
   if (!col) return;
+  colourRenderPaints();
   for (const b of document.querySelectorAll('[data-col-mode]')) b.setAttribute('aria-pressed', String(b.dataset.colMode === col.mode));
   const key = col.maskKey || null;
   for (const b of document.querySelectorAll('[data-col-mask]')) b.setAttribute('aria-pressed', String((b.dataset.colMask || null) === key));
@@ -337,11 +417,33 @@ function colourSoon() {
 
 function initColour() {
   const prefs = loadColourPrefs();
-  col = { mode: ['colour', 'value', 'mapped'].includes(prefs.mode) ? prefs.mode : 'colour', mask: null, maskKey: null };
+  col = { mode: ['colour', 'value', 'mapped'].includes(prefs.mode) ? prefs.mode : 'colour', mask: null, maskKey: null, paints: paintPaletteKey(), medium: paintMedium() };
   if (Array.isArray(prefs.mask) && prefs.mask.length >= 3 &&
       prefs.mask.every(p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) col.mask = prefs.mask;
   el('colMasks').innerHTML = `<button class="chip" type="button" data-col-mask="">Off</button>` +
     Object.entries(COL_MASKS).map(([k, m]) => `<button class="chip" type="button" data-col-mask="${k}" title="${esc(m.hint)}">${m.label}</button>`).join('');
+
+  el('colPaints').innerHTML = Object.entries(PAINT_PALETTES)
+    .map(([k, p]) => `<button class="chip" type="button" data-col-paints="${k}" title="${esc(p.hint)}">${p.label}</button>`).join('');
+  el('colMedium').innerHTML = Object.entries(PAINT_MEDIA)
+    .map(([k, label]) => `<button class="chip" type="button" data-col-medium="${k}">${label}</button>`).join('');
+  el('colMedium').addEventListener('click', e => {
+    const b = e.target.closest('[data-col-medium]');
+    if (!b) return;
+    col.medium = b.dataset.colMedium;
+    setPaintMedium(col.medium);
+    el('mediumSelect').value = col.medium;
+    colourRender();
+  });
+  el('colPaints').addEventListener('click', e => {
+    const b = e.target.closest('[data-col-paints]');
+    if (!b) return;
+    col.paints = b.dataset.colPaints;
+    // One choice of paints for the whole app - the eyedropper's too.
+    setPaintPaletteKey(col.paints);
+    el('paintSelect').value = col.paints;
+    colourRender();
+  });
 
   el('colModes').addEventListener('click', e => {
     const b = e.target.closest('[data-col-mode]');
@@ -357,6 +459,24 @@ function initColour() {
     // Choosing a mask is asking to see what it does.
     if (k && col.mode === 'colour') col.mode = 'mapped';
     saveColourPrefs(); colourRender();
+  });
+
+  // A palette row: pointing at it shows where that colour is; a click keeps
+  // it shown (and a second click, or another row, lets it go).
+  const pal = el('colPalette');
+  const focus = i => { if (col.focus !== i) { col.focus = i; colourRenderImage(); colourRenderWheel(); } };
+  pal.addEventListener('pointerover', e => {
+    const row = e.target.closest('.col-sw');
+    if (row) focus(+row.dataset.i);
+  });
+  pal.addEventListener('pointerleave', () => focus(col.pin));
+  pal.addEventListener('click', e => {
+    const row = e.target.closest('.col-sw');
+    if (!row) return;
+    const i = +row.dataset.i;
+    col.pin = col.pin === i ? null : i;
+    focus(col.pin === null ? i : col.pin);
+    colourRenderPalette();
   });
 
   const take = file => { if (file && file.type.startsWith('image/')) colourLoad(trainKeepUrl(URL.createObjectURL(file))); };
@@ -383,7 +503,7 @@ function initColour() {
     col.hover = [col.lab[j + 1] / COL_CMAX, col.lab[j + 2] / COL_CMAX];
     const [, C, h] = rgbOklch(rgb);
     const inMask = col.mask ? (pointInPolygon(col.hover, col.mask) ? ' · inside the mask' : ' · outside the mask') : '';
-    el('colReadout').textContent = `${colHex(rgb)} · value L* ${Math.round(lstar(rgb))} · ${colChromaWord(C)}${C >= 0.03 ? ' ' + hueName(h) : ''}${inMask}`;
+    el('colReadout').textContent = `${colHex(rgb)} · value L* ${Math.round(lstar(rgb))} · ${colChromaWord(C)}${C >= 0.03 ? ' ' + hueName(h) : ''} · palette ${col.assign[p] + 1}${inMask}`;
     colourRenderWheel();
   });
   el('colImg').addEventListener('pointerleave', () => { col.hover = null; colourRenderWheel(); });
@@ -424,6 +544,9 @@ function initColour() {
 
 function showColour() {
   if (!col) initColour();
+  // Either may have been changed from the eyedropper since.
+  col.paints = paintPaletteKey();
+  col.medium = paintMedium();
   el('colRandom').classList.toggle('hidden', !trainLibraryImage());
   colourRender();
 }

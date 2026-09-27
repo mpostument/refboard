@@ -318,6 +318,9 @@ function formGeometry(shape) {
   const F = forms;
   if (F.models[shape]) return F.models[shape].geometry;
   const key = FORM_SHAPES[shape] ? shape : 'cube';
+  // The heads come from a scan, fetched the first time one is wanted; the
+  // sculpted stand-in below shows until it arrives.
+  if (key === 'head' || key === 'planes') formHeadScan();
   return F.geometries[key] || (F.geometries[key] = FORM_SHAPES[key].build(F.T));
 }
 

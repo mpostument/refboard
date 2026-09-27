@@ -559,7 +559,8 @@ function show(src) {
   setMemoryPhase(null);
   setStage(null);
   el('eyedropperReadout').innerHTML = '';
-  el('mixGuide').textContent = '';
+  lastMixRgb = null;
+  renderMixGuide(null);
   eyedropperHistory = [];
   renderEyedropperHistory();
 

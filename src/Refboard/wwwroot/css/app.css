@@ -666,7 +666,14 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 }
 #valueLegend .palette-swatch { width: 14px; height: 14px; border-radius: 3px; }
 #eyedropperReadout { display: flex; align-items: center; gap: 6px; color: var(--ink); }
-#mixGuide { color: var(--dim); font-size: 12px; }
+/* Mixing recipes - see paintRecipes(). Each: the colour the mix gives, the
+   recipe, how close it lands. A line of its own under the eyedropper. */
+#mixGuide { flex-basis: 100%; display: flex; flex-direction: column; gap: 3px; color: var(--dim); font-size: 12px; }
+#mixGuide:empty { display: none; }
+.mix-row { display: flex; align-items: center; gap: 7px; color: var(--ink); }
+.mix-row i { flex: none; width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.15); }
+.mix-row em { font-style: normal; color: var(--dim); }
+.mix-note { color: var(--dim); }
 /* Rolling history of the last few sampled spots (see sampleEyedropper()) -
    click one to copy its hex without re-clicking the same spot on the
    reference again. Same swatch look as the dominant-colour palette; reads
@@ -953,6 +960,15 @@ section { margin-bottom: 20px; }
 .col-sw i { width: 26px; height: 26px; border-radius: 5px; border: 1px solid rgba(255,255,255,.1); display: block; }
 .col-sw b { font-variant-numeric: tabular-nums; font-weight: 500; }
 .col-sw span { color: var(--dim); }
+.col-sw { cursor: pointer; border-radius: 6px; padding-left: 4px; margin-left: -4px; }
+.col-sw:hover { background: rgba(255,255,255,.05); }
+.col-sw.pinned { background: rgba(227,160,67,.16); }
+/* A palette colour's mixes, under its row. */
+.col-mix { margin: 0 0 6px 50px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+.col-mix summary { cursor: pointer; color: var(--dim); list-style: none; }
+.col-mix summary::-webkit-details-marker { display: none; }
+.col-mix summary .mix-row { display: inline-flex; }
+.col-mix[open] summary em::after { content: ''; }
 #colValueNote { margin-top: 8px; }
 .train-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; max-width: 1100px; }
 .train-card {

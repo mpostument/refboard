@@ -197,9 +197,10 @@ const FORM_SHAPES = {
   // An artist's wooden mannequin: its body is FORM_RIG, hung off this tiny
   // ball at the pelvis (hidden inside it) - see buildFormRig().
   figure:   { label: 'Figure',   lines: [8, 6], rig: 'figure', build: T => new T.SphereGeometry(0.04, 8, 6) },
-  // The head, twice from one sculpt (formHeadGeometry()): smooth, as the
-  // Loomis ball-and-jaw reads, and cut into planes the way a plaster planes
-  // head is - fewer, flat facets, so each turn of the form is one value.
+  // The head, twice from one real head scan (formHeadScan()): as it is, and
+  // cut into planes the way the Asaro planes head is - large flat facets, so
+  // each turn of the form is one value. Until the scan has arrived (and if
+  // it cannot), the sculpted head stands in (formHeadGeometry()).
   // `subject`: like the figure, a thing to draw in its own right, never dealt
   // out as one more random shape.
   head:     { label: 'Head',     lines: [12, 8], subject: true, build: T => formHeadGeometry(T, 128, 96) },
@@ -368,6 +369,91 @@ function formHeadGeometry(T, wSeg, hSeg) {
   }
   g.computeVertexNormals();
   return g;
+}
+
+/* ---- the head scan. A real head, not a sculpt: Lee Perry-Smith's 3D scan
+   (Infinite-Realities, CC BY 3.0 - credited in the help), the one three.js
+   ships with its examples, fetched from jsDelivr the first time a head is
+   picked - 400 KB, once, and cached by the browser after that. Pinned to a
+   release tag like three.js itself, so it cannot change under the page.
+
+   From it, two geometries:
+   - Head: the scan as it is, smooth.
+   - Head planes: the scan simplified to a few hundred flat facets - what
+     John Asaro did by hand for his planes head, here done by meshoptimizer
+     (three's SimplifyModifier), which merges the faces whose collapse changes
+     the shape least. Big, gently turning areas (forehead, cheek, side of the
+     skull) melt into one plane each; the turns that matter - brow ridge,
+     sides of the nose, cheekbone, the corner of the jaw - survive as edges,
+     because collapsing them would move the surface most.
+
+   Both get their UVs replaced: the scan's own are a texture unwrap, which
+   would make the cross-contour lines (drawn from UVs) wander across the face
+   in pieces. Instead u goes round the head and v up it, so the lines are
+   true cross-contours - meridians and level slices, like a sculptor's
+   calliper lines. */
+const FORM_HEAD_SCAN = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r186/examples/models/gltf/LeePerrySmith/LeePerrySmith.glb';
+// Facets on the planes head: enough for the eye sockets and the nose to read
+// as planes, few enough that each one is a shape you could paint.
+const FORM_HEAD_PLANES = 900;
+let formHeadScanLoading = null;
+
+function formHeadScan() {
+  if (formHeadScanLoading) return;
+  const F = forms, T = F.T;
+  formHeadScanLoading = (async () => {
+    const [{ GLTFLoader }, { mergeVertices }, { SimplifyModifier }] = await Promise.all([
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/utils/BufferGeometryUtils.js'),
+      import('three/addons/modifiers/SimplifyModifier.js'),
+    ]);
+    const root = (await new GLTFLoader().loadAsync(FORM_HEAD_SCAN)).scene;
+    root.updateMatrixWorld(true);
+    let src = null;
+    root.traverse(o => { if (o.isMesh && !src) src = o.geometry.clone().applyMatrix4(o.matrixWorld); });
+    if (!src) throw new Error('no mesh in the head scan');
+    // Positions only, welded: the scan's UV seams otherwise split the
+    // surface into pieces the simplifier would keep apart.
+    let g = new T.BufferGeometry();
+    g.setAttribute('position', src.getAttribute('position'));
+    if (src.index) g.setIndex(src.index);
+    g = mergeVertices(g, 1e-4);
+    // The same size and place as the sculpted head, so the framing, the
+    // floor and the proportion sliders treat it the same.
+    const ref = formHeadGeometry(T, 32, 24);
+    ref.computeBoundingBox(); g.computeBoundingBox();
+    const rb = ref.boundingBox, gb = g.boundingBox;
+    const k = (rb.max.y - rb.min.y) / (gb.max.y - gb.min.y);
+    g.translate(-(gb.min.x + gb.max.x) / 2, -(gb.min.y + gb.max.y) / 2, -(gb.min.z + gb.max.z) / 2);
+    g.scale(k, k, k);
+    g.translate((rb.min.x + rb.max.x) / 2, (rb.min.y + rb.max.y) / 2, (rb.min.z + rb.max.z) / 2);
+
+    const smooth = g.clone();
+    smooth.computeVertexNormals();
+    const verts = g.getAttribute('position').count;
+    // Target by faces: a closed-ish mesh has about twice as many faces as
+    // vertices, so FORM_HEAD_PLANES faces is about half as many vertices.
+    const planes = await new SimplifyModifier().modify(g, Math.max(0, verts - FORM_HEAD_PLANES / 2));
+    planes.computeVertexNormals();
+    for (const geo of [smooth, planes]) { formHeadUv(geo); geo.computeBoundingBox(); geo.computeBoundingSphere(); }
+    F.geometries.head = smooth;
+    F.geometries.planes = planes;
+    formsChanged();
+  })();
+  formHeadScanLoading.catch(err => console.error('head scan (the sculpted head stays):', err));
+}
+
+// Cross-contour UVs for a head: u round the vertical axis (the seam down the
+// back of the skull), v up its height.
+function formHeadUv(g) {
+  const pos = g.getAttribute('position'), n = pos.count, uv = new Float32Array(n * 2);
+  g.computeBoundingBox();
+  const b = g.boundingBox, cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2, h = b.max.y - b.min.y;
+  for (let i = 0; i < n; i++) {
+    uv[i * 2] = Math.atan2(pos.getX(i) - cx, pos.getZ(i) - cz) / (2 * Math.PI) + 0.5;
+    uv[i * 2 + 1] = (pos.getY(i) - b.min.y) / h;
+  }
+  g.setAttribute('uv', new forms.T.BufferAttribute(uv, 2));
 }
 
 /* ---- the figure. A wooden mannequin, about eight heads tall (4 units -

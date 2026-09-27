@@ -634,61 +634,40 @@ el('eyedropperHistory').addEventListener('click', e => {
 });
 
 /* --------------------------------------------------------- mixing guide
-   A rough paint-mixing suggestion for the eyedropper's sampled colour - see
-   #mixGuide's CSS comment and sampleEyedropper(). NOT a spectrally accurate
-   pigment matcher (real paint mixes by absorption/reflectance across the
-   whole spectrum, not a screen's three RGB channels - two colours that look
-   identical on screen can still mix differently on paper) - this is a
-   starting suggestion built on the same 3-primary intuition most
-   "mixing primary" watercolour sets are sold around: a Yellow, a Blue, and
-   a Magenta/Red, spaced 120 degrees apart on the hue wheel, with the
-   sampled colour's ratio interpolated continuously between whichever two
-   it falls between - not a fixed table of named hues. */
-const MIX_PRIMARY_NAMES = ['Yellow', 'Blue', 'Magenta']; // 120° apart - Yellow sits at hue 60
-
-function rgbToHsl(r, g, b) {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  if (max === min) return { h: 0, s: 0, l };
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  let h;
-  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
-  else if (max === g) h = (b - r) / d + 2;
-  else h = (r - g) / d + 4;
-  return { h: h * 60, s, l };
+   Ways to mix the eyedropper's colour from real paint - paintRecipes() in
+   paint.js, which mixes pigments the way paint does (by what they absorb),
+   not the way screens do. Several routes, closest first, from whichever
+   palette is chosen: the same colour from a full palette, and from Zorn's
+   four, are different lessons. In watercolour, water and the white of the
+   paper do what white paint does here. */
+function renderMixGuide(rgb) {
+  const box = el('mixGuide');
+  if (!rgb) { box.innerHTML = ''; return; }
+  const recipes = paintRecipes(rgb);
+  box.innerHTML = recipes.length
+    ? recipes.map(paintRecipeHtml).join('') + `<span class="mix-note">${paintMedium() === 'water'
+      ? 'Parts of paint; the wash says how much water - lighter is more water, and white is the paper.'
+      : 'Parts by volume, white included.'}</span>`
+    : '<span class="mix-note">Mixing needs js/vendor/spectral.js, which did not load.</span>';
 }
 
-function mixGuide(r, g, b) {
-  const { h, s, l } = rgbToHsl(r, g, b);
-
-  // Shift so Yellow (hue 60) is the zero point, then which 120° third of
-  // the wheel the sample falls in picks the two primaries either side of
-  // it, and how far along that third gives the mix ratio between them.
-  const shifted = (((h - 60) % 360) + 360) % 360;
-  const segment = Math.floor(shifted / 120);
-  const t = (shifted % 120) / 120;
-  const loName = MIX_PRIMARY_NAMES[segment], hiName = MIX_PRIMARY_NAMES[(segment + 1) % 3];
-  const loPct = Math.round((1 - t) * 100), hiPct = 100 - loPct;
-  const ratio = loPct === 100 ? loName : hiPct === 100 ? hiName : `${loPct}% ${loName} + ${hiPct}% ${hiName}`;
-
-  // Watercolour lightens with water, not white paint - so this reads as
-  // dilution, not a "+ white" instruction the way an opaque medium would get.
-  const value = l > 0.8 ? 'very light - mostly water, just a hint of pigment'
-    : l > 0.6 ? 'light - dilute the mix well'
-    : l > 0.35 ? 'mid value - a moderately loaded brush'
-    : l > 0.15 ? 'dark - concentrated pigment'
-    : 'very dark - fully loaded; a touch of a dark neutral (not black) deepens it without muddying the hue';
-
-  const mute = s < 0.15
-    ? ' - reads as nearly neutral/gray; equal parts of two near-opposite colours gets there faster than chasing this ratio'
-    : s < 0.35
-    ? " - muted; a small touch of the mix's complement tones it down"
-    : '';
-
-  return `≈ ${ratio} · ${value}${mute}`;
+function initPaintSelect() {
+  const sel = el('paintSelect');
+  sel.innerHTML = Object.entries(PAINT_PALETTES).map(([k, p]) => `<option value="${k}" title="${esc(p.hint)}">${p.label}</option>`).join('');
+  sel.value = paintPaletteKey();
+  sel.addEventListener('change', () => {
+    setPaintPaletteKey(sel.value);
+    if (lastMixRgb) renderMixGuide(lastMixRgb);
+  });
+  const med = el('mediumSelect');
+  med.innerHTML = Object.entries(PAINT_MEDIA).map(([k, label]) => `<option value="${k}">${label}</option>`).join('');
+  med.value = paintMedium();
+  med.addEventListener('change', () => {
+    setPaintMedium(med.value);
+    if (lastMixRgb) renderMixGuide(lastMixRgb);
+  });
 }
+let lastMixRgb = null;
 
 function sampleEyedropper(clientX, clientY) {
   const img = el('img');
@@ -702,7 +681,8 @@ function sampleEyedropper(clientX, clientY) {
   const pct = Math.round((0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 * 100);
   el('eyedropperReadout').innerHTML =
     `<span class="palette-swatch" style="background:${hex}"></span> ${hex} · ${pct}% value`;
-  el('mixGuide').textContent = mixGuide(r, g, b);
+  lastMixRgb = [r, g, b];
+  renderMixGuide(lastMixRgb);
   el('valueTools').classList.remove('hidden'); // surface the reading even if the drawer was closed
 
   eyedropperHistory.unshift(hex);
@@ -715,6 +695,7 @@ function initEyedropper() {
     if (state.eyedropperMode) sampleEyedropper(e.clientX, e.clientY);
   });
   el('btnEyedropper').addEventListener('click', toggleEyedropper);
+  initPaintSelect();
 }
 
 /* ------------------------------------------------------------- info drawer
