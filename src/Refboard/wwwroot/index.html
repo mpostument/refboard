@@ -776,6 +776,22 @@
     position: absolute; left: 12px; bottom: 12px; z-index: 4; max-width: min(520px, calc(100% - 24px));
     padding: 7px 11px; border-radius: 7px; background: rgba(0,0,0,.72); color: #fff; font-size: 13px; line-height: 1.45;
   }
+  #poseNote hr { border: 0; border-top: 1px solid rgba(255,255,255,.25); margin: 6px 0; }
+  /* Loomis head - see runHead(). Same box and scaling as #poseOverlay; each
+     line is drawn twice, a dark wide one under a coloured one, so it reads
+     on a pale face and a dark background alike. Lines on the far side of the
+     head are dashed and faint. */
+  #headOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  #headOverlay * { vector-effect: non-scaling-stroke; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  #headOverlay .o { stroke: #000; stroke-width: 4; opacity: .4; }
+  #headOverlay .ball { stroke: #fff; stroke-width: 1.5; opacity: .8; }
+  #headOverlay .third { stroke: #ffd54f; stroke-width: 2; }
+  #headOverlay .mid { stroke: #ff6f59; stroke-width: 2; }
+  #headOverlay .side { stroke: #6fc3ff; stroke-width: 2; }
+  #headOverlay .jaw { stroke: #fff; stroke-width: 2; }
+  #headOverlay .hid { stroke-dasharray: 3 5; opacity: .45; }
+  #headOverlay .o.hid { display: none; }
+  #headOverlay circle.dot { fill: #ffd54f; stroke: #000; stroke-width: 1; }
   #poseNote b { color: #ffd54f; font-weight: 600; }
   #poseNote i { font-style: normal; color: #ff8f7e; }
   #poseNote u { text-decoration: none; color: #8fd0ff; }
@@ -1525,7 +1541,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -1621,6 +1637,7 @@
     </select>
     <button id="btnEyedropper" data-icon="pipette" title="Eyedropper (e): click the reference to read its exact colour and value" aria-label="Eyedropper"></button>
     <button id="btnPose" data-icon="person" title="Pose skeleton (p): the gesture, the tilt of shoulders and hips, and where the weight is - found by a pose model that runs in this browser" aria-label="Pose skeleton"></button>
+    <button id="btnHead" data-icon="head" title="Loomis head (l): the ball, side plane and thirds of the face, turned to match each head in the picture - found by a face model that runs in this browser" aria-label="Loomis head"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <span class="hud-sep"></span>
     <button id="btnInfo" data-icon="info" title="Show this pose's brightness histogram and dominant colours (i)" aria-label="Info"></button>
@@ -1835,6 +1852,22 @@
         foot bearing the weight. It stays on for every pose until you turn it
         off. The model runs in this browser; the first time, it is
         downloaded once (about 6 MB). The image is never sent anywhere.</p>
+    </section>
+
+    <section>
+      <h2>Loomis head</h2>
+      <p><b>Head</b> (<b>L</b>) draws Andrew Loomis's construction over every
+        face in the picture, turned the way that head is turned: the
+        cranium as a <b>ball</b>, its sides sliced flat into the <b>side
+        plane</b> (blue - the ear sits just behind its middle), the
+        <b>centre line</b> (red) over the ball and down the face, and the
+        face in <b>thirds</b> (yellow) - hairline, brow, base of the nose,
+        chin. Lines on the far side of the head are dashed. The note says
+        how far the head is turned, tipped and tilted, and what that does to
+        the features. Draw the construction first, then check it against
+        this. It needs the face fairly large in the picture; like the pose
+        model, the face model runs in this browser and is downloaded once
+        (about 4 MB).</p>
     </section>
 
     <section>
@@ -2137,6 +2170,7 @@ const ICONS = {
   cube: '<path d="M12 2.5 3.5 7v10l8.5 4.5 8.5-4.5V7z"/><path d="M3.5 7 12 11.5 20.5 7M12 11.5v10"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
   person: '<circle cx="12" cy="4.5" r="2.2"/><path d="M12 7.5v7M7.5 10.5l4.5-2 4.5 2M8.5 21l3.5-6.5 3.5 6.5"/>',
+  head: '<circle cx="11" cy="9.5" r="6.5"/><path d="M11 3v13M4.5 9.5h13M16 10v2.5a2 2 0 0 1-1 1.7L11 21M7 14.5 11 21"/>',
   palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.7-1 1.2-1.9-.5-1 0-2.1 1.2-2.1H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7v.3"/><circle cx="12" cy="17" r=".7" fill="currentColor"/>',
   sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -2595,6 +2629,7 @@ const state = {
   // 'draw' or 'reveal'. See beginMemoryStudy().
   memPhase: null,
   poseOn: false,              // pose skeleton shown - see togglePose()
+  headOn: false,              // Loomis head shown - see toggleHead()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,
   // Browse mode - the stage opened on a grid cell rather than on a session.
@@ -4649,6 +4684,7 @@ function show(src) {
     positionGrid();
     if (el('optGrid').checked) drawGrid();
     if (state.poseOn) runPose();
+    if (state.headOn) runHead();
     refreshValueTools();
   };
   img.onerror = () => {
@@ -4698,8 +4734,9 @@ function show(src) {
   clearConstruct();
   // A drawing belongs to the pose it was drawn from.
   clearDrawing();
-  // A skeleton belongs to the pose it was found on.
+  // A skeleton belongs to the pose it was found on - and a head to its face.
   clearPose();
+  clearHead();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);
@@ -5868,7 +5905,7 @@ function refreshValueTools() {
    pre-transform values, which is what a positioned child inside the
    transformed wrapper needs. */
 function positionGrid() {
-  for (const [gridId, imgId] of [['grid', 'img'], ['gridValue', 'imgValue'], ['poseOverlay', 'img']]) {
+  for (const [gridId, imgId] of [['grid', 'img'], ['gridValue', 'imgValue'], ['poseOverlay', 'img'], ['headOverlay', 'img']]) {
     const g = el(gridId), im = el(imgId);
     if (!im.naturalWidth) continue;   // nothing decoded yet - show()'s onload calls back
     g.style.left = im.offsetLeft + 'px';
@@ -5948,29 +5985,44 @@ const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmar
 const PL = { nose: 0, lSh: 11, rSh: 12, lEl: 13, rEl: 14, lWr: 15, rWr: 16, lHip: 23, rHip: 24, lKn: 25, rKn: 26, lAn: 27, rAn: 28, lToe: 31, rToe: 32 };
 const POSE_BONES = [['lSh', 'rSh'], ['lSh', 'lEl'], ['lEl', 'lWr'], ['rSh', 'rEl'], ['rEl', 'rWr'], ['lSh', 'lHip'], ['rSh', 'rHip'],
   ['lHip', 'rHip'], ['lHip', 'lKn'], ['lKn', 'lAn'], ['rHip', 'rKn'], ['rKn', 'rAn'], ['lAn', 'lToe'], ['rAn', 'rToe']];
-let poseModel = null, poseLoading = null, poseRun = 0;
+const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+// The MediaPipe tasks this page uses - one runtime, fetched once, shared by
+// both; each model is fetched the first time its button is pressed.
+const VISION_TASKS = {
+  pose: { cls: 'PoseLandmarker', model: POSE_MODEL, opts: { numPoses: 2 } },
+  face: { cls: 'FaceLandmarker', model: FACE_MODEL, opts: { numFaces: 4 } },
+};
+const visionModels = {}, visionLoading = {};
+let poseRun = 0;
 
-function loadPoseModel() {
-  if (poseModel) return Promise.resolve(poseModel);
-  if (!poseLoading) {
-    poseLoading = (async () => {
-      const { FilesetResolver, PoseLandmarker } = await import(`${POSE_LIB}/vision_bundle.mjs`);
-      const files = await FilesetResolver.forVisionTasks(`${POSE_LIB}/wasm`);
-      const make = delegate => PoseLandmarker.createFromOptions(files, {
-        baseOptions: { modelAssetPath: POSE_MODEL, delegate }, runningMode: 'IMAGE', numPoses: 2 });
+function loadVision(kind) {
+  if (visionModels[kind]) return Promise.resolve(visionModels[kind]);
+  if (!visionLoading[kind]) {
+    const t = VISION_TASKS[kind];
+    visionLoading[kind] = (async () => {
+      const lib = await import(`${POSE_LIB}/vision_bundle.mjs`);
+      const files = await lib.FilesetResolver.forVisionTasks(`${POSE_LIB}/wasm`);
+      const make = delegate => lib[t.cls].createFromOptions(files, {
+        baseOptions: { modelAssetPath: t.model, delegate }, runningMode: 'IMAGE', ...t.opts });
       // The GPU path is faster but not every browser can give it a context.
-      try { poseModel = await make('GPU'); } catch { poseModel = await make('CPU'); }
-      return poseModel;
+      try { visionModels[kind] = await make('GPU'); } catch { visionModels[kind] = await make('CPU'); }
+      return visionModels[kind];
     })();
-    poseLoading.catch(() => { poseLoading = null; });
+    visionLoading[kind].catch(() => { visionLoading[kind] = null; });
   }
-  return poseLoading;
+  return visionLoading[kind];
 }
 
-function poseNote(html) {
-  el('poseNote').classList.toggle('hidden', !html);
-  el('poseNote').innerHTML = html || '';
+// The one note box is shared: the head's note above the pose's when both
+// are on.
+const overlayNotes = { head: '', pose: '' };
+function overlayNote(key, html) {
+  overlayNotes[key] = html || '';
+  const all = [overlayNotes.head, overlayNotes.pose].filter(Boolean).join('<hr>');
+  el('poseNote').classList.toggle('hidden', !all);
+  el('poseNote').innerHTML = all;
 }
+const poseNote = html => overlayNote('pose', html);
 function clearPose() {
   poseRun++;
   el('poseOverlay').classList.add('hidden');
@@ -5987,9 +6039,9 @@ function togglePose() {
 async function runPose() {
   const img = el('img'), run = ++poseRun;
   if (!img.naturalWidth) return;
-  if (!poseModel) poseNote('Loading the pose model - about 6 MB, once. The image stays in this browser.');
+  if (!visionModels.pose) poseNote('Loading the pose model - about 6 MB, once. The image stays in this browser.');
   let model;
-  try { model = await loadPoseModel(); }
+  try { model = await loadVision('pose'); }
   catch (err) {
     console.error('pose model:', err);
     poseNote('<i>The pose model could not load</i> - it needs a connection the first time, and WebAssembly.');
@@ -6090,6 +6142,240 @@ function drawPose(poses) {
 }
 
 el('btnPose').addEventListener('click', togglePose);
+
+/* ------------------------------------------------------ Loomis head
+   Andrew Loomis's construction, the one most portrait courses start from,
+   fitted to each face in the picture:
+
+   - the cranium is a ball; its sides are sliced off flat, and the slice -
+     the side plane - is a circle, where the ear sits just behind the middle;
+   - the face hangs off the front of the ball in three equal parts: hairline
+     to brow, brow to the base of the nose, nose to chin. The side circle
+     runs from the hairline to the nose line, so brow line is its middle;
+   - a centre line runs over the ball and down the face.
+
+   A face model (MediaPipe's face landmarker - 478 points, each with a depth)
+   finds the face; from four of its points comes which way the head is
+   turned, as three axes: across (outer corner of one eye to the other), up
+   (chin to forehead, made square to across) and forward (square to both).
+   Where the ball sits and how big it is come from matching three points of
+   the construction to the model's: the brow, the base of the nose and the
+   chin. Everything else is then drawn in the head's own frame and turned
+   with it - so a head seen from below gets its lines arching up, the far
+   side plane disappears on a three-quarter view, and so on.
+
+   The model's depth is in the same units as its x (a fraction of the image
+   width), which is what lets its points be treated as a 3D shape at all.
+   Projection is flat (no perspective), right for a head, which is small
+   against its distance from the camera. */
+// Loomis's proportions, in units of the ball's radius: one third of the
+// face - the side circle's radius, its diameter two thirds of the ball's -
+// and how far out the side planes are cut (where a sphere of radius 1 is a
+// circle of radius U - Pythagoras). That puts the side planes about as far
+// apart as the cheekbones, which is where Loomis has them.
+const LOOMIS_U = 2 / 3, LOOMIS_SIDE = Math.sqrt(1 - LOOMIS_U * LOOMIS_U);
+// Face-mesh points: between the brows, base of the nose, chin, the outer
+// corners of the eyes (the face's right and left), top of the forehead.
+const FM = { brow: 9, nose: 2, chin: 152, rEye: 33, lEye: 263, top: 10 };
+let headRun = 0;
+
+function clearHead() {
+  headRun++;
+  el('headOverlay').classList.add('hidden');
+  el('headOverlay').innerHTML = '';
+  overlayNote('head', state.headOn ? 'Finding the head...' : '');
+}
+
+function toggleHead() {
+  state.headOn = !state.headOn;
+  el('btnHead').setAttribute('aria-pressed', String(state.headOn));
+  if (state.headOn) runHead(); else clearHead();
+}
+
+async function runHead() {
+  const img = el('img'), run = ++headRun;
+  if (!img.naturalWidth) return;
+  if (!visionModels.face) overlayNote('head', 'Loading the face model - about 4 MB, once. The image stays in this browser.');
+  let model;
+  try { model = await loadVision('face'); }
+  catch (err) {
+    console.error('face model:', err);
+    overlayNote('head', '<i>The face model could not load</i> - it needs a connection the first time, and WebAssembly.');
+    return;
+  }
+  if (run !== headRun || !state.headOn) return;
+  let faces;
+  try { faces = detectFaces(model, img); }
+  catch (err) { console.error('face detect:', err); overlayNote('head', '<i>Could not read a face from this image.</i>'); return; }
+  drawHead(faces);
+}
+
+/* The face detector looks for a face with some room round it, so a tight
+   portrait crop - the face filling the frame, the commonest reference of
+   all - often finds nothing. Then it tries again on a copy with a grey
+   margin added, and moves the points back onto the photo: x and y out of
+   the bigger canvas's fractions, and depth, which is in units of the
+   canvas's width, rescaled to the photo's. */
+function detectFaces(model, img) {
+  const W = img.naturalWidth, H = img.naturalHeight;
+  for (const pad of [0, 0.3, 0.6]) {
+    let src = img;
+    if (pad) {
+      src = document.createElement('canvas');
+      src.width = Math.round(W * (1 + 2 * pad)); src.height = Math.round(H * (1 + 2 * pad));
+      const g = src.getContext('2d');
+      g.fillStyle = '#808080'; g.fillRect(0, 0, src.width, src.height);
+      g.drawImage(img, W * pad, H * pad);
+    }
+    const found = model.detect(src).faceLandmarks || [];
+    if (found.length) {
+      const kx = src.width / W, ky = src.height / H;
+      return found.map(lm => lm.map(p => ({ x: p.x * kx - pad, y: p.y * ky - pad, z: p.z * kx })));
+    }
+  }
+  return [];
+}
+
+const v3 = {
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  scale: (a, k) => [a[0] * k, a[1] * k, a[2] * k],
+  norm: a => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+};
+
+/* The head's frame from its landmarks, in image pixels with y down and depth
+   away from the camera: X across (toward the face's own left), Y up, Z out of
+   the face; C the ball's centre and s its radius in pixels. */
+function headFrame(lm, W, H) {
+  const P = i => [lm[i].x * W, lm[i].y * H, lm[i].z * W];
+  const X = v3.norm(v3.sub(P(FM.lEye), P(FM.rEye)));
+  const up = v3.sub(P(FM.top), P(FM.chin));
+  const Y = v3.norm(v3.sub(up, v3.scale(X, v3.dot(up, X))));
+  // Across x up points toward the camera here (y is down, depth is away).
+  const Z = v3.cross(X, Y);
+  const U = LOOMIS_U;
+  // Brow to chin is two thirds of the face: that sets the size.
+  const s = v3.dot(v3.sub(P(FM.brow), P(FM.chin)), Y) / (2 * U);
+  // And these three, placed on the construction, set where the ball is -
+  // averaged, so no one point's error decides it.
+  const pairs = [[FM.brow, [0, 0, 1]], [FM.nose, [0, -U, 1]], [FM.chin, [0, -2 * U, 0.88]]];
+  const C = [0, 0, 0];
+  for (const [i, m] of pairs) {
+    const w = v3.sub(P(i), v3.scale([
+      m[0] * X[0] + m[1] * Y[0] + m[2] * Z[0],
+      m[0] * X[1] + m[1] * Y[1] + m[2] * Z[1],
+      m[0] * X[2] + m[1] * Y[2] + m[2] * Z[2]], s));
+    for (let k = 0; k < 3; k++) C[k] += w[k] / pairs.length;
+  }
+  return { X, Y, Z, C, s };
+}
+
+function drawHead(faces) {
+  const img = el('img'), svg = el('headOverlay');
+  const W = img.naturalWidth, H = img.naturalHeight, flip = img.classList.contains('flip');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  if (!faces.length) {
+    svg.innerHTML = '';
+    overlayNote('head', 'No face found - it needs to be fairly large in the picture, and not turned fully away.');
+    return;
+  }
+  const U = LOOMIS_U, S = LOOMIS_SIDE, fr = n => n.toFixed(1);
+  let m = '', note = '';
+  faces.forEach((lm, fi) => {
+    const f = headFrame(lm, W, H);
+    const world = p => [0, 1, 2].map(k => p[0] * f.X[k] + p[1] * f.Y[k] + p[2] * f.Z[k]);
+    const at = p => { const w = world(p), x = f.C[0] + w[0] * f.s; return [flip ? W - x : x, f.C[1] + w[1] * f.s]; };
+    // Facing the camera when its normal points toward it (depth decreasing).
+    const seen = n => world(n)[2] < 0;
+    // A curve p(t), split into the runs that face the camera and those that
+    // do not; `normal` defaults to the point itself - right on the ball.
+    const curve = (cls, p, t0, t1, normal = p, steps = 48) => {
+      let run = [], vis = null;
+      const flush = () => {
+        if (run.length > 1) {
+          const d = 'M' + run.map(q => `${fr(q[0])} ${fr(q[1])}`).join('L');
+          m += `<path class="o${vis ? '' : ' hid'}" d="${d}"/><path class="${cls}${vis ? '' : ' hid'}" d="${d}"/>`;
+        }
+      };
+      for (let i = 0; i <= steps; i++) {
+        const t = t0 + (t1 - t0) * i / steps, q = at(p(t)), v = seen(normal(t));
+        if (vis !== null && v !== vis) { run.push(q); flush(); run = [run[run.length - 1]]; }
+        vis = v; run.push(q);
+      }
+      flush();
+    };
+    const PI = Math.PI, edge = Math.asin(S);
+
+    // The ball's outline - a sphere looks like a circle from anywhere.
+    const c = at([0, 0, 0]);
+    m += `<circle class="o" cx="${fr(c[0])}" cy="${fr(c[1])}" r="${fr(f.s)}"/><circle class="ball" cx="${fr(c[0])}" cy="${fr(c[1])}" r="${fr(f.s)}"/>`;
+    // The centre line, from the brow up over the ball and down the back to
+    // its underside (below the brow, the face is in front of the ball), then
+    // down the face.
+    curve('mid', t => [0, Math.sin(t), Math.cos(t)], 0, 1.5 * PI, undefined, 72);
+    curve('mid', t => [0, -U * t, 1 - 0.12 * Math.max(0, t - 1)], 0, 2, () => [0, 0, 1], 8);
+    // The side planes: a circle each, and the cross through it.
+    for (const sx of [-1, 1]) {
+      const n = () => [sx, 0, 0];
+      curve('side', t => [sx * S, U * Math.cos(t), U * Math.sin(t)], 0, 2 * PI, n, 64);
+      curve('side', t => [sx * S, t, 0], -U, U, n, 4);
+      curve('side', t => [sx * S, 0, t], -U, U, n, 4);
+    }
+    // The thirds: hairline and brow run round the ball between the side
+    // planes, the nose line round the front of the face - each ending on the
+    // side circle, at its top, middle and bottom.
+    curve('third', t => [S * Math.sin(t), U, S * Math.cos(t)], -PI / 2, PI / 2);
+    curve('third', t => [Math.sin(t), 0, Math.cos(t)], -edge, edge);
+    curve('third', t => [S * Math.sin(t), -U, Math.cos(t)], -PI / 2, PI / 2, t => [Math.sin(t), 0, Math.cos(t)]);
+    curve('third', t => [t, -2 * U, 0.86], -0.22, 0.22, () => [0, -0.3, 1], 4);
+    // The jaw: from under the ear down to its corner, then forward to the
+    // chin - a polyline on each side.
+    // The corner of the jaw is narrower than the cheekbones - about four
+    // fifths of the side planes' width.
+    const jaw = [[S, -0.6 * U, -0.25], [S * 0.8, -1.45 * U, -0.15], [0.3, -1.95 * U, 0.72], [0, -2 * U, 0.88]];
+    for (const sx of [-1, 1]) {
+      const pts = jaw.map(p => [sx * p[0], p[1], p[2]]);
+      curve('jaw', t => {
+        const i = Math.min(2, Math.floor(t)), k = t - i, a = pts[i], b = pts[i + 1];
+        return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+      }, 0, 3, t => { const p = pts[Math.min(3, Math.round(t))]; return v3.norm([p[0], 0, p[2] + 0.4]); }, 24);
+    }
+    // The four marks down the centre line.
+    for (const p of [[0, U, Math.sqrt(1 - U * U)], [0, 0, 1], [0, -U, 1], [0, -2 * U, 0.88]]) {
+      const q = at(p);
+      m += `<circle class="dot" cx="${fr(q[0])}" cy="${fr(q[1])}" r="${fr(f.s / 28)}"/>`;
+    }
+
+    if (fi === 0) {
+      // How the head is turned, as the picture shows it (mirrored with it).
+      const Z = f.Z, sgn = flip ? -1 : 1;
+      const yaw = sgn * Math.atan2(Z[0], -Z[2]) * 180 / PI;
+      const pitch = Math.atan2(-Z[1], Math.hypot(Z[0], Z[2])) * 180 / PI;
+      const roll = sgn * Math.atan2(f.X[1], f.X[0]) * 180 / PI;
+      const side = a => (a > 0 ? 'right' : 'left');
+      const parts = [];
+      parts.push(Math.abs(yaw) < 5 ? 'facing you' : `turned ${Math.abs(yaw).toFixed(0)}° to the ${side(yaw)}`);
+      if (Math.abs(pitch) >= 5) parts.push(`tipped ${pitch > 0 ? 'up' : 'down'} ${Math.abs(pitch).toFixed(0)}°`);
+      if (Math.abs(roll) >= 4) parts.push(`tilted ${Math.abs(roll).toFixed(0)}° toward the ${side(roll)}`);
+      let tip = '';
+      if (Math.abs(pitch) >= 8) tip = pitch > 0
+        ? ' Seen from below, so the lines round the face <b>arch up</b> - the nose covers more of the eyes, the chin looks big.'
+        : ' Seen from above, so the lines round the face <b>curve down</b> like a smile - more forehead, the chin tucked away.';
+      else if (Math.abs(yaw) >= 20) tip = ' The far half of the face is <b>narrower</b>: its eye smaller and closer to the centre line.';
+      note = `<b>Head</b>: ${parts.join(', ')}.${tip}` +
+        `<br><b>Yellow</b>: hairline, brow, nose, chin - three equal thirds. <i>Red</i>: the centre line. ` +
+        `<u>Blue</u>: the side plane - the ear sits just behind its middle.` +
+        (faces.length > 1 ? ` (${faces.length} heads; this is about the first.)` : '');
+    }
+  });
+  svg.innerHTML = m;
+  svg.classList.remove('hidden');
+  positionGrid();
+  overlayNote('head', note);
+}
+
+el('btnHead').addEventListener('click', toggleHead);
 
 /* ------------------------------------------------ compare your drawing
    The one question none of the measuring tools answer: is what I drew
@@ -6560,6 +6846,7 @@ document.addEventListener('keydown', e => {
     // Mid-way through lining up a drawing, Esc gives up on that - not on
     // the whole session.
     case 'p': case 'P': togglePose(); break;
+    case 'l': case 'L': toggleHead(); break;
     case 'Backspace':
       if (state.constructMode === 'persp' && state.persp && state.persp.length) { e.preventDefault(); state.persp.pop(); renderConstructOverlay(); }
       break;
