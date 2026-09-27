@@ -196,9 +196,10 @@ async function colourLoad(src) {
     samples.push([lab[q], lab[q + 1], lab[q + 2], data[p * 4], data[p * 4 + 1], data[p * 4 + 2]]);
   }
   const palette = colKmeans(samples, COL_K);
-  Object.assign(col, { w, h, data, lab, samples, palette, assign: colAssign(lab, palette), mapped: null, hover: null, focus: null, pin: null });
+  Object.assign(col, { src, w, h, data, lab, samples, palette, assign: colAssign(lab, palette), mapped: null, hover: null, focus: null, pin: null });
   el('colEmpty').classList.add('hidden');
   el('colImg').classList.remove('hidden');
+  el('colWorkspace').classList.remove('hidden');
   el('colReadout').textContent = 'Point at the image to find a colour on the wheel.';
   colourRender();
 }
@@ -483,6 +484,8 @@ function initColour() {
   const take = file => { if (file && file.type.startsWith('image/')) colourLoad(trainKeepUrl(URL.createObjectURL(file))); };
   el('colPick').addEventListener('click', () => el('colInput').click());
   el('colInput').addEventListener('change', e => { take(e.target.files[0]); e.target.value = ''; });
+  // The same picture with every other tool: value, construction, the pose.
+  el('colWorkspace').addEventListener('click', () => { if (col.src) openInWorkspace(col.src, { label: 'Colour studio', tab: 'colour' }); });
   el('colRandom').addEventListener('click', () => { const u = trainLibraryImage(); if (u) colourLoad(u); });
   const stage = el('colStage');
   stage.addEventListener('dragover', e => { e.preventDefault(); stage.classList.add('over'); });

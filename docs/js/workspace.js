@@ -109,12 +109,29 @@ function useWorkspaceRow(n) {
 }
 
 // One panel at a time in that corner: the workspace or the layers.
-function toggleWorkspace(open = el('wsPanel').classList.contains('hidden')) {
+// focus: false when it opens by itself - the panel keeps the keys typed in
+// it, and "r" or Escape must still reach the session you just started.
+function toggleWorkspace(open = el('wsPanel').classList.contains('hidden'), focus = true) {
   if (open && !el('layersPanel').classList.contains('hidden')) toggleLayersPanel(false);
   el('wsPanel').classList.toggle('hidden', !open);
   el('btnWorkspace').setAttribute('aria-pressed', String(open));
-  if (open) { renderWorkspace(); el('wsTabs').querySelector('[aria-selected="true"]').focus(); }
+  if (open) { renderWorkspace(); if (focus) el('wsTabs').querySelector('[aria-selected="true"]').focus(); }
   else if (el('wsPanel').contains(document.activeElement)) el('btnWorkspace').focus();
+}
+
+// Any one picture onto the session's stage, with the panel open at the
+// question it was brought for - from the Colour studio, a dropped photo.
+// Browse mode: no clock, nothing logged as practice (see startSession()).
+function openInWorkspace(src, { label = 'Workspace', tab } = {}) {
+  startSession([{ frames: [src], pack: label, group: label }], { browse: true, label });
+  showWorkspaceAt(tab);
+}
+
+// The panel open at one tab - not saved: the tab you chose yourself is
+// still the one next time.
+function showWorkspaceAt(tab) {
+  if (WS_TABS.some(t => t.id === tab)) wsTab = tab;
+  toggleWorkspace(true, false);
 }
 
 function setWorkspaceTab(id) {
