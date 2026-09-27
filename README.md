@@ -287,7 +287,7 @@ changed images, write the manifest. No nginx, no separate cron daemon, no
 database - state that needs to persist is a couple of JSON files and a folder
 of resized copies, and everything else is `localStorage` in the browser.
 
-The frontend (`wwwroot/index.html`) itself doesn't assume a backend exists at
+The frontend (`wwwroot/`) itself doesn't assume a backend exists at
 all - `boot()` falls back to a "no library" mode (see its own comment) when
 `index.json` isn't there, which is what makes the same file work as a GitHub
 Pages demo with nothing behind it at all.
@@ -301,13 +301,19 @@ src/Refboard/
     FeatureBuilder.cs      - the expensive per-image pass (Magick.NET)
     ReindexHostedService.cs - the background loop tying the two together
   wwwroot/
-    index.html             - the entire frontend: one file, no build step, no JS framework
+    index.html             - the frontend's markup; no build step, no JS framework
+    css/app.css            - all of its styles
+    js/*.js                - its code, as plain classic scripts loaded in order
+                              (see the note above the <script> tags in index.html:
+                              a file may use at load time only what earlier files
+                              define). Opens straight from disk too - classic
+                              scripts, unlike modules, load over file://.
 docs/
   index.html               - GitHub Pages source (Settings > Pages > main /docs).
-                              A manual copy of wwwroot/index.html, not a symlink or
-                              a build step - keep them identical by hand when either
-                              changes. (icon-refboard.svg and refboard.webmanifest
-                              are copied alongside it for the same reason.)
+                              A copy of wwwroot/ (index.html, css/, js/, the icon
+                              and manifest), not a symlink or a build step - the
+                              Sync GitHub Pages workflow copies it on every push
+                              that touches wwwroot/.
 ```
 
 ### On the imaging library

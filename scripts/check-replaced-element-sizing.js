@@ -8,8 +8,8 @@
 // #angleOverlay silently clipped to a corner for months. See the CSS
 // comment above #grid/#angleOverlay in index.html for the full story.
 //
-// This is a static, single-file heuristic (regex over the flat CSS in
-// index.html's one <style> block), not a real browser layout check - good
+// This is a static heuristic (regex over the flat CSS in css/app.css,
+// against the elements in index.html), not a real browser layout check - good
 // enough to catch the same class of mistake creeping back in without adding
 // a headless-browser dependency to a project whose whole point is "no build
 // step, no framework."
@@ -19,10 +19,14 @@ const path = require('path');
 
 const file = process.argv[2] || path.join(__dirname, '..', 'src', 'Refboard', 'wwwroot', 'index.html');
 const html = fs.readFileSync(file, 'utf8');
-
-const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+// The stylesheet index.html links, next to it - or, for an older copy that
+// still had it inline, its <style> block.
+const cssFile = path.join(path.dirname(file), 'css', 'app.css');
+const styleMatch = fs.existsSync(cssFile)
+  ? [null, fs.readFileSync(cssFile, 'utf8')]
+  : html.match(/<style>([\s\S]*?)<\/style>/);
 if (!styleMatch) {
-  console.error(`No <style> block found in ${file}`);
+  console.error(`No css/app.css or <style> block found for ${file}`);
   process.exit(1);
 }
 // Comments stripped first - otherwise a /* ... */ block sitting between two
