@@ -40,7 +40,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=2b72423a">
+<link rel="stylesheet" href="css/app.css?v=ce8d215f">
 </head>
 <body>
 <div id="setup">
@@ -692,6 +692,21 @@
      card is read the same way regardless of which screen opened it from. -->
 <!-- Find a tool (Ctrl+K) - see js/command.js. Outside #setup and #session
      so it opens over either. -->
+<!-- The tour - see js/tour.js. A ring round the real control, the rest
+     dimmed by the ring's own shadow, and a note beside it. -->
+<div id="tour" class="hidden" role="dialog" aria-modal="true" aria-label="Tour" aria-describedby="tourText">
+  <div id="tourRing"></div>
+  <div id="tourNote">
+    <p id="tourText"></p>
+    <div class="row">
+      <span id="tourCount" class="grow"></span>
+      <button type="button" id="tourSkip" class="ghost">Skip</button>
+      <button type="button" id="tourBack" class="ghost">Back</button>
+      <button type="button" id="tourNext">Next</button>
+    </div>
+  </div>
+</div>
+
 <div id="cmdk" class="hidden" role="dialog" aria-modal="true" aria-label="Find a tool">
   <div id="cmdkBox">
     <input id="cmdkInput" type="text" role="combobox" aria-expanded="true" aria-controls="cmdkList"
@@ -745,6 +760,7 @@
   <div id="helpModal">
     <div class="row" style="margin-bottom:18px">
       <div class="grow" style="font-size:17px;font-weight:600">How to use Refboard</div>
+      <button id="btnTour" class="ghost" type="button" title="Where things are, in six short notes">Take the tour</button>
       <button id="btnHelpClose" class="ghost" type="button" title="Close (Escape)">Close</button>
     </div>
 
@@ -1335,8 +1351,9 @@
 <script src="js/forms.js?v=b129bd90"></script>
 <script src="js/train.js?v=087d7106"></script>
 <script src="js/theme-editor.js?v=eb90793b"></script>
-<script src="js/command.js?v=818a8410"></script>
+<script src="js/command.js?v=60e119ab"></script>
 <script src="js/colour.js?v=645241e3"></script>
-<script src="js/main.js?v=f703cd1f"></script>
+<script src="js/tour.js?v=be6ddada"></script>
+<script src="js/main.js?v=2fb9ba45"></script>
 </body>
 </html>

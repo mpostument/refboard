@@ -101,6 +101,7 @@ function collectCommands() {
   }
   out.push({ id: 'theme-editor', label: 'Theme editor', hint: 'Appearance', words: 'colours customise custom own import export', run: openThemeEditor });
   out.push({ id: 'help', label: 'Help - how everything works', hint: '?', words: 'manual guide', run: toggleHelp });
+  out.push({ id: 'tour', label: 'Tour - where things are', hint: 'Help', words: 'intro start new guide walkthrough', run: startTour });
   return out;
 }
 
