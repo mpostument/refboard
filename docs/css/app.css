@@ -1078,3 +1078,13 @@ section { margin-bottom: 20px; }
   #sidebar, #sidebar.collapsed { display: flex; left: 52px; }
   #inspector, #inspector.collapsed { display: flex; }
 }
+
+/* "New version ready" - see checkForUpdate(). Bottom centre, out of the way
+   of the rail and the inspector, and only ever over the setup screens. */
+#updateReady {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50;
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--accent);
+  border-radius: 999px; padding: 7px 16px; font-size: 13px; box-shadow: 0 4px 16px rgb(0 0 0 / .35);
+}
+#updateReady b { color: var(--accent); }
+#updateReady:hover { background: var(--accent-dim); }

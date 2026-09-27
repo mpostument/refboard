@@ -37,7 +37,7 @@
   All state is localStorage. There is one user and no account, so a
   server-side session would be pure overhead.
 -->
-<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/app.css?v=40425b1a">
 </head>
 <body>
 <div id="setup">
@@ -57,6 +57,12 @@
     <span class="grow"></span>
     <button type="button" id="btnHelpSetup" data-icon="help" data-tip="Help (?)" aria-label="Help"></button>
   </nav>
+
+  <!-- Shown when this tab has outlived a deploy - see checkForUpdate(). Inside
+       #setup, so it never appears over a running session: reloading
+       mid-pose would throw the session away. -->
+  <button type="button" id="updateReady" class="hidden"
+          title="A newer Refboard has been deployed since this tab was opened">New version ready - <b>Reload</b></button>
 
   <!-- ------------------------------------------ the library, folding panel -->
   <aside id="sidebar">
@@ -1120,18 +1126,18 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js"></script>
-<script src="js/setup.js"></script>
-<script src="js/session.js"></script>
-<script src="js/vendor/spectral.js"></script>
-<script src="js/paint.js"></script>
-<script src="js/tools.js"></script>
-<script src="js/vision.js"></script>
-<script src="js/study.js"></script>
-<script src="js/forms-models.js"></script>
-<script src="js/forms.js"></script>
-<script src="js/train.js"></script>
-<script src="js/colour.js"></script>
-<script src="js/main.js"></script>
+<script src="js/core.js?v=59c1d7a3"></script>
+<script src="js/setup.js?v=065c6e8a"></script>
+<script src="js/session.js?v=8e3339cc"></script>
+<script src="js/vendor/spectral.js?v=dbaa1a8b"></script>
+<script src="js/paint.js?v=eab18099"></script>
+<script src="js/tools.js?v=0a942822"></script>
+<script src="js/vision.js?v=fc41134e"></script>
+<script src="js/study.js?v=7f0f99e2"></script>
+<script src="js/forms-models.js?v=063cbff2"></script>
+<script src="js/forms.js?v=5943596f"></script>
+<script src="js/train.js?v=39aa5c15"></script>
+<script src="js/colour.js?v=6a25e24b"></script>
+<script src="js/main.js?v=5fcc3cf7"></script>
 </body>
 </html>
