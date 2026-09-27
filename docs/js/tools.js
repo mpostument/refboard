@@ -24,6 +24,16 @@ function toggleFlip() {
   const on = !el('img').classList.contains('flip');
   el('img').classList.toggle('flip', on);
   el('imgValue').classList.toggle('flip', on);
+  syncViewButtons();
+}
+// Flip, Gray and Squint show whether they are on - read off the picture's
+// own classes, so a random flip on a new pose or Gray reset by a value
+// split shows too.
+function syncViewButtons() {
+  const img = el('img');
+  for (const [id, cls] of [['btnFlip', 'flip'], ['btnGray', 'gray'], ['btnSquint', 'squint']]) {
+    el(id).setAttribute('aria-pressed', String(img.classList.contains(cls)));
+  }
 }
 // No-op while splitting: the button stays present (rather than also
 // disabled) since Flip's own reasoning - see something fresh - still
@@ -31,6 +41,7 @@ function toggleFlip() {
 function toggleGray() {
   if (state.valueSteps) return;
   el('img').classList.toggle('gray');
+  syncViewButtons();
 }
 // Same disabled-while-splitting treatment as Gray, and the same reason -
 // see applyOptions()'s own comment on #btnSquint. The fastest version of
@@ -39,6 +50,7 @@ function toggleGray() {
 function toggleSquint() {
   if (state.valueSteps) return;
   el('img').classList.toggle('squint');
+  syncViewButtons();
 }
 el('btnFlip').addEventListener('click', toggleFlip);
 el('btnGray').addEventListener('click', toggleGray);
@@ -325,6 +337,8 @@ function setConstructMode(mode) {
   }
   state.constructMode = mode;
   el('constructSelect').value = mode;
+  // Reads as on, like the value select, whenever a guide is showing.
+  el('constructSelect').classList.toggle('active', mode !== 'off');
   clearConstruct();
 }
 function clearConstruct() {
@@ -639,16 +653,31 @@ el('eyedropperHistory').addEventListener('click', e => {
    not the way screens do. Several routes, closest first, from whichever
    palette is chosen: the same colour from a full palette, and from Zorn's
    four, are different lessons. In watercolour, water and the white of the
-   paper do what white paint does here. */
+   paper do what white paint does here.
+
+   First, in every medium, what the value is in it - its step on the
+   medium's tone ladder (js/materials.js): "a light wash", "cross-hatching",
+   "2B". For ink and graphite that is the whole answer - they have one
+   colour. Not for watercolour or oil: there the recipe's own wash or white
+   is the exact answer, and a ladder step beside it would only disagree. */
+const MIX_NOTES = {
+  watercolour: 'Parts of paint; the wash says how much water - lighter is more water, and white is the paper.',
+  opaque: 'Parts by volume, white included.',
+  wcPencil: 'The pigments to look for in your set - wetted, they mix like watercolour. Layer the first one first.',
+  wcMarker: 'The pigments to look for in your markers - thinned with water, they mix like watercolour.',
+};
 function renderMixGuide(rgb) {
   const box = el('mixGuide');
   if (!rgb) { box.innerHTML = ''; return; }
+  const p = materialsProfile(), m = MATERIALS[p.main];
+  const pct = Math.round((0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255 * 100);
+  const step = ['watercolour', 'opaque'].includes(p.main) ? ''
+    : `<span class="mix-step">${esc(m.label)}: <b>${esc(materialToneFor(pct, m))}</b></span>`;
+  if (!m.paint) { box.innerHTML = step; return; }
   const recipes = paintRecipes(rgb);
-  box.innerHTML = recipes.length
-    ? recipes.map(paintRecipeHtml).join('') + `<span class="mix-note">${paintMedium() === 'water'
-      ? 'Parts of paint; the wash says how much water - lighter is more water, and white is the paper.'
-      : 'Parts by volume, white included.'}</span>`
-    : '<span class="mix-note">Mixing needs js/vendor/spectral.js, which did not load.</span>';
+  box.innerHTML = step + (recipes.length
+    ? recipes.map(paintRecipeHtml).join('') + `<span class="mix-note">${MIX_NOTES[p.main] || ''}</span>`
+    : '<span class="mix-note">Mixing needs js/vendor/spectral.js, which did not load.</span>');
 }
 
 function initPaintSelect() {
@@ -657,13 +686,6 @@ function initPaintSelect() {
   sel.value = paintPaletteKey();
   sel.addEventListener('change', () => {
     setPaintPaletteKey(sel.value);
-    if (lastMixRgb) renderMixGuide(lastMixRgb);
-  });
-  const med = el('mediumSelect');
-  med.innerHTML = Object.entries(PAINT_MEDIA).map(([k, label]) => `<option value="${k}">${label}</option>`).join('');
-  med.value = paintMedium();
-  med.addEventListener('change', () => {
-    setPaintMedium(med.value);
     if (lastMixRgb) renderMixGuide(lastMixRgb);
   });
 }

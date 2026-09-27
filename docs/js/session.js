@@ -535,6 +535,7 @@ function show(src) {
   const flip = el('optFlipRandom').checked && Math.random() < 0.5;
   img.classList.toggle('flip', flip);
   imgValue.classList.toggle('flip', flip);
+  syncViewButtons();
 
   // Browsing knows exactly where it is in a fixed list, which a shuffled
   // draw never does - so it says so, in place of the running pose count.
@@ -724,6 +725,7 @@ function applyOptions() {
   // leaves whatever toggleSquint() last set alone.
   el('btnSquint').disabled = splitting;
   if (splitting) el('img').classList.remove('squint');
+  syncViewButtons();
   state.gridStyle = el('gridStyle').value;
   const wantGrid = el('optGrid').checked;
   el('grid').classList.toggle('hidden', !wantGrid);

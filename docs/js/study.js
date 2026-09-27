@@ -443,6 +443,8 @@ document.addEventListener('keydown', e => {
     case 'i': case 'I': toggleValueTools(); break;
     case 'r': case 'R':
       el('optGrid').checked = !el('optGrid').checked; applyOptions(); break;
+    case 'o': case 'O': toggleLayersPeek(); break;
+    case 'w': case 'W': toggleWorkspace(); break;
     case 'h': case 'H':
       el('optHighContrast').checked = !el('optHighContrast').checked; applyOptions(); break;
     case 'm': case 'M': if (FEATURES) toggleSimilar(); break;
