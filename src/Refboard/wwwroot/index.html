@@ -575,6 +575,10 @@
   #constructOverlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #constructOverlay line { stroke: var(--accent); stroke-width: 1; opacity: .7; }
   #constructOverlay .construct-guide { stroke-width: 1.5; opacity: .9; }
+  /* Viewfinder - see renderConstructOverlay(). What is outside the frame is
+     dimmed rather than hidden: the crop is judged against what it leaves out. */
+  #constructOverlay .construct-shade { fill: rgba(0, 0, 0, .6); stroke: none; }
+  #constructOverlay .construct-thirds { stroke-width: .75; opacity: .55; stroke-dasharray: 4 4; }
   #constructOverlay circle { fill: var(--accent); }
   #constructOverlay text {
     fill: #fff; font-size: 11px; font-family: inherit;
@@ -740,6 +744,22 @@
   #pos { font-variant-numeric: tabular-nums; }
   #hud.idle { opacity: 0; transition: opacity .4s; }
   #session:hover #hud.idle { opacity: 1; }
+  /* Memory drawing - see beginMemoryStudy(). Study: a badge over the still-
+     visible pose. Draw: the pose is covered and the cover is the reveal
+     button. Reveal: a note at the bottom over the uncovered pose. */
+  #memCover { position: absolute; inset: 0; z-index: 5; }
+  #memCover.study, #memCover.reveal { pointer-events: none; }
+  #memCover.study span, #memCover.reveal span {
+    position: absolute; left: 50%; transform: translateX(-50%); padding: 5px 12px; border-radius: 6px;
+    background: rgba(0,0,0,.66); color: #fff; font-size: 14px; font-variant-numeric: tabular-nums;
+    white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis;
+  }
+  #memCover.study span { top: 12px; }
+  #memCover.reveal span { bottom: 12px; }
+  #memCover.draw {
+    display: grid; place-items: center; background: #0d0d10; color: #bbb;
+    font-size: 16px; text-align: center; padding: 20px; cursor: pointer;
+  }
   .keys { margin-left: auto; font-size: 11px; color: #55555f; }
   @media (max-width: 700px) { .keys { display: none; } }
 
@@ -909,6 +929,26 @@
   #compareBar, #valueTools { background: #141416; }
 
   /* ---- Train: a grid of trainers, then one task at a time. */
+  /* Colour studio - see showColour(). Image left, wheel and palette right;
+     stacked on a narrow screen. */
+  .col-wrap { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; max-width: 1300px; }
+  .col-left { flex: 1 1 420px; min-width: 0; }
+  .col-right { flex: 0 1 340px; min-width: 260px; }
+  .col-bar { gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  #colStage {
+    position: relative; border: 1px dashed var(--line); border-radius: 8px; background: #141416;
+    min-height: 260px; display: grid; place-items: center; overflow: hidden;
+  }
+  #colStage.over { border-color: var(--accent); }
+  #colImg { display: block; max-width: 100%; max-height: 70vh; cursor: crosshair; }
+  #colEmpty { color: var(--dim); font-size: 13px; padding: 30px; text-align: center; }
+  #colWheel { display: block; width: 100%; aspect-ratio: 1; touch-action: none; }
+  .col-right h4 { margin: 14px 0 6px; font-size: 11px; color: var(--dim); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+  .col-sw { display: grid; grid-template-columns: 16px 26px 26px 1fr auto; gap: 8px; align-items: center; font-size: 12px; padding: 3px 0; color: var(--ink); }
+  .col-sw i { width: 26px; height: 26px; border-radius: 5px; border: 1px solid rgba(255,255,255,.1); display: block; }
+  .col-sw b { font-variant-numeric: tabular-nums; font-weight: 500; }
+  .col-sw span { color: var(--dim); }
+  #colValueNote { margin-top: 8px; }
   .train-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; max-width: 1100px; }
   .train-card {
     display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto 1fr auto; gap: 3px 12px;
@@ -1032,6 +1072,7 @@
     <button class="nav-item" type="button" data-view="drop" data-icon="eye" data-tip="Check your own image" aria-label="Check your own image"></button>
     <span class="rail-sep"></span>
     <button class="nav-item" type="button" data-view="forms" data-icon="cube" data-tip="3D forms" aria-label="3D forms"></button>
+    <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
     <button class="nav-item" type="button" data-view="train" data-icon="target" data-tip="Train - value, colour, anatomy, lines, perspective" aria-label="Train"></button>
     <span class="grow"></span>
     <button type="button" id="btnHelpSetup" data-icon="help" data-tip="Help (?)" aria-label="Help"></button>
@@ -1213,6 +1254,39 @@
       <!-- Trainers - see TRAINERS. Built by showTrain(). -->
       <div id="viewTrain" class="hidden"></div>
 
+      <!-- Colour studio - see showColour(). Like the drop zone it needs no
+           library: the image is read in this browser and goes nowhere. -->
+      <div id="viewColour" class="hidden">
+        <div class="col-wrap">
+          <div class="col-left">
+            <div class="row col-bar">
+              <button class="ghost" type="button" id="colPick">Choose image...</button>
+              <button class="ghost hidden" type="button" id="colRandom" title="A random image from your library">Random from library</button>
+              <div class="chips" id="colModes" role="group" aria-label="How the image is shown">
+                <button class="chip" type="button" data-col-mode="colour" title="The image as it is">Colour</button>
+                <button class="chip" type="button" data-col-mode="value" title="Its values alone - the lightness every colour in it has, as grey">Value</button>
+                <button class="chip" type="button" data-col-mode="mapped" title="Repainted inside the gamut mask - what this picture would be with only those colours">In gamut</button>
+              </div>
+            </div>
+            <div id="colStage">
+              <canvas id="colImg" class="hidden"></canvas>
+              <div id="colEmpty">Drop, paste or choose an image - a reference photo, a master painting, a painting of your own.</div>
+            </div>
+            <div class="count" id="colReadout"></div>
+          </div>
+          <div class="col-right">
+            <canvas id="colWheel" title="Hue round the circle, chroma out from grey in the middle. Dots: every colour in the image. Numbers: its palette."></canvas>
+            <h4>Gamut mask</h4>
+            <div class="chips" id="colMasks"></div>
+            <div class="count" id="colMaskHint"></div>
+            <h4>Palette - colour and value</h4>
+            <div id="colPalette" class="count">No image yet.</div>
+            <div class="count" id="colValueNote"></div>
+          </div>
+        </div>
+        <input type="file" id="colInput" accept="image/*" class="hidden">
+      </div>
+
       <div id="viewBrowse" class="hidden">
         <div id="thumbGrid"></div>
         <div class="row" id="gridMoreRow" style="margin-top:14px; justify-content:center">
@@ -1259,6 +1333,26 @@
         <button id="addScheduleStep" class="ghost" type="button" style="margin-top:6px">+ Add step</button>
       </div>
     </section>
+    <!-- Memory drawing - see beginMemoryStudy(). A mode of the session, not a
+         view of its own, so it works the same over the library, dropped
+         photos and 3D renders: everything that reaches startSession(). -->
+    <section>
+      <h2>Memory</h2>
+      <label class="opt"><input type="checkbox" id="optMemory"> Draw from memory</label>
+      <div class="row" style="margin-top:9px">
+        <label class="opt" for="memorySecs">Study for</label>
+        <select id="memorySecs">
+          <option value="5">5 s</option>
+          <option value="10">10 s</option>
+          <option value="15" selected>15 s</option>
+          <option value="30">30 s</option>
+          <option value="60">1 min</option>
+        </select>
+      </div>
+      <div class="count" style="margin-top:9px">Each pose is shown for the study time, then hidden - the interval above is
+        your drawing time. When it runs out the reference comes back and the clock stops:
+        <b>D</b> lays a photo of your drawing over it, <b>&rarr;</b> goes on.</div>
+    </section>
       </div>
       <div class="insp-tab" data-tab="filter">
         <p class="count" style="margin:0 0 12px">Which packs and folders: tick them in the library. Here, what is drawn from them.</p>
@@ -1290,6 +1384,9 @@
         <select id="gridStyle" title="Which guide lines the grid overlay draws">
           <option value="thirds">Rule of thirds</option>
           <option value="golden">Golden ratio</option>
+          <option value="dynamic">Dynamic symmetry</option>
+          <option value="armature">Harmonic armature</option>
+          <option value="rabatment">Rabatment</option>
           <option value="diagonal">Diagonals</option>
           <option value="center">Center only</option>
         </select>
@@ -1399,6 +1496,10 @@
          divider) - see setConstructMode(). Same "does not follow zoom/pan"
          treatment as #angleOverlay just above, for the same reason. -->
     <svg id="constructOverlay" class="hidden"></svg>
+    <!-- Memory drawing's cover - see beginMemoryStudy(). Last in #stage so it
+         sits over every guide and measurement: while you draw from memory,
+         none of them may give the pose away. -->
+    <div id="memCover" class="hidden"></div>
   </div>
   <div id="bar"><div id="fill"></div></div>
   <!-- Collapsed by default - see toggleValueTools(). Everything in here is
@@ -1456,6 +1557,7 @@
       <option value="vp">Vanishing point</option>
       <option value="plumb">Plumb line</option>
       <option value="divider">Proportion divider</option>
+      <option value="frame">Viewfinder</option>
     </select>
     <button id="btnEyedropper" data-icon="pipette" title="Eyedropper (e): click the reference to read its exact colour and value" aria-label="Eyedropper"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
@@ -1526,7 +1628,10 @@
         <b>Custom</b>: any number of steps, each its own seconds-per-pose and
         pose count, saved for next time) - and any options: grayscale,
         random mirroring, a grid overlay (rule of thirds, golden ratio,
-        diagonals, or just a center cross), a ghost of the previous pose, a
+        diagonals, a center cross, or the classical armatures - dynamic
+        symmetry's diagonals and reciprocals, the harmonic armature, and
+        rabatment's squares - drawn to each image's own proportions), a
+        ghost of the previous pose, a
         focal-point marker, a bell when the pose changes, fullscreen. Tone
         filtering (high-contrast / low-key / high-key) and skipping
         near-duplicates are both computed from your own library, not a fixed
@@ -1618,7 +1723,7 @@
 
     <section>
       <h2>Construction guides</h2>
-      <p>The HUD's guide select (<b>C</b> cycles) offers three more
+      <p>The HUD's guide select (<b>C</b> cycles) offers four more
         traditional construction aids, one at a time:</p>
       <ul>
         <li><b>Vanishing point</b> - drag (following the cursor live) to drop
@@ -1633,11 +1738,26 @@
           angle tool's own reference length works, and the tool marks off
           repeating multiples of it automatically along the same line - "how
           many head-heights tall," measured instead of eyeballed.</li>
+        <li><b>Viewfinder</b> - drag a frame over the reference: everything
+          outside it dims, thirds divide it, and its proportions are named
+          (4:5, 3:2...) - find a stronger picture inside the photo, cropped to
+          the shape of your paper. The <b>Thumbnails</b> schedule is the
+          exercise to use it with: eight small composition sketches.</li>
       </ul>
       <p>Only one guide is ever active at a time, and switching to a guide
         turns the angle tool and eyedropper off (and vice versa) - all three
         want the same drag gesture for different things. Selecting "Off," or
         switching guides, clears whatever was drawn.</p>
+    </section>
+
+    <section>
+      <h2>Draw from memory</h2>
+      <p>Tick <b>Draw from memory</b> under Timing and every new pose is shown
+        only for the study time, then covered. The interval is your drawing
+        time; when it runs out - or you click the cover, or press <b>&rarr;</b> -
+        the reference comes back and the clock stops, so you can check.
+        <b>D</b> lays a photo of your drawing over it, the same as Compare
+        below. <b>Previous</b> shows an earlier pose plainly.</p>
     </section>
 
     <section>
@@ -1654,6 +1774,26 @@
         moved so they meet - what is left between them is your proportions
         and angles as drawn. <b>D</b> hides it for a moment; it goes away with
         the pose, and never leaves this browser.</p>
+    </section>
+
+    <section>
+      <h2>Colour studio</h2>
+      <p>Drop, paste or choose any image - a reference, a master painting, a
+        painting of your own. On the <b>wheel</b>, hue runs round and chroma
+        (how intense a colour is) out from grey in the middle; every pixel of
+        the image is a dot on it, so you see at once which hues it lives in
+        and how grey it really is. The numbered circles are its
+        <b>palette</b>, found from its pixels and sized by how much of the
+        picture each covers; the list beside gives each one with its
+        <b>value as grey</b>, and warns where two different colours have the
+        same value - they will merge in a black-and-white study.
+        <b>Value</b> shows the whole image that way.</p>
+      <p>A <b>gamut mask</b> (James Gurney's tool) is a shape on the wheel
+        that limits which colours a painting may use. Pick one, drag inside
+        it to turn it to other hues, drag a corner to reshape it, and
+        <b>In gamut</b> repaints the image with only the colours inside it,
+        its values untouched - try a palette on a picture before committing
+        paint to it. The image never leaves this browser.</p>
     </section>
 
     <section>
@@ -1705,6 +1845,15 @@
         lowest, so a kneeling figure kneels. A model file stays in
         the browser, and only until the page is reloaded. Contour lines on a
         model need texture coordinates in the file.</p>
+      <p><b>Head</b> is the Loomis head - a ball with its sides planed off
+        and the face hung below it in thirds, brow, nose, mouth and chin as
+        big masses - and <b>Head planes</b> is the same head cut into flat
+        facets, the plaster planes head, where each turn of the form is one
+        value. <b>Hand</b> poses like the figure, joint by joint - the wrist,
+        three joints on each finger and the thumb - with its own poses:
+        relaxed, spread, fist, pointing, pinching, gripping. In <b>Draw random
+        forms</b> a head nods, tilts and turns and a hand takes a new pose,
+        instead of being swapped for a random shape.</p>
       <p><b>Move, turn and stretch a form in the view</b>, the way Blender
         does it. The selected form carries handles - <b>Move</b>,
         <b>Rotate</b> or <b>Scale</b>, picked top-left of the view (pressing
@@ -1875,6 +2024,7 @@ const ICONS = {
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   cube: '<path d="M12 2.5 3.5 7v10l8.5 4.5 8.5-4.5V7z"/><path d="M3.5 7 12 11.5 20.5 7M12 11.5v10"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.7-1 1.2-1.9-.5-1 0-2.1 1.2-2.1H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7v.3"/><circle cx="12" cy="17" r=".7" fill="currentColor"/>',
   sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
@@ -1950,6 +2100,9 @@ const SCHEDULES = {
   warmup:  { label: 'Warm-up',   steps: [[30,10],[60,5],[120,3],[300,2]] },
   quick:   { label: 'Quick 20',  steps: [[30,20]] },
   long:    { label: 'Long study',steps: [[300,4],[600,2]] },
+  // Composition, not figure: a few minutes a picture, drawn small.
+  thumbs:  { label: 'Thumbnails', steps: [[90,8]],
+             hint: 'Postage-stamp composition sketches: draw a small box first, then only the big shapes in two or three values - the picture, not the pose.' },
   custom:  { label: 'Custom',    steps: null },
 };
 
@@ -2318,11 +2471,15 @@ const state = {
   gridStyle: 'thirds',        // key into GRID_STYLES - see drawGrid()
   constructMode: 'off',       // 'off'|'vp'|'plumb'|'divider' - see setConstructMode()
   vp: null,                   // {x,y} - vanishing point, construct mode 'vp'
+  frame: null,                // {x1,y1,x2,y2} - viewfinder, construct mode 'frame'
   plumb: null,                // {x,y} - construct mode 'plumb'
   divider: null,              // {x1,y1,x2,y2} unit vector - construct mode 'divider'
   ghostSrc: null,             // previous pose's src, for #ghostImg - see show()
   focalFrac: null,            // {x,y} 0..1 - see refreshValueTools(), positionFocalMarker()
   hudIdleTimer: null,
+  // Memory drawing - null (off, or a pose revisited with Previous), 'study',
+  // 'draw' or 'reveal'. See beginMemoryStudy().
+  memPhase: null,
   // Browse mode - the stage opened on a grid cell rather than on a session.
   // Sequential instead of shuffled, no clock, no schedule, not logged. See
   // openViewer() and browseStep().
@@ -2367,6 +2524,7 @@ function saveSettings() {
     gridStyle: el('gridStyle').value,
     gridOrder,
     ghost: el('optGhost').checked, focalPoint: el('optFocalPoint').checked,
+    memory: el('optMemory').checked, memorySecs: Number(el('memorySecs').value),
     // When this setup was last changed, so the merge in syncSettings() can tell
     // two devices' panels apart - see syncSettings() for why this is a
     // whole-document last-write-wins merge rather than a field-by-field one.
@@ -2533,7 +2691,8 @@ async function boot() {
   for (const [id, key] of [['optGray','gray'],['optFlipRandom','flipRandom'],
                            ['optGrid','grid'],['optBell','bell'],['optFull','full'],
                            ['optHighContrast','highContrast'],['optGhost','ghost'],
-                           ['optFocalPoint','focalPoint'],['optDedup','dedup']]) {
+                           ['optFocalPoint','focalPoint'],['optDedup','dedup'],
+                           ['optMemory','memory']]) {
     if (saved[key] !== undefined) el(id).checked = saved[key];
     el(id).addEventListener('change', saveSettings);
   }
@@ -2542,6 +2701,8 @@ async function boot() {
 
   // Not a checkbox, so it sits outside the loop above - same restore-then-
   // persist idea, just a select's .value instead of a checkbox's .checked.
+  if (saved.memorySecs) el('memorySecs').value = String(saved.memorySecs);
+  el('memorySecs').addEventListener('change', saveSettings);
   el('gridStyle').value = saved.gridStyle || 'thirds';
   el('gridStyle').addEventListener('change', () => {
     state.gridStyle = el('gridStyle').value;
@@ -3357,6 +3518,10 @@ function updateViewMeta() {
     m.textContent = 'Short drills for the eye and the hand - each round scored, your best kept.';
     return;
   }
+  if (view.kind === 'colour') {
+    m.textContent = 'Palette, colour wheel and gamut mask for any image - read in this browser, nothing is uploaded.';
+    return;
+  }
   const parts = [gridItems.length === viewTotal
     ? `${viewTotal.toLocaleString()} image${viewTotal === 1 ? '' : 's'}`
     : `${gridItems.length.toLocaleString()} of ${viewTotal.toLocaleString()} images`];
@@ -3375,6 +3540,7 @@ function viewTitle() {
     case 'drop':  return 'Check your own image';
     case 'forms': return '3D forms';
     case 'train': return 'Train';
+    case 'colour': return 'Colour studio';
     default:      return 'Dashboard';
   }
 }
@@ -3388,17 +3554,18 @@ function setView(next) {
   if (changed && gridOrder === 'random') reshuffle();
   const browsing = view.kind === 'all' || view.kind === 'pack' || view.kind === 'group';
 
-  const forms = view.kind === 'forms', train = view.kind === 'train';
+  const forms = view.kind === 'forms', train = view.kind === 'train', colour = view.kind === 'colour';
   el('viewBrowse').classList.toggle('hidden', !browsing);
   el('viewForms').classList.toggle('hidden', !forms);
   el('viewTrain').classList.toggle('hidden', !train);
+  el('viewColour').classList.toggle('hidden', !colour);
   el('mainBody').classList.toggle('forms-mode', forms);
   // The Session inspector is for drawing from the library. Here it only took
   // width from the stage; its one use in this view - the interval for Draw
   // random forms - has its own control in the 3D panel. The trainers have
   // no use for it at all.
-  el('setup').classList.toggle('forms-mode', forms || train);
-  el('viewDashboard').classList.toggle('hidden', browsing || forms || train);
+  el('setup').classList.toggle('forms-mode', forms || train || colour);
+  el('viewDashboard').classList.toggle('hidden', browsing || forms || train || colour);
   el('searchbar').classList.toggle('hidden', !browsing);
   el('viewTitle').textContent = viewTitle();
 
@@ -3412,6 +3579,7 @@ function setView(next) {
   // are real GPU memory, and most visits to the board never open this view.
   if (forms) showForms();
   if (train) showTrain();
+  if (colour) showColour();
   el('sidebar').classList.remove('peek');
   shellSync();
   el('mainBody').scrollTop = 0;
@@ -3792,7 +3960,7 @@ function renderSchedules(saved) {
 function hintSchedule(key) {
   const sch = SCHEDULES[key];
   el('scheduleHint').textContent = sch.steps
-    ? sch.steps.map(([s, n]) => `${n} × ${fmt(s)}`).join('  ·  ') +
+    ? (sch.hint ? sch.hint + '  ' : '') + sch.steps.map(([s, n]) => `${n} × ${fmt(s)}`).join('  ·  ') +
       `  —  ${sch.steps.reduce((a, [s, n]) => a + s * n, 0) / 60 | 0} min total, ignores the interval above`
     : key === 'custom' ? 'Add at least one step below.'
     : 'Runs until you stop, using the interval above.';
@@ -4222,6 +4390,7 @@ function advance(first) {
 
   show(src);
   resetClock();
+  beginMemoryStudy();
   preloadNext();
 }
 
@@ -4278,8 +4447,10 @@ function show(src) {
     img.style.opacity = '1'; imgValue.style.opacity = '1';
     state.errors = 0;
     // A new pose is a new box - a portrait after a landscape changes the
-    // rendered size of both panes' images, and with it where the grid goes.
+    // rendered size of both panes' images, and with it where the grid goes -
+    // and, for the armatures, which lines it draws at all.
     positionGrid();
+    if (el('optGrid').checked) drawGrid();
     refreshValueTools();
   };
   img.onerror = () => {
@@ -4329,6 +4500,9 @@ function show(src) {
   clearConstruct();
   // A drawing belongs to the pose it was drawn from.
   clearDrawing();
+  // Previous, browsing and a new pose all start plainly visible; only
+  // advance() - a fresh pose - opens a memory study, right after this.
+  setMemoryPhase(null);
   el('eyedropperReadout').innerHTML = '';
   el('mixGuide').textContent = '';
   eyedropperHistory = [];
@@ -4380,10 +4554,20 @@ function onTick() {
   // No timer: the tick still runs (Pause, the HUD and the schedule all read
   // from the same loop) but nothing counts down, so a pose only ever changes
   // because Next was pressed.
-  if (state.paused || !currentInterval()) return;
+  const studying = state.memPhase === 'study';
+  if (state.paused || (!currentInterval() && !studying)) return;
   state.remain -= 0.25;
+  if (studying) {
+    if (state.remain <= 0) { startMemoryDraw(); return; }
+    setMemoryPhase('study');   // redraws the countdown badge
+    paint();
+    return;
+  }
   if (state.remain <= 0) {
     if (el('optBell').checked) bell();
+    // Drawing time is up: the reference comes back instead of the next pose
+    // arriving - checking the drawing is the half of the exercise that teaches.
+    if (state.memPhase === 'draw') { revealMemory(); return; }
     flashExpired();
     return;
   }
@@ -4408,7 +4592,7 @@ function flashExpired() {
 }
 
 function paint() {
-  const total = currentInterval();
+  const total = state.memPhase === 'study' ? Number(el('memorySecs').value) : currentInterval();
   // A bar that would sit at 0% forever, and a clock counting down from
   // nothing, both say the wrong thing about an untimed session - so it gets
   // a full bar and a mark that means "this is not running out".
@@ -4433,6 +4617,11 @@ function stepHistory(delta) {
   // Prev/Next walk it directly. Wrapping, so the end of a folder is not a
   // dead end you have to leave the viewer to get out of.
   if (state.browse) { browseStep(delta); return; }
+  // Next while drawing from memory shows the answer, never skips it - one
+  // stray keypress would otherwise throw the check away. During the study
+  // it means "got it" - cover it now rather than wait out the countdown.
+  if (delta > 0 && state.memPhase === 'draw') { revealMemory(); return; }
+  if (delta > 0 && state.memPhase === 'study') { startMemoryDraw(); return; }
   const target = state.histPos + delta;
   if (target < 0 || target >= state.history.length) {
     if (delta > 0) advance(false);
@@ -4519,17 +4708,55 @@ function cuts(p) {
     `<line x1="0" y1="${x}" x2="100" y2="${x}" stroke="#fff" stroke-width=".25"/>`
   ).join('');
 }
+/* The classical armatures below depend on the picture's proportions - a
+   reciprocal is perpendicular to a diagonal only in the real rectangle, not
+   in the stretched 0..100 square the viewBox is. So they are worked out in
+   a W x 1 frame (W the image's aspect ratio) and only then written into the
+   viewBox, where the stretch carries them onto the image exactly. */
+function gridLines(W, segs) {
+  return segs.map(([x1, y1, x2, y2]) =>
+    `<line x1="${x1 / W * 100}" y1="${y1 * 100}" x2="${x2 / W * 100}" y2="${y2 * 100}" stroke="#fff" stroke-width=".25"/>`).join('');
+}
+// From (x, y) along (dx, dy) to where it leaves the W x 1 frame.
+function rayToEdge(x, y, dx, dy, W) {
+  let t = Infinity;
+  if (dx > 0) t = Math.min(t, (W - x) / dx); else if (dx < 0) t = Math.min(t, -x / dx);
+  if (dy > 0) t = Math.min(t, (1 - y) / dy); else if (dy < 0) t = Math.min(t, -y / dy);
+  return [x, y, x + dx * t, y + dy * t];
+}
 const GRID_STYLES = {
   thirds: () => cuts(33.33),
   golden: () => cuts(38.2), // ~1/phi - the wider-spaced of the two classic ratios
   diagonal: () => `<line x1="0" y1="0" x2="100" y2="100" stroke="#fff" stroke-width=".25"/>` +
                   `<line x1="100" y1="0" x2="0" y2="100" stroke="#fff" stroke-width=".25"/>`,
   center: () => '',
+  // Hambidge's dynamic symmetry: both diagonals, and from each remaining
+  // corner the "reciprocal" - the line square to a diagonal. Where they
+  // cross are the eyes of the rectangle, the strong places for a focus;
+  // the lines themselves are the angles a composition can lean on.
+  dynamic: W => gridLines(W, [[0, 0, W, 1], [W, 0, 0, 1],
+    rayToEdge(W, 0, -1, W, W), rayToEdge(0, 1, 1, -W, W),
+    rayToEdge(0, 0, 1, W, W), rayToEdge(W, 1, -1, -W, W)]),
+  // The harmonic armature: the diagonals, the diamond through the middles
+  // of the sides, and from each corner to the middles of the two far sides.
+  armature: W => {
+    const m = [[W / 2, 0], [W, 0.5], [W / 2, 1], [0, 0.5]];
+    const corners = [[0, 0, [1, 2]], [W, 0, [3, 2]], [0, 1, [0, 1]], [W, 1, [0, 3]]];
+    return gridLines(W, [[0, 0, W, 1], [W, 0, 0, 1],
+      ...m.map((p, i) => [...p, ...m[(i + 1) % 4]]),
+      ...corners.flatMap(([x, y, to]) => to.map(k => [x, y, ...m[k]]))]);
+  },
+  // Rabatment: the square folded in from each short side. Its inner edge is
+  // a line painters have long hung the main vertical (or horizontal) on.
+  rabatment: W => W >= 1
+    ? gridLines(W, [[1, 0, 1, 1], [W - 1, 0, W - 1, 1]])
+    : gridLines(W, [[0, W, W, W], [0, 1 - W, W, 1 - W]]),
 };
 
 function drawGrid() {
   const style = GRID_STYLES[state.gridStyle] ? state.gridStyle : 'thirds';
-  const markup = GRID_STYLES[style]() +
+  const im = el('img'), aspect = im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 1;
+  const markup = GRID_STYLES[style](aspect) +
     `<line x1="50" y1="0" x2="50" y2="100" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>` +
     `<line x1="0" y1="50" x2="100" y2="50" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>`;
   // Both panes, identically: each grid is stretched over its own pane, which
@@ -4911,7 +5138,7 @@ function setConstructMode(mode) {
   clearConstruct();
 }
 function clearConstruct() {
-  state.vp = state.plumb = state.divider = null;
+  state.vp = state.plumb = state.divider = state.frame = null;
   renderConstructOverlay();
 }
 // Fully turns the guide off (mode + select, not just the drawn points) -
@@ -4928,10 +5155,20 @@ function exitConstructMode() {
   clearConstruct();
 }
 function cycleConstruct() {
-  const order = ['off', 'vp', 'plumb', 'divider'];
+  const order = ['off', 'vp', 'plumb', 'divider', 'frame'];
   setConstructMode(order[(order.indexOf(state.constructMode) + 1) % order.length]);
 }
 el('constructSelect').addEventListener('change', e => setConstructMode(e.target.value));
+
+// A frame's proportions, named when they are a paper or canvas shape anyone
+// buys (within 2.5%), else as a plain ratio - always width to height.
+function frameRatio(fw, fh) {
+  const r = fw / fh;
+  for (const [a, b] of [[1, 1], [5, 4], [4, 3], [3, 2], [16, 9], [2, 1], [7, 5]]) {
+    for (const [p, q] of [[a, b], [b, a]]) if (Math.abs(r / (p / q) - 1) < 0.025) return `${p}:${q}`;
+  }
+  return r >= 1 ? `${r.toFixed(2)}:1` : `1:${(1 / r).toFixed(2)}`;
+}
 
 // Same stage-relative coordinate space as angleLineAt() - see its own
 // comment. Rebuilds #constructOverlay from scratch on every call, the same
@@ -4979,6 +5216,23 @@ function renderConstructOverlay() {
       }
       markup += `<line class="construct-guide" x1="${x1}" y1="${y1}" x2="${x1 + nx * unit * 20}" y2="${y1 + ny * unit * 20}"/>`;
     }
+  } else if (state.constructMode === 'frame' && state.frame) {
+    // A viewfinder: the card with a window cut in it that painters hold up
+    // to find a picture in a scene - or here, a better one inside a photo.
+    // Thirds inside it, and its proportions, so the crop can be matched to
+    // the paper it will be drawn on.
+    const f = state.frame;
+    const x = Math.min(f.x1, f.x2), y = Math.min(f.y1, f.y2), fw = Math.abs(f.x2 - f.x1), fh = Math.abs(f.y2 - f.y1);
+    if (fw > 6 && fh > 6) {
+      markup += `<path class="construct-shade" fill-rule="evenodd" d="M0 0H${w}V${h}H0Z M${x} ${y}h${fw}v${fh}h${-fw}Z"/>`;
+      for (const k of [1, 2]) {
+        markup += `<line class="construct-thirds" x1="${x + fw * k / 3}" y1="${y}" x2="${x + fw * k / 3}" y2="${y + fh}"/>` +
+          `<line class="construct-thirds" x1="${x}" y1="${y + fh * k / 3}" x2="${x + fw}" y2="${y + fh * k / 3}"/>`;
+      }
+      markup += [[x, y, x + fw, y], [x + fw, y, x + fw, y + fh], [x + fw, y + fh, x, y + fh], [x, y + fh, x, y]]
+        .map(([a, b, c, d]) => `<line class="construct-guide" x1="${a}" y1="${b}" x2="${c}" y2="${d}"/>`).join('');
+      markup += `<text x="${x + 4}" y="${y > 18 ? y - 6 : y + 15}">${frameRatio(fw, fh)}</text>`;
+    }
   }
 
   svg.classList.toggle('hidden', markup === '');
@@ -5004,6 +5258,7 @@ el('stage').addEventListener('pointermove', e => {
   if (state.constructMode === 'vp') { state.vp = pt; renderConstructOverlay(); }
   else if (state.constructMode === 'plumb') { state.plumb = pt; renderConstructOverlay(); }
   else if (state.constructMode === 'divider') { state.divider = { x1: constructDrag.x, y1: constructDrag.y, x2: pt.x, y2: pt.y }; renderConstructOverlay(); }
+  else if (state.constructMode === 'frame') { state.frame = { x1: constructDrag.x, y1: constructDrag.y, x2: pt.x, y2: pt.y }; renderConstructOverlay(); }
 });
 el('stage').addEventListener('pointerup', () => { constructDrag = null; });
 el('stage').addEventListener('pointercancel', () => { constructDrag = null; });
@@ -5644,6 +5899,54 @@ function skipCurrent() {
   advance(false);
 }
 
+/* ------------------------------------------------------ memory drawing
+   Look, then draw with the reference gone, then check. Copying a photo line
+   for line never makes you decide what mattered in it; with nothing left to
+   copy, you have to have taken in the gesture, the big shapes and the
+   proportions while you could still see them - which is exactly the looking
+   timed drawing is meant to train. The 3D forms have their own version of
+   this (startMemoryDrill()); this one is for everything a session draws.
+
+   Three phases per pose, on the session's own clock:
+     study  - the pose is visible; state.remain counts the study time down
+     draw   - the pose is covered; state.remain is the ordinary interval
+     reveal - the pose is back and the clock is paused, for Compare (D)
+   A pose reached with Previous is shown plainly: it has been drawn already. */
+function memoryOn() { return !state.browse && el('optMemory').checked; }
+
+function setMemoryPhase(phase) {
+  state.memPhase = phase;
+  const c = el('memCover');
+  c.className = phase || 'hidden';
+  if (phase === 'study') c.innerHTML = `<span>Memorise it - ${Math.max(1, Math.ceil(state.remain))}s &middot; → when you have it</span>`;
+  else if (phase === 'draw') c.textContent = 'Draw it from memory. Click here, or press →, when you are done.';
+  else if (phase === 'reveal') c.innerHTML = '<span>How close was it? D lays your drawing over it - → for the next pose.</span>';
+  else c.textContent = '';
+}
+
+function beginMemoryStudy() {
+  if (!memoryOn()) return;
+  state.remain = Number(el('memorySecs').value);
+  setMemoryPhase('study');
+  paint();
+}
+
+function startMemoryDraw() {
+  if (el('optBell').checked) bell();
+  // Anything measured during the study would be a crib sheet now.
+  clearAngleLine();
+  clearConstruct();
+  resetClock();
+  setMemoryPhase('draw');
+}
+
+function revealMemory() {
+  setMemoryPhase('reveal');
+  if (!state.paused) togglePause();
+}
+
+el('memCover').addEventListener('click', () => { if (state.memPhase === 'draw') revealMemory(); });
+
 function togglePause() {
   // Nothing to pause - there is no clock in browse mode.
   if (state.browse) return;
@@ -5869,8 +6172,75 @@ const FORM_SHAPES = {
   }, sections: [[-0.5, 0.748], [0, 0.8], [0.5, 0.637]], axis: [-1, 1] },
   // An artist's wooden mannequin: its body is FORM_RIG, hung off this tiny
   // ball at the pelvis (hidden inside it) - see buildFormRig().
-  figure:   { label: 'Figure',   lines: [8, 6], rig: true, build: T => new T.SphereGeometry(0.04, 8, 6) },
+  figure:   { label: 'Figure',   lines: [8, 6], rig: 'figure', build: T => new T.SphereGeometry(0.04, 8, 6) },
+  // The head, twice from one sculpt (formHeadGeometry()): smooth, as the
+  // Loomis ball-and-jaw reads, and cut into planes the way a plaster planes
+  // head is - fewer, flat facets, so each turn of the form is one value.
+  // `subject`: like the figure, a thing to draw in its own right, never dealt
+  // out as one more random shape.
+  head:     { label: 'Head',     lines: [12, 8], subject: true, build: T => formHeadGeometry(T, 128, 96) },
+  planes:   { label: 'Head planes', lines: [12, 8], subject: true, flat: true, build: T => formHeadGeometry(T, 30, 22) },
+  // A mannequin hand, posable finger by finger - FORM_HAND_JOINTS.
+  hand:     { label: 'Hand',     lines: [8, 6], rig: 'hand', build: T => new T.SphereGeometry(0.04, 8, 6) },
 };
+
+/* A head sculpted out of a sphere by moving its points - no model to fetch,
+   and the same function gives the smooth head and the planes head by being
+   asked for more or fewer of them. It faces +z, crown up, about the size of
+   the other forms. What it follows is the Loomis construction: a ball for
+   the cranium with its sides planed off, the face hung below the front of
+   it in three equal parts - hairline to brow, brow to the base of the nose,
+   nose to chin - and the features as masses on that, not details: a brow
+   ridge, the sockets under it, a nose wedge, cheekbones, the barrel of the
+   mouth, a chin, an ear behind the middle of each side. Every move is a
+   smooth falloff, so neighbouring points never cross and the surface stays
+   whole at any resolution. */
+function formHeadGeometry(T, wSeg, hSeg) {
+  // phiStart at -90° puts the sphere's UV seam down the back of the skull,
+  // where the one line of split normals it leaves is least in the way.
+  const g = new T.SphereGeometry(1, wSeg, hSeg, -Math.PI / 2);
+  const pos = g.attributes.position;
+  const ss = (a, b, t) => { t = Math.min(Math.max((t - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+  const bump = (dx, dy, sx, sy) => Math.exp(-(dx * dx) / (2 * sx * sx) - (dy * dy) / (2 * sy * sy));
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const front = ss(-0.15, 0.75, z);      // 0 round the back, 1 on the face
+    const low = ss(0.1, -0.9, y);          // 0 above the brow, 1 underneath
+    // Cranium: narrower than it is deep, and the sides planed flat.
+    x *= 0.8;
+    const ax = Math.abs(x);
+    if (ax > 0.6) x = Math.sign(x) * (0.6 + (ax - 0.6) * 0.3);
+    // The jaw: the lower front of the ball drawn down and in to the chin,
+    // and the back tucked in over where the neck would go.
+    y -= low * front * 0.45;
+    x *= 1 - 0.4 * low * front;
+    z *= 1 - 0.22 * low * (1 - front);
+    // ...and brought forward: left where the ball puts it, the lower face
+    // would curve back under the brow like the underside of a sphere, and a
+    // profile would have no chin.
+    z += front * low * 0.3;
+    // The face is a plane, flatter than the ball behind it.
+    if (z > 0.76) z = 0.76 + (z - 0.76) * 0.35;
+    const fx = Math.abs(x);
+    // Brow ridge, and the sockets under it.
+    z += front * 0.08 * bump(0, y - 0.02, 1, 0.07) * (1 - ss(0.4, 0.58, fx));
+    z -= front * 0.12 * bump(fx - 0.26, y + 0.13, 0.12, 0.08);
+    // The nose: a wedge from between the brows out to its tip, widening
+    // as it goes, undercut at its base.
+    const ny = ss(0, -0.44, y) * (1 - ss(-0.46, -0.58, y));
+    z += front * 0.32 * ny * bump(x, 0, 0.06 + 0.07 * ss(-0.05, -0.5, y), 1);
+    // Cheekbones, the barrel of the mouth, the chin.
+    x += Math.sign(x) * front * 0.04 * bump(fx - 0.45, y + 0.25, 0.1, 0.12);
+    z += front * 0.05 * bump(fx - 0.38, y + 0.22, 0.1, 0.1);
+    z += front * 0.06 * bump(x, y + 0.78, 0.26, 0.16);
+    z += front * 0.07 * bump(x, y + 1.02, 0.13, 0.08);
+    // Ears: on the side planes, behind the middle, from brow to nose base.
+    x += Math.sign(x) * 0.07 * bump(z + 0.08, y + 0.25, 0.1, 0.19) * ss(0.5, 0.6, fx);
+    pos.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
 
 /* ---- the figure. A wooden mannequin, about eight heads tall (4 units -
    twice a cube), jointed where a real one is. Each row is a joint: its
@@ -5905,8 +6275,8 @@ const FORM_RIG = [
     ];
   }),
 ];
-const FORM_RIG_JOINTS = new Map(FORM_RIG.map(r => [r[0], r]));
-const formJointLabel = j => j ? FORM_RIG_JOINTS.get(j)[3] : 'Whole figure';
+// Of the joint being named, on the rig being posed - see FORM_RIGS.
+const formJointLabel = (j, rig = activeFormRig() || FORM_RIGS.figure) => j ? rig.jointMap.get(j)[3] : rig.whole;
 
 /* How far each joint goes, [min, max] per axis, for the figure's left side;
    the right mirrors it. Only random poses keep to these - your own hand is
@@ -5923,7 +6293,8 @@ const FORM_RIG_LIMITS = {
   shin: [[0, 140], [0, 0], [0, 0]],
   foot: [[-25, 40], [-15, 15], [-15, 15]],
 };
-function formJointLimits(j) {
+function formJointLimits(j, rig = FORM_RIGS.figure) { return rig.limits(j); }
+function formFigureLimits(j) {
   const [kind, side] = j.split('.'), l = FORM_RIG_LIMITS[kind];
   // Mirrored in x: bend stays, twist and lean change sign.
   return side === 'R' ? [l[0], [-l[1][1], -l[1][0]], [-l[2][1], -l[2][0]]] : l;
@@ -5957,10 +6328,10 @@ const FORM_POSES = {
 
 // Anything that claims to be a pose comes out as one: known joints, three
 // finite angles each, nothing else.
-function cleanFormPose(p) {
+function cleanFormPose(p, rig = FORM_RIGS.figure) {
   const out = {};
   if (p && typeof p === 'object') {
-    for (const j of FORM_RIG_JOINTS.keys()) {
+    for (const j of rig.jointMap.keys()) {
       const v = p[j];
       if (Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) {
         out[j] = v.map(a => Math.min(Math.max(Math.round(a * 10) / 10, -180), 180));
@@ -5984,21 +6355,99 @@ function mirrorFormPose(o) {
 
 // One of the class poses, shaken - every joint moved a little, inside what
 // it can do - and as often as not seen in a mirror.
-function randomFormPose() {
-  const keys = Object.keys(FORM_POSES).filter(k => k !== 'sit');
-  const base = FORM_POSES[keys[Math.floor(Math.random() * keys.length)]].pose;
+function randomFormPose(rig = FORM_RIGS.figure) {
+  const keys = rig.random;
+  const base = rig.poses[keys[Math.floor(Math.random() * keys.length)]].pose;
   const pose = {};
-  for (const j of FORM_RIG_JOINTS.keys()) {
-    const v = base[j] || [0, 0, 0], lim = formJointLimits(j);
+  for (const j of rig.jointMap.keys()) {
+    const v = base[j] || [0, 0, 0], lim = formJointLimits(j, rig);
     pose[j] = v.map((a, k) => {
-      const shake = (Math.random() * 2 - 1) * (k === 1 ? 10 : 14);
+      const shake = (Math.random() * 2 - 1) * rig.shake[k];
       return Math.round(Math.min(Math.max(a + shake, lim[k][0]), lim[k][1]));
     });
   }
   const o = { pose, ry: 0, rz: 0 };
-  if (Math.random() < 0.5) mirrorFormPose(o);
+  if (rig.mirror && Math.random() < 0.5) mirrorFormPose(o);
   return o.pose;
 }
+
+/* ---- the hand. A mannequin hand, a right one, palm facing +z and fingers
+   up - the hand held up to show its palm. Built the way a drawing book
+   constructs one: the palm a box (a hand drawn as a flat paddle never turns
+   convincingly), the ball of the thumb a mass of its own, each finger three
+   cylinders that shorten toward the tip, and the knuckles on an arc, not a
+   line - the middle finger's highest. Bend closes a joint toward the palm,
+   lean spreads a finger sideways.
+
+   The thumb is the one joint that does not sit straight in its parent: it
+   comes off the side of the palm at an angle and turned to face across it.
+   That is the sixth entry of its row, a rest pose held by the fixed pivot
+   buildFormRig() puts above every joint - so a zero pose is a relaxed
+   thumb, not one standing straight up beside the fingers, and bending it
+   runs across the palm the way a real one does. */
+const FORM_HAND_ROOT = [rigEll([0, -0.5, 0], [0.3, 0.62, 0.18])]; // the wrist end of the forearm
+const FORM_HAND_JOINTS = [
+  ['wrist', null, [0, 0.02, 0], 'Wrist', [rigBox([0, 0.5, 0], [0.84, 0.92, 0.26]), rigEll([0.2, 0.3, 0.07], [0.22, 0.3, 0.14])]],
+  ['thumb1', 'wrist', [0.3, 0.18, 0.08], 'Thumb base', [rigBall([0, 0, 0], 0.11), rigLimb(0.44, 0.11, 1)], [20, -35, -38]],
+  ['thumb2', 'thumb1', [0, 0.44, 0], 'Thumb middle', [rigLimb(0.32, 0.092, 1)]],
+  ['thumb3', 'thumb2', [0, 0.32, 0], 'Thumb tip', [rigLimb(0.27, 0.082, 1)]],
+  ...[['index', 'Index', 0.3, 0.95, [0.5, 0.3, 0.24], 0.085],
+      ['middle', 'Middle', 0.1, 0.98, [0.56, 0.34, 0.26], 0.088],
+      ['ring', 'Ring', -0.1, 0.96, [0.52, 0.32, 0.25], 0.083],
+      ['little', 'Little', -0.3, 0.9, [0.4, 0.25, 0.21], 0.074]].flatMap(([k, n, x, y, [a, b, c], r]) => [
+    [`${k}1`, 'wrist', [x, y, 0], `${n} knuckle`, [rigBall([0, 0, 0], r * 1.12), rigLimb(a, r, 1)]],
+    [`${k}2`, `${k}1`, [0, a, 0], `${n} middle joint`, [rigLimb(b, r * 0.93, 1)]],
+    [`${k}3`, `${k}2`, [0, b, 0], `${n} tip joint`, [rigLimb(c, r * 0.86, 1)]],
+  ]),
+];
+const FORM_HAND_LIMITS = {
+  wrist: [[-70, 70], [-80, 80], [-25, 25]],
+  thumb1: [[-20, 50], [-20, 20], [-20, 45]], thumb2: [[0, 60], [0, 0], [0, 0]], thumb3: [[-10, 80], [0, 0], [0, 0]],
+  finger1: [[-20, 90], [-5, 5], [-18, 18]], finger2: [[0, 105], [0, 0], [0, 0]], finger3: [[0, 80], [0, 0], [0, 0]],
+};
+// { finger: [knuckle, middle, tip, spread] }, thumb [base, middle, tip] as
+// full [bend, twist, lean] triples, and the wrist.
+function handPose(fingers, thumb, wrist) {
+  const p = {};
+  for (const [k, [a, b, c, s = 0]] of Object.entries(fingers)) {
+    p[k + '1'] = [a, 0, s]; p[k + '2'] = [b, 0, 0]; p[k + '3'] = [c, 0, 0];
+  }
+  if (thumb) [p.thumb1, p.thumb2, p.thumb3] = thumb;
+  if (wrist) p.wrist = wrist;
+  return p;
+}
+const FORM_HAND_POSES = {
+  relaxed: { label: 'Relaxed', pose: handPose({ index: [12, 18, 10, -3], middle: [18, 24, 12], ring: [24, 30, 14, 3], little: [30, 34, 16, 6] },
+    [[8, 0, 0], [10, 0, 0], [10, 0, 0]]) },
+  spread: { label: 'Spread', pose: handPose({ index: [-5, 0, 0, -14], middle: [-5, 0, 0, -2], ring: [-5, 0, 0, 10], little: [-5, 0, 0, 20] },
+    [[-10, 0, -20], [0, 0, 0], [0, 0, 0]], [-15, 0, 0]) },
+  fist: { label: 'Fist', pose: handPose({ index: [85, 100, 65], middle: [88, 100, 65], ring: [90, 100, 65], little: [90, 100, 65] },
+    [[40, 0, 42], [30, 0, 0], [30, 0, 0]]) },
+  point: { label: 'Point', pose: handPose({ index: [0, 0, 0], middle: [88, 100, 65], ring: [90, 100, 65], little: [90, 100, 65] },
+    [[38, 0, 40], [30, 0, 0], [25, 0, 0]]) },
+  pinch: { label: 'Pinch', pose: handPose({ index: [40, 55, 35], middle: [30, 40, 20], ring: [28, 36, 18], little: [26, 34, 16] },
+    [[30, 0, 12], [20, 0, 0], [15, 0, 0]]) },
+  grip: { label: 'Grip', pose: handPose({ index: [50, 60, 40], middle: [55, 62, 40], ring: [58, 64, 40], little: [60, 66, 40] },
+    [[30, 0, 20], [15, 0, 0], [10, 0, 0]]) },
+};
+
+/* Every posable form, by the key its FORM_SHAPES entry names in `rig`.
+   root: the parts on the form itself; joints: FORM_RIG-style rows; limits:
+   a joint's [min, max] per axis, for random poses; random: the poses those
+   start from; shake: how far each axis is shaken; mirror: whether a mirror
+   image is still the same thing (a figure yes - a right hand mirrored is a
+   left one this model cannot be). */
+const FORM_RIGS = {
+  figure: { root: FORM_RIG_PELVIS, joints: FORM_RIG, limits: formFigureLimits, poses: FORM_POSES,
+            random: ['stand', 'contra', 'walk', 'kneel', 'reach'], shake: [14, 10, 14],
+            whole: 'Whole figure', mirror: true, reset: 'Standing straight, arms down' },
+  hand:   { root: FORM_HAND_ROOT, joints: FORM_HAND_JOINTS, poses: FORM_HAND_POSES,
+            limits: j => FORM_HAND_LIMITS[j.replace(/^(index|middle|ring|little)(\d)$/, 'finger$2')],
+            random: Object.keys(FORM_HAND_POSES), shake: [14, 4, 5],
+            whole: 'Whole hand', mirror: false, reset: 'Open and flat' },
+};
+for (const r of Object.values(FORM_RIGS)) r.jointMap = new Map(r.joints.map(j => [j[0], j]));
+const formRigOf = shape => FORM_RIGS[formShapeDef(shape).rig] || null;
 
 /* The zones view. Colours are arbitrary but ordered warm-to-cool the way the
    families run from the light round to the shadow side; the thresholds are
@@ -6023,6 +6472,7 @@ let formScene = null;    // the scene being edited, persisted to FORMS_KEY
 let formUrls = [];       // blob: URLs handed to the last session, revoked on the next
 
 const activeFormObject = () => formScene.objects[formScene.active];
+const activeFormRig = () => formScene ? formRigOf(activeFormObject().shape) : null;
 // Panel keys are either the scene's own or the selected object's.
 const formVal = k => FORM_OBJ_KEYS.includes(k) ? activeFormObject()[k] : formScene[k];
 function setFormVal(k, v) {
@@ -6047,7 +6497,7 @@ function normalizeFormScene(raw) {
     // back to a cube rather than vanishing and shifting every index after it.
     if (!isFormShape(n.shape)) n.shape = 'cube';
     if (!FORM_FINISHES[n.finish]) n.finish = 'matte';
-    n.pose = cleanFormPose(n.pose);
+    n.pose = cleanFormPose(n.pose, FORM_RIGS[(FORM_SHAPES[n.shape] || {}).rig] || FORM_RIGS.figure);
     return n;
   });
   if (objs.length) s.objects = objs;
@@ -6264,8 +6714,13 @@ function formRigPartGeometry(geo) {
   else { const [, len, r] = geo.split(':').map(Number); g = new T.CapsuleGeometry(r, Math.max(len - 2 * r, 0.01), 12, 24); }
   return (F.geometries[key] = g);
 }
-function buildFormRig(m) {
-  const T = forms.T, rig = { nodes: {}, parts: [] };
+/* Every joint hangs from a pivot of its own: the pivot sits where the joint
+   is and holds its rest pose (a row's sixth entry - the thumb's angle off
+   the palm), and the joint turns inside it. So a pose is always relative to
+   rest, and the rotate handles, which read a joint's angles in the frame of
+   whatever it hangs from, get that for free. */
+function buildFormRig(m, kind) {
+  const T = forms.T, def = FORM_RIGS[kind], rig = { nodes: {}, pivots: {}, parts: [], def, kind };
   const addParts = (node, joint, parts) => parts.forEach(part => {
     const pm = new T.Mesh(formRigPartGeometry(part.geo), m.material);
     pm.castShadow = pm.receiveShadow = true;
@@ -6273,10 +6728,13 @@ function buildFormRig(m) {
     node.add(pm);
     rig.parts.push([pm, part]);
   });
-  addParts(m, null, FORM_RIG_PELVIS);
-  for (const [name, parent, , , parts] of FORM_RIG) {
-    const node = new T.Group();
-    (parent ? rig.nodes[parent] : m).add(node);
+  addParts(m, null, def.root);
+  for (const [name, parent, , , parts, rest] of def.joints) {
+    const pivot = new T.Group(), node = new T.Group();
+    if (rest) pivot.rotation.set(rest[0] * THREE_DEG, rest[1] * THREE_DEG, rest[2] * THREE_DEG);
+    (parent ? rig.nodes[parent] : m).add(pivot);
+    pivot.add(node);
+    rig.pivots[name] = pivot;
     rig.nodes[name] = node;
     addParts(node, name, parts);
   }
@@ -6292,9 +6750,9 @@ function dropFormRig(m) {
    raised arm would come out wide instead of long. */
 function poseFormRig(m, o) {
   const rig = m.userData.rig, sc = [o.sx, o.sy, o.sz];
-  for (const [name, , at] of FORM_RIG) {
+  for (const [name, , at] of rig.def.joints) {
     const node = rig.nodes[name], r = o.pose[name] || [0, 0, 0];
-    node.position.set(at[0] * sc[0], at[1] * sc[1], at[2] * sc[2]);
+    rig.pivots[name].position.set(at[0] * sc[0], at[1] * sc[1], at[2] * sc[2]);
     node.rotation.set(r[0] * THREE_DEG, r[1] * THREE_DEG, r[2] * THREE_DEG);
   }
   for (const [pm, { at, size }] of rig.parts) {
@@ -6373,8 +6831,9 @@ function formsRender(sc, w, h, clean = false) {
   sc.objects.forEach((o, i) => {
     const m = F.meshes[i], def = formShapeDef(o.shape);
     m.geometry = formGeometry(o.shape);
-    if (def.rig && !m.userData.rig) buildFormRig(m);
-    else if (!def.rig && m.userData.rig) dropFormRig(m);
+    // A figure turned into a hand is a different rig, not a re-pose.
+    if (m.userData.rig && m.userData.rig.kind !== def.rig) dropFormRig(m);
+    if (def.rig && !m.userData.rig) buildFormRig(m, def.rig);
     applyFormFinish(m.material, o, def);
     const u = m.material.userData.u;
     u.uLines.value = sc.lines && !clean ? 1 : 0;
@@ -6675,11 +7134,11 @@ function drawFormRig(ctx, dpr, toScreen) {
   const sel = activeFormJoint();
   const at = node => toScreen(node.getWorldPosition(new T.Vector3()));
   const pts = { '': at(m) };
-  for (const [name] of FORM_RIG) pts[name] = at(rig.nodes[name]);
+  for (const [name] of rig.def.joints) pts[name] = at(rig.nodes[name]);
   ctx.save();
   ctx.strokeStyle = 'rgba(255, 255, 255, .45)'; ctx.lineWidth = 1.5 * dpr;
   ctx.beginPath();
-  for (const [name, parent] of FORM_RIG) {
+  for (const [name, parent] of rig.def.joints) {
     const a = pts[parent || ''], b = pts[name];
     if (a[2] < 1 && b[2] < 1) { ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }
   }
@@ -7506,13 +7965,22 @@ function randomFormScene(base, anyShape) {
   const r = (a, b) => a + Math.random() * (b - a);
   const s = structuredClone(base);
   // The figure is a subject of its own, not one more shape to deal out.
-  const keys = Object.keys(FORM_SHAPES).filter(k => !FORM_SHAPES[k].rig);
+  const keys = Object.keys(FORM_SHAPES).filter(k => !FORM_SHAPES[k].rig && !FORM_SHAPES[k].subject);
   for (const o of s.objects) {
-    if (FORM_SHAPES[o.shape] && FORM_SHAPES[o.shape].rig) {
+    const def = FORM_SHAPES[o.shape];
+    if (def && def.rig) {
       // A figure gets a new pose and faces a new way, but stays upright:
-      // tipped over, it is not a pose any more.
-      o.pose = randomFormPose();
-      o.rx = 0; o.rz = 0; o.ry = Math.round(r(-180, 180));
+      // tipped over, it is not a pose any more. A hand turns every way.
+      o.pose = randomFormPose(FORM_RIGS[def.rig]);
+      o.rx = def.rig === 'hand' ? Math.round(r(-60, 60)) : 0;
+      o.rz = def.rig === 'hand' ? Math.round(r(-40, 40)) : 0;
+      o.ry = Math.round(r(-180, 180));
+      continue;
+    }
+    if (def && def.subject) {
+      // A head nods and tilts the way a sitter's does - the angles a head
+      // drawing is actually hard at - and turns any way round.
+      o.rx = Math.round(r(-30, 25)); o.ry = Math.round(r(-180, 180)); o.rz = Math.round(r(-20, 20));
       continue;
     }
     if (anyShape && FORM_SHAPES[o.shape]) {
@@ -7801,11 +8269,11 @@ function formsPanelHtml() {
       <div class="count" id="formJointHint"></div>
       <div id="formJointRows">${[['Bend', 'Forward and back'], ['Twist', 'About its own length'], ['Lean', 'Out to the side']]
         .map(([l, t], i) => `<label class="frow" title="${t}"><span>${l}</span><input type="range" data-jaxis="${i}" min="-180" max="180" step="1"><output data-unit="°"></output></label>`).join('')}</div>
-      ${chips('formPoses', Object.entries(FORM_POSES), 'pose-preset')}
+      <div class="chips" id="formPoses"></div>
       <div class="factions">
         <button class="ghost" type="button" id="formPoseRandom" title="One of the poses above, every joint moved a little">Random pose</button>
         <button class="ghost" type="button" id="formPoseMirror" title="Left and right swapped, as in a mirror - the other half of a contrapposto">Mirror</button>
-        <button class="ghost" type="button" id="formPoseReset" title="Standing straight, arms down">Reset pose</button>
+        <button class="ghost" type="button" id="formPoseReset" title="Back to the rest pose">Reset pose</button>
       </div>`,
     finish: chips('formFinishes', Object.entries(FORM_FINISHES), 'finish', f => f.hint),
     presets: chips('formPresets', Object.entries(LIGHT_PRESETS), 'preset', p => `Light from ${p.az}°, ${p.el}° up`),
@@ -7871,17 +8339,23 @@ function syncFormsPanel() {
   el('formRemove').disabled = formScene.objects.length < 2;
   el('formAdd').disabled = formScene.objects.length >= FORM_MAX_OBJECTS;
 
-  const rig = !!formShapeDef(o.shape).rig, joint = activeFormJoint();
+  const rig = formRigOf(o.shape), joint = activeFormJoint();
   panel.querySelector('[data-group="Pose"]').closest('.fgroup').classList.toggle('hidden', !rig);
   if (rig) {
     const js = el('formJoint');
-    const opts = `<option value="">Whole figure</option>` +
-      FORM_RIG.map(([j, , , label]) => `<option value="${j}">${label}</option>`).join('');
+    const opts = `<option value="">${rig.whole}</option>` +
+      rig.joints.map(([j, , , label]) => `<option value="${j}">${label}</option>`).join('');
     if (js.innerHTML !== opts) js.innerHTML = opts;
     js.value = joint || '';
     el('formJointHint').textContent = joint
       ? 'R or the rings in the view bend it; Alt+R straightens it.'
-      : 'Click a dot on a joint, or a part of the figure, to bend it.';
+      : `Click a dot on a joint, or a part of the ${rig === FORM_RIGS.hand ? 'hand' : 'figure'}, to bend it.`;
+    // The class poses are the rig's own - a figure's and a hand's differ.
+    const poses = Object.entries(rig.poses).map(([k, p]) =>
+      `<button class="chip" type="button" data-pose-preset="${k}">${esc(p.label)}</button>`).join('');
+    if (el('formPoses').dataset.rig !== rig.whole) { el('formPoses').innerHTML = poses; el('formPoses').dataset.rig = rig.whole; }
+    el('formPoseMirror').classList.toggle('hidden', !rig.mirror);
+    el('formPoseReset').title = rig.reset;
     el('formJointRows').classList.toggle('hidden', !joint);
     const v = (joint && o.pose[joint]) || [0, 0, 0];
     for (const inp of panel.querySelectorAll('[data-jaxis]')) {
@@ -7889,7 +8363,7 @@ function syncFormsPanel() {
       inp.nextElementSibling.textContent = Math.round(inp.value) + '°';
     }
     for (const b of panel.querySelectorAll('[data-pose-preset]')) {
-      b.setAttribute('aria-pressed', String(JSON.stringify(cleanFormPose(FORM_POSES[b.dataset.posePreset].pose)) === JSON.stringify(o.pose)));
+      b.setAttribute('aria-pressed', String(JSON.stringify(cleanFormPose(rig.poses[b.dataset.posePreset].pose, rig)) === JSON.stringify(o.pose)));
     }
   }
 
@@ -7962,11 +8436,17 @@ function bindFormsPanel() {
     if ((b = hit('[data-obj]'))) { formScene.active = Number(b.dataset.obj); formsChanged(); return; }
     if ((b = hit('[data-pose-preset]'))) {
       pushFormUndo(formObjectsSnapshot());
-      activeFormObject().pose = cleanFormPose(FORM_POSES[b.dataset.posePreset].pose);
+      const rig = activeFormRig();
+      activeFormObject().pose = cleanFormPose(rig.poses[b.dataset.posePreset].pose, rig);
       formsChanged();
       return;
     }
-    if ((b = hit('[data-shape]'))) { activeFormObject().shape = b.dataset.shape; formsChanged(); return; }
+    if ((b = hit('[data-shape]'))) {
+      const o = activeFormObject();
+      // A figure's joints mean nothing to a hand: a new rig starts at rest.
+      if (formShapeDef(o.shape).rig !== formShapeDef(b.dataset.shape).rig) o.pose = {};
+      o.shape = b.dataset.shape; formsChanged(); return;
+    }
     if ((b = hit('[data-finish]'))) {
       const o = activeFormObject();
       o.finish = b.dataset.finish;
@@ -8093,7 +8573,7 @@ function bindFormsPanel() {
   el('formMemory').addEventListener('click', startMemoryDrill);
   el('formViewDrill').addEventListener('click', startViewDrill);
   const poseEdit = f => () => { pushFormUndo(formObjectsSnapshot()); f(activeFormObject()); formsChanged(); };
-  el('formPoseRandom').addEventListener('click', poseEdit(o => { o.pose = randomFormPose(); }));
+  el('formPoseRandom').addEventListener('click', poseEdit(o => { o.pose = randomFormPose(formRigOf(o.shape)); }));
   el('formPoseMirror').addEventListener('click', poseEdit(mirrorFormPose));
   el('formPoseReset').addEventListener('click', poseEdit(o => { o.pose = {}; }));
   el('formsCover').addEventListener('click', () => {
@@ -9527,6 +10007,432 @@ function initTrain() {
   });
 }
 initTrain();
+
+/* ------------------------------------------------------------ colour studio
+   The colour questions a painter asks of a picture, answered from its pixels:
+   what are its colours (a palette, found by clustering), where do they sit
+   (a colour wheel with every pixel on it), how saturated is it really (most
+   photos are far greyer than they look - the wheel shows it at a glance),
+   and does its value hold up without colour (each palette colour beside its
+   grey, and a warning where two different colours are the same value).
+
+   And the gamut mask, James Gurney's tool: a shape laid over the wheel that
+   says which colours a painting may use. Everything outside it is out, and
+   the picture repainted inside it shows what that choice does - a triad, a
+   complementary pair, a limited "atmospheric" palette - before a brush
+   touches paint. The wheel is OKLCH at one lightness: hue round it, chroma
+   out from the grey centre. Chroma past COL_CMAX sits on the rim.
+
+   Everything happens here in the browser; the image never leaves it. */
+const COLOUR_KEY = 'refboard.colour.v1';
+const COL_CMAX = 0.25;      // OKLCH chroma at the wheel's rim
+const COL_WHEEL_L = 0.72;   // the lightness the wheel itself is painted at
+const COL_WORK_EDGE = 720;  // long edge the image is worked on at
+const COL_K = 6;            // palette size
+// [hue°, radius 0..1] - a shape at rest; dragging it turns it round the wheel.
+const COL_MASKS = {
+  triad: { label: 'Triad', pts: [[40, 0.95], [160, 0.95], [280, 0.95]],
+    hint: 'Three hues a third of the way round from each other, and every mixture between them.' },
+  comp: { label: 'Complementary', pts: [[60, 0.95], [150, 0.2], [240, 0.95], [330, 0.2]],
+    hint: 'Two opposite hues at full strength, and the greys that mixing them makes - little else.' },
+  atmos: { label: 'Atmospheric', pts: [[25, 0.95], [95, 0.7], [220, 0.28]],
+    hint: 'One family of hues, warm here, with a hint of its opposite near grey - the limited palette of a mood or a time of day.' },
+  split: { label: 'Split', pts: [[50, 0.95], [205, 0.75], [255, 0.75]],
+    hint: 'One hue against the two either side of its complement - contrast, without the clash of a direct pair.' },
+};
+
+// Lookup tables: a per-pixel pow() is what makes repainting slow.
+const COL_TO_LIN = Float32Array.from({ length: 256 }, (_, i) => srgbToLin(i / 255));
+const COL_TO_SRGB = Uint8ClampedArray.from({ length: 4097 }, (_, i) => Math.round(linToSrgb(i / 4096) * 255));
+const colByte = v => COL_TO_SRGB[Math.round(clamp01(v) * 4096)];
+
+let col = null; // the studio's state; null until first opened
+
+function loadColourPrefs() {
+  try { const v = JSON.parse(localStorage.getItem(COLOUR_KEY)); if (v && typeof v === 'object') return v; } catch {}
+  return {};
+}
+function saveColourPrefs() {
+  try { localStorage.setItem(COLOUR_KEY, JSON.stringify({ mode: col.mode, mask: col.mask })); } catch {}
+}
+
+/* ---- the mask's geometry, in wheel units: [a, b] / COL_CMAX, so the rim
+   is radius 1 and a point's angle is its OKLCH hue. */
+function colPolarToPt([h, r]) { const a = h * Math.PI / 180; return [r * Math.cos(a), r * Math.sin(a)]; }
+function pointInPolygon([x, y], poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function nearestOnPolygon([x, y], poly) {
+  let best = null, bd = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, ay] = poly[j], [bx, by] = poly[i], dx = bx - ax, dy = by - ay;
+    const t = clamp01(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1));
+    const px = ax + t * dx, py = ay + t * dy, d = (px - x) ** 2 + (py - y) ** 2;
+    if (d < bd) { bd = d; best = [px, py]; }
+  }
+  return best;
+}
+
+/* Where a colour outside the mask goes when the picture is repainted inside
+   it. Called only for points already known to be outside `poly`; must return
+   a point inside it or on its edge. Lightness is not this function's
+   business - it stays exactly as it was, which is what keeps the drawing.
+
+   The nearest point on the mask's edge is the smallest possible change, but
+   it will happily trade hue for chroma: a red just outside a mask that
+   stops short of red comes back orange. The alternative is to walk the
+   colour in toward grey along its own hue until it meets the mask - it
+   keeps its hue and loses intensity, which is closer to how a painter
+   "knocks a colour back" - but a hue the mask does not reach at all has no
+   such point, so it still needs a fallback.
+
+   So: along its own hue first. The segment from grey (the origin) out to the
+   colour crosses the mask's edge wherever the mask covers that hue; of those
+   crossings the one furthest out (largest t) is the most intense version of
+   this exact hue the mask allows. Only a hue the mask misses entirely falls
+   back to the nearest point - there, changing hue is the only way in. */
+function mapIntoGamut(pt, poly) {
+  const [px, py] = pt;
+  let best = -1;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, ay] = poly[j], ex = poly[i][0] - ax, ey = poly[i][1] - ay;
+    // origin + t*pt = a + s*e, solved by cross products.
+    const den = px * ey - py * ex;
+    if (Math.abs(den) < 1e-12) continue;          // parallel to this edge
+    const t = (ax * ey - ay * ex) / den, s = (ax * py - ay * px) / den;
+    if (t >= 0 && t <= 1 && s >= 0 && s <= 1 && t > best) best = t;
+  }
+  return best >= 0 ? [px * best, py * best] : nearestOnPolygon(pt, poly);
+}
+
+/* ---- the palette: k-means over the image's pixels in OKLab, with chroma
+   weighted up - lightness alone spans most of OKLab's distances, and left
+   as is every cluster would be a value step, not a colour. Seeded by
+   farthest-point from the sample nearest the average, so the same image
+   always gives the same palette. */
+function colKmeans(pts, k) {
+  const W = 2; // chroma weight
+  const d2 = (p, q) => (p[0] - q[0]) ** 2 + W * ((p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2);
+  const n = pts.length, mean = [0, 0, 0];
+  for (const p of pts) for (let c = 0; c < 3; c++) mean[c] += p[c] / n;
+  let first = pts[0];
+  for (const p of pts) if (d2(p, mean) < d2(first, mean)) first = p;
+  const centers = [first.slice(0, 3)], dist = pts.map(p => d2(p, first));
+  while (centers.length < k) {
+    let bi = 0;
+    for (let i = 1; i < n; i++) if (dist[i] > dist[bi]) bi = i;
+    if (dist[bi] === 0) break;
+    centers.push(pts[bi].slice(0, 3));
+    for (let i = 0; i < n; i++) dist[i] = Math.min(dist[i], d2(pts[i], pts[bi]));
+  }
+  const assign = new Int32Array(n);
+  for (let it = 0; it < 14; it++) {
+    const sum = centers.map(() => [0, 0, 0, 0]);
+    for (let i = 0; i < n; i++) {
+      let bc = 0, bd = Infinity;
+      for (let c = 0; c < centers.length; c++) { const d = d2(pts[i], centers[c]); if (d < bd) { bd = d; bc = c; } }
+      assign[i] = bc;
+      const s = sum[bc]; s[0] += pts[i][0]; s[1] += pts[i][1]; s[2] += pts[i][2]; s[3]++;
+    }
+    sum.forEach((s, c) => { if (s[3]) centers[c] = [s[0] / s[3], s[1] / s[3], s[2] / s[3]]; });
+  }
+  const counts = centers.map(() => 0);
+  for (let i = 0; i < n; i++) counts[assign[i]]++;
+  return centers.map((lab, c) => {
+    const rgb = oklabToLin(...lab).map(colByte);
+    return { lab, rgb, share: counts[c] / n };
+  // Under half a percent is the anti-aliased fringe of an edge, not a colour
+  // anyone painted.
+  }).filter(p => p.share >= 0.005).sort((a, b) => b.share - a.share);
+}
+
+const colHex = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+const colChromaWord = C => C < 0.03 ? 'grey' : C < 0.08 ? 'muted' : C < 0.15 ? 'clear' : 'vivid';
+
+async function colourLoad(src) {
+  let im;
+  try { im = await loadImg(src); } catch { el('colReadout').textContent = 'That image could not be read.'; return; }
+  const s = Math.min(1, COL_WORK_EDGE / Math.max(im.naturalWidth, im.naturalHeight));
+  const w = Math.max(1, Math.round(im.naturalWidth * s)), h = Math.max(1, Math.round(im.naturalHeight * s));
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(im, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h).data;
+  // Every pixel's OKLab once, kept: the value and in-gamut views and the
+  // wheel all read from this rather than redoing the cube roots.
+  const lab = new Float32Array(w * h * 3);
+  for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
+    const L = linToOklab(COL_TO_LIN[data[i]], COL_TO_LIN[data[i + 1]], COL_TO_LIN[data[i + 2]]);
+    lab[j] = L[0]; lab[j + 1] = L[1]; lab[j + 2] = L[2];
+  }
+  const step = Math.max(1, Math.floor(Math.sqrt(w * h / 5000)));
+  const samples = [];
+  for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
+    const p = (y * w + x), q = p * 3;
+    samples.push([lab[q], lab[q + 1], lab[q + 2], data[p * 4], data[p * 4 + 1], data[p * 4 + 2]]);
+  }
+  Object.assign(col, { w, h, data, lab, samples, palette: colKmeans(samples, COL_K), mapped: null, hover: null });
+  el('colEmpty').classList.add('hidden');
+  el('colImg').classList.remove('hidden');
+  el('colReadout').textContent = 'Point at the image to find a colour on the wheel.';
+  colourRender();
+}
+
+// The image, in the chosen view, into #colImg at its working size.
+function colourRenderImage() {
+  if (!col.data) return;
+  const cv = el('colImg'), { w, h, data, lab } = col;
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const ctx = cv.getContext('2d');
+  const mode = col.mode === 'mapped' && !col.mask ? 'colour' : col.mode;
+  const out = new ImageData(w, h), o = out.data;
+  if (mode === 'colour') o.set(data);
+  else if (mode === 'value') {
+    // Relative luminance, back to sRGB: exactly the grey of each pixel's L*.
+    for (let i = 0; i < data.length; i += 4) {
+      const g = colByte(0.2126 * COL_TO_LIN[data[i]] + 0.7152 * COL_TO_LIN[data[i + 1]] + 0.0722 * COL_TO_LIN[data[i + 2]]);
+      o[i] = o[i + 1] = o[i + 2] = g; o[i + 3] = 255;
+    }
+  } else {
+    const key = JSON.stringify(col.mask);
+    if (!col.mapped || col.mappedKey !== key) {
+      const m = new Uint8ClampedArray(data.length), poly = col.mask;
+      for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
+        let a = lab[j + 1], b = lab[j + 2];
+        const pt = [a / COL_CMAX, b / COL_CMAX];
+        if (!pointInPolygon(pt, poly)) { const q = mapIntoGamut(pt, poly); a = q[0] * COL_CMAX; b = q[1] * COL_CMAX; }
+        const lin = oklabToLin(lab[j], a, b);
+        m[i] = colByte(lin[0]); m[i + 1] = colByte(lin[1]); m[i + 2] = colByte(lin[2]); m[i + 3] = 255;
+      }
+      col.mapped = m; col.mappedKey = key;
+    }
+    o.set(col.mapped);
+  }
+  ctx.putImageData(out, 0, 0);
+}
+
+// The wheel's own colours, painted once at low resolution and scaled up -
+// a gamut-clipped OKLCH per pixel is too slow to redo at screen size.
+function colWheelBackground() {
+  if (col.bg) return col.bg;
+  const N = 160, c = N / 2, cv = document.createElement('canvas');
+  cv.width = cv.height = N;
+  const ctx = cv.getContext('2d'), id = ctx.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const u = (x + 0.5 - c) / c, v = (c - y - 0.5) / c, r = Math.hypot(u, v);
+    if (r > 1) continue;
+    const rgb = lchRgb(COL_WHEEL_L, r * COL_CMAX, Math.atan2(v, u) * 180 / Math.PI), k = (y * N + x) * 4;
+    id.data[k] = rgb[0]; id.data[k + 1] = rgb[1]; id.data[k + 2] = rgb[2]; id.data[k + 3] = 255;
+  }
+  ctx.putImageData(id, 0, 0);
+  return (col.bg = cv);
+}
+
+function colWheelGeom() {
+  const cv = el('colWheel'), dpr = window.devicePixelRatio || 1;
+  const S = Math.round(cv.clientWidth * dpr);
+  if (S && cv.width !== S) { cv.width = cv.height = S; }
+  const c = cv.width / 2, R = c - 10 * dpr;
+  return { cv, dpr, c, R, toXY: ([u, v]) => [c + u * R, c - v * R], fromXY: (x, y) => [(x * dpr - c) / R, (c - y * dpr) / R] };
+}
+
+function colourRenderWheel() {
+  const g = colWheelGeom(), { cv, dpr, c, R, toXY } = g;
+  if (!cv.width) return;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  // Dimmed, so the image's own colours on top of it stand out.
+  ctx.save();
+  ctx.beginPath(); ctx.arc(c, c, R, 0, 2 * Math.PI); ctx.clip();
+  ctx.globalAlpha = 0.32; ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(colWheelBackground(), c - R, c - R, 2 * R, 2 * R);
+  ctx.restore();
+  // Chroma rings and the hue spokes, as a scale to read positions against.
+  ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1 * dpr;
+  for (const f of [0.25, 0.5, 0.75, 1]) { ctx.beginPath(); ctx.arc(c, c, R * f, 0, 2 * Math.PI); ctx.stroke(); }
+  // Every sampled pixel, in its own colour.
+  if (col.samples) {
+    for (const s of col.samples) {
+      const [x, y] = toXY([Math.max(-1.02, Math.min(1.02, s[1] / COL_CMAX)), Math.max(-1.02, Math.min(1.02, s[2] / COL_CMAX))]);
+      ctx.fillStyle = `rgb(${s[3]},${s[4]},${s[5]})`;
+      ctx.fillRect(x - 1.2 * dpr, y - 1.2 * dpr, 2.4 * dpr, 2.4 * dpr);
+    }
+  }
+  // The mask: everything outside it darkened, its edge and its corners.
+  if (col.mask) {
+    const pts = col.mask.map(toXY);
+    ctx.save();
+    ctx.beginPath(); ctx.arc(c, c, R + 2 * dpr, 0, 2 * Math.PI);
+    pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
+    ctx.fillStyle = 'rgba(12,12,14,.62)'; ctx.fill('evenodd');
+    ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
+    ctx.strokeStyle = '#e3a043'; ctx.lineWidth = 2 * dpr; ctx.stroke();
+    for (const [x, y] of pts) {
+      ctx.beginPath(); ctx.arc(x, y, 5 * dpr, 0, 2 * Math.PI);
+      ctx.fillStyle = '#e3a043'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1 * dpr; ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // The palette, each colour sized by how much of the image it covers.
+  ctx.font = `600 ${10 * dpr}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  (col.palette || []).forEach((p, i) => {
+    const [x, y] = toXY([p.lab[1] / COL_CMAX, p.lab[2] / COL_CMAX]), r = (6 + 10 * Math.sqrt(p.share)) * dpr;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+    ctx.fillStyle = rgbCss(p.rgb); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+    ctx.fillStyle = p.lab[0] > 0.62 ? '#111' : '#fff'; ctx.fillText(String(i + 1), x, y + 0.5 * dpr);
+  });
+  if (col.hover) {
+    const [x, y] = toXY(col.hover);
+    ctx.beginPath(); ctx.arc(x, y, 8 * dpr, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * dpr; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, 10 * dpr, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1 * dpr; ctx.stroke();
+  }
+}
+
+// Each palette colour beside its grey, and the pairs that are two colours
+// but one value - the ones a black-and-white study will merge.
+function colourRenderPalette() {
+  const pal = col.palette;
+  if (!pal) return;
+  el('colPalette').innerHTML = pal.map((p, i) => {
+    const L = lstar(p.rgb), [, C, h] = rgbOklch(p.rgb);
+    return `<div class="col-sw"><b>${i + 1}</b><i style="background:${rgbCss(p.rgb)}" title="${colHex(p.rgb)}"></i>` +
+      `<i style="background:${rgbCss(greyOfLstar(L))}" title="Its value as grey"></i>` +
+      `<span>${colHex(p.rgb)} · ${colChromaWord(C)}${C >= 0.03 ? ' ' + hueName(h) : ''}</span>` +
+      `<b>L* ${Math.round(L)} <span>· ${Math.round(p.share * 100)}%</span></b></div>`;
+  }).join('');
+  const same = [];
+  for (let i = 0; i < pal.length; i++) for (let j = i + 1; j < pal.length; j++) {
+    const a = pal[i], b = pal[j], la = lstar(a.rgb), lb = lstar(b.rgb);
+    const [, ca, ha] = rgbOklch(a.rgb), [, cb, hb] = rgbOklch(b.rgb);
+    const dh = Math.abs(((ha - hb + 540) % 360) - 180);
+    if (Math.abs(la - lb) < 5 && (Math.max(ca, cb) > 0.04) && (dh > 40 || Math.abs(ca - cb) > 0.06)) same.push(`${i + 1} and ${j + 1}`);
+  }
+  el('colValueNote').innerHTML = same.length
+    ? `<b>Same value, different colour:</b> ${same.join(', ')}. In a value study each pair is one shape - the picture separates them by colour alone.`
+    : 'Every palette colour has a value of its own - the picture reads in black and white too.';
+}
+
+function colourRender() {
+  if (!col) return;
+  for (const b of document.querySelectorAll('[data-col-mode]')) b.setAttribute('aria-pressed', String(b.dataset.colMode === col.mode));
+  const key = col.maskKey || null;
+  for (const b of document.querySelectorAll('[data-col-mask]')) b.setAttribute('aria-pressed', String((b.dataset.colMask || null) === key));
+  el('colMaskHint').textContent = col.mask
+    ? (COL_MASKS[key] ? COL_MASKS[key].hint + ' ' : '') + 'Drag inside the shape to turn it, a corner to reshape it.'
+    : 'A shape that limits which colours a painting may use. Pick one, then look at the image In gamut.';
+  colourRenderImage();
+  colourRenderWheel();
+  colourRenderPalette();
+}
+
+// Coalesced to a frame: dragging the mask repaints the whole image.
+let colFrame = 0;
+function colourSoon() {
+  if (colFrame) return;
+  colFrame = requestAnimationFrame(() => { colFrame = 0; colourRender(); });
+}
+
+function initColour() {
+  const prefs = loadColourPrefs();
+  col = { mode: ['colour', 'value', 'mapped'].includes(prefs.mode) ? prefs.mode : 'colour', mask: null, maskKey: null };
+  if (Array.isArray(prefs.mask) && prefs.mask.length >= 3 &&
+      prefs.mask.every(p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) col.mask = prefs.mask;
+  el('colMasks').innerHTML = `<button class="chip" type="button" data-col-mask="">Off</button>` +
+    Object.entries(COL_MASKS).map(([k, m]) => `<button class="chip" type="button" data-col-mask="${k}" title="${esc(m.hint)}">${m.label}</button>`).join('');
+
+  el('colModes').addEventListener('click', e => {
+    const b = e.target.closest('[data-col-mode]');
+    if (!b) return;
+    col.mode = b.dataset.colMode; saveColourPrefs(); colourRender();
+  });
+  el('colMasks').addEventListener('click', e => {
+    const b = e.target.closest('[data-col-mask]');
+    if (!b) return;
+    const k = b.dataset.colMask;
+    col.maskKey = k || null;
+    col.mask = k ? COL_MASKS[k].pts.map(colPolarToPt) : null;
+    // Choosing a mask is asking to see what it does.
+    if (k && col.mode === 'colour') col.mode = 'mapped';
+    saveColourPrefs(); colourRender();
+  });
+
+  const take = file => { if (file && file.type.startsWith('image/')) colourLoad(trainKeepUrl(URL.createObjectURL(file))); };
+  el('colPick').addEventListener('click', () => el('colInput').click());
+  el('colInput').addEventListener('change', e => { take(e.target.files[0]); e.target.value = ''; });
+  el('colRandom').addEventListener('click', () => { const u = trainLibraryImage(); if (u) colourLoad(u); });
+  const stage = el('colStage');
+  stage.addEventListener('dragover', e => { e.preventDefault(); stage.classList.add('over'); });
+  stage.addEventListener('dragleave', () => stage.classList.remove('over'));
+  stage.addEventListener('drop', e => { e.preventDefault(); stage.classList.remove('over'); take(e.dataTransfer.files[0]); });
+  document.addEventListener('paste', e => {
+    if (view.kind !== 'colour') return;
+    const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(i => i.type.startsWith('image/'));
+    if (item) take(item.getAsFile());
+  });
+
+  // Pointing at the image: that pixel's colour, and where it sits on the wheel.
+  el('colImg').addEventListener('pointermove', e => {
+    if (!col.lab) return;
+    const r = el('colImg').getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * col.w), y = Math.floor((e.clientY - r.top) / r.height * col.h);
+    if (x < 0 || y < 0 || x >= col.w || y >= col.h) return;
+    const p = y * col.w + x, rgb = [col.data[p * 4], col.data[p * 4 + 1], col.data[p * 4 + 2]], j = p * 3;
+    col.hover = [col.lab[j + 1] / COL_CMAX, col.lab[j + 2] / COL_CMAX];
+    const [, C, h] = rgbOklch(rgb);
+    const inMask = col.mask ? (pointInPolygon(col.hover, col.mask) ? ' · inside the mask' : ' · outside the mask') : '';
+    el('colReadout').textContent = `${colHex(rgb)} · value L* ${Math.round(lstar(rgb))} · ${colChromaWord(C)}${C >= 0.03 ? ' ' + hueName(h) : ''}${inMask}`;
+    colourRenderWheel();
+  });
+  el('colImg').addEventListener('pointerleave', () => { col.hover = null; colourRenderWheel(); });
+
+  // The mask on the wheel: a corner drags that corner; inside, the whole
+  // shape turns about the centre - which is how a mask is used, since the
+  // shape is the harmony and where it points is the choice of hues.
+  let drag = null;
+  const wheel = el('colWheel');
+  wheel.addEventListener('pointerdown', e => {
+    if (!col.mask) return;
+    const g = colWheelGeom(), r = wheel.getBoundingClientRect();
+    const px = e.clientX - r.left, py = e.clientY - r.top, pt = g.fromXY(px, py);
+    const vi = col.mask.findIndex(q => { const [x, y] = g.toXY(q); return Math.hypot(x / g.dpr - px, y / g.dpr - py) < 12; });
+    if (vi >= 0) drag = { vi };
+    else if (pointInPolygon(pt, col.mask)) drag = { a0: Math.atan2(pt[1], pt[0]), pts: col.mask.map(q => q.slice()) };
+    else return;
+    col.maskKey = drag.vi !== undefined ? null : col.maskKey;
+    try { wheel.setPointerCapture(e.pointerId); } catch {}
+  });
+  wheel.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const g = colWheelGeom(), r = wheel.getBoundingClientRect(), pt = g.fromXY(e.clientX - r.left, e.clientY - r.top);
+    if (drag.vi !== undefined) {
+      const len = Math.hypot(pt[0], pt[1]), k = len > 1 ? 1 / len : 1;
+      col.mask[drag.vi] = [pt[0] * k, pt[1] * k];
+    } else {
+      const d = Math.atan2(pt[1], pt[0]) - drag.a0, cs = Math.cos(d), sn = Math.sin(d);
+      col.mask = drag.pts.map(([x, y]) => [x * cs - y * sn, x * sn + y * cs]);
+    }
+    colourSoon();
+  });
+  const end = () => { if (drag) { drag = null; saveColourPrefs(); colourSoon(); } };
+  wheel.addEventListener('pointerup', end);
+  wheel.addEventListener('pointercancel', end);
+  window.addEventListener('resize', () => { if (view.kind === 'colour') colourRenderWheel(); });
+}
+
+function showColour() {
+  if (!col) initColour();
+  el('colRandom').classList.toggle('hidden', !trainLibraryImage());
+  colourRender();
+}
 
 
 applyIcons();
