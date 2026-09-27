@@ -1292,6 +1292,24 @@ section { margin-bottom: 20px; }
 #cmdkList .cmdk-none { color: var(--dim); cursor: default; }
 .cmdk-foot { padding: 8px 16px; font-size: 11px; color: var(--dim); border-top: 1px solid var(--line); }
 
+/* The tour - see js/tour.js. Its ring's shadow is the dimming: all but
+   the control it goes round. Above Find a tool, below nothing. */
+#tour { position: fixed; inset: 0; z-index: 80; }
+#tourRing {
+  position: fixed; border: 2px solid var(--accent); border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / .6); transition: left .2s, top .2s, width .2s, height .2s;
+}
+#tourNote {
+  position: fixed; width: min(320px, calc(100vw - 32px)); padding: 14px 16px;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line-hi); border-radius: 12px;
+  box-shadow: 0 16px 48px rgb(0 0 0 / .45); transition: left .2s, top .2s;
+}
+#tourText { margin: 0 0 12px; font-size: 13.5px; line-height: 1.55; }
+#tourText kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line-hi); border-radius: 4px; padding: 1px 5px; }
+#tourCount { font-size: 11px; color: var(--dim); }
+#tourNote .row { gap: 6px; }
+@media (prefers-reduced-motion: reduce) { #tourRing, #tourNote { transition: none; } }
+
 /* The theme editor - see js/theme-editor.js. */
 #themeEditor {
   position: fixed; inset: 0; z-index: 70; background: rgb(0 0 0 / .35);

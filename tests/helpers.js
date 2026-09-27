@@ -47,7 +47,11 @@ const quadrantsPng = () => makePng(200, 200, (x, y) =>
 const EXPECTED_404 = /index\.json|features\.json|healthz|state\.js/;
 
 const test = base.test.extend({
-  page: async ({ page }, use) => {
+  // The first-time tour would sit over every other test; its own spec
+  // turns this off - test.use({ seenTour: false }).
+  seenTour: [true, { option: true }],
+  page: async ({ page, seenTour }, use) => {
+    if (seenTour) await page.addInitScript(() => localStorage.setItem('refboard.tour.v1', 'seen'));
     const errors = [];
     page.on('pageerror', e => errors.push('pageerror: ' + e.message));
     page.on('console', m => {

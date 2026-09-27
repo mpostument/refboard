@@ -2,4 +2,5 @@
 "use strict";
 
 applyIcons();
-boot();
+// The tour after boot(): it rings controls boot() may still hide.
+boot().then(startTourOnce);

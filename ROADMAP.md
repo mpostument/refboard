@@ -48,10 +48,11 @@ and transfer under Prepare; the camera eyedropper under Paint; critique
 and the framed view under Check. And hiding what you do not use - "Sections you use" under the
 dashboard's cards: a section unticked leaves the rail and its card (a stage
 with nothing left goes too), and is still in Ctrl+K. Each new section (oil
-paint, manga...) is one more tick there.
+paint, manga...) is one more tick there. A tour the first time the app
+opens (`js/tour.js`): six notes, each ringing the real control - the rail,
+Ctrl+K, the cards, Sections you use, Start drawing and the workspace,
+Help - and skipping a section you hid; again from Help or Ctrl+K.
 
-- **A tour.** A short tour the first time the new interface opens: where
-  things are, and how Ctrl+K works.
 - **What's new.** After an update, a short panel of the new features with
   a "try it" button - so new things are not lost among a hundred others.
 
