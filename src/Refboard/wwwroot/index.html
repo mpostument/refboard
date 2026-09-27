@@ -579,6 +579,12 @@
      dimmed rather than hidden: the crop is judged against what it leaves out. */
   #constructOverlay .construct-shade { fill: rgba(0, 0, 0, .6); stroke: none; }
   #constructOverlay .construct-thirds { stroke-width: .75; opacity: .55; stroke-dasharray: 4 4; }
+  /* Perspective check - see perspMarkup(). */
+  #constructOverlay .persp-ext { stroke-width: .75; opacity: .45; }
+  #constructOverlay .persp-horizon { stroke: #6fc3ff; stroke-width: 1.5; opacity: .9; stroke-dasharray: 8 5; }
+  #constructOverlay .persp-vp { fill: #6fc3ff; }
+  #constructOverlay .persp-note { font-size: 13px; }
+  #constructOverlay .persp-warn { font-size: 13px; fill: #ffb36b; }
   #constructOverlay circle { fill: var(--accent); }
   #constructOverlay text {
     fill: #fff; font-size: 11px; font-family: inherit;
@@ -755,6 +761,29 @@
     white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis;
   }
   #memCover.study span { top: 12px; }
+  /* Pose skeleton - see runPose(). Inside .zoomwrap, sized to the image like
+     #grid, and drawn in the image's own pixels (viewBox), so it follows zoom
+     and pan; strokes stay the same width on screen whatever the zoom. */
+  #poseOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  #poseOverlay * { vector-effect: non-scaling-stroke; }
+  #poseOverlay .bone-o { stroke: #000; stroke-width: 4.5; opacity: .45; }
+  #poseOverlay .bone { stroke: #fff; stroke-width: 2; opacity: .9; }
+  #poseOverlay .tilt { stroke: #ffd54f; stroke-width: 2.5; }
+  #poseOverlay .action { stroke: #ff6f59; stroke-width: 4; fill: none; opacity: .9; stroke-linecap: round; }
+  #poseOverlay .plumb { stroke: #6fc3ff; stroke-width: 1.5; stroke-dasharray: 6 5; }
+  #poseOverlay circle { fill: #fff; stroke: #000; stroke-width: 1; }
+  #poseNote {
+    position: absolute; left: 12px; bottom: 12px; z-index: 4; max-width: min(520px, calc(100% - 24px));
+    padding: 7px 11px; border-radius: 7px; background: rgba(0,0,0,.72); color: #fff; font-size: 13px; line-height: 1.45;
+  }
+  #poseNote b { color: #ffd54f; font-weight: 600; }
+  #poseNote i { font-style: normal; color: #ff8f7e; }
+  #poseNote u { text-decoration: none; color: #8fd0ff; }
+  #stageBadge { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none;
+    padding: 5px 12px; border-radius: 6px; background: rgba(0,0,0,.66); color: #fff; font-size: 14px; white-space: nowrap; }
+  /* The stages show the one image, filtered - a split view would put the
+     finished original right beside the stage that is meant to hide it. */
+  #session.staging #paneValue { display: none; }
   #memCover.reveal span { bottom: 12px; }
   #memCover.draw {
     display: grid; place-items: center; background: #0d0d10; color: #bbb;
@@ -1194,9 +1223,10 @@
           <h2>Check your own image</h2>
           <div id="dropZone" tabindex="0" role="button"
                style="border:1px dashed var(--line); border-radius:8px; padding:26px; text-align:center; color:var(--dim); font-size:13px; cursor:pointer;">
-            Drop one image to view it full-screen with the tonal-value tools, or several to draw a timed session from them.
+            Drop one image to view it full-screen with the tonal-value tools, or several to draw a timed session from them -
+            or a video, to draw from frames taken at random through it.
           </div>
-          <input type="file" id="dropInput" accept="image/*" multiple class="hidden">
+          <input type="file" id="dropInput" accept="image/*,video/*" multiple class="hidden">
           <!-- Uses the Interval/Schedule/Options sections in the inspector
                exactly as they are - a dropped-file session is not a different
                kind of session, just one whose pool came from the browser
@@ -1353,6 +1383,14 @@
         your drawing time. When it runs out the reference comes back and the clock stops:
         <b>D</b> lays a photo of your drawing over it, <b>&rarr;</b> goes on.</div>
     </section>
+    <!-- Build-up stages - see setStage(). -->
+    <section>
+      <h2>Stages</h2>
+      <label class="opt"><input type="checkbox" id="optStages"> Build up in stages</label>
+      <div class="count" style="margin-top:9px">For copying a master painting or a long study: each pose starts as two
+        masses of light and dark, then three values, then soft masses of colour, and only at the end everything -
+        the order a painting is built in. The interval is shared between the stages; <b>&rarr;</b> goes to the next one.</div>
+    </section>
       </div>
       <div class="insp-tab" data-tab="filter">
         <p class="count" style="margin:0 0 12px">Which packs and folders: tick them in the library. Here, what is drawn from them.</p>
@@ -1442,6 +1480,23 @@
        but static rather than rebuilt: nothing user-configurable feeds this one,
        unlike the real value filter buildValueFilter() rebuilds on every
        settings change. -->
+  <!-- Build-up stages (setStage()): the picture as two masses, then three
+       values, each simplified first by a little blur - a stage is about big
+       shapes, and a hard-edged posterize of fine texture is noise. -->
+  <filter id="stageNotan" color-interpolation-filters="sRGB">
+    <feGaussianBlur stdDeviation="2.5"/>
+    <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"/>
+    <feComponentTransfer>
+      <feFuncR type="discrete" tableValues="0.12 0.86"/><feFuncG type="discrete" tableValues="0.12 0.86"/><feFuncB type="discrete" tableValues="0.12 0.86"/>
+    </feComponentTransfer>
+  </filter>
+  <filter id="stageThree" color-interpolation-filters="sRGB">
+    <feGaussianBlur stdDeviation="1.5"/>
+    <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"/>
+    <feComponentTransfer>
+      <feFuncR type="discrete" tableValues="0.12 0.5 0.86"/><feFuncG type="discrete" tableValues="0.12 0.5 0.86"/><feFuncB type="discrete" tableValues="0.12 0.5 0.86"/>
+    </feComponentTransfer>
+  </filter>
   <filter id="ghostFilter" color-interpolation-filters="sRGB">
     <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"/>
     <feConvolveMatrix order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" divisor="1" bias="0.5" preserveAlpha="true"/>
@@ -1470,7 +1525,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -1500,6 +1555,10 @@
          sits over every guide and measurement: while you draw from memory,
          none of them may give the pose away. -->
     <div id="memCover" class="hidden"></div>
+    <!-- Which build-up stage the pose is at - see setStage(). -->
+    <div id="stageBadge" class="hidden"></div>
+    <!-- What the pose skeleton found - see runPose(). -->
+    <div id="poseNote" class="hidden"></div>
   </div>
   <div id="bar"><div id="fill"></div></div>
   <!-- Collapsed by default - see toggleValueTools(). Everything in here is
@@ -1558,8 +1617,10 @@
       <option value="plumb">Plumb line</option>
       <option value="divider">Proportion divider</option>
       <option value="frame">Viewfinder</option>
+      <option value="persp">Perspective check</option>
     </select>
     <button id="btnEyedropper" data-icon="pipette" title="Eyedropper (e): click the reference to read its exact colour and value" aria-label="Eyedropper"></button>
+    <button id="btnPose" data-icon="person" title="Pose skeleton (p): the gesture, the tilt of shoulders and hips, and where the weight is - found by a pose model that runs in this browser" aria-label="Pose skeleton"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <span class="hud-sep"></span>
     <button id="btnInfo" data-icon="info" title="Show this pose's brightness histogram and dominant colours (i)" aria-label="Info"></button>
@@ -1743,11 +1804,54 @@
           (4:5, 3:2...) - find a stronger picture inside the photo, cropped to
           the shape of your paper. The <b>Thumbnails</b> schedule is the
           exercise to use it with: eight small composition sketches.</li>
+        <li><b>Perspective check</b> - finds the vanishing points from the
+          picture itself. Click two points along an edge, then two along an
+          edge parallel to it in the scene (the top and bottom of a window):
+          where the two lines meet is a vanishing point. Four more clicks on
+          another direction make a second, with the horizon through both and
+          how far it is tilted; it then says what field of view that implies,
+          and warns when the vanishing points are so close that square
+          things will look stretched - or on the same side of the centre,
+          which no square corner can do. A third direction finds the centre
+          of vision, which for an uncropped photo is the middle of the frame.
+          Works on your own drawing too - photograph it and open it with
+          Check your own image. <b>Backspace</b> undoes a point.</li>
       </ul>
       <p>Only one guide is ever active at a time, and switching to a guide
         turns the angle tool and eyedropper off (and vice versa) - all three
         want the same drag gesture for different things. Selecting "Off," or
         switching guides, clears whatever was drawn.</p>
+    </section>
+
+    <section>
+      <h2>Pose skeleton</h2>
+      <p><b>Pose</b> (<b>P</b>) finds the figure's joints with a pose model
+        and draws over it what a teacher would: the <b>tilt of the shoulders
+        and hips</b> (and whether they tilt against each other -
+        contrapposto), the <b>line of action</b> in red - one curve from the
+        head down the spine to the leg that carries the weight, the gesture
+        to draw first - and the <b>balance line</b> in blue, a plumb line
+        from the pit of the neck, which on a figure at rest lands on the
+        foot bearing the weight. It stays on for every pose until you turn it
+        off. The model runs in this browser; the first time, it is
+        downloaded once (about 6 MB). The image is never sent anywhere.</p>
+    </section>
+
+    <section>
+      <h2>Build up in stages</h2>
+      <p>Tick <b>Build up in stages</b> under Timing for copying a master
+        painting or a long study. Each new pose is shown first as two masses
+        of light and dark, then as three values, then as soft masses of
+        colour, and only in the last stretch as it really is - the order a
+        painting is built in, so the eye cannot go to the detail first. The
+        interval is shared between the stages; <b>&rarr;</b> moves to the
+        next one early. It and memory drawing are one or the other.</p>
+      <h2>Frames from a video</h2>
+      <p>Drop a video on <b>Check your own image</b> (or pick one) and twenty
+        frames are taken from it at random - one from each stretch of the
+        clip, so they cover all of it - to draw a session from. Dancing,
+        sport and animals give poses in real movement that no posed photo
+        has. The frames are made in this browser; the video goes nowhere.</p>
     </section>
 
     <section>
@@ -1854,6 +1958,14 @@
         relaxed, spread, fist, pointing, pinching, gripping. In <b>Draw random
         forms</b> a head nods, tilts and turns and a hand takes a new pose,
         instead of being swapped for a random shape.</p>
+      <p><b>Cloth over a ball</b>, <b>Hanging cloth</b> and <b>Curtain</b>
+        are drapery, each one of the fold types drawing books teach: drop
+        folds falling from what holds the cloth up, diaper folds sagging
+        between two points, pipe folds running down from a gathered edge.
+        The cloth is simulated falling the first time you pick one - a
+        moment's wait, once - and lit and shaded like every other form.
+        Contour lines follow the weave, which is the easiest way to see how
+        a fold turns.</p>
       <p><b>Move, turn and stretch a form in the view</b>, the way Blender
         does it. The selected form carries handles - <b>Move</b>,
         <b>Rotate</b> or <b>Scale</b>, picked top-left of the view (pressing
@@ -1998,7 +2110,7 @@
         · G gray · Q squint · V value levels · +/- zoom · 0 reset zoom ·
         A angle tool · C construction guides · E eyedropper · D compare your drawing · I info drawer ·
         R grid · H high-contrast overlays · M similar (when available) ·
-        S skip · Esc stop · ? this help</p>
+        P pose skeleton · S skip · Esc stop · ? this help</p>
     </section>
   </div>
 </div>
@@ -2024,6 +2136,7 @@ const ICONS = {
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   cube: '<path d="M12 2.5 3.5 7v10l8.5 4.5 8.5-4.5V7z"/><path d="M3.5 7 12 11.5 20.5 7M12 11.5v10"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  person: '<circle cx="12" cy="4.5" r="2.2"/><path d="M12 7.5v7M7.5 10.5l4.5-2 4.5 2M8.5 21l3.5-6.5 3.5 6.5"/>',
   palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.7-1 1.2-1.9-.5-1 0-2.1 1.2-2.1H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7v.3"/><circle cx="12" cy="17" r=".7" fill="currentColor"/>',
   sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -2472,6 +2585,7 @@ const state = {
   constructMode: 'off',       // 'off'|'vp'|'plumb'|'divider' - see setConstructMode()
   vp: null,                   // {x,y} - vanishing point, construct mode 'vp'
   frame: null,                // {x1,y1,x2,y2} - viewfinder, construct mode 'frame'
+  persp: null,                // [{x,y}...] - perspective check, construct mode 'persp'
   plumb: null,                // {x,y} - construct mode 'plumb'
   divider: null,              // {x1,y1,x2,y2} unit vector - construct mode 'divider'
   ghostSrc: null,             // previous pose's src, for #ghostImg - see show()
@@ -2480,6 +2594,9 @@ const state = {
   // Memory drawing - null (off, or a pose revisited with Previous), 'study',
   // 'draw' or 'reveal'. See beginMemoryStudy().
   memPhase: null,
+  poseOn: false,              // pose skeleton shown - see togglePose()
+  // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
+  stage: null,
   // Browse mode - the stage opened on a grid cell rather than on a session.
   // Sequential instead of shuffled, no clock, no schedule, not logged. See
   // openViewer() and browseStep().
@@ -2525,6 +2642,7 @@ function saveSettings() {
     gridOrder,
     ghost: el('optGhost').checked, focalPoint: el('optFocalPoint').checked,
     memory: el('optMemory').checked, memorySecs: Number(el('memorySecs').value),
+    stages: el('optStages').checked,
     // When this setup was last changed, so the merge in syncSettings() can tell
     // two devices' panels apart - see syncSettings() for why this is a
     // whole-document last-write-wins merge rather than a field-by-field one.
@@ -2692,7 +2810,7 @@ async function boot() {
                            ['optGrid','grid'],['optBell','bell'],['optFull','full'],
                            ['optHighContrast','highContrast'],['optGhost','ghost'],
                            ['optFocalPoint','focalPoint'],['optDedup','dedup'],
-                           ['optMemory','memory']]) {
+                           ['optMemory','memory'],['optStages','stages']]) {
     if (saved[key] !== undefined) el(id).checked = saved[key];
     el(id).addEventListener('change', saveSettings);
   }
@@ -2701,6 +2819,11 @@ async function boot() {
 
   // Not a checkbox, so it sits outside the loop above - same restore-then-
   // persist idea, just a select's .value instead of a checkbox's .checked.
+  // Memory and stages both decide what the pose looks like while you draw -
+  // hidden, or built up - so only one of them at a time.
+  el('optMemory').addEventListener('change', () => { if (el('optMemory').checked) { el('optStages').checked = false; saveSettings(); } });
+  el('optStages').addEventListener('change', () => { if (el('optStages').checked) { el('optMemory').checked = false; saveSettings(); } });
+  if (el('optMemory').checked && el('optStages').checked) el('optStages').checked = false;
   if (saved.memorySecs) el('memorySecs').value = String(saved.memorySecs);
   el('memorySecs').addEventListener('change', saveSettings);
   el('gridStyle').value = saved.gridStyle || 'thirds';
@@ -3097,11 +3220,40 @@ function initDropZone() {
     sessionInfo.classList.remove('hidden');
   }
 
-  function showDropped(fileList) {
-    const images = [...fileList].filter(f => f && f.type && f.type.startsWith('image/'));
-    if (!images.length) return;
-    if (images.length === 1) showOne(images[0]);
-    else showMany(images);
+  async function showDropped(fileList) {
+    const files = [...fileList].filter(f => f && f.type);
+    const images = files.filter(f => f.type.startsWith('image/'));
+    const videos = files.filter(f => f.type.startsWith('video/'));
+    if (!videos.length) {
+      if (images.length === 1) showOne(images[0]);
+      else if (images.length) showMany(images);
+      return;
+    }
+    // Frames go into the same staged pool as dropped images - a video is
+    // just a source of stills here, and a session drawn from them is an
+    // ordinary session.
+    const start = el('startDropped');
+    sessionInfo.classList.remove('hidden');
+    start.disabled = true;
+    const frames = [];
+    try {
+      for (const [k, v] of videos.entries()) {
+        const of = videos.length > 1 ? ` (video ${k + 1} of ${videos.length})` : '';
+        frames.push(...await videoFrames(v, VIDEO_FRAMES, i => {
+          sessionCount.textContent = `Taking frames from ${v.name}: ${i}/${VIDEO_FRAMES}${of}`;
+        }));
+      }
+    } catch (err) {
+      frames.forEach(u => URL.revokeObjectURL(u));
+      sessionCount.textContent = `Could not read that video - ${err.message}. The browser has to be able to play it.`;
+      start.disabled = false;
+      return;
+    }
+    droppedUrls.forEach(u => URL.revokeObjectURL(u));
+    droppedUrls = [...images.map(f => URL.createObjectURL(f)), ...frames];
+    sessionCount.textContent = `${frames.length} frames` +
+      (images.length ? ` and ${images.length} image${images.length === 1 ? '' : 's'}` : '') + ' ready';
+    start.disabled = false;
   }
 
   el('startDropped').addEventListener('click', () => {
@@ -3124,6 +3276,48 @@ function initDropZone() {
     if (e.dataTransfer.files) showDropped(e.dataTransfer.files);
   });
   input.addEventListener('change', () => showDropped(input.files));
+}
+
+/* Stills out of a video, for gesture drawing from real movement - a dancer,
+   a match, an animal - rather than poses held still for a camera. One random
+   moment in each of `n` equal slices of the clip (stratified, not uniform
+   random), so the frames cover the whole of it and never bunch up into
+   near-identical neighbours. Decoded by the browser's own player, drawn to a
+   canvas, kept as blob: URLs - nothing leaves the page. */
+const VIDEO_FRAMES = 20;
+async function videoFrames(file, n, progress) {
+  const src = URL.createObjectURL(file);
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = src;
+  try {
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('unsupported format')); });
+    // A recording that was never finalised (a browser's own MediaRecorder,
+    // some screen recorders) says its length is Infinity until the player
+    // has been to the end - so send it there, and read it back.
+    if (v.duration === Infinity) {
+      v.currentTime = 1e9;
+      await new Promise(res => { v.addEventListener('seeked', res, { once: true }); setTimeout(res, 4000); });
+    }
+    const dur = v.duration;
+    if (!Number.isFinite(dur) || dur <= 0) throw new Error('no length');
+    const s = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(v.videoWidth * s); cv.height = Math.round(v.videoHeight * s);
+    const ctx = cv.getContext('2d');
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      v.currentTime = (i + 0.1 + Math.random() * 0.8) * dur / n;
+      await new Promise(res => v.addEventListener('seeked', res, { once: true }));
+      ctx.drawImage(v, 0, 0, cv.width, cv.height);
+      const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.9));
+      out.push(URL.createObjectURL(blob));
+      progress(i + 1);
+    }
+    return out;
+  } finally {
+    v.removeAttribute('src'); v.load();
+    URL.revokeObjectURL(src);
+  }
 }
 
 function renderPacks(saved) {
@@ -4266,6 +4460,8 @@ function startSession(pool, opts = {}) {
 
 function stopSession() {
   clearInterval(state.tick); state.tick = null;
+  setMemoryPhase(null);
+  setStage(null);
   clearDrawing();
   clearHudIdle();
   releaseWakeLock();
@@ -4391,6 +4587,7 @@ function advance(first) {
   show(src);
   resetClock();
   beginMemoryStudy();
+  if (!state.browse && el('optStages').checked) setStage(0);
   preloadNext();
 }
 
@@ -4451,6 +4648,7 @@ function show(src) {
     // and, for the armatures, which lines it draws at all.
     positionGrid();
     if (el('optGrid').checked) drawGrid();
+    if (state.poseOn) runPose();
     refreshValueTools();
   };
   img.onerror = () => {
@@ -4500,9 +4698,12 @@ function show(src) {
   clearConstruct();
   // A drawing belongs to the pose it was drawn from.
   clearDrawing();
+  // A skeleton belongs to the pose it was found on.
+  clearPose();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);
+  setStage(null);
   el('eyedropperReadout').innerHTML = '';
   el('mixGuide').textContent = '';
   eyedropperHistory = [];
@@ -4563,6 +4764,12 @@ function onTick() {
     paint();
     return;
   }
+  if (state.stage !== null) {
+    const total = currentInterval(), f = 1 - Math.max(state.remain, 0) / total;
+    let i = MASTER_STAGES.findIndex(s => f < s.upTo);
+    if (i < 0) i = MASTER_STAGES.length - 1;
+    if (i !== state.stage) setStage(i);
+  }
   if (state.remain <= 0) {
     if (el('optBell').checked) bell();
     // Drawing time is up: the reference comes back instead of the next pose
@@ -4622,6 +4829,15 @@ function stepHistory(delta) {
   // it means "got it" - cover it now rather than wait out the countdown.
   if (delta > 0 && state.memPhase === 'draw') { revealMemory(); return; }
   if (delta > 0 && state.memPhase === 'study') { startMemoryDraw(); return; }
+  // Next during a build-up goes to the next stage, and the clock jumps to
+  // where that stage starts, so the stages that follow keep their share.
+  if (delta > 0 && state.stage !== null && state.stage < MASTER_STAGES.length - 1) {
+    const total = currentInterval();
+    if (total) state.remain = Math.min(state.remain, total * (1 - MASTER_STAGES[state.stage].upTo));
+    setStage(state.stage + 1);
+    paint();
+    return;
+  }
   const target = state.histPos + delta;
   if (target < 0 || target >= state.history.length) {
     if (delta > 0) advance(false);
@@ -5138,7 +5354,7 @@ function setConstructMode(mode) {
   clearConstruct();
 }
 function clearConstruct() {
-  state.vp = state.plumb = state.divider = state.frame = null;
+  state.vp = state.plumb = state.divider = state.frame = state.persp = null;
   renderConstructOverlay();
 }
 // Fully turns the guide off (mode + select, not just the drawn points) -
@@ -5155,10 +5371,147 @@ function exitConstructMode() {
   clearConstruct();
 }
 function cycleConstruct() {
-  const order = ['off', 'vp', 'plumb', 'divider', 'frame'];
+  const order = ['off', 'vp', 'plumb', 'divider', 'frame', 'persp'];
   setConstructMode(order[(order.indexOf(state.constructMode) + 1) % order.length]);
 }
 el('constructSelect').addEventListener('change', e => setConstructMode(e.target.value));
+
+/* ---- perspective check. Where the angle tool measures one line and the
+   vanishing-point guide is placed by eye, this finds the vanishing points
+   FROM the picture: two lines along edges that are parallel in the world
+   (two edges of a table top, a window's top and bottom) meet at one. Four
+   clicks make a vanishing point, eight make two - and a horizon through
+   them - and twelve make three. Then it checks what they imply, since a
+   drawing, unlike a photo, can have vanishing points no camera could:
+
+   - The horizon's tilt. Level in almost any photo held straight.
+   - Two vanishing points of a right angle (a box's two sides) must lie on
+     opposite sides of the centre of vision, and where they are fixes how
+     far away the eye was: it sits on the circle whose diameter joins them,
+     since the two directions are 90° apart. From that distance comes the
+     field of view the picture implies - past about 90° the corners of
+     anything will look stretched, which is the classic "vanishing points
+     too close together" mistake.
+   - With three, the centre of vision is the orthocentre of their triangle
+     (the foot of the perpendicular from the eye onto the picture), which
+     for an uncropped photo is the middle of the frame.
+
+   Lines are homogeneous here: the line through p and q is p x q, and two
+   lines meet at l1 x l2 - a third component near zero is a point at
+   infinity, i.e. the edges are parallel on the page too. */
+const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+function perspVP(l1, l2) {
+  const h = p => [p.x, p.y, 1];
+  const v = cross3(cross3(h(l1[0]), h(l1[1])), cross3(h(l2[0]), h(l2[1])));
+  if (Math.abs(v[2]) < 1e-9) return null;
+  const p = { x: v[0] / v[2], y: v[1] / v[2] };
+  // Far enough that it is parallel for any purpose a drawing has.
+  return Math.hypot(p.x, p.y) > 1e6 ? null : p;
+}
+function orthocentre(A, B, C) {
+  // (H - A).(B - C) = 0 and (H - B).(A - C) = 0, two linear equations in H.
+  const a1 = B.x - C.x, b1 = B.y - C.y, c1 = A.x * a1 + A.y * b1;
+  const a2 = A.x - C.x, b2 = A.y - C.y, c2 = B.x * a2 + B.y * b2;
+  const det = a1 * b2 - a2 * b1;
+  return Math.abs(det) < 1e-9 ? null : { x: (c1 * b2 - c2 * b1) / det, y: (a1 * c2 - a2 * c1) / det };
+}
+function perspMarkup(w, h) {
+  const P = state.persp || [];
+  const f = v => v.toFixed(1);
+  let m = '';
+  const notes = [];
+  // The whole line through two points, drawn well past the stage.
+  const through = (a, b, cls) => {
+    const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy);
+    if (!L) return '';
+    const k = (w + h) * 20 / L;
+    return `<line class="${cls}" x1="${f(a.x - dx * k)}" y1="${f(a.y - dy * k)}" x2="${f(a.x + dx * k)}" y2="${f(a.y + dy * k)}"/>`;
+  };
+  const lines = [];
+  for (let i = 0; i + 1 < P.length; i += 2) lines.push([P[i], P[i + 1]]);
+  for (const [a, b] of lines) {
+    m += through(a, b, 'persp-ext') +
+      `<line class="construct-guide" x1="${f(a.x)}" y1="${f(a.y)}" x2="${f(b.x)}" y2="${f(b.y)}"/>`;
+  }
+  for (const p of P) m += `<circle cx="${f(p.x)}" cy="${f(p.y)}" r="4"/>`;
+
+  const vps = [];
+  for (let i = 0; i + 1 < lines.length; i += 2) {
+    const v = perspVP(lines[i], lines[i + 1]), n = i / 2 + 1;
+    vps.push(v);
+    if (!v) { notes.push([`VP${n}: the two edges are parallel on the page - that direction does not converge (it is flat to the picture).`]); continue; }
+    if (v.x >= 0 && v.x <= w && v.y >= 0 && v.y <= h) {
+      m += `<circle class="persp-vp" cx="${f(v.x)}" cy="${f(v.y)}" r="6"/><text x="${f(v.x + 9)}" y="${f(v.y - 8)}">VP${n}</text>`;
+    } else {
+      // Off the stage: a marker on its edge, in its direction from the middle.
+      const cx = w / 2, cy = h / 2, dx = v.x - cx, dy = v.y - cy;
+      const t = Math.min(dx ? (dx > 0 ? w - 14 - cx : 14 - cx) / dx : Infinity, dy ? (dy > 0 ? h - 14 - cy : 14 - cy) / dy : Infinity);
+      const ex = cx + dx * t, ey = cy + dy * t;
+      m += `<circle class="persp-vp" cx="${f(ex)}" cy="${f(ey)}" r="5"/>` +
+        `<text x="${f(Math.min(ex + 8, w - 150))}" y="${f(Math.max(ey - 8, 14))}">VP${n} off by ${(Math.hypot(dx, dy) / w).toFixed(1)} widths</text>`;
+    }
+  }
+  const found = vps.map((v, i) => v && { v, n: i + 1 }).filter(Boolean);
+
+  // The image's own box on the stage: the centre of vision of an uncropped
+  // photo, and the width a field of view is measured across.
+  const sr = el('stage').getBoundingClientRect(), ir = el('img').getBoundingClientRect();
+  const C = { x: ir.left - sr.left + ir.width / 2, y: ir.top - sr.top + ir.height / 2 }, imgW = ir.width || w;
+
+  if (found.length >= 2) {
+    // The horizon joins the two whose line is nearest level - with three, the
+    // other one is the vertical direction's.
+    let pair = [found[0], found[1]];
+    if (found.length === 3) {
+      const lvl = ([a, b]) => Math.abs(Math.atan2(b.v.y - a.v.y, b.v.x - a.v.x) % Math.PI);
+      const pairs = [[found[0], found[1]], [found[0], found[2]], [found[1], found[2]]];
+      pair = pairs.reduce((best, p) => Math.min(lvl(p), Math.PI - lvl(p)) < Math.min(lvl(best), Math.PI - lvl(best)) ? p : best);
+    }
+    const [A, B] = pair.map(p => p.v);
+    m += through(A, B, 'persp-horizon');
+    let tilt = Math.atan2(B.y - A.y, B.x - A.x) * 180 / Math.PI;
+    if (tilt > 90) tilt -= 180; if (tilt < -90) tilt += 180;
+    notes.push([Math.abs(tilt) < 0.5 ? 'Horizon (eye level) is level.' : `Horizon (eye level) is tilted ${Math.abs(tilt).toFixed(1)}°.`, Math.abs(tilt) >= 2]);
+
+    if (found.length === 2) {
+      // The eye, from the two vanishing points of a right angle.
+      const L = Math.hypot(B.x - A.x, B.y - A.y), ux = (B.x - A.x) / L, uy = (B.y - A.y) / L;
+      const s = (C.x - A.x) * ux + (C.y - A.y) * uy, F = { x: A.x + ux * s, y: A.y + uy * s };
+      const t1 = (A.x - F.x) * ux + (A.y - F.y) * uy, t2 = (B.x - F.x) * ux + (B.y - F.y) * uy;
+      if (t1 * t2 >= 0) {
+        notes.push(['Both vanishing points are on the same side of the picture’s centre - two sides of a square corner cannot do that. One pair of edges is off, or the corner is not square.', true]);
+      } else {
+        const d = Math.sqrt(-t1 * t2), fov = 2 * Math.atan(imgW / 2 / d) * 180 / Math.PI;
+        const mm = 18 / Math.tan(fov / 2 * Math.PI / 180);
+        notes.push([`If VP1 and VP2 are a right angle (a box’s two sides), the picture sees ${Math.round(fov)}° across - a ${Math.round(mm)} mm lens on full frame.`]);
+        if (fov > 90) notes.push(['Wider than the eye takes in comfortably: square things will look stretched at their corners. Move the vanishing points further apart.', true]);
+      }
+    } else {
+      const H = orthocentre(found[0].v, found[1].v, found[2].v);
+      if (H) {
+        m += `<line class="construct-guide" x1="${f(H.x - 12)}" y1="${f(H.y)}" x2="${f(H.x + 12)}" y2="${f(H.y)}"/>` +
+          `<line class="construct-guide" x1="${f(H.x)}" y1="${f(H.y - 12)}" x2="${f(H.x)}" y2="${f(H.y + 12)}"/>` +
+          `<text x="${f(H.x + 14)}" y="${f(H.y + 16)}">centre of vision</text>`;
+        const off = Math.hypot(H.x - C.x, H.y - C.y) / imgW;
+        notes.push([off < 0.08
+          ? 'The centre of vision is near the middle of the picture, as a camera’s is.'
+          : `The centre of vision is ${Math.round(off * 100)}% of the width from the middle - a cropped photo, or vanishing points that do not agree.`, off >= 0.25]);
+      }
+    }
+  }
+  if (P.length < 12) {
+    // Which line of its pair the next click starts: the first along some
+    // edge, the second along an edge parallel to it.
+    const second = Math.floor(P.length / 2) % 2 === 1;
+    const step = second ? 'Now two points along another edge parallel to it in the scene'
+      : P.length >= 8 ? 'Optionally, a third direction - two points up a vertical edge - for three-point perspective'
+      : P.length >= 4 ? 'Two points along an edge in a new direction (another side of the same box)'
+      : 'Click two points along a straight edge in the picture';
+    notes.unshift([`${step}. Backspace undoes a point.`]);
+  }
+  notes.forEach(([t, warn], i) => { m += `<text class="${warn ? 'persp-warn' : 'persp-note'}" x="12" y="${22 + i * 18}">${esc(t)}</text>`; });
+  return m;
+}
 
 // A frame's proportions, named when they are a paper or canvas shape anyone
 // buys (within 2.5%), else as a plain ratio - always width to height.
@@ -5216,6 +5569,8 @@ function renderConstructOverlay() {
       }
       markup += `<line class="construct-guide" x1="${x1}" y1="${y1}" x2="${x1 + nx * unit * 20}" y2="${y1 + ny * unit * 20}"/>`;
     }
+  } else if (state.constructMode === 'persp') {
+    markup += perspMarkup(w, h);
   } else if (state.constructMode === 'frame' && state.frame) {
     // A viewfinder: the card with a window cut in it that painters hold up
     // to find a picture in a scene - or here, a better one inside a photo.
@@ -5250,6 +5605,12 @@ el('stage').addEventListener('pointerdown', e => {
   try { el('stage').setPointerCapture(e.pointerId); } catch { /* keeps the drag going regardless */ }
   if (state.constructMode === 'vp') { state.vp = constructDrag; renderConstructOverlay(); }
   else if (state.constructMode === 'plumb') { state.plumb = constructDrag; renderConstructOverlay(); }
+  else if (state.constructMode === 'persp') {
+    // Twelve points is three vanishing points; the next click starts over.
+    if (!state.persp || state.persp.length >= 12) state.persp = [];
+    state.persp.push(constructDrag);
+    renderConstructOverlay();
+  }
 });
 el('stage').addEventListener('pointermove', e => {
   if (!constructDrag) return;
@@ -5507,7 +5868,7 @@ function refreshValueTools() {
    pre-transform values, which is what a positioned child inside the
    transformed wrapper needs. */
 function positionGrid() {
-  for (const [gridId, imgId] of [['grid', 'img'], ['gridValue', 'imgValue']]) {
+  for (const [gridId, imgId] of [['grid', 'img'], ['gridValue', 'imgValue'], ['poseOverlay', 'img']]) {
     const g = el(gridId), im = el(imgId);
     if (!im.naturalWidth) continue;   // nothing decoded yet - show()'s onload calls back
     g.style.left = im.offsetLeft + 'px';
@@ -5563,6 +5924,173 @@ el('btnSkip').addEventListener('click', skipCurrent);
    answer here. state.current is the single frame shown, which is right even
    for a rotation group: skipping one angle should not remove the other three,
    the same distinction buildPool's own filtering makes. */
+/* ------------------------------------------------------ pose skeleton
+   A pose model (Google's MediaPipe pose landmarker) finds the figure's
+   joints, and what is drawn from them is what a figure-drawing teacher
+   would chalk over the photo - not the model's own stick figure:
+
+   - The tilt of the shoulders and of the hips, and whether they tilt
+     against each other - contrapposto, the weight shift that makes a
+     standing figure look alive rather than propped up.
+   - The line of action: one smooth curve from the head down the spine to
+     the leg that carries the weight - the gesture to draw first.
+   - The balance line: a plumb line down from the pit of the neck. On a
+     figure at rest it lands on the foot that carries the weight; when it
+     misses both feet, the figure is moving (or leaning on something).
+
+   It runs in this browser. The first use downloads the model once (about
+   6 MB from Google's model storage, and its runtime from the jsDelivr CDN)
+   - like three.js, only when first asked for, so nothing else changes. The
+   image itself is never sent anywhere: the model comes to it. */
+const POSE_LIB = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1';
+const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+// BlazePose's 33 points: the ones used here.
+const PL = { nose: 0, lSh: 11, rSh: 12, lEl: 13, rEl: 14, lWr: 15, rWr: 16, lHip: 23, rHip: 24, lKn: 25, rKn: 26, lAn: 27, rAn: 28, lToe: 31, rToe: 32 };
+const POSE_BONES = [['lSh', 'rSh'], ['lSh', 'lEl'], ['lEl', 'lWr'], ['rSh', 'rEl'], ['rEl', 'rWr'], ['lSh', 'lHip'], ['rSh', 'rHip'],
+  ['lHip', 'rHip'], ['lHip', 'lKn'], ['lKn', 'lAn'], ['rHip', 'rKn'], ['rKn', 'rAn'], ['lAn', 'lToe'], ['rAn', 'rToe']];
+let poseModel = null, poseLoading = null, poseRun = 0;
+
+function loadPoseModel() {
+  if (poseModel) return Promise.resolve(poseModel);
+  if (!poseLoading) {
+    poseLoading = (async () => {
+      const { FilesetResolver, PoseLandmarker } = await import(`${POSE_LIB}/vision_bundle.mjs`);
+      const files = await FilesetResolver.forVisionTasks(`${POSE_LIB}/wasm`);
+      const make = delegate => PoseLandmarker.createFromOptions(files, {
+        baseOptions: { modelAssetPath: POSE_MODEL, delegate }, runningMode: 'IMAGE', numPoses: 2 });
+      // The GPU path is faster but not every browser can give it a context.
+      try { poseModel = await make('GPU'); } catch { poseModel = await make('CPU'); }
+      return poseModel;
+    })();
+    poseLoading.catch(() => { poseLoading = null; });
+  }
+  return poseLoading;
+}
+
+function poseNote(html) {
+  el('poseNote').classList.toggle('hidden', !html);
+  el('poseNote').innerHTML = html || '';
+}
+function clearPose() {
+  poseRun++;
+  el('poseOverlay').classList.add('hidden');
+  el('poseOverlay').innerHTML = '';
+  poseNote(state.poseOn ? 'Finding the pose...' : '');
+}
+
+function togglePose() {
+  state.poseOn = !state.poseOn;
+  el('btnPose').setAttribute('aria-pressed', String(state.poseOn));
+  if (state.poseOn) runPose(); else clearPose();
+}
+
+async function runPose() {
+  const img = el('img'), run = ++poseRun;
+  if (!img.naturalWidth) return;
+  if (!poseModel) poseNote('Loading the pose model - about 6 MB, once. The image stays in this browser.');
+  let model;
+  try { model = await loadPoseModel(); }
+  catch (err) {
+    console.error('pose model:', err);
+    poseNote('<i>The pose model could not load</i> - it needs a connection the first time, and WebAssembly.');
+    return;
+  }
+  if (run !== poseRun || !state.poseOn) return;   // the pose changed while it loaded
+  let res;
+  try { res = model.detect(img); }
+  catch (err) { console.error('pose detect:', err); poseNote('<i>Could not read a pose from this image.</i>'); return; }
+  drawPose(res.landmarks || []);
+}
+
+// A smooth curve through the points (Catmull-Rom, as cubic Beziers).
+function smoothPath(pts) {
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    d += ` C${p1[0] + (p2[0] - p0[0]) / 6} ${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6} ${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]} ${p2[1]}`;
+  }
+  return d;
+}
+
+function drawPose(poses) {
+  const img = el('img'), svg = el('poseOverlay');
+  const W = img.naturalWidth, H = img.naturalHeight, flip = img.classList.contains('flip');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  if (!poses.length) { svg.innerHTML = ''; poseNote('No figure found in this image.'); return; }
+  let m = '', note = '';
+  const fr = n => n.toFixed(1);
+  poses.forEach((lm, pi) => {
+    // Image pixels, mirrored when the image is shown flipped; null when the
+    // model is not confident the joint is in view.
+    const P = {};
+    for (const [k, i] of Object.entries(PL)) {
+      const p = lm[i];
+      P[k] = p && (p.visibility === undefined || p.visibility > 0.5) ? [flip ? (1 - p.x) * W : p.x * W, p.y * H] : null;
+    }
+    const mid = (a, b) => a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : null;
+    const line = (a, b, cls) => `<line class="${cls}" x1="${fr(a[0])}" y1="${fr(a[1])}" x2="${fr(b[0])}" y2="${fr(b[1])}"/>`;
+    for (const [a, b] of POSE_BONES) if (P[a] && P[b]) m += line(P[a], P[b], 'bone-o') + line(P[a], P[b], 'bone');
+    const neck = mid(P.lSh, P.rSh), pelvis = mid(P.lHip, P.rHip);
+    const torso = neck && pelvis ? Math.hypot(neck[0] - pelvis[0], neck[1] - pelvis[1]) : H / 4;
+
+    // Tilt, as it reads on screen: positive rises to the right.
+    const tilt = (a, b) => { const [l, r] = a[0] <= b[0] ? [a, b] : [b, a]; return Math.atan2(l[1] - r[1], r[0] - l[0]) * 180 / Math.PI; };
+    const ext = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], k = 0.25; return [[a[0] - dx * k, a[1] - dy * k], [b[0] + dx * k, b[1] + dy * k]]; };
+    let ts = null, th = null;
+    if (P.lSh && P.rSh) { ts = tilt(P.lSh, P.rSh); m += line(...ext(P.lSh, P.rSh), 'tilt'); }
+    if (P.lHip && P.rHip) { th = tilt(P.lHip, P.rHip); m += line(...ext(P.lHip, P.rHip), 'tilt'); }
+
+    // Which foot carries the weight: the one under the pit of the neck.
+    let support = null, balance = '';
+    if (neck && (P.lAn || P.rAn)) {
+      const ys = [P.lAn, P.rAn].filter(Boolean).map(p => p[1]);
+      m += line(neck, [neck[0], Math.max(...ys) + torso * 0.1], 'plumb');
+      if (P.lAn && P.rAn) {
+        const lo = Math.min(P.lAn[0], P.rAn[0]), hi = Math.max(P.lAn[0], P.rAn[0]), span = hi - lo, slack = torso * 0.12;
+        const dl = Math.abs(neck[0] - P.lAn[0]), dr = Math.abs(neck[0] - P.rAn[0]);
+        if (neck[0] < lo - slack || neck[0] > hi + slack) balance = 'The balance line misses both feet - the figure is <u>moving</u>, or leaning on something.';
+        else if (span < torso * 0.25) { balance = 'Both feet under the body - the weight is <u>shared</u>.'; support = mid(P.lAn, P.rAn); }
+        else if (Math.min(dl, dr) < span * 0.3) {
+          // Named by the side of the PICTURE it is on, not the figure's own
+          // left or right: that needs to know which way the figure faces,
+          // which the model can get wrong (a back view, a faceless
+          // mannequin), while where the foot is on the page is never in doubt.
+          support = dl < dr ? P.lAn : P.rAn;
+          const other = dl < dr ? P.rAn : P.lAn;
+          balance = `The weight is on the <u>foot to the ${support[0] < other[0] ? 'left' : 'right'}</u> in the picture - the balance line lands on it.`;
+        } else { balance = 'The weight falls <u>between the feet</u>.'; support = mid(P.lAn, P.rAn); }
+      } else support = P.lAn || P.rAn;
+    }
+
+    // The line of action: head, pit of the neck, pelvis, supporting foot.
+    const spine = [P.nose, neck, pelvis, support].filter(Boolean);
+    if (spine.length >= 3) m += `<path class="action" d="${smoothPath(spine.map(p => p.map(v => +v.toFixed(1))))}"/>`;
+    for (const k of Object.keys(PL)) if (P[k] && k !== 'nose') m += `<circle cx="${fr(P[k][0])}" cy="${fr(P[k][1])}" r="${fr(W / 220)}"/>`;
+
+    if (pi === 0) {
+      const deg = a => `${Math.abs(a).toFixed(0)}°`;
+      const parts = [];
+      if (ts !== null) parts.push(`<b>Shoulders</b> ${Math.abs(ts) < 2 ? 'level' : deg(ts)}`);
+      if (th !== null) parts.push(`<b>hips</b> ${Math.abs(th) < 2 ? 'level' : deg(th)}`);
+      let rel = '';
+      if (ts !== null && th !== null && Math.abs(ts) >= 2 && Math.abs(th) >= 2) {
+        rel = Math.sign(ts) !== Math.sign(th)
+          ? ' - tilted against each other: <b>contrapposto</b>, the weight shifted onto one leg.'
+          : ' - tilted the same way: the whole body leans.';
+      } else if (ts !== null && th !== null) rel = '.';
+      note = `${parts.join(', ')}${rel}` + (balance ? `<br>${balance}` : '') +
+        `<br><i>Red</i>: the line of action - draw it first. <u>Blue</u>: the balance line.` +
+        (poses.length > 1 ? ` (${poses.length} figures; this is about the first.)` : '');
+    }
+  });
+  svg.innerHTML = m;
+  svg.classList.remove('hidden');
+  positionGrid();
+  poseNote(note);
+}
+
+el('btnPose').addEventListener('click', togglePose);
+
 /* ------------------------------------------------ compare your drawing
    The one question none of the measuring tools answer: is what I drew
    right? Photograph or scan the drawing and lay it over the reference.
@@ -5947,6 +6475,29 @@ function revealMemory() {
 
 el('memCover').addEventListener('click', () => { if (state.memPhase === 'draw') revealMemory(); });
 
+/* ------------------------------------------------------ build-up stages
+   How a copy of a master painting - or any long study - is built: the big
+   light and dark masses first, then the values within them, then colour as
+   soft masses, and edges and detail last. Seeing the reference only as far
+   as the stage you are at stops the eye going to the eyelashes in minute
+   one. Each stage gets a share of the interval, up to `upTo` of it. */
+const MASTER_STAGES = [
+  { upTo: 0.2, label: 'Notan - two masses, light and dark', filter: 'url(#stageNotan)' },
+  { upTo: 0.45, label: 'Three values - light, halftone, shadow', filter: 'url(#stageThree)' },
+  { upTo: 0.7, label: 'Colour masses - big shapes, no detail', filter: 'blur(7px)' },
+  { upTo: 1, label: 'Everything - edges and detail last', filter: '' },
+];
+function setStage(i) {
+  state.stage = i;
+  const s = i === null ? null : MASTER_STAGES[i];
+  // Inline, so it wins over the Gray and Squint classes while a stage is on
+  // and gives them back the moment it is cleared.
+  el('img').style.filter = s ? s.filter : '';
+  el('session').classList.toggle('staging', i !== null);
+  el('stageBadge').classList.toggle('hidden', i === null);
+  if (s) el('stageBadge').textContent = `Stage ${i + 1} of ${MASTER_STAGES.length} · ${s.label}`;
+}
+
 function togglePause() {
   // Nothing to pause - there is no clock in browse mode.
   if (state.browse) return;
@@ -6008,6 +6559,10 @@ document.addEventListener('keydown', e => {
     case 's': case 'S': skipCurrent(); break;
     // Mid-way through lining up a drawing, Esc gives up on that - not on
     // the whole session.
+    case 'p': case 'P': togglePose(); break;
+    case 'Backspace':
+      if (state.constructMode === 'persp' && state.persp && state.persp.length) { e.preventDefault(); state.persp.pop(); renderConstructOverlay(); }
+      break;
     case 'Escape':     if (drawing && drawing.align) cancelAlign(); else stopSession(); break;
   }
 });
@@ -6097,11 +6652,45 @@ const FORM_DEFAULTS = {
   focal: 50, yaw: 35, pitch: 22, zoom: 1,
   lines: false, horizon: false, lightMarker: true, vp: false, ellipses: false, floorGrid: false, zones: false,
   count: 10, anyShape: true, memorySecs: 15,
+  // Atmospheric perspective - see formsRender(). 0 is the clean studio.
+  haze: 0, hazeColor: '#b9c6d6',
 };
 const defaultFormScene = () => structuredClone(FORM_DEFAULTS);
 
 // [azimuth, elevation]. The names are the ones a drawing book uses; "Front"
 // is here to show what flat light does to form, not because it is useful.
+/* The lights a portrait photographer or painter names, relative to the FACE,
+   not to you: Rembrandt is Rembrandt whichever way the head is turned and
+   wherever you stand. az/el as the Light sliders read them, but measured
+   from the direction the face points; fill is the second light's strength
+   (0 = off), from the other side unless fillAz says where. */
+const PORTRAIT_LIGHTS = {
+  rembrandt: { label: 'Rembrandt', az: -45, el: 42, fill: 0.12,
+    hint: 'High and to one side: a small triangle of light on the shadow cheek, under the eye' },
+  loop: { label: 'Loop', az: -30, el: 32, fill: 0.3,
+    hint: 'A little round from the front: the nose shadow loops down toward the corner of the mouth' },
+  butterfly: { label: 'Butterfly', az: 0, el: 55, fill: 0.25, fillAz: 0, fillEl: 5,
+    hint: 'High and straight on: a small butterfly of shadow under the nose, the cheekbones carved' },
+  split: { label: 'Split', az: -90, el: 8, fill: 0,
+    hint: 'Straight from the side: the face cut in two down the ridge of the nose' },
+  rim: { label: 'Rim', az: -150, el: 25, fill: 0.3, fillAz: 30, fillEl: 10,
+    hint: 'From behind: a line of light round the edge of the head, the face in soft fill' },
+};
+/* A portrait light in the scene's own terms. The Light sliders read
+   relative to the viewer (world azimuth = lightAz + yaw - see
+   setLightFromVector()), and a form turned by ry faces world azimuth ry, so
+   face-relative a is scene lightAz = a + ry - yaw. */
+function portraitLight(sc, o, p) {
+  const off = (o.ry || 0) - sc.yaw;
+  const t = { lightAz: Math.round(wrap180(p.az + off)), lightEl: Math.round(p.el), fillOn: p.fill > 0 };
+  if (p.fill > 0) {
+    t.fillStrength = p.fill;
+    t.fillAz = Math.round(wrap180((p.fillAz !== undefined ? p.fillAz : (p.az <= 0 ? 60 : -60)) + off));
+    t.fillEl = p.fillEl || 15;
+  }
+  return t;
+}
+
 const LIGHT_PRESETS = {
   classic: { label: '3/4',   az: -45,  el: 40 },
   side:    { label: 'Side',  az: -90,  el: 12 },
@@ -6180,9 +6769,113 @@ const FORM_SHAPES = {
   // out as one more random shape.
   head:     { label: 'Head',     lines: [12, 8], subject: true, build: T => formHeadGeometry(T, 128, 96) },
   planes:   { label: 'Head planes', lines: [12, 8], subject: true, flat: true, build: T => formHeadGeometry(T, 30, 22) },
+  // Drapery - a cloth simulated once, when first picked (formClothGeometry()),
+  // for each of the fold types a drawing book names. `cloth`: seen from both
+  // sides, and never dealt out as a random shape.
+  drape:    { label: 'Cloth over a ball', lines: [14, 14], cloth: true, build: T => formClothGeometry(T, 'drape') },
+  swag:     { label: 'Hanging cloth', lines: [14, 14], cloth: true, build: T => formClothGeometry(T, 'swag') },
+  curtain:  { label: 'Curtain', lines: [14, 14], cloth: true, build: T => formClothGeometry(T, 'curtain') },
   // A mannequin hand, posable finger by finger - FORM_HAND_JOINTS.
   hand:     { label: 'Hand',     lines: [8, 6], rig: 'hand', build: T => new T.SphereGeometry(0.04, 8, 6) },
 };
+
+/* ---- drapery. Folds are what cloth does under gravity against whatever
+   holds it up, so rather than sculpt them this lets a cloth fall: a grid of
+   particles, Verlet-integrated (each step moves a point by its last step,
+   damped, plus gravity - velocity is never stored), then pulled back toward
+   the right distance from its neighbours a few times per step. Three kinds of
+   link: to the next point (holds the weave's length), across the diagonal
+   (resists shearing), and to the point after next, weaker (resists bending -
+   weak, so it folds sooner than it stretches, which is what makes folds).
+
+   The three set-ups are Hogarth's fold types, the ones drawing books teach:
+   - drape:   a cloth dropped over a ball - drop folds, radiating from what
+              holds it and falling straight down from its edge.
+   - swag:    a cloth hung from two points closer together than it is wide -
+              diaper folds, the sagging V's and U's between two supports.
+   - curtain: a cloth hung from a gathered top edge - pipe folds, tubes
+              running down from each gather.
+   Seeded, so each is always the same cloth. Run once per page, when first
+   picked (a few hundred milliseconds), and cached like any geometry. */
+function formClothGeometry(T, kind) {
+  const N = 46, S = 3.2, d = S / (N - 1);
+  const g = new T.PlaneGeometry(S, S, N - 1, N - 1);
+  const pos = g.attributes.position, n = pos.count;
+  const p = new Float32Array(n * 3), q = new Float32Array(n * 3), pin = new Uint8Array(n);
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5;
+  // PlaneGeometry's points run row by row from the top, left to right.
+  const at = (i, j) => j * N + i;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const k = at(i, j) * 3, u = i / (N - 1), v = j / (N - 1);
+    if (kind === 'drape') {
+      p[k] = (u - 0.5) * S; p[k + 1] = 1.1 + rnd() * 0.01; p[k + 2] = (v - 0.5) * S;
+    } else if (kind === 'swag') {
+      p[k] = (u - 0.5) * S; p[k + 1] = 1.6 - v * S; p[k + 2] = rnd() * 0.01;
+      // The two top corners, pinned closer together than the cloth is wide.
+      if (j === 0 && (i === 0 || i === N - 1)) { pin[at(i, j)] = 1; p[k] = (u - 0.5) * S * 0.55; }
+    } else {
+      // Gathered: the whole top edge pinned into half its width, zig-zagging
+      // in and out - each gather starts a pipe.
+      p[k] = (u - 0.5) * S * (j === 0 ? 0.5 : 1); p[k + 1] = 1.6 - v * S;
+      p[k + 2] = j === 0 ? 0.1 * Math.sin(u * Math.PI * 14) : rnd() * 0.01;
+      if (j === 0) pin[at(i, j)] = 1;
+    }
+  }
+  q.set(p);
+  const links = [];
+  const link = (a, b, rest, stiff) => links.push(a, b, rest, stiff);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const a = at(i, j);
+    if (i + 1 < N) link(a, at(i + 1, j), d, 1);
+    if (j + 1 < N) link(a, at(i, j + 1), d, 1);
+    if (i + 1 < N && j + 1 < N) { link(a, at(i + 1, j + 1), d * Math.SQRT2, 0.7); link(at(i + 1, j), at(i, j + 1), d * Math.SQRT2, 0.7); }
+    if (i + 2 < N) link(a, at(i + 2, j), 2 * d, 0.15);
+    if (j + 2 < N) link(a, at(i, j + 2), 2 * d, 0.15);
+  }
+  const L = new Float32Array(links);
+  const ball = { x: 0.06, y: 0, z: -0.04, r: 0.85 }, floor = kind === 'drape' ? -1 : -40;
+  const dt = 0.016, grav = -9.8 * dt * dt;
+  for (let step = 0; step < 320; step++) {
+    for (let a = 0; a < n; a++) {
+      if (pin[a]) continue;
+      const k = a * 3;
+      for (let c = 0; c < 3; c++) {
+        const cur = p[k + c], vel = (cur - q[k + c]) * 0.985;
+        q[k + c] = cur; p[k + c] = cur + vel + (c === 1 ? grav : 0);
+      }
+    }
+    for (let it = 0; it < 6; it++) {
+      for (let l = 0; l < L.length; l += 4) {
+        const a = L[l] * 3, b = L[l + 1] * 3;
+        const dx = p[b] - p[a], dy = p[b + 1] - p[a + 1], dz = p[b + 2] - p[a + 2];
+        const len = Math.hypot(dx, dy, dz) || 1e-9, diff = (len - L[l + 2]) / len * 0.5 * L[l + 3];
+        const wa = pin[L[l]] ? 0 : 1, wb = pin[L[l + 1]] ? 0 : 1, share = wa + wb;
+        if (!share) continue;
+        const fa = diff * 2 * wa / share, fb = diff * 2 * wb / share;
+        p[a] += dx * fa; p[a + 1] += dy * fa; p[a + 2] += dz * fa;
+        p[b] -= dx * fb; p[b + 1] -= dy * fb; p[b + 2] -= dz * fb;
+      }
+      for (let a = 0; a < n; a++) {
+        if (pin[a]) continue;
+        const k = a * 3;
+        if (kind === 'drape') {
+          const ex = p[k] - ball.x, ey = p[k + 1] - ball.y, ez = p[k + 2] - ball.z, r = Math.hypot(ex, ey, ez), R = ball.r + 0.025;
+          // A touching point sticks where it touched - friction. Without it
+          // every step's fall-then-push-out turns into a slide down the curve,
+          // and the whole cloth slips off the ball onto the floor.
+          if (r < R) { const s = R / r; p[k] = ball.x + ex * s; p[k + 1] = ball.y + ey * s; p[k + 2] = ball.z + ez * s; pin[a] = 1; }
+        }
+        // The floor, with friction: a point that touches it stops sliding.
+        if (p[k + 1] < floor) { p[k + 1] = floor; p[k] = q[k]; p[k + 2] = q[k + 2]; }
+      }
+    }
+  }
+  for (let a = 0; a < n; a++) pos.setXYZ(a, p[a * 3], p[a * 3 + 1], p[a * 3 + 2]);
+  g.computeVertexNormals();
+  g.computeBoundingBox();
+  return g;
+}
 
 /* A head sculpted out of a sphere by moving its points - no model to fetch,
    and the same function gives the smooth head and the planes head by being
@@ -6789,7 +7482,7 @@ function applyFormFinish(mat, o, def) {
   // These switch whole features of the shader on or off (clearcoat,
   // transmission, sheen...), so only touch them - and pay for a recompile -
   // when the finish itself changed, not on every Shine slider tick.
-  const key = o.finish + (def.flat ? '|flat' : '');
+  const key = o.finish + (def.flat ? '|flat' : '') + (def.cloth ? '|both' : '');
   if (mat.userData.key !== key) {
     mat.metalness = f.metal || 0;
     mat.clearcoat = f.clearcoat || 0;
@@ -6801,6 +7494,8 @@ function applyFormFinish(mat, o, def) {
     mat.sheenRoughness = 0.4;
     mat.envMap = f.env ? forms.env : null;
     mat.flatShading = !!def.flat;
+    // Cloth is seen from both sides - inside every fold is its back.
+    mat.side = def.cloth ? forms.T.DoubleSide : forms.T.FrontSide;
     mat.userData.key = key;
     mat.needsUpdate = true;
   }
@@ -6975,10 +7670,17 @@ function formsRender(sc, w, h, clean = false) {
   F.hemi.color.setRGB(1, 1, 1).multiplyScalar(sc.ambient);
   F.hemi.groundColor.set(sc.ground ? sc.groundColor : sc.bg).multiplyScalar(sc.bounce);
 
-  F.scene.background = new T.Color(sc.bg);
-  F.scene.fog.color.set(sc.bg);
-  F.scene.fog.near = dist + rad * 1.5;
-  F.scene.fog.far = dist + rad * 9;
+  // With no haze, the fog only dissolves the far floor into the background.
+  // With it, the fog IS the air: it starts just in front of the nearest form
+  // and thickens toward the far one, in the air's colour - which the sky
+  // behind takes too, since a far form fades into exactly that.
+  const air = sc.haze > 0;
+  F.scene.background = new T.Color(air ? sc.hazeColor : sc.bg);
+  F.scene.fog.color.set(air ? sc.hazeColor : sc.bg);
+  // The scene is about 2 radii deep from its front to its back, so at full
+  // haze the far side is nearly lost and at half it is roughly half gone.
+  F.scene.fog.near = air ? Math.max(0.1, dist - rad) : dist + rad * 1.5;
+  F.scene.fog.far = air ? F.scene.fog.near + rad * (1.5 + 12 * (1 - sc.haze) ** 2) : dist + rad * 9;
   F.ground.visible = sc.ground;
   F.ground.material.color.set(sc.groundColor);
   F.ground.scale.setScalar(rad * 200);
@@ -7965,7 +8667,7 @@ function randomFormScene(base, anyShape) {
   const r = (a, b) => a + Math.random() * (b - a);
   const s = structuredClone(base);
   // The figure is a subject of its own, not one more shape to deal out.
-  const keys = Object.keys(FORM_SHAPES).filter(k => !FORM_SHAPES[k].rig && !FORM_SHAPES[k].subject);
+  const keys = Object.keys(FORM_SHAPES).filter(k => !FORM_SHAPES[k].rig && !FORM_SHAPES[k].subject && !FORM_SHAPES[k].cloth);
   for (const o of s.objects) {
     const def = FORM_SHAPES[o.shape];
     if (def && def.rig) {
@@ -7975,6 +8677,11 @@ function randomFormScene(base, anyShape) {
       o.rx = def.rig === 'hand' ? Math.round(r(-60, 60)) : 0;
       o.rz = def.rig === 'hand' ? Math.round(r(-40, 40)) : 0;
       o.ry = Math.round(r(-180, 180));
+      continue;
+    }
+    if (def && def.cloth) {
+      // A cloth is the folds it fell into: only which way round it is seen.
+      o.rx = 0; o.rz = 0; o.ry = Math.round(r(-180, 180));
       continue;
     }
     if (def && def.subject) {
@@ -8006,6 +8713,18 @@ function randomFormScene(base, anyShape) {
   s.lightAz = Math.round((Math.random() < 0.5 ? -1 : 1) * r(30, 140));
   s.lightEl = Math.round(r(18, 65));
   s.pitch = Math.round(r(5, 45));
+  // A head gets one of the portrait lights, shaken a little and mirrored
+  // half the time - a random direction mostly lands somewhere no portrait
+  // painter would put a lamp.
+  const head = s.objects.find(o => FORM_SHAPES[o.shape] && FORM_SHAPES[o.shape].subject);
+  if (head) {
+    const keys = Object.keys(PORTRAIT_LIGHTS), p = { ...PORTRAIT_LIGHTS[keys[Math.floor(Math.random() * keys.length)]] };
+    const side = Math.random() < 0.5 ? -1 : 1;
+    p.az = side * (p.az + r(-10, 10)); if (p.fillAz !== undefined) p.fillAz *= side;
+    p.el = Math.max(3, p.el + r(-6, 6));
+    s.pitch = Math.round(r(0, 25));
+    Object.assign(s, portraitLight(s, head, p));
+  }
   return s;
 }
 
@@ -8213,6 +8932,7 @@ const FORM_PANEL = [
   ['Saved scenes', 'scenes', []],
   ['Ambient', null, [['ambient', 'Fill', 0, 1, 0.01], ['bounce', 'Bounce', 0, 1, 0.01]]],
   ['Scene', null, [['bg', 'Background', 'color'], ['groundColor', 'Ground', 'color'], ['ground', 'Ground and cast shadow', 'check']]],
+  ['Air', 'air', [['haze', 'Haze', 0, 1, 0.02], ['hazeColor', 'Air colour', 'color']]],
 ];
 
 /* Which panel groups are folded. Per browser and purely a convenience, so
@@ -8226,7 +8946,7 @@ const FORMS_PANEL_KEY = 'refboard.formsPanel.v1';
 const FORM_TABS = [
   ['object', 'Object', ['Forms', 'Pose', 'Placement', 'Proportions', 'Rotation', 'Surface']],
   ['light', 'Light', ['Light', 'Second light', 'Ambient']],
-  ['view', 'View', ['Camera', 'Guides', 'Scene']],
+  ['view', 'View', ['Camera', 'Guides', 'Scene', 'Air']],
   ['use', 'Use', ['Use it', 'Saved scenes']],
 ];
 const FORM_TAB_KEY = 'refboard.formsTab.v1';
@@ -8276,7 +8996,9 @@ function formsPanelHtml() {
         <button class="ghost" type="button" id="formPoseReset" title="Back to the rest pose">Reset pose</button>
       </div>`,
     finish: chips('formFinishes', Object.entries(FORM_FINISHES), 'finish', f => f.hint),
-    presets: chips('formPresets', Object.entries(LIGHT_PRESETS), 'preset', p => `Light from ${p.az}°, ${p.el}° up`),
+    presets: chips('formPresets', Object.entries(LIGHT_PRESETS), 'preset', p => `Light from ${p.az}°, ${p.el}° up`) +
+      `<div id="formPortraitWrap" class="hidden"><h4>Portrait lighting - on the selected head</h4>` +
+      chips('formPortrait', Object.entries(PORTRAIT_LIGHTS), 'portrait', p => p.hint) + '</div>',
     fill: `<div class="chips">
         <button class="chip" type="button" data-fill="fill" title="Soft light from the other side of the camera - lifts the shadow side">Fill</button>
         <button class="chip" type="button" data-fill="rim" title="Light from behind - a bright edge that separates the form from the background">Rim</button></div>`,
@@ -8301,6 +9023,9 @@ function formsPanelHtml() {
         <button class="ghost" type="button" id="formMemory" title="Study a random scene, draw it with it hidden, then compare">Memory drill</button>
         <button class="ghost" type="button" id="formViewDrill" title="Draw a random scene the way it is NOT shown - from another side, above, a different light or lens - then see the answer">View drill</button>
       </div>`,
+    air: `<div class="count">The air between you and a far form: with distance its contrast drops, its darks lift
+        and everything drifts toward the colour of the air - how a painting says "far" without a line of perspective.</div>
+      <div class="factions"><button class="ghost" type="button" id="formDepthPlanes" title="Four of the same form, receding into haze - near, middle and far planes">Depth planes</button></div>`,
     scenes: `<div class="factions">
         <input type="text" id="formSceneName" placeholder="Name this scene" maxlength="40">
         <button class="ghost" type="button" id="formSceneSave">Save</button></div>
@@ -8371,6 +9096,12 @@ function syncFormsPanel() {
   for (const b of panel.querySelectorAll('[data-preset]')) {
     const p = LIGHT_PRESETS[b.dataset.preset];
     b.setAttribute('aria-pressed', String(p.az === formScene.lightAz && p.el === formScene.lightEl));
+  }
+  const head = !!formShapeDef(o.shape).subject;
+  el('formPortraitWrap').classList.toggle('hidden', !head);
+  if (head) for (const b of panel.querySelectorAll('[data-portrait]')) {
+    const t = portraitLight(formScene, o, PORTRAIT_LIGHTS[b.dataset.portrait]);
+    b.setAttribute('aria-pressed', String(t.lightAz === formScene.lightAz && t.lightEl === formScene.lightEl));
   }
   for (const b of panel.querySelectorAll('[data-persp]')) {
     const p = PERSPECTIVE_PRESETS[b.dataset.persp];
@@ -8465,6 +9196,11 @@ function bindFormsPanel() {
     if ((b = hit('[data-preset]'))) {
       const p = LIGHT_PRESETS[b.dataset.preset];
       formScene.lightAz = p.az; formScene.lightEl = p.el;
+      formsChanged();
+      return;
+    }
+    if ((b = hit('[data-portrait]'))) {
+      Object.assign(formScene, portraitLight(formScene, activeFormObject(), PORTRAIT_LIGHTS[b.dataset.portrait]));
       formsChanged();
       return;
     }
@@ -8576,6 +9312,21 @@ function bindFormsPanel() {
   el('formPoseRandom').addEventListener('click', poseEdit(o => { o.pose = randomFormPose(formRigOf(o.shape)); }));
   el('formPoseMirror').addEventListener('click', poseEdit(mirrorFormPose));
   el('formPoseReset').addEventListener('click', poseEdit(o => { o.pose = {}; }));
+  // The same form four times, near to far along a diagonal - the size change
+  // and the air change can only be compared like with like. Placed by where
+  // they land on screen (x over distance to the camera), so no far one hides
+  // exactly behind a near one.
+  el('formDepthPlanes').addEventListener('click', () => {
+    pushFormUndo(formObjectsSnapshot());
+    const base = { ...activeFormObject(), pose: activeFormObject().pose };
+    formScene.objects = [[-3.5, 5, 20], [-0.8, 0, -15], [1.8, -5, 35], [4.5, -10, -25]]
+      .map(([x, z, ry]) => ({ ...base, x, z, y: 0, ry }));
+    // A wide lens: the camera frames the scene at the same size whatever the
+    // lens (a dolly zoom), so only a wide one brings it close enough for the
+    // far form to shrink the way a far thing does.
+    Object.assign(formScene, { active: 0, lightOn: 0, haze: Math.max(formScene.haze, 0.55), yaw: 0, pitch: 6, zoom: 1, focal: 20 });
+    formsChanged();
+  });
   el('formsCover').addEventListener('click', () => {
     if (el('formsCover').className === 'covered') el('formsCover').className = 'hidden';
   });
