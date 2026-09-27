@@ -37,7 +37,10 @@
   All state is localStorage. There is one user and no account, so a
   server-side session would be pure overhead.
 -->
-<link rel="stylesheet" href="css/app.css?v=dae78a99">
+<!-- The one script in <head>: it sets the saved theme's colours before
+     anything is drawn. Everything else loads at the end of <body>. -->
+<script src="js/theme.js?v=579237fe"></script>
+<link rel="stylesheet" href="css/app.css?v=5fec9cfb">
 </head>
 <body>
 <div id="setup">
@@ -55,6 +58,8 @@
     <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
     <button class="nav-item" type="button" data-view="train" data-icon="target" data-tip="Train - value, colour, anatomy, lines, perspective" aria-label="Train"></button>
     <span class="grow"></span>
+    <button type="button" id="btnTheme" data-icon="moon" data-tip="Theme" aria-label="Theme"
+            aria-haspopup="menu" aria-expanded="false" aria-controls="themeMenu"></button>
     <button type="button" id="btnHelpSetup" data-icon="help" data-tip="Help (?)" aria-label="Help"></button>
   </nav>
 
@@ -63,6 +68,10 @@
        mid-pose would throw the session away. -->
   <button type="button" id="updateReady" class="hidden"
           title="A newer Refboard has been deployed since this tab was opened">New version ready - <b>Reload</b></button>
+
+  <!-- The theme picker, beside the rail button that opens it - see
+       initThemeMenu(). Filled from THEMES in js/theme.js. -->
+  <div id="themeMenu" class="hidden" role="menu" aria-label="Theme"></div>
 
   <!-- ------------------------------------------ the library, folding panel -->
   <aside id="sidebar">
@@ -619,6 +628,13 @@
         <b>Timing</b>, <b>Filter</b> and <b>Display</b>, with the pose count
         and Start always at the bottom. Both panels stay the way you leave
         them. The 3D panel has tabs too: Object, Light, View and Use.</p>
+      <p>The <b>moon</b> near the bottom of the rail picks a theme:
+        Catppuccin Mocha (the default), Macchiato, Frappé and Latte, the
+        original Studio dark, and Daylight - black on white, for a tablet
+        outdoors. A theme colours the panels and controls only: a session's
+        stage stays black, and the picture, value scales and swatches look
+        the same in every theme, so none of them changes how dark something
+        reads.</p>
       <p>The library panel lists your packs. Clicking a pack or a folder
         <b>name</b> opens it as a grid in the middle; clicking its
         <b>checkbox</b> includes it in the pool a timed session draws from.
@@ -1126,8 +1142,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=1e049ec9"></script>
-<script src="js/setup.js?v=203f74ad"></script>
+<script src="js/core.js?v=07bac79f"></script>
+<script src="js/setup.js?v=4a7b32c4"></script>
 <script src="js/session.js?v=767c07cd"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0bc3b11f"></script>
@@ -1137,7 +1153,7 @@
 <script src="js/forms-models.js?v=2ce0b537"></script>
 <script src="js/forms.js?v=b129bd90"></script>
 <script src="js/train.js?v=087d7106"></script>
-<script src="js/colour.js?v=0dea7ffa"></script>
+<script src="js/colour.js?v=821b03cc"></script>
 <script src="js/main.js?v=f703cd1f"></script>
 </body>
 </html>

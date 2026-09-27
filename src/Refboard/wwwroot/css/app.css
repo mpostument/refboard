@@ -7,16 +7,18 @@
      the browser which native palette to use for form controls generally,
      which the light-mode override below flips along with everything else. */
   color-scheme: dark;
-  /* A studio, not a website: neutral greys in three steps - the backdrop,
-     the panels on it, the controls on those - the way Blender and every
-     grading or paint program is laid out, so the image is the only
-     colourful thing on screen. One warm accent, for what is on. */
-  --bg: #1b1b1d; --panel: #242427; --panel-2: #2f2f33; --line: #353539;
-  --ink: #e6e6ea; --dim: #9696a0; --accent: #e3a043; --accent-dim: #6b5223;
-  --line-hi: #4b4b52;     /* border on hover */
-  --on-accent: #1a1206;   /* text on the amber fill */
-  --btn-off: #333338;     /* Start, before a pool exists */
-  --bad: #e0705f;
+  /* The frame in three steps - the backdrop, the panels beside it, the
+     controls on those - and one accent, for what is on. These are the
+     default theme, Catppuccin Mocha; js/theme.js sets them for the chosen
+     one before the first paint. Only the frame: see the note there. */
+  --bg: #1e1e2e; --panel: #181825; --panel-2: #313244; --line: #313244;
+  --ink: #cdd6f4; --dim: #a6adc8; --accent: #cba6f7;
+  --accent-dim: color-mix(in srgb, #cba6f7 38%, #1e1e2e);
+  --line-hi: #45475a;     /* border on hover */
+  --on-accent: #11111b;   /* text on the accent fill */
+  --btn-off: #313244;     /* Start, before a pool exists */
+  --bad: #f38ba8;
+  --hover: rgba(205, 214, 244, .06); /* a row or chip under the pointer */
 }
 /* THE LIGHT THEME STOPS AT THE SETUP PANEL, AND THAT IS THE POINT.
    #session below keeps its black backdrop in both themes and is not
@@ -181,7 +183,7 @@ button, select, input { font: inherit; color: inherit; }
   padding: 3px 9px; font-size: 11px; background: rgba(0,0,0,.5); color: #ddd;
   border-color: rgba(255,255,255,.15);
 }
-#formsTools .chip[aria-pressed="true"] { background: #d8a24a; color: #17130a; border-color: #d8a24a; }
+#formsTools .chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 #formsTools .chip[data-clean] { margin-left: 8px; }
 /* Clean: just the scene - every handle and number is off the overlay (see
    drawFormsOverlay()), and of the toolbar only the way back stays, faint. */
@@ -776,14 +778,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 @media (max-width: 700px) { .keys { display: none; } }
 
 /* ---------- help ---------- */
-/* Same always-dark trick as #session (see its own comment) - opened from
-   either screen, themed the same regardless of which. */
-#helpOverlay {
-  color-scheme: dark;
-  --bg: #0b0b0d; --panel: #141419; --line: #26262e;
-  --ink: #e9e9ee; --dim: #8b8b98; --accent: #d8a24a; --accent-dim: #6b5223;
-  --line-hi: #3a3a46; --on-accent: #17130a;
-}
+/* Help is text to read, so it takes the theme like the rest of the frame
+   - only the session's stage stays out of it. */
 #helpOverlay {
   position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6);
   display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -815,7 +811,7 @@ body { font-size: 13px; }
 .icon { width: 18px; height: 18px; display: block; flex: none; }
 #rail {
   width: 52px; flex: none; display: flex; flex-direction: column; align-items: center;
-  gap: 4px; padding: 10px 0; background: #161618; border-right: 1px solid var(--line);
+  gap: 4px; padding: 10px 0; background: var(--panel); border-right: 1px solid var(--line);
   z-index: 31;
 }
 #rail .rail-brand { width: 30px; height: 30px; margin-bottom: 10px; opacity: .9; }
@@ -834,7 +830,8 @@ body { font-size: 13px; }
 /* The rail's names: a label that slides out on hover or focus. */
 #rail [data-tip]::after {
   content: attr(data-tip); position: absolute; left: 46px; top: 50%; transform: translateY(-50%);
-  white-space: nowrap; background: #0e0e10; color: var(--ink); border: 1px solid var(--line);
+  white-space: nowrap; background: var(--panel); color: var(--ink); border: 1px solid var(--line-hi);
+  box-shadow: 0 4px 14px rgb(0 0 0 / .25);
   padding: 4px 8px; border-radius: 5px; font-size: 12px; pointer-events: none;
   opacity: 0; transition: opacity .1s; z-index: 40;
 }
@@ -866,7 +863,7 @@ body { font-size: 13px; }
 .insp-tab:not(.on) { display: none; }
 #inspector h2 { border-bottom: 0; margin-bottom: 8px; }
 #inspector section { margin-bottom: 18px; }
-.insp-foot { flex: none; border-top: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 8px; background: #212124; }
+.insp-foot { flex: none; border-top: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 8px; background: var(--bg); }
 .insp-pool { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .insp-pool b { font-size: 20px; font-weight: 600; }
 .insp-pool .count { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -891,7 +888,7 @@ body { font-size: 13px; }
   background: var(--panel-2); color: var(--ink); border-color: var(--line); border-radius: 4px;
   padding: 5px 11px;
 }
-.ghost:hover:not(:disabled) { background: #38383d; }
+.ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--panel-2) 82%, var(--ink)); }
 .icon-btn { display: grid; place-items: center; padding: 6px; border-radius: 6px; }
 .icon-btn:hover { background: var(--panel-2); }
 input[type=number], input[type=search], .searchbar select, .factions select, .factions input[type=text] {
@@ -961,8 +958,8 @@ section { margin-bottom: 20px; }
 .col-sw b { font-variant-numeric: tabular-nums; font-weight: 500; }
 .col-sw span { color: var(--dim); }
 .col-sw { cursor: pointer; border-radius: 6px; padding-left: 4px; margin-left: -4px; }
-.col-sw:hover { background: rgba(255,255,255,.05); }
-.col-sw.pinned { background: rgba(227,160,67,.16); }
+.col-sw:hover { background: var(--hover); }
+.col-sw.pinned { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 /* A palette colour's mixes, under its row. */
 .col-mix { margin: 0 0 6px 50px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
 .col-mix summary { cursor: pointer; color: var(--dim); list-style: none; }
@@ -976,7 +973,7 @@ section { margin-bottom: 20px; }
   text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
   padding: 14px; cursor: pointer; color: var(--ink);
 }
-.train-card:hover { border-color: var(--line-hi); background: #2a2a2e; }
+.train-card:hover { border-color: var(--line-hi); background: var(--hover); }
 .train-card .train-ico { grid-row: 1 / 4; width: 40px; height: 40px; border-radius: 8px; background: var(--panel-2); display: grid; place-items: center; color: var(--accent); }
 .train-card .train-ico .icon { width: 22px; height: 22px; }
 .train-card b { font-size: 14px; }
@@ -1088,3 +1085,20 @@ section { margin-bottom: 20px; }
 }
 #updateReady b { color: var(--accent); }
 #updateReady:hover { background: var(--accent-dim); }
+
+/* The theme menu - see initThemeMenu(). Opens up from the rail's theme
+   button, near the bottom of the rail. */
+#themeMenu {
+  position: fixed; left: 60px; bottom: 60px; z-index: 60; width: 250px;
+  display: flex; flex-direction: column; gap: 2px; padding: 6px;
+  background: var(--panel); border: 1px solid var(--line-hi); border-radius: 10px;
+  box-shadow: 0 10px 32px rgb(0 0 0 / .35);
+}
+#themeMenu button {
+  display: flex; align-items: center; gap: 10px; padding: 7px 8px; border: 1px solid transparent;
+  border-radius: 7px; background: none; color: var(--ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+#themeMenu button:hover { background: var(--hover); }
+#themeMenu button[aria-checked="true"] { border-color: var(--accent); }
+.theme-strip { display: flex; width: 58px; height: 22px; border-radius: 5px; overflow: hidden; flex: none; border: 1px solid rgb(128 128 128 / .3); }
+.theme-strip i { flex: 1; }

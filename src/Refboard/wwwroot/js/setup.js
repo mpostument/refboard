@@ -87,9 +87,52 @@ function initUpdateCheck() {
   });
 }
 
+/* The theme menu: each theme as a strip of its own colours and its name.
+   Picking one applies it at once and keeps it (setTheme(), js/theme.js). */
+function initThemeMenu() {
+  const btn = el('btnTheme'), menu = el('themeMenu');
+  const render = () => {
+    const now = themeId();
+    menu.innerHTML = Object.entries(THEMES).map(([id, t]) => {
+      const v = t.vars;
+      return `<button type="button" role="menuitemradio" aria-checked="${id === now}" data-theme="${id}">` +
+        `<span class="theme-strip">${[v.bg, v.panel, v['panel-2'], v.accent, v.ink].map(c => `<i style="background:${c}"></i>`).join('')}</span>` +
+        `${t.label}</button>`;
+    }).join('');
+  };
+  const open = show => {
+    menu.classList.toggle('hidden', !show);
+    btn.setAttribute('aria-expanded', String(show));
+    if (show) { render(); menu.querySelector('[aria-checked="true"]').focus(); }
+  };
+  btn.addEventListener('click', e => { e.stopPropagation(); open(menu.classList.contains('hidden')); });
+  menu.addEventListener('click', e => {
+    const b = e.target.closest('[data-theme]');
+    if (!b) return;
+    setTheme(b.dataset.theme);
+    render();
+    menu.querySelector(`[data-theme="${b.dataset.theme}"]`).focus();
+  });
+  menu.addEventListener('keydown', e => {
+    const items = [...menu.querySelectorAll('button')], i = items.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.stopPropagation(); open(false); btn.focus(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+    }
+  });
+  // composedPath(), not menu.contains(e.target): a pick redraws the menu,
+  // so by the time the click reaches here its button is no longer in it.
+  // The menu stays open after a pick, to try one theme after another.
+  document.addEventListener('click', e => {
+    if (!menu.classList.contains('hidden') && !e.composedPath().includes(menu)) open(false);
+  });
+}
+
 async function boot() {
   updateFooterVersion();
   initUpdateCheck();
+  initThemeMenu();
 
   // No library is a real, expected state here - not just "the fetch failed
   // once" - it's the whole of what this page is on GitHub Pages, which has

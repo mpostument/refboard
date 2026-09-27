@@ -40,11 +40,9 @@ clickable mock-up before any code.
 - **Medium-aware.** The materials profile (see Materials) shapes what
   each tool suggests.
 
-- **Themes.** Several themes, among them **Catppuccin** in all four
-  flavours (Mocha, Macchiato, Frappé, Latte - Mocha by default for this
-  user), a plain dark and a daylight one: light and high-contrast, for
-  reading a tablet in sunlight at plein air. All colours are already CSS
-  variables, so a theme is a set of them.
+Themes are in: the four Catppuccin flavours (Mocha by default), Studio
+dark and Daylight, from the rail - `js/theme.js`.
+
 - **Theme editor.** Change any of a theme's colours and save it as your
   own; export and import it as a file. Colours that carry meaning (the
   value scale, the swatches, the image itself) are never themed - a theme

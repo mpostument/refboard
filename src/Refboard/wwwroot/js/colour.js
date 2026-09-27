@@ -311,10 +311,10 @@ function colourRenderWheel() {
     pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
     ctx.fillStyle = 'rgba(12,12,14,.62)'; ctx.fill('evenodd');
     ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
-    ctx.strokeStyle = '#e3a043'; ctx.lineWidth = 2 * dpr; ctx.stroke();
+    ctx.strokeStyle = themeVar('accent'); ctx.lineWidth = 2 * dpr; ctx.stroke();
     for (const [x, y] of pts) {
       ctx.beginPath(); ctx.arc(x, y, 5 * dpr, 0, 2 * Math.PI);
-      ctx.fillStyle = '#e3a043'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1 * dpr; ctx.stroke();
+      ctx.fillStyle = themeVar('accent'); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1 * dpr; ctx.stroke();
     }
     ctx.restore();
   }
@@ -416,6 +416,8 @@ function colourSoon() {
 }
 
 function initColour() {
+  // The mask's outline is drawn in the theme's accent.
+  document.addEventListener('refboard:theme', colourRenderWheel);
   const prefs = loadColourPrefs();
   col = { mode: ['colour', 'value', 'mapped'].includes(prefs.mode) ? prefs.mode : 'colour', mask: null, maskKey: null, paints: paintPaletteKey(), medium: paintMedium() };
   if (Array.isArray(prefs.mask) && prefs.mask.length >= 3 &&
