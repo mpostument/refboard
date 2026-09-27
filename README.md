@@ -367,9 +367,14 @@ commit to main beyond `:latest`.
 ## What this isn't
 
 There's no user accounts, no server-side session, no telemetry, and no
-network calls out - with one exception: opening the **3D forms** view fetches
-three.js (pinned to an exact version) from `cdn.jsdelivr.net`. Nothing is sent
-there beyond that request, and every other view keeps working offline. Everything about a session is `localStorage` in whatever
+network calls out - except to fetch code and models the first time a feature
+that needs them is used, all pinned to exact versions: the **3D forms** view
+fetches three.js and, when a head is picked, a 400 KB head scan from
+`cdn.jsdelivr.net`; the **pose skeleton** and **Loomis head** fetch the
+MediaPipe runtime from `cdn.jsdelivr.net` and its model from
+`storage.googleapis.com`. Nothing is sent there beyond those requests - the
+image a model reads stays in the browser - and every other view keeps
+working offline. Everything about a session is `localStorage` in whatever
 browser opened the page - open it from a different device and it starts
 fresh, on purpose, for a tool this small.
 
