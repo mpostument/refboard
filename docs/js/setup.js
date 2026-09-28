@@ -941,7 +941,7 @@ function viewImages() {
       for (const img of g.images) {
         out.push({
           src: img.src, pack: pack.name, group: g.name,
-          rotation: !!g.rotation, name: baseName(img.src),
+          rotation: !!g.rotation, name: baseName(img.src), tags: img.tags || [],
         });
       }
     }
@@ -952,14 +952,16 @@ function viewImages() {
 /* Matches the file name, its folder and its pack, not just the file name: in
    a flat "all images" view the folder is the only thing that distinguishes
    two identically-numbered poses from different packs, and it is what you
-   actually remember about them. */
+   actually remember about them. And a sorted upload's tags (js/sort.js).
+   Each word on its own, anywhere: "sitting lit left" finds a seated pose lit
+   from the left, however the words fall across name, folder and tags. */
 function filterImages(list) {
-  const q = el('imgFilter').value.trim().toLowerCase();
-  if (!q) return list;
-  return list.filter(i =>
-    i.name.toLowerCase().includes(q) ||
-    i.group.toLowerCase().includes(q) ||
-    i.pack.toLowerCase().includes(q));
+  const words = el('imgFilter').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return list;
+  return list.filter(i => {
+    const text = [i.name, i.group, i.pack, ...(i.tags || [])].join(' | ').toLowerCase();
+    return words.every(w => text.includes(w));
+  });
 }
 
 /* The order the grid draws its images in - whatever #gridOrder is set to,
@@ -1148,7 +1150,10 @@ function updateViewMeta() {
   const m = el('viewMeta');
   if (view.kind === 'dashboard') { m.textContent = ''; return; }
   if (view.kind === 'drop') {
-    m.textContent = 'Stays in this browser - nothing is uploaded anywhere.';
+    // Behind the container what you drop is kept - and sorted - on it.
+    m.textContent = storeMode === 'server'
+      ? 'Kept on your own server, sorted into folders - never sent anywhere else.'
+      : 'Stays in this browser - nothing is uploaded anywhere.';
     return;
   }
   if (view.kind === 'forms') {

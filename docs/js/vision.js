@@ -1,4 +1,5 @@
-/* refboard - The MediaPipe models: pose skeleton and Loomis head.
+/* refboard - The MediaPipe models: pose skeleton and head construction
+   (and the classifier js/sort.js uses).
    One of the classic scripts index.html loads in order; see the note there. */
 "use strict";
 
@@ -29,9 +30,15 @@ const POSE_BONES = [['lSh', 'rSh'], ['lSh', 'lEl'], ['lEl', 'lWr'], ['rSh', 'rEl
 const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 // The MediaPipe tasks this page uses - one runtime, fetched once, shared by
 // both; each model is fetched the first time its button is pressed.
+// The classifier names what a picture is of - 1000 ImageNet classes - for
+// sorting uploads (js/sort.js); about 5 MB.
+const CLASSIFY_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/int8/1/efficientnet_lite0.tflite';
 const VISION_TASKS = {
   pose: { cls: 'PoseLandmarker', model: POSE_MODEL, opts: { numPoses: 2 } },
   face: { cls: 'FaceLandmarker', model: FACE_MODEL, opts: { numFaces: 4 } },
+  // CPU only: on the GPU delegate this quantized model's output comes back
+  // as floats, and MediaPipe's dequantizing step refuses them.
+  classify: { cls: 'ImageClassifier', model: CLASSIFY_MODEL, opts: { maxResults: 5 }, cpu: true },
 };
 const visionModels = {}, visionLoading = {};
 let poseRun = 0;
@@ -46,7 +53,8 @@ function loadVision(kind) {
       const make = delegate => lib[t.cls].createFromOptions(files, {
         baseOptions: { modelAssetPath: t.model, delegate }, runningMode: 'IMAGE', ...t.opts });
       // The GPU path is faster but not every browser can give it a context.
-      try { visionModels[kind] = await make('GPU'); } catch { visionModels[kind] = await make('CPU'); }
+      if (t.cpu) visionModels[kind] = await make('CPU');
+      else try { visionModels[kind] = await make('GPU'); } catch { visionModels[kind] = await make('CPU'); }
       return visionModels[kind];
     })();
     visionLoading[kind].catch(() => { visionLoading[kind] = null; });
@@ -219,9 +227,37 @@ const LOOMIS_U = 2 / 3, LOOMIS_SIDE = Math.sqrt(1 - LOOMIS_U * LOOMIS_U);
 // corners of the eyes (the face's right and left), top of the forehead.
 const FM = { brow: 9, nose: 2, chin: 152, rEye: 33, lEye: 263, top: 10 };
 let headRun = 0;
+// The faces last found in the picture on screen - a change of style redraws
+// them rather than running the model again.
+let headFaces = null;
+
+/* The same head, drawn the anime way. The ball, its side planes and the
+   centre line stay - they are how the head is turned, and the angle is the
+   hard part of anime - but the face is not Loomis's thirds. Eyes sit lower
+   and are far bigger: their line about halfway from the brow to Loomis's
+   nose line, each eye about a fifth of the head wide and one eye apart.
+   The nose is a mark, the mouth a short line, both close under the eyes;
+   the jaw runs almost straight to a pointed chin. Same units as Loomis's:
+   the ball's radius, y up from the brow, z out of the face. */
+const ANIME_HEAD = {
+  eyeY: -0.38, eyeX: 0.36, eyeA: 0.2, eyeB: 0.16,  // eye centres, half-width, half-height
+  irisA: 0.085, irisB: 0.13,                        // the iris - a tall ellipse
+  nose: -0.84, mouth: -1.07,
+  jaw: [[1, -0.4, -0.25], [0.78, -0.92, 0.3], [0.12, -1.27, 0.8], [0, -2 * LOOMIS_U, 0.88]], // x of the first two in side-plane widths
+};
+const HEAD_STYLES = { loomis: 'Loomis', anime: 'Anime' };
+const HEAD_STYLE_KEY = 'refboard.headStyle.v1';
+let headStyle = (() => { try { return HEAD_STYLES[localStorage.getItem(HEAD_STYLE_KEY)] ? localStorage.getItem(HEAD_STYLE_KEY) : 'loomis'; } catch { return 'loomis'; } })();
+function setHeadStyle(style) {
+  if (!HEAD_STYLES[style] || style === headStyle) return;
+  headStyle = style;
+  try { localStorage.setItem(HEAD_STYLE_KEY, style); } catch {}
+  if (state.headOn && headFaces) drawHead(headFaces);
+}
 
 function clearHead() {
   headRun++;
+  headFaces = null;
   el('headOverlay').classList.add('hidden');
   el('headOverlay').innerHTML = '';
   overlayNote('head', state.headOn ? 'Finding the head...' : '');
@@ -235,6 +271,7 @@ function toggleHead() {
 
 async function runHead() {
   const img = el('img'), run = ++headRun;
+  headFaces = null; // they were the last picture's
   if (!img.naturalWidth) return;
   if (!visionModels.face) overlayNote('head', 'Loading the face model - about 4 MB, once. The image stays in this browser.');
   let model;
@@ -312,10 +349,86 @@ function headFrame(lm, W, H) {
   return { X, Y, Z, C, s };
 }
 
+// A polyline of 3D points round the lower face - the jaw, on each side.
+// Its normal, for which parts face the camera, leans out and forward.
+function jawLine(curve, jaw) {
+  for (const sx of [-1, 1]) {
+    const pts = jaw.map(p => [sx * p[0], p[1], p[2]]), last = pts.length - 1;
+    curve('jaw', t => {
+      const i = Math.min(last - 1, Math.floor(t)), k = t - i, a = pts[i], b = pts[i + 1];
+      return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+    }, 0, last, t => { const p = pts[Math.min(last, Math.round(t))]; return v3.norm([p[0], 0, p[2] + 0.4]); }, 24);
+  }
+}
+const headDot = (at, p, s, cls = 'dot') => {
+  const q = at(p);
+  return `<circle class="${cls}" cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${(s / 28).toFixed(1)}"/>`;
+};
+
+// Loomis's face: the thirds, his jaw, a mark at each third.
+function loomisFace(curve, at, s) {
+  const U = LOOMIS_U, S = LOOMIS_SIDE, PI = Math.PI, edge = Math.asin(S);
+  // The thirds: hairline and brow run round the ball between the side
+  // planes, the nose line round the front of the face - each ending on the
+  // side circle, at its top, middle and bottom.
+  curve('third', t => [S * Math.sin(t), U, S * Math.cos(t)], -PI / 2, PI / 2);
+  curve('third', t => [Math.sin(t), 0, Math.cos(t)], -edge, edge);
+  curve('third', t => [S * Math.sin(t), -U, Math.cos(t)], -PI / 2, PI / 2, t => [Math.sin(t), 0, Math.cos(t)]);
+  curve('third', t => [t, -2 * U, 0.86], -0.22, 0.22, () => [0, -0.3, 1], 4);
+  // The jaw: from under the ear down to its corner, then forward to the
+  // chin. The corner of the jaw is narrower than the cheekbones - about
+  // four fifths of the side planes' width.
+  jawLine(curve, [[S, -0.6 * U, -0.25], [S * 0.8, -1.45 * U, -0.15], [0.3, -1.95 * U, 0.72], [0, -2 * U, 0.88]]);
+  // The four marks down the centre line.
+  return [[0, U, Math.sqrt(1 - U * U)], [0, 0, 1], [0, -U, 1], [0, -2 * U, 0.88]].map(p => headDot(at, p, s)).join('');
+}
+
+// The anime face - see ANIME_HEAD.
+function animeFace(curve, at, s) {
+  const A = ANIME_HEAD, S = LOOMIS_SIDE;
+  // The eyes lie on the ball itself, which is what turns them with it: the
+  // far one narrows and slides toward the centre line on its own.
+  const onBall = (x, y) => [x, y, Math.sqrt(Math.max(0, 1 - x * x - y * y))];
+  // The eye line round the ball, from one side plane to the other.
+  const r = Math.sqrt(1 - A.eyeY * A.eyeY), lim = Math.asin(Math.min(1, S / r));
+  curve('eyeline', t => [r * Math.sin(t), A.eyeY, r * Math.cos(t)], -lim, lim);
+  let marks = '';
+  for (const sx of [-1, 1]) {
+    const ex = sx * A.eyeX, ey = A.eyeY;
+    // t = 0 at the outer corner, π at the inner one.
+    const lidAt = (a, b, dy = 0) => t => onBall(ex + sx * a * Math.cos(t), ey + dy + b * Math.sin(t));
+    // The upper lash line - the heaviest line of an anime face - flatter
+    // than the eye is tall, flicked down past the outer corner.
+    curve('lash', lidAt(A.eyeA, A.eyeB * 0.75), 0, Math.PI, undefined, 24);
+    curve('lash', t => onBall(ex + sx * (A.eyeA + 0.05 * t), ey - 0.06 * t), 0, 1, undefined, 3);
+    // The lower lid: short, on the outer half only.
+    curve('lid', lidAt(A.eyeA * 0.95, A.eyeB * 0.9), -0.12 * Math.PI, -0.55 * Math.PI, undefined, 10);
+    // The iris, tall, its top tucked under the lash line.
+    curve('iris', lidAt(A.irisA, A.irisB, -0.01), 0, 2 * Math.PI, undefined, 32);
+    // The gleam - on the same side in both eyes, as one light makes it.
+    marks += headDot(at, onBall(ex - 0.035, ey + 0.055), s * 1.3, 'gleam');
+  }
+  // The nose, a small mark; the mouth, a short line - both on the front of
+  // the face, which below the ball stands out in front of it.
+  curve('feat', t => [-0.03 * t, A.nose + 0.04 * (1 - t), 1.0], 0, 1, () => [0, -0.2, 1], 2);
+  curve('feat', t => [t, A.mouth + 0.3 * t * t, 0.97], -0.11, 0.11, () => [0, -0.3, 1], 8);
+  // The jaw nearly straight to a pointed chin - the first two points'
+  // widths are in side-plane widths, the corner being where the cheek ends.
+  jawLine(curve, A.jaw.map(([x, y, z], i) => [i < 2 ? x * S : x, y, z]));
+  return marks + headDot(at, A.jaw[A.jaw.length - 1], s, 'dot pink');
+}
+
+// The Loomis / Anime switch at the head of the note.
+function headStyleSwitch() {
+  return `<span class="head-style" role="group" aria-label="Head construction style">${Object.entries(HEAD_STYLES).map(([k, label]) =>
+    `<button type="button" data-head-style="${k}" aria-pressed="${k === headStyle}">${label}</button>`).join('')}</span>`;
+}
+
 function drawHead(faces) {
   const img = el('img'), svg = el('headOverlay');
   const W = img.naturalWidth, H = img.naturalHeight, flip = img.classList.contains('flip');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  headFaces = faces;
   if (!faces.length) {
     svg.innerHTML = '';
     overlayNote('head', 'No face found - it needs to be fairly large in the picture, and not turned fully away.');
@@ -346,7 +459,7 @@ function drawHead(faces) {
       }
       flush();
     };
-    const PI = Math.PI, edge = Math.asin(S);
+    const PI = Math.PI;
 
     // The ball's outline - a sphere looks like a circle from anywhere.
     const c = at([0, 0, 0]);
@@ -363,30 +476,11 @@ function drawHead(faces) {
       curve('side', t => [sx * S, t, 0], -U, U, n, 4);
       curve('side', t => [sx * S, 0, t], -U, U, n, 4);
     }
-    // The thirds: hairline and brow run round the ball between the side
-    // planes, the nose line round the front of the face - each ending on the
-    // side circle, at its top, middle and bottom.
-    curve('third', t => [S * Math.sin(t), U, S * Math.cos(t)], -PI / 2, PI / 2);
-    curve('third', t => [Math.sin(t), 0, Math.cos(t)], -edge, edge);
-    curve('third', t => [S * Math.sin(t), -U, Math.cos(t)], -PI / 2, PI / 2, t => [Math.sin(t), 0, Math.cos(t)]);
-    curve('third', t => [t, -2 * U, 0.86], -0.22, 0.22, () => [0, -0.3, 1], 4);
-    // The jaw: from under the ear down to its corner, then forward to the
-    // chin - a polyline on each side.
-    // The corner of the jaw is narrower than the cheekbones - about four
-    // fifths of the side planes' width.
-    const jaw = [[S, -0.6 * U, -0.25], [S * 0.8, -1.45 * U, -0.15], [0.3, -1.95 * U, 0.72], [0, -2 * U, 0.88]];
-    for (const sx of [-1, 1]) {
-      const pts = jaw.map(p => [sx * p[0], p[1], p[2]]);
-      curve('jaw', t => {
-        const i = Math.min(2, Math.floor(t)), k = t - i, a = pts[i], b = pts[i + 1];
-        return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
-      }, 0, 3, t => { const p = pts[Math.min(3, Math.round(t))]; return v3.norm([p[0], 0, p[2] + 0.4]); }, 24);
-    }
-    // The four marks down the centre line.
-    for (const p of [[0, U, Math.sqrt(1 - U * U)], [0, 0, 1], [0, -U, 1], [0, -2 * U, 0.88]]) {
-      const q = at(p);
-      m += `<circle class="dot" cx="${fr(q[0])}" cy="${fr(q[1])}" r="${fr(f.s / 28)}"/>`;
-    }
+    // The face itself, in the chosen style. Its lines go through curve();
+    // its marks (dots, the eyes' gleam) come back as SVG - added after the
+    // call, since `m += face()` would read m before face() adds its lines.
+    const marks = (headStyle === 'anime' ? animeFace : loomisFace)(curve, at, f.s);
+    m += marks;
 
     if (fi === 0) {
       // How the head is turned, as the picture shows it (mirrored with it).
@@ -403,10 +497,16 @@ function drawHead(faces) {
       if (Math.abs(pitch) >= 8) tip = pitch > 0
         ? ' Seen from below, so the lines round the face <b>arch up</b> - the nose covers more of the eyes, the chin looks big.'
         : ' Seen from above, so the lines round the face <b>curve down</b> like a smile - more forehead, the chin tucked away.';
-      else if (Math.abs(yaw) >= 20) tip = ' The far half of the face is <b>narrower</b>: its eye smaller and closer to the centre line.';
-      note = `<b>Head</b>: ${parts.join(', ')}.${tip}` +
-        `<br><b>Yellow</b>: hairline, brow, nose, chin - three equal thirds. <i>Red</i>: the centre line. ` +
-        `<u>Blue</u>: the side plane - the ear sits just behind its middle.` +
+      else if (Math.abs(yaw) >= 20) tip = headStyle === 'anime'
+        ? ' The far eye is <b>narrower</b> and tucked against the centre line; turned much further, it goes behind the bridge of the nose, and the cheek bulges out past it.'
+        : ' The far half of the face is <b>narrower</b>: its eye smaller and closer to the centre line.';
+      const legend = headStyle === 'anime'
+        ? '<b class="pink">Pink</b>: where anime puts the eyes, nose, mouth and chin at this angle - eyes lower and bigger than a real face\'s, ' +
+          'nose and mouth close under them, a pointed chin. <i>Red</i>: the centre line - the eyes are one eye apart across it. ' +
+          '<u>Blue</u>: the side plane - the ear runs from the eye line down to the nose.'
+        : '<b>Yellow</b>: hairline, brow, nose, chin - three equal thirds. <i>Red</i>: the centre line. ' +
+          '<u>Blue</u>: the side plane - the ear sits just behind its middle.';
+      note = headStyleSwitch() + `<b>Head</b>: ${parts.join(', ')}.${tip}<br>${legend}` +
         (faces.length > 1 ? ` (${faces.length} heads; this is about the first.)` : '');
     }
   });
@@ -417,3 +517,10 @@ function drawHead(faces) {
 }
 
 el('btnHead').addEventListener('click', toggleHead);
+// The note sits on the stage, whose own pointer handlers pan and draw:
+// a press on the switch is the switch's alone.
+el('poseNote').addEventListener('pointerdown', e => { if (e.target.closest('button')) e.stopPropagation(); });
+el('poseNote').addEventListener('click', e => {
+  const b = e.target.closest('[data-head-style]');
+  if (b) setHeadStyle(b.dataset.headStyle);
+});

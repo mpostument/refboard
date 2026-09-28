@@ -31,7 +31,7 @@ const WS_TABS = [
   ] },
   { id: 'figure', label: 'Figure', q: 'How is the body built?', tools: [
     { hud: 'pose', about: 'the gesture, the tilt of shoulders and hips, the weight' },
-    { hud: 'head', about: 'the ball, the side plane and the thirds of the face' },
+    { hud: 'head', about: 'the ball, the side plane, the face - Loomis or anime' },
     { layer: 'ghost', label: 'Ghost of the last pose', key: '', about: 'the pose before, to compare the two' },
     { hud: 'similar', about: 'more poses like this one next' },
   ] },

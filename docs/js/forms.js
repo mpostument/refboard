@@ -138,7 +138,7 @@ async function formsInitThree() {
   // Merged, never replaced: three's own defines (STANDARD) live in the same
   // object. The shared guide code reads vUv.
   ground.material.defines = { ...ground.material.defines, USE_UV: '' };
-  ground.material.userData.u = { uLineCount: { value: new T.Vector2(1, 1) }, uLines: { value: 0 }, uZones: { value: 0 } };
+  ground.material.userData.u = formGuideUniforms(T, 1);
   ground.material.onBeforeCompile = injectFormGuides;
   scene.add(ground);
   // The floor dissolves into the background with distance - a photographer's
@@ -163,17 +163,23 @@ async function formsInitThree() {
    by every material (three keys compiled programs by its source, so they all
    share one program); `this` is the material, whose own uniforms it wires in.
    USE_UV makes three pass vUv through even though there is no texture. */
-function injectFormGuides(sh) {
-  Object.assign(sh.uniforms, this.userData.u);
-  const zones = FORM_ZONES.map(([, hex]) => {
-    const [r, g, b] = hexToRgb(hex).map(c => (c / 255).toFixed(3));
-    return `vec3(${r}, ${g}, ${b})`;
-  });
-  const frag = sh.fragmentShader;
-  sh.fragmentShader = 'uniform vec2 uLineCount;\nuniform float uLines;\nuniform float uZones;\n' +
-    frag.replace('#include <dithering_fragment>', `#include <dithering_fragment>
-    if (uZones > 0.5) {
-      // The key light is whichever light casts a shadow - the fill never does.
+/* The uniforms injectFormGuides() wires in - the same set on every material,
+   the floor's included, since they all compile to the one program. */
+function formGuideUniforms(T, lines) {
+  return {
+    uLineCount: { value: new T.Vector2(lines, lines) }, uLines: { value: 0 }, uZones: { value: 0 },
+    // Cel shading: the tones from celTones(), the highlight's size (0 is
+    // none), and the rim - its direction in view space and how strong.
+    uCel: { value: 0 }, uCelBase: { value: new T.Color() }, uCelShade: { value: new T.Color() },
+    uCelHi: { value: new T.Color() }, uCelHiSize: { value: 0 },
+    uCelRim: { value: new T.Color() }, uRimDir: { value: new T.Vector3(0, 0, 1) }, uRim: { value: 0 },
+  };
+}
+
+// The key light is whichever light casts a shadow - the fill never does.
+// Its direction toward the surface (view space) and how lit it leaves this
+// point (0 in its shadow, 1 out of it). Used by the zones and by cel shading.
+const FORM_KEY_LIGHT_GLSL = `
       vec3 kL = vec3(0.0, 1.0, 0.0);
       float kSh = 1.0;
       #if defined( USE_SHADOWMAP ) && NUM_POINT_LIGHT_SHADOWS > 0
@@ -187,7 +193,61 @@ function injectFormGuides(sh) {
         kSh = getShadow(directionalShadowMap[0], directionalLightShadows[0].shadowMapSize,
           directionalLightShadows[0].shadowIntensity, directionalLightShadows[0].shadowBias,
           directionalLightShadows[0].shadowRadius, vDirectionalShadowCoord[0]);
-      #endif
+      #endif`;
+
+function injectFormGuides(sh) {
+  Object.assign(sh.uniforms, this.userData.u);
+  const zones = FORM_ZONES.map(([, hex]) => {
+    const [r, g, b] = hexToRgb(hex).map(c => (c / 255).toFixed(3));
+    return `vec3(${r}, ${g}, ${b})`;
+  });
+  const frag = sh.fragmentShader;
+  sh.fragmentShader = `uniform vec2 uLineCount;
+uniform float uLines;
+uniform float uZones;
+uniform float uCel;
+uniform vec3 uCelBase;
+uniform vec3 uCelShade;
+uniform vec3 uCelHi;
+uniform float uCelHiSize;
+uniform vec3 uCelRim;
+uniform vec3 uRimDir;
+uniform float uRim;
+` +
+    frag.replace('#include <opaque_fragment>', `
+    // Cel shading replaces the light three worked out, while it is still
+    // linear - so the colour space and the fog (the Air) apply to it after,
+    // as they do to any finish. Every edge is a hard one, blended across a
+    // single pixel (fwidth) so it stays crisp without stair-steps.
+    if (uCel > 0.5) {${FORM_KEY_LIGHT_GLSL}
+      vec3 n = normalize(geometryNormal);
+      float ndl = dot(n, kL);
+      // Each edge's width is how fast its value changes across one pixel -
+      // never quite zero: on a flat face it is, and smoothstep with its two
+      // edges equal is undefined in GLSL (noise, on some GPUs).
+      float aa = max(fwidth(ndl), 1e-4);
+      // Lit: facing the key light and outside any cast shadow. The shadow
+      // map's soft edge is cut at its middle, so a cast shadow is as hard
+      // edged as the form's own. Near the terminator the map is left out:
+      // seen edge-on it wobbles and speckles, which a gradient hides and a
+      // hard edge shows - and the form's own shadow needs no map there.
+      float unshadowed = 1.0 - (1.0 - smoothstep(0.4, 0.6, kSh)) * smoothstep(0.15 - aa, 0.15 + aa, ndl);
+      float lit = smoothstep(-aa, aa, ndl) * unshadowed;
+      vec3 c = mix(uCelShade, uCelBase, lit);
+      // The highlight: a hard-edged spot where the surface mirrors the key
+      // light toward you. Shine sets its size.
+      float sp = dot(n, normalize(kL + geometryViewDir));
+      float edge = 1.0 - uCelHiSize, sw = max(fwidth(sp), 1e-4);
+      c = mix(c, uCelHi, smoothstep(edge - sw, edge + sw, sp) * lit * step(0.0005, uCelHiSize));
+      // The rim: a band along the silhouette (where the surface turns away
+      // from you) on the side the second light comes from.
+      float fr = 1.0 - max(dot(n, geometryViewDir), 0.0), fw = max(fwidth(fr), 1e-4);
+      float rd = dot(n, uRimDir), rw = max(fwidth(rd), 1e-4);
+      c = mix(c, uCelRim, uRim * smoothstep(0.6 - fw, 0.6 + fw, fr) * smoothstep(-rw, rw, rd));
+      outgoingLight = c;
+    }
+    #include <opaque_fragment>`).replace('#include <dithering_fragment>', `#include <dithering_fragment>
+    if (uZones > 0.5) {${FORM_KEY_LIGHT_GLSL}
       float ndl = dot(normalize(geometryNormal), kL);
       float spec = dot(reflectedLight.directSpecular, vec3(0.3333));
       vec3 zc = gl_FragColor.rgb;
@@ -218,7 +278,7 @@ function newFormMesh() {
   // without PHYSICAL the shader silently drops to the standard model, and
   // glass (which needs its IOR) does not compile at all.
   mat.defines = { ...mat.defines, USE_UV: '' };
-  mat.userData.u = { uLineCount: { value: new T.Vector2(4, 4) }, uLines: { value: 0 }, uZones: { value: 0 } };
+  mat.userData.u = formGuideUniforms(T, 4);
   mat.onBeforeCompile = injectFormGuides;
   // Front faces into the shadow map, not three's default of back faces. Back
   // faces record the far side of a form, which near the point where it
@@ -356,6 +416,8 @@ function applyFormFinish(mat, o, def) {
    at formExportSize(), so it cannot drift from what the preview showed. `clean`
    leaves out what is drawn on the forms as a guide (contour lines, zones,
    floor grid): an export is a reference to draw from, not a diagram. */
+const formSceneIsCel = sc => sc.objects.some(o => (FORM_FINISHES[o.finish] || {}).cel);
+
 function formsRender(sc, w, h, clean = false) {
   const F = forms, T = F.T;
   while (F.meshes.length < sc.objects.length) F.meshes.push(newFormMesh());
@@ -449,6 +511,10 @@ function formsRender(sc, w, h, clean = false) {
     return new T.Vector3(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a));
   };
   const L = dirFrom(sc.lightAz, sc.lightEl), elev = THREE_DEG * sc.lightEl;
+  // Softness blurs a shadow edge with scattered samples - noise a gradient
+  // averages away but cel shading's hard cut turns to speckle. Anime's cast
+  // shadows are hard anyway; the map is the light's, so it is the scene's.
+  const softness = formSceneIsCel(sc) ? 0 : sc.softness;
 
   // The sun. Its shadow camera must reach the tip of the cast shadow, which
   // a low light stretches out to height / tan(elevation) - capped, or a
@@ -461,7 +527,7 @@ function formsRender(sc, w, h, clean = false) {
   k.position.copy(target).addScaledVector(L, s * 3);
   Object.assign(k.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 0.01, far: s * 6 });
   k.shadow.camera.updateProjectionMatrix();
-  k.shadow.radius = 1 + sc.softness * 24; // in shadow-map texels
+  k.shadow.radius = 1 + softness * 24; // in shadow-map texels
   // Along the surface normal, in world units: enough to lift a lit face clear
   // of its own recorded depth (the speckle of shadow acne). It has to grow
   // with the softness, because PCF compares against depths up to `radius`
@@ -496,7 +562,7 @@ function formsRender(sc, w, h, clean = false) {
   bulb.shadow.camera.near = rad * 0.1;
   bulb.shadow.camera.far = bulbDist + rad * 30;
   bulb.shadow.camera.updateProjectionMatrix();
-  bulb.shadow.radius = 1 + sc.softness * 12;
+  bulb.shadow.radius = 1 + softness * 12;
   // Normal offset in world units, not a depth bias: a cube shadow map stores
   // perspective depth, where a fixed bias near the far plane spans a large
   // real distance - enough to light the floor right under the form, the one
@@ -510,6 +576,26 @@ function formsRender(sc, w, h, clean = false) {
   F.fill.intensity = sc.fillStrength * sc.intensity * Math.PI;
   F.fill.target.position.copy(target);
   F.fill.position.copy(target).addScaledVector(Lf, rad * 10);
+
+  // Cel shading. Its tones are flat colours, so it ignores the lights'
+  // strength and the ambient; the second light turns into its rim - given in
+  // view space, as the shader's normals are.
+  cam.updateMatrixWorld();
+  const rimDir = Lf.clone().transformDirection(cam.matrixWorldInverse);
+  sc.objects.forEach((o, i) => {
+    const u = F.meshes[i].material.userData.u;
+    const cel = !!(FORM_FINISHES[o.finish] || {}).cel;
+    u.uCel.value = cel ? 1 : 0;
+    if (!cel) return;
+    const t = celTones(o.color, sc.lightColor, sc.fillColor);
+    for (const [k, rgb] of [['uCelBase', t.base], ['uCelShade', t.shade], ['uCelHi', t.hi], ['uCelRim', t.rim]]) {
+      u[k].value.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, T.SRGBColorSpace);
+    }
+    // Shine 0 is no highlight; at 1 it covers about a third of the lit side.
+    u.uCelHiSize.value = o.gloss * o.gloss * 0.12;
+    u.uRimDir.value.copy(rimDir);
+    u.uRim.value = sc.fillOn ? Math.min(1, sc.fillStrength * 2) : 0;
+  });
 
   // Hemisphere: fill from above in neutral light, bounce from below in the
   // floor's colour - the split that puts reflected light, of the right hue,
@@ -1842,7 +1928,9 @@ function formsPanelHtml() {
         <button class="ghost" type="button" id="formPoseMirror" title="Left and right swapped, as in a mirror - the other half of a contrapposto">Mirror</button>
         <button class="ghost" type="button" id="formPoseReset" title="Back to the rest pose">Reset pose</button>
       </div>`,
-    finish: chips('formFinishes', Object.entries(FORM_FINISHES), 'finish', f => f.hint),
+    finish: chips('formFinishes', Object.entries(FORM_FINISHES), 'finish', f => f.hint) +
+      `<div class="count hidden" id="formCelNote">Flat tones, as anime is coloured: the colour, its shadow, a highlight.
+        For the bright edge, turn on the Second light (Light tab) and pick Rim.</div>`,
     presets: chips('formPresets', Object.entries(LIGHT_PRESETS), 'preset', p => `Light from ${p.az}°, ${p.el}° up`) +
       `<div id="formPortraitWrap" class="hidden"><h4>Portrait lighting - on the selected head</h4>` +
       chips('formPortrait', Object.entries(PORTRAIT_LIGHTS), 'portrait', p => p.hint) + '</div>',
@@ -1940,6 +2028,13 @@ function syncFormsPanel() {
   }
 
   for (const b of panel.querySelectorAll('[data-finish]')) b.setAttribute('aria-pressed', String(b.dataset.finish === o.finish));
+  // Under cel shading Shine no longer blurs a highlight - it sizes one.
+  const cel = !!FORM_FINISHES[o.finish].cel;
+  panel.querySelector('[data-k="gloss"]').previousElementSibling.textContent = cel ? 'Highlight' : 'Shine';
+  el('formCelNote').classList.toggle('hidden', !cel);
+  const soft = panel.querySelector('[data-k="softness"]');
+  soft.disabled = formSceneIsCel(formScene);
+  soft.closest('.frow').title = soft.disabled ? 'Cast shadows are hard-edged while a form is Anime' : '';
   for (const b of panel.querySelectorAll('[data-preset]')) {
     const p = LIGHT_PRESETS[b.dataset.preset];
     b.setAttribute('aria-pressed', String(p.az === formScene.lightAz && p.el === formScene.lightEl));

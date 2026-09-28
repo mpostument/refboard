@@ -34,10 +34,14 @@ async function renderUploads() {
     const li = document.createElement('li');
     li.className = 'up-tile';
     const video = u.type.startsWith('video/');
+    // Where it was sorted to (js/sort.js), and what it was tagged with.
+    const folder = u.folder ? SORT_FOLDERS[u.folder] || '' : '';
+    const about = [folder, ...(u.tags || [])].filter(Boolean).join(', ');
     li.innerHTML =
-      `<button type="button" class="up-open" data-i="${i}" aria-label="Open ${esc(u.name)}" title="${esc(u.name)} - ${new Date(u.t).toLocaleString()}">` +
+      `<button type="button" class="up-open" data-i="${i}" aria-label="Open ${esc(u.name)}${folder ? ' - ' + esc(folder) : ''}" title="${esc(u.name)} - ${new Date(u.t).toLocaleString()}${about ? ' - ' + esc(about) : ''}">` +
       (video ? iconSvg('play') : `<img alt="" loading="lazy">`) + '</button>' +
       `<span class="up-name" aria-hidden="true">${esc(u.name)}</span>` +
+      (folder ? `<span class="up-folder" aria-hidden="true">${esc(folder)}</span>` : '') +
       `<button type="button" class="up-forget" data-forget="${i}" aria-label="Forget ${esc(u.name)}" title="Forget it - no longer kept">${iconSvg('close')}</button>`;
     host.appendChild(li);
     if (!video) storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });

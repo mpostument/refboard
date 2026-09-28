@@ -22,7 +22,7 @@ const HUD_TOOLS = [
   { id: 'guides', label: 'Construction guides', els: ['constructSelect'], key: 'c', group: 'look' },
   { id: 'eyedropper', label: 'Eyedropper', els: ['btnEyedropper'], key: 'e', group: 'look' },
   { id: 'pose', label: 'Pose skeleton', els: ['btnPose'], key: 'p', group: 'look' },
-  { id: 'head', label: 'Loomis head', els: ['btnHead'], key: 'l', group: 'look' },
+  { id: 'head', label: 'Head construction', els: ['btnHead'], key: 'l', group: 'look' },
   { id: 'compare', label: 'Compare your drawing', els: ['btnCompare'], key: 'd', group: 'look' },
   { id: 'workspace', label: 'Workspace - tools by question', els: ['btnWorkspace'], key: 'w', group: 'look' },
   { id: 'layers', label: 'Layers', els: ['btnLayers'], key: '', group: 'look' },
