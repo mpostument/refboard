@@ -124,6 +124,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 
 ## Features
 
+- **How to draw it** - any picture in the workspace (Learn tab, Ctrl+K, or
+  Steps on a generated one) taken back to the steps it is drawn in, for the
+  medium: the big shapes blocked in with a few straight lines, the lines,
+  then the first wash and the shadows for watercolour, hatching one way and
+  across for ink, three values for pencil - each step with what to do.
+  Worked out from the picture itself in the browser (Otsu thresholds, XDoG
+  lines, a traced and simplified silhouette), so it needs no server and no
+  model, and every frame is the same composition.
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
   on a machine with a GPU (`COMFY_URL`): anime references made to order - a
   character (who, the hair, how much of them, from where, the pose), a

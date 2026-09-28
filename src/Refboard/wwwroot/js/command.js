@@ -76,6 +76,8 @@ function collectCommands() {
     }
     out.push(...layerCommands());
     out.push({ id: 'btnMaterials', label: 'My materials', hint: 'Medium', words: COMMAND_WORDS.btnMaterials, run: openMaterials });
+    out.push({ id: 'steps', label: 'How to draw it', hint: 'Learn', words: 'steps stages guide tutorial learn order sketch hatching wash',
+      run: () => openSteps(state.current) });
     // The head construction in either style - turned on too, if it is off.
     for (const [k, label] of Object.entries(HEAD_STYLES)) {
       if (state.headOn && k === headStyle) continue;

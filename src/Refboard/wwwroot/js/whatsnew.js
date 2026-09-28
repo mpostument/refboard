@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'steps', title: 'How to draw it, step by step',
+    text: 'Any picture in the workspace, taken back to the steps it is drawn in, for your medium: big shapes blocked in, the lines, then the first wash and the shadows for watercolour, hatching for ink, tone for pencil - each with what to do. Workspace > Learn, the Steps button on a generated picture, or Ctrl+K "how to draw".',
+    act: 'Show me', run: () => setView({ kind: 'drop' }) },
   { id: 'generate', title: 'Generate references',
     text: 'Behind your own server with a ComfyUI set up (COMFY_URL): anime references made to order - a character, a landscape, buildings, nature or an animal, from where you choose, in the light, weather and season you pick, and the medium: watercolour, ink line, flat colour or pencil. Each is kept in Uploads, in the Generated group, tagged with what you chose.',
     act: 'Show me', run: () => setView({ kind: 'generate' }) },

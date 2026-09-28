@@ -58,6 +58,8 @@ async function openUpload(u) {
     return;
   }
   const url = await storeFileUrl(u.file);
+  // What it was made in, for How to draw it (js/steps.js).
+  if (url && u.tags) stepsKnown.set(url, u.tags);
   if (url) openInWorkspace(url, { label: u.name, tab: u.from === 'colour' ? 'colour' : 'value' });
 }
 

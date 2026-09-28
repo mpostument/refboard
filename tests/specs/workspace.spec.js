@@ -12,7 +12,7 @@ test('tabs by question; each row is the toolbar tool itself', async ({ page }) =
   // A dropped photo opens with the panel, at Value - it is split already.
   await openSession(page);
   await expect(page.locator('#wsPanel')).toBeVisible();
-  await expect(page.locator('#wsTabs [role=tab]')).toHaveText(['Value', 'Colour', 'Construction', 'Figure', 'My work']);
+  await expect(page.locator('#wsTabs [role=tab]')).toHaveText(['Value', 'Colour', 'Construction', 'Figure', 'My work', 'Learn']);
   await expect(page.locator('#wsQuestion')).toHaveText('How light or dark is each part?');
 
   // While the value split is on, Grayscale is off - here as in the toolbar.

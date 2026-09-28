@@ -154,6 +154,11 @@ knows about (`COMFY_URL`): a character, a landscape, buildings, nature or an
 animal - one style, anime, for now - the choices as Danbooru tags ("no
 humans" for all but a character, or the model draws a girl in), a job the page asks
 after, the picture kept in Uploads > Generated with the choices as its tags.
+In place too: How to draw it (`js/steps.js`) - any picture taken back to its
+steps, per medium, worked out from the picture (an image model asked for an
+earlier stage draws a different picture; Paints-Undo, the model trained to
+rewind a painting, was weighed and left: 24 GB, and digital painting's
+order, not watercolour's or ink's).
 Next: the pose and the light from the 3D figure - its depth or OpenPose
 render through a ControlNet - so the reference is the pose you set; a photo
 simplified into a study (img2img); variations of one you like (its seed).

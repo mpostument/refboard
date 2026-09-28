@@ -9,7 +9,8 @@
    question, and then it is in more than one tab. */
 "use strict";
 
-// hud: an id in HUD_TOOLS (js/pins.js); layer: an id in LAYERS (js/layers.js).
+// hud: an id in HUD_TOOLS (js/pins.js); layer: an id in LAYERS (js/layers.js);
+// action: something it opens rather than a state it shows.
 // about: the question the tool answers, in the words of the tab.
 const WS_TABS = [
   { id: 'value', label: 'Value', q: 'How light or dark is each part?', tools: [
@@ -40,6 +41,10 @@ const WS_TABS = [
     { hud: 'flip', about: 'fresh eyes - mistakes jump out mirrored' },
     { hud: 'squint', about: 'do the big shapes match, before the details?' },
   ] },
+  { id: 'learn', label: 'Learn', q: 'How do I draw it, step by step?', tools: [
+    { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'this picture in the steps it is drawn in, for your medium',
+      run: () => openSteps(state.current) },
+  ] },
 ];
 const WS_TAB_KEY = 'refboard.workspaceTab.v1';
 
@@ -56,6 +61,10 @@ function renderWorkspace() {
   el('wsQuestion').textContent = tab.q;
   el('wsList').innerHTML = tab.tools.map((r, i) => {
     let label, key, icon;
+    if (r.action) {
+      return `<button type="button" class="ws-row ws-tool" data-row="${i}"><span data-icon="${r.icon}"></span>` +
+        `<span class="ws-text"><b>${esc(r.label)}</b><small>${esc(r.about)}</small></span></button>`;
+    }
     if (r.hud) {
       const t = wsHud(r.hud), first = t.nodes[0];
       if (first.classList.contains('hidden')) return '';
@@ -88,6 +97,7 @@ function syncWorkspace() {
   const tab = WS_TABS.find(t => t.id === wsTab);
   for (const n of el('wsList').querySelectorAll('[data-row]')) {
     const r = tab.tools[n.dataset.row];
+    if (r.action) continue;
     if (r.layer) { wsPress(n, !!wsLayer(r.layer).on()); continue; }
     const c = wsHud(r.hud).nodes[0];
     // Off when its button is - Grayscale while the value split is on.
@@ -99,6 +109,7 @@ function syncWorkspace() {
 
 function useWorkspaceRow(n) {
   const r = WS_TABS.find(t => t.id === wsTab).tools[n.dataset.row];
+  if (r.action) { r.run(); return; }
   if (r.layer) wsLayer(r.layer).toggle();
   else if (n.tagName === 'SELECT') {
     const c = wsHud(r.hud).nodes[0];

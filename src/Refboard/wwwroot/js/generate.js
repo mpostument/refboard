@@ -245,9 +245,16 @@ function renderGenResults(list) {
   for (const u of list) {
     const li = document.createElement('li');
     li.innerHTML = `<button type="button" class="gen-open" title="${esc((u.tags || []).join(', '))}" ` +
-      `aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>`;
+      `aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
+      `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
-    li.querySelector('button').addEventListener('click', () => openUpload(u));
+    li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
+    li.querySelector('.gen-steps').addEventListener('click', async () => {
+      const url = await storeFileUrl(u.file);
+      if (!url) return;
+      stepsKnown.set(url, u.tags || []);
+      openSteps(url);
+    });
     host.appendChild(li);
   }
   el('genEmpty').classList.toggle('hidden', list.length > 0);
