@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=d51295f2">
+<link rel="stylesheet" href="css/app.css?v=d8e27096">
 </head>
 <body>
 <div id="setup">
@@ -152,7 +152,7 @@
       <!-- Browse-only: a search box over a dashboard would have nothing to
            search. setView() shows and hides it with the grid it belongs to. -->
       <div class="searchbar hidden" id="searchbar">
-        <input type="search" id="imgFilter" placeholder="Search images by file, folder or pack name...">
+        <input type="search" id="imgFilter" placeholder="Search by file, folder, pack or tag - sitting, profile, low key...">
         <!-- The two brightness orders are dropped by initShell() when there is
              no features.json behind this page to read a value out of - an
              order that silently does nothing is worse than an absent one. -->
@@ -245,6 +245,7 @@
               <button class="ghost" type="button" id="btnData" title="Where things are kept, and a backup of everything">Your data...</button>
             </div>
             <p class="count" id="uploadsWhere" style="margin:6px 0"></p>
+            <p class="count hidden" id="uploadsSorting" aria-live="polite" style="margin:0 0 6px"></p>
             <label class="opt hidden" id="keepWrap"><input type="checkbox" id="optKeep"> Keep in this browser</label>
             <ul id="uploadsList" aria-labelledby="uploadsTitle"></ul>
           </div>
@@ -674,7 +675,7 @@
     </select>
     <button id="btnEyedropper" data-icon="pipette" title="Eyedropper (e): click the reference to read its exact colour and value" aria-label="Eyedropper"></button>
     <button id="btnPose" data-icon="person" title="Pose skeleton (p): the gesture, the tilt of shoulders and hips, and where the weight is - found by a pose model that runs in this browser" aria-label="Pose skeleton"></button>
-    <button id="btnHead" data-icon="head" title="Loomis head (l): the ball, side plane and thirds of the face, turned to match each head in the picture - found by a face model that runs in this browser" aria-label="Loomis head"></button>
+    <button id="btnHead" data-icon="head" title="Head construction (l): the ball, side plane and face - Loomis's thirds, or where anime puts the features - turned to match each head in the picture, found by a face model that runs in this browser" aria-label="Head construction"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <button id="btnWorkspace" data-icon="sliders" title="Workspace (w): the tools sorted by the question you ask of the picture - value, colour, construction, figure, your own work" aria-label="Workspace" aria-pressed="false"></button>
     <button id="btnLayers" data-icon="layers" title="Layers: every overlay in one list, each on or off and with its own opacity" aria-label="Layers" aria-pressed="false"></button>
@@ -929,7 +930,7 @@
         on or off the same as from its key.</p>
       <p><b>Layers</b> - the stack icon in the toolbar lists every overlay
         that can lie over the picture: construction guides, angle lines, the
-        focal point, the ghost of the last pose, the Loomis head, the pose
+        focal point, the ghost of the last pose, the head construction, the pose
         skeleton, the grid and your drawing, top to bottom as they stack.
         Each has a checkbox - the same as its own button or key - and its own
         opacity, kept for next time, so several can be on at once without
@@ -1079,7 +1080,7 @@
     </section>
 
     <section>
-      <h2>Loomis head</h2>
+      <h2>Head construction - Loomis and anime</h2>
       <p><b>Head</b> (<b>L</b>) draws Andrew Loomis's construction over every
         face in the picture, turned the way that head is turned: the
         cranium as a <b>ball</b>, its sides sliced flat into the <b>side
@@ -1092,6 +1093,14 @@
         this. It needs the face fairly large in the picture; like the pose
         model, the face model runs in this browser and is downloaded once
         (about 4 MB).</p>
+      <p><b>Anime</b>, at the start of the note, keeps the ball, the side
+        plane and the centre line - how the head is turned - and draws the
+        face as anime does (pink): the eyes lower and much bigger, one eye
+        apart, with a heavy upper lash line and a tall iris; a small nose and
+        mouth close under them; the jaw nearly straight to a pointed chin.
+        Take a photo of anyone at a hard angle - from below, three-quarter,
+        tilted - and see where anime features sit on it. The choice is
+        kept.</p>
     </section>
 
     <section>
@@ -1405,7 +1414,7 @@
         · G gray · Q squint · V value levels · +/- zoom · 0 reset zoom ·
         A angle tool · C construction guides · E eyedropper · D compare your drawing · I info drawer ·
         R grid · H high-contrast overlays · M similar (when available) ·
-        P pose skeleton · L Loomis head · S skip · Esc stop · ? this help</p>
+        P pose skeleton · L head construction · S skip · Esc stop · ? this help</p>
       <p class="sub" style="margin-bottom:0">Everywhere: Tab and Shift+Tab move
         between controls, with a ring round the one you are on; in a dialog they
         stay in it, and Esc closes it. ↑ ↓ walk the rail of sections, Home and
@@ -1424,32 +1433,33 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=9429ed85"></script>
-<script src="js/setup.js?v=205d5859"></script>
+<script src="js/setup.js?v=af915991"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
-<script src="js/store.js?v=d077cc86"></script>
-<script src="js/uploads.js?v=d45014c1"></script>
+<script src="js/store.js?v=8f9197ee"></script>
+<script src="js/uploads.js?v=638d268d"></script>
 <script src="js/session.js?v=c661ddcf"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0bc3b11f"></script>
 <script src="js/tools.js?v=dbf4607e"></script>
 <script src="js/materials.js?v=a9b7eb53"></script>
-<script src="js/vision.js?v=86d4847f"></script>
+<script src="js/vision.js?v=2e157b5d"></script>
+<script src="js/sort.js?v=3be0d526"></script>
 <script src="js/study.js?v=80a3719e"></script>
-<script src="js/layers.js?v=fdaf2ff2"></script>
+<script src="js/layers.js?v=a10c648e"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=9cc64b70"></script>
-<script src="js/workspace.js?v=24f8d0a0"></script>
+<script src="js/pins.js?v=1e8e7dd7"></script>
+<script src="js/workspace.js?v=28addd88"></script>
 <script src="js/train.js?v=9fd9bbc0"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=8df47674"></script>
+<script src="js/command.js?v=e12d93de"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=ad4b115c"></script>
+<script src="js/whatsnew.js?v=3de7703d"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
-<script src="js/forms-models.js?v=a7d884e0"></script>
-<script src="js/forms.js?v=cdbc34fc"></script>
+<script src="js/forms-models.js?v=033ccb9f"></script>
+<script src="js/forms.js?v=e7d1d119"></script>
 </template>
 <template id="lazy-backup">
 <script src="js/backup.js?v=e7ec2fe2"></script>

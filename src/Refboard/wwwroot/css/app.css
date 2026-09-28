@@ -872,6 +872,20 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #headOverlay .hid { stroke-dasharray: 3 5; opacity: .45; }
 #headOverlay .o.hid { display: none; }
 #headOverlay circle.dot { fill: #ffd54f; stroke: #000; stroke-width: 1; }
+/* The anime face - see animeFace(). Pink, so it never reads as Loomis's
+   yellow thirds; the lash line heaviest, as it is in the drawing itself. */
+#headOverlay .eyeline { stroke: #ff8fc8; stroke-width: 1.5; stroke-dasharray: 8 5; }
+#headOverlay .lash { stroke: #ff8fc8; stroke-width: 3.5; }
+#headOverlay :is(.lid, .iris, .feat) { stroke: #ff8fc8; stroke-width: 1.8; }
+#headOverlay circle.gleam { fill: #fff; stroke: #000; stroke-width: 1; }
+#headOverlay circle.dot.pink { fill: #ff8fc8; }
+#poseNote b.pink { color: #ff8fc8; }
+#poseNote .head-style { display: inline-flex; gap: 2px; margin-right: 8px; vertical-align: 1px; }
+#poseNote .head-style button {
+  font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 5px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.35); background: transparent; color: #fff;
+}
+#poseNote .head-style button[aria-pressed="true"] { background: #fff; color: #000; }
 #poseNote b { color: #ffd54f; font-weight: 600; }
 #poseNote i { font-style: normal; color: #ff8f7e; }
 #poseNote u { text-decoration: none; color: #8fd0ff; }
@@ -1407,6 +1421,8 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .up-open img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .up-open .icon { width: 28px; height: 28px; }
 .up-open:hover { border-color: var(--accent); }
+/* The folder an upload was sorted into (js/sort.js), under its name. */
+.up-folder { display: block; font-size: 10px; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .up-name { display: block; font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
 .up-forget {
   position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px;

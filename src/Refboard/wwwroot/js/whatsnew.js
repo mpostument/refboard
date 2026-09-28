@@ -15,6 +15,15 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'sorted-uploads', title: 'Uploads sorted into folders',
+    text: 'Behind your own server, every picture you drop is looked at - people, poses, faces, what it is of, its light and colour - tagged, and put in a folder: Figure, Portrait, Landscape, Animals... In the library they are groups of the Uploads pack, and the search finds them by tag: "sitting", "profile", "low key".',
+    act: 'Show me', run: () => setView({ kind: 'drop' }) },
+  { id: 'anime-head', title: 'Anime head on a photo',
+    text: 'Head construction (L) has an Anime style: at the angle of the head in the photo, where anime puts the eyes - lower and bigger - the nose, the mouth and a pointed chin. Switch in the note under the picture, or Ctrl+K "anime".',
+    act: 'Open a photo', run: () => setView({ kind: 'drop' }) },
+  { id: 'cel', title: 'Anime cel shading in 3D',
+    text: 'The Anime finish, under Surface: any form, the figure or the head in flat tones - the colour, a hard-edged shadow, a highlight - and the second light as a rim. Where the shadow shape falls, under any light.',
+    act: 'Show me', run: () => setView({ kind: 'forms' }) },
   { id: 'backup', title: 'A backup of everything',
     text: 'One .zip with your settings, materials, themes, 3D scenes, practice log, trainer scores and uploads - to keep safe, or to move to another computer.',
     act: 'Your data', run: () => openData() },

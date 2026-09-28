@@ -92,7 +92,11 @@ Two, deliberately kept separate:
   (`/data/uploads`, each file named by the SHA-256 of its contents, so the
   same one uploaded twice is stored once), and the small JSON documents about
   them (`/data/.items`). Uploaded pictures join the library as an **Uploads**
-  pack on the next index pass. Back the volume up - or use *Your data* in the
+  pack, **sorted into folders** by subject - `/data/uploads/Figure`,
+  `Portrait`, `Landscape`, `Animals`, `City`, `Plants`, `Still life`,
+  `Illustration`, `My work`, `Other` - each a group of the pack, and tagged
+  (see *Sorted uploads* below); what is not sorted yet waits in the folder
+  itself, as *Unsorted*. Back the volume up - or use *Your data* in the
   app, which downloads everything, settings included, as one .zip.
 
 ### The storage API
@@ -103,8 +107,10 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 
 | | |
 |---|---|
-| `POST /api/uploads` | The body is the file, its type in `Content-Type`. Returns `{ id, url, bytes }`. Up to 1 GB. |
+| `POST /api/uploads` | The body is the file, its type in `Content-Type`. Returns `{ id, url, bytes, folder }` - `folder` set if the same file was kept and sorted before. Up to 1 GB. |
 | `GET /api/uploads` | Every stored file. |
+| `GET /api/uploads/{id}` | One stored file, whichever folder it is in. |
+| `PUT /api/uploads/{id}/folder` | `{ "folder": "figure" }` - moves it into one of the fixed folders (keys: `figure`, `portrait`, `animals`, `landscape`, `city`, `plants`, `still-life`, `illustration`, `my-work`, `other`) and wakes the index pass. |
 | `DELETE /api/uploads/{id}` | |
 | `GET /api/items` | The kinds of document stored. |
 | `GET /api/items/{kind}` | Every document of a kind, as `{ id: document }`. |
@@ -256,7 +262,10 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     loaded in the browser - or a jointed wooden **figure**: pick a joint by its
     dot and bend it with rings, R or sliders, from classic poses (contrapposto,
     walk, kneel...), random ones, or a mirror of the last. Each with its own placement, proportions, rotation,
-    colour and surface: matte, satin, glossy, metal, glass or velvet.
+    colour and surface: matte, satin, glossy, metal, glass or velvet - or
+    **Anime**, cel shading: a flat colour, one hard-edged shadow tone of its
+    own (pulled toward blue-violet, as anime colours it), a highlight, and the
+    second light as a rim.
   - *Posed in the view, Blender-style:* move, rotate and scale handles on the
     selected form (click a form to select it; Z lifts it off the floor), and
     Blender's keys - **G / R / S**, then **X / Y / Z** to
@@ -304,6 +313,15 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   Pages, with *Keep in this browser* ticked), or not at all. *Your data*
   downloads everything - settings, materials, themes, 3D scenes, practice
   log, trainer scores, uploads - as one .zip, and restores from one.
+- **Sorted uploads** - behind the container, each picture you drop is looked
+  at in the browser (the pose and face models, and an image classifier),
+  tagged - *one person, sitting, three-quarter view, lit from the left, low
+  key, warm, seashore* - and moved into a folder by subject. The library's
+  search finds them by tag, each word on its own: `sitting lit left`.
+- **Anime head on a photo** - the head construction (`l`) in an *Anime* style:
+  the ball, side planes and centre line fitted to the head's angle, with the
+  face drawn as anime does - eyes lower and bigger, a small nose and mouth, a
+  pointed chin. Switched in the note under the picture, or from Ctrl+K.
 - **The keyboard, and screen readers** - a visible focus ring, Tab kept inside
   dialogs, arrow keys along the rail, a *Skip to the content* link, and a
   live region that says which section opened and which pose is up.
@@ -443,9 +461,9 @@ There's no user accounts, no server-side session, no telemetry, and no
 network calls out - except to fetch code and models the first time a feature
 that needs them is used, all pinned to exact versions: the **3D forms** view
 fetches three.js and, when a head is picked, a 400 KB head scan from
-`cdn.jsdelivr.net`; the **pose skeleton** and **Loomis head** fetch the
-MediaPipe runtime from `cdn.jsdelivr.net` and its model from
-`storage.googleapis.com`. Nothing is sent there beyond those requests - the
+`cdn.jsdelivr.net`; the **pose skeleton**, the **head construction** and,
+behind the container, the **sorting of uploads** fetch the MediaPipe runtime
+from `cdn.jsdelivr.net` and their models from `storage.googleapis.com`. Nothing is sent there beyond those requests - the
 image a model reads stays in the browser - and every other view keeps
 working offline. Everything about a session is `localStorage` in whatever
 browser opened the page - open it from a different device and it starts

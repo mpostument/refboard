@@ -1,10 +1,13 @@
 namespace Refboard.Models;
 
-/// <summary>One image file within a group: its served URL and its size on disk.</summary>
+/// <summary>One image file within a group: its served URL and its size on disk
+/// - and, for an uploaded picture that has been sorted, what it was tagged
+/// with (js/sort.js), which the library's search matches too.</summary>
 public sealed class ImageRecord
 {
     public string Src { get; set; } = "";
     public long Bytes { get; set; }
+    public List<string>? Tags { get; set; }
 }
 
 /// <summary>

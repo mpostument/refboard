@@ -28,6 +28,18 @@ public sealed partial class UserStore(RefboardOptions opts)
         ["image/avif"] = ".avif", ["video/mp4"] = ".mp4", ["video/webm"] = ".webm", ["video/quicktime"] = ".mov",
     };
 
+    /// <summary>The folders an uploaded picture is sorted into (see js/sort.js,
+    /// which decides which): the key the page sends, and the folder's name on
+    /// disk - which is also its group's name in the library. Fixed here, so a
+    /// folder name never comes from the client. Unsorted pictures, and video,
+    /// stay in the uploads folder itself.</summary>
+    public static readonly IReadOnlyDictionary<string, string> Folders = new Dictionary<string, string>
+    {
+        ["figure"] = "Figure", ["portrait"] = "Portrait", ["animals"] = "Animals", ["landscape"] = "Landscape",
+        ["city"] = "City", ["plants"] = "Plants", ["still-life"] = "Still life", ["illustration"] = "Illustration",
+        ["my-work"] = "My work", ["other"] = "Other",
+    };
+
     public string UploadsDir => Path.Combine(opts.DataDir, "uploads");
     private string ItemsDir => Path.Combine(opts.DataDir, ".items");
 
@@ -41,7 +53,39 @@ public sealed partial class UserStore(RefboardOptions opts)
     public static bool ValidName(string s) => NameRx().IsMatch(s);
     public static bool ValidFileId(string s) => FileIdRx().IsMatch(s);
 
-    public sealed record FileEntry(string Id, string Url, long Bytes);
+    /// <summary>A kept file: its id (hash and extension), where it is served,
+    /// its size, and the folder it has been sorted into - null while unsorted.</summary>
+    public sealed record FileEntry(string Id, string Url, long Bytes, string? Folder = null);
+
+    private static FileEntry Entry(string id, long bytes, string? folder) =>
+        new(id, "uploads/" + (folder is null ? "" : Uri.EscapeDataString(Folders[folder]) + "/") + id, bytes, folder);
+
+    /// <summary>Where a kept file is: the uploads folder, or one of the sorted
+    /// folders under it. Null if it is nowhere.</summary>
+    public (string Path, string? Folder)? FindFile(string id)
+    {
+        var root = Path.Combine(UploadsDir, id);
+        if (File.Exists(root)) return (root, null);
+        foreach (var (key, name) in Folders)
+        {
+            var p = Path.Combine(UploadsDir, name, id);
+            if (File.Exists(p)) return (p, key);
+        }
+        return null;
+    }
+
+    /// <summary>Moves a kept file into a sorted folder. Null if there is no
+    /// such file.</summary>
+    public FileEntry? MoveFile(string id, string folder)
+    {
+        if (FindFile(id) is not { } from) return null;
+        var len = new FileInfo(from.Path).Length;
+        if (from.Folder == folder) return Entry(id, len, folder);
+        var dir = Path.Combine(UploadsDir, Folders[folder]);
+        Directory.CreateDirectory(dir);
+        File.Move(from.Path, Path.Combine(dir, id), overwrite: true);
+        return Entry(id, len, folder);
+    }
 
     /// <summary>Streams the body to a temp file while hashing it, then moves
     /// it into place under its hash - unless that file is already there.</summary>
@@ -65,10 +109,14 @@ public sealed partial class UserStore(RefboardOptions opts)
                 }
             }
             var id = Convert.ToHexStringLower(sha.GetHashAndReset()) + ext;
-            var path = Path.Combine(UploadsDir, id);
-            if (File.Exists(path)) File.Delete(tmp);
-            else File.Move(tmp, path);
-            return new FileEntry(id, "uploads/" + id, bytes);
+            // Kept already - perhaps sorted into a folder since: that copy stays.
+            if (FindFile(id) is { } have)
+            {
+                File.Delete(tmp);
+                return Entry(id, bytes, have.Folder);
+            }
+            File.Move(tmp, Path.Combine(UploadsDir, id));
+            return Entry(id, bytes, null);
         }
         catch
         {
@@ -77,18 +125,22 @@ public sealed partial class UserStore(RefboardOptions opts)
         }
     }
 
-    public IEnumerable<FileEntry> ListFiles() =>
-        !Directory.Exists(UploadsDir) ? [] :
-        new DirectoryInfo(UploadsDir).EnumerateFiles()
-            .Where(f => ValidFileId(f.Name))
-            .OrderBy(f => f.LastWriteTimeUtc)
-            .Select(f => new FileEntry(f.Name, "uploads/" + f.Name, f.Length));
+    public IEnumerable<FileEntry> ListFiles()
+    {
+        if (!Directory.Exists(UploadsDir)) return [];
+        IEnumerable<(FileInfo F, string? Folder)> Files(string dir, string? folder) =>
+            !Directory.Exists(dir) ? [] :
+            new DirectoryInfo(dir).EnumerateFiles().Where(f => ValidFileId(f.Name)).Select(f => (f, folder));
+        return Files(UploadsDir, null)
+            .Concat(Folders.SelectMany(kv => Files(Path.Combine(UploadsDir, kv.Value), kv.Key)))
+            .OrderBy(x => x.F.LastWriteTimeUtc)
+            .Select(x => Entry(x.F.Name, x.F.Length, x.Folder));
+    }
 
     public bool DeleteFile(string id)
     {
-        var path = Path.Combine(UploadsDir, id);
-        if (!File.Exists(path)) return false;
-        File.Delete(path);
+        if (FindFile(id) is not { } at) return false;
+        File.Delete(at.Path);
         return true;
     }
 

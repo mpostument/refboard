@@ -1,6 +1,6 @@
 // What's new: after an update, what came with it - once, never over the
 // first visit's tour.
-const { test, expect, openApp } = require('../helpers');
+const { test, expect, openApp, NEWS_IDS } = require('../helpers');
 
 test.describe('a returning visitor', () => {
   test.use({ seenNews: false });
@@ -9,7 +9,7 @@ test.describe('a returning visitor', () => {
     await openApp(page);
     await expect(page.locator('#whatsNew')).toBeVisible();
     await expect(page.locator('#whatsNewList .news')).toHaveCount(4);
-    await expect(page.locator('#whatsNewList .news').first()).toContainText('A backup of everything');
+    await expect(page.locator('#whatsNewList .news').first()).toHaveAttribute('data-news', NEWS_IDS[0]);
     await expect(page.locator('#whatsNewEarlier')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('#whatsNew')).toBeHidden();
@@ -30,13 +30,12 @@ test.describe('a returning visitor', () => {
 test.describe('someone who has seen all but the newest', () => {
   test.use({ seenNews: false });
   test('sees only that one', async ({ page }) => {
-    await page.addInitScript(() => {
-      if (!localStorage.getItem('refboard.news.v1')) {
-        localStorage.setItem('refboard.news.v1', JSON.stringify(['uploads-kept', 'keyboard', 'fast', 'tour', 'workspace-any', 'find', 'materials', 'themes']));
-      }
-    });
+    await page.addInitScript(ids => {
+      if (!localStorage.getItem('refboard.news.v1')) localStorage.setItem('refboard.news.v1', JSON.stringify(ids));
+    }, NEWS_IDS.slice(1));
     await openApp(page);
     await expect(page.locator('#whatsNew .news')).toHaveCount(1);
+    await expect(page.locator('#whatsNew .news')).toHaveAttribute('data-news', NEWS_IDS[0]);
     await expect(page.locator('#whatsNewEarlier')).toBeHidden();
   });
 });
@@ -57,7 +56,7 @@ test.describe('a first visit', () => {
 test('again from the footer, from Help and from Ctrl+K', async ({ page }) => {
   await openApp(page);
   await page.click('#btnNewsFooter');
-  await expect(page.locator('#whatsNew .news')).toHaveCount(9);
+  await expect(page.locator('#whatsNew .news')).toHaveCount(NEWS_IDS.length);
   await page.click('#whatsNewClose');
   await expect(page.locator('#btnNewsFooter')).toBeFocused();
 

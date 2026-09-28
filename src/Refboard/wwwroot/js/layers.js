@@ -28,7 +28,7 @@ const LAYERS = [
   { id: 'ghost', label: 'Ghost of the last pose', els: ['ghostImg'], base: 0.35,
     on: () => el('optGhost').checked, toggle: () => layerOption('optGhost'),
     note: () => el('optGhost').checked && !state.ghostSrc ? 'from the next pose' : '' },
-  { id: 'head', label: 'Loomis head', els: ['headOverlay'], base: 1,
+  { id: 'head', label: 'Head construction', els: ['headOverlay'], base: 1,
     on: () => !!state.headOn, toggle: () => toggleHead() },
   { id: 'pose', label: 'Pose skeleton', els: ['poseOverlay'], base: 1,
     on: () => !!state.poseOn, toggle: () => togglePose() },

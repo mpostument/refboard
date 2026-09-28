@@ -9,9 +9,35 @@ namespace Refboard.Services;
 /// feature pass only when its own, longer interval has elapsed, or someone
 /// asked for it now via POST /api/reindex.
 /// </summary>
-public sealed class ReindexHostedService(RefboardOptions opts, ILogger<ReindexHostedService> logger)
+public sealed class ReindexHostedService(RefboardOptions opts, UserStore store, ILogger<ReindexHostedService> logger)
     : BackgroundService
 {
+    private static readonly SemaphoreSlim WakeSignal = new(0, 1);
+
+    /// <summary>Runs the next tick now rather than at the end of the interval
+    /// - after an upload is sorted into a folder, so the library shows it
+    /// there in seconds, not minutes. Several calls before the tick make one.</summary>
+    public static void Wake()
+    {
+        try { WakeSignal.Release(); } catch (SemaphoreFullException) { /* a tick is already due */ }
+    }
+
+    // The tags each sorted upload was given, by its file name - from the
+    // "uploads" documents the page keeps (see js/store.js, js/sort.js).
+    private Func<string, List<string>?> UploadTags()
+    {
+        var byFile = new Dictionary<string, List<string>>();
+        foreach (var doc in store.ListItems("uploads").Values)
+        {
+            if (doc.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+            if (!doc.TryGetProperty("file", out var f) || f.ValueKind != System.Text.Json.JsonValueKind.String) continue;
+            if (!doc.TryGetProperty("tags", out var t) || t.ValueKind != System.Text.Json.JsonValueKind.Array) continue;
+            byFile[f.GetString()!] = t.EnumerateArray()
+                .Where(x => x.ValueKind == System.Text.Json.JsonValueKind.String).Select(x => x.GetString()!).ToList();
+        }
+        return name => byFile.GetValueOrDefault(name);
+    }
+
     /// <summary>Set by the /api/reindex endpoint. A plain volatile flag rather
     /// than a channel or queue: this is a single-process, single-instance tool
     /// with one background loop, and "run the expensive pass on the next
@@ -35,7 +61,7 @@ public sealed class ReindexHostedService(RefboardOptions opts, ILogger<ReindexHo
             try
             {
                 LastIndex = IndexBuilder.Build(opts.SourceDir, opts.RefsPrefix, opts.RotationPatterns,
-                    (Path.Combine(opts.DataDir, "uploads"), "/uploads/"));
+                    (store.UploadsDir, "/uploads/"), UploadTags());
                 AtomicFile.WriteJson(Path.Combine(opts.DataDir, "index.json"), LastIndex);
                 logger.LogInformation("indexed {Total} images in {Packs} packs -> index.json",
                     LastIndex.TotalImages, LastIndex.Packs.Count);
@@ -62,7 +88,7 @@ public sealed class ReindexHostedService(RefboardOptions opts, ILogger<ReindexHo
                 }
             }
 
-            try { await Task.Delay(TimeSpan.FromSeconds(opts.IndexIntervalSecs), stoppingToken); }
+            try { await WakeSignal.WaitAsync(TimeSpan.FromSeconds(opts.IndexIntervalSecs), stoppingToken); }
             catch (OperationCanceledException) { }
         }
     }

@@ -10,7 +10,7 @@
 
 // Other words a tool is looked for by, keyed by its element's id.
 const COMMAND_WORDS = {
-  btnHead: 'face construction ball thirds anime',
+  btnHead: 'face construction ball thirds loomis anime eyes',
   btnPose: 'skeleton gesture figure body weight',
   btnEyedropper: 'colour color picker sample pipette mix recipe paint watercolour',
   btnCompare: 'overlay my drawing check photo',
@@ -26,7 +26,7 @@ const COMMAND_WORDS = {
   'view-dashboard': 'home start',
   'view-all': 'browse grid images search',
   'view-drop': 'open file upload photo check own image video',
-  'view-forms': '3d model mannequin head asaro planes light shadow',
+  'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading',
   'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
   'view-train': 'drill practice exercise test',
   btnLibrary: 'folders packs',
@@ -76,6 +76,15 @@ function collectCommands() {
     }
     out.push(...layerCommands());
     out.push({ id: 'btnMaterials', label: 'My materials', hint: 'Medium', words: COMMAND_WORDS.btnMaterials, run: openMaterials });
+    // The head construction in either style - turned on too, if it is off.
+    for (const [k, label] of Object.entries(HEAD_STYLES)) {
+      if (state.headOn && k === headStyle) continue;
+      out.push({
+        id: 'head-' + k, label: 'Head construction: ' + label, hint: 'L',
+        words: k === 'anime' ? 'face manga eyes chin' : 'face thirds ball',
+        run: () => { setHeadStyle(k); if (!state.headOn) toggleHead(); },
+      });
+    }
   } else {
     for (const b of el('rail').querySelectorAll('button')) {
       // A section you hid (js/stages.js) is off the rail, not out of reach.

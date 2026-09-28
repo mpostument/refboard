@@ -144,11 +144,15 @@ proportions. Anime has its own rules, and the tools should know them.
 
 Head and face:
 
-- **Anime head construction on a photo.** The same fit to the head's
-  angle as the Loomis head, with anime proportions: eyes lower and larger,
-  a small nose and mouth, a pointed chin. Take a photo of a person and see
-  where anime eyes, nose and mouth sit at that angle - the angles
-  (three-quarter, from below, tilted) being the hard part of anime.
+In place: the anime head on a photo - Head construction (L, `js/vision.js`)
+has two styles, switched in the note under the picture or from Ctrl+K and
+kept: Loomis's, and Anime (`ANIME_HEAD`, `animeFace()`), which keeps the
+ball, side planes and centre line fitted to the head's angle and draws the
+anime face on them - eyes lower and bigger, one eye apart, with the lash
+line, iris and gleam; a small nose and mouth; a pointed chin. Still to come
+on it: a choice of anime styles (the proportions differ from studio to
+studio), and the eye's angle-by-angle detail - see The anime eye.
+
 - **An anime head in 3D.** A stylised head to turn: how flat anime eyes,
   a dot of a nose and the mouth shift and squeeze as it turns - anime
   features do not foreshorten the way real ones do.
@@ -169,10 +173,14 @@ Body:
 
 Shading and colour:
 
-- **Cel shading in 3D.** An "anime" finish: two or three tones with a
-  hard shadow edge, and a rim light - where exactly the shadow shape falls
-  on a head, a figure, cloth, under any light. The most direct help with
-  anime colouring; the 3D forms' finishes already have the place for it.
+In place: cel shading in 3D - the Anime finish under Surface
+(`FORM_FINISHES.anime`, `celTones()` in `js/forms-models.js`, the cel block
+in `injectFormGuides()`): a flat base in the key light's colour, one
+hard-edged shadow tone of its own colour (`celShadow()`), a highlight sized
+by the Shine slider, renamed Highlight meanwhile, and the Second light as a
+rim. Cast shadows go hard while any form is Anime. Still to come on it: an
+ink outline (the inverted hull), a second, darker shadow tone for occlusion.
+
 - **A photo as anime colouring.** Each area of the photo reduced to a base
   colour, a shadow and a highlight, as anime is coloured - with the shadow
   colour shifted toward purple or blue the way anime usually does.
@@ -243,6 +251,18 @@ Clothes, movement, settings:
   in what order the layers.
 
 ## Library
+
+In place: uploads sorted and tagged (`js/sort.js`) - behind the container,
+each picture kept is looked at in the browser by the pose and face models
+and an ImageNet classifier (EfficientNet-Lite0, on the CPU), tagged (one
+person, sitting, three-quarter view, lit from the left, low key, warm,
+seashore...) and moved by the server into a folder from its own list
+(`UserStore.Folders`: Figure, Portrait, Animals, Landscape, City, Plants,
+Still life, Illustration, My work, Other). The folders are the Uploads
+pack's groups; the tags go into index.json and the library's search matches
+them word by word. What was not sorted - older uploads, a failed try - is
+queued again when the app opens. Still to come: the same for the mounted
+packs (below), and moving a picture to another folder by hand.
 
 - **Auto tags.** The pose and face models run over the whole library and
   tag every image: standing, sitting or lying, the head's angle, where the

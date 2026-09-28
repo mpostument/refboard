@@ -156,7 +156,57 @@ const FORM_FINISHES = {
   metal:  { label: 'Metal',  gloss: 0.75, metal: 1, env: true, hint: 'Metal - mirrors its surroundings; almost no colour of its own in shadow' },
   glass:  { label: 'Glass',  gloss: 0.97, transmission: 1, env: true, hint: 'Glass - see-through, bending what is behind it. Its cast shadow stays solid here: shadow maps have no transparency' },
   velvet: { label: 'Velvet', gloss: 0.02, sheen: 1, hint: 'Cloth - brightest at the edges, the reverse of a matte form' },
+  // Not a material but a way of colouring one - see celTones() and the cel
+  // block in injectFormGuides(). Shine sets the highlight's size here.
+  anime:  { label: 'Anime',  gloss: 0.35, cel: true, hint: 'Cel shading - a flat colour, one hard-edged shadow tone and a sharp highlight; the Second light becomes a rim' },
 };
+
+/* ---- cel shading. Anime colours a form with a few flat tones, not a
+   gradient: the base colour in the light, one shadow colour, a highlight -
+   and a rim of light on the edge turned away. The tones are worked out here,
+   once per form, in sRGB 0-255; the shader only decides where each goes. */
+
+// A colour as OKLCH - [lightness 0-1, chroma, hue in degrees] - the space
+// where "a bit darker, a bit bluer" means the same for every colour.
+function rgbToOklch([r, g, b]) {
+  const [L, a, bb] = linToOklab(srgbToLin(r / 255), srgbToLin(g / 255), srgbToLin(b / 255));
+  return [L, Math.hypot(a, bb), (Math.atan2(bb, a) * 180 / Math.PI + 360) % 360];
+}
+
+/* The shadow tone for a base colour, as anime colours it: not the base with
+   black in it (that is what makes shadows muddy) but its own colour, usually
+   pulled toward blue-purple - the cool of the sky that fills a shadow.
+   `rgb` is sRGB 0-255; returns the same. lchRgb(L, C, h) builds a colour
+   back from OKLCH and keeps it inside the screen's gamut. */
+function celShadow(rgb) {
+  const [L, C, h] = rgbToOklch(rgb);
+  const COOL = 285; // blue-violet
+  // A third of the way to it, the short way round the circle - skin goes
+  // toward rose-violet, not through green; a navy already there stays put.
+  const dh = ((COOL - h + 540) % 360) - 180;
+  // A near-grey has no hue of its own to keep: a white shirt's shadow is a
+  // pale lavender, the commonest shadow in anime.
+  const grey = C < 0.03;
+  // Light colours fall further than dark ones, which have little room left.
+  // Chroma rises a touch: a shadow greyer than its light reads as dirt.
+  return lchRgb(L - (0.1 + 0.1 * L), grey ? 0.035 : C * 1.1, grey ? COOL : h + dh / 3);
+}
+
+// All the tones one form needs: its base in the key light's colour, the
+// shadow, a highlight and the rim (in the second light's colour).
+function celTones(color, lightColor, rimColor) {
+  const base = hexToRgb(color), light = hexToRgb(lightColor);
+  // The light's colour tints what it touches - a warm lamp warms the base -
+  // but not the shadow, which by definition it does not reach.
+  const lit = base.map((c, i) => Math.round(c * light[i] / 255));
+  const toward = (a, b, t) => a.map((c, i) => Math.round(c + (b[i] - c) * t));
+  return {
+    base: lit,
+    shade: celShadow(base),
+    hi: toward(lit, light, 0.75),
+    rim: toward(lit, hexToRgb(rimColor), 0.8),
+  };
+}
 
 /* Each geometry is built around the origin at roughly unit radius; the
    renderer lifts whatever rotation and scale produce so it rests on the

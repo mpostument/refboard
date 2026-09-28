@@ -74,5 +74,20 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 [ "$pack" = 1 ] || fail "the upload never joined the library as the Uploads pack"
+# Sorting (js/sort.js decides, UserStore moves): into a folder from the
+# server's own list - served by its id after, and in the library under that
+# folder's group within seconds - and never into a folder the client names.
+id=$(echo "$up" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+curl -fsS -X PUT -H 'Content-Type: application/json' --data '{"folder":"figure"}' "$BASE/api/uploads/$id/folder" \
+  | grep -q '"folder":"figure"' || fail "upload not sorted into a folder"
+curl -fsS -o /dev/null "$BASE/api/uploads/$id" || fail "a sorted upload is not served by its id"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Content-Type: application/json' --data '{"folder":"../x"}' "$BASE/api/uploads/$id/folder")" = 400 ] \
+  || fail "a folder outside the list was not refused"
+group=0
+for _ in $(seq 1 30); do
+  if curl -fsS "$BASE/index.json" 2>/dev/null | grep -q "/uploads/Figure/$id"; then group=1; break; fi
+  sleep 1
+done
+[ "$group" = 1 ] || fail "the sorted upload never showed in the library under Figure"
 
 echo "[$PLATFORM] smoke test passed"

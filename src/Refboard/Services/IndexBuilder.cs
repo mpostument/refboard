@@ -26,11 +26,17 @@ public static class IndexBuilder
     /// <paramref name="uploads"/> on <see cref="Build"/>.</summary>
     public const string UploadsPack = "Uploads";
 
+    /// <summary>The group the uploads not yet sorted into a folder are in.</summary>
+    public const string UnsortedGroup = "Unsorted";
+
     /// <param name="uploads">What the app was given to keep (UserStore), as
     /// one more pack after the mounted ones - so an uploaded reference can be
-    /// ticked and drawn from like any other. Null for none.</param>
+    /// ticked and drawn from like any other - each folder it has been sorted
+    /// into a group. Null for none.</param>
+    /// <param name="uploadTags">An uploaded file's tags, by its file name; null
+    /// when it has none.</param>
     public static IndexDocument Build(string sourceDir, string urlPrefix, string[] rotationPatterns,
-        (string Dir, string Prefix)? uploads = null)
+        (string Dir, string Prefix)? uploads = null, Func<string, List<string>?>? uploadTags = null)
     {
         if (!Directory.Exists(sourceDir))
             throw new DirectoryNotFoundException($"source directory not found: {sourceDir}");
@@ -62,17 +68,24 @@ public static class IndexBuilder
         {
             var groups = new Dictionary<string, GroupRecord>();
             WalkPack(up.Dir, up.Dir, up.Dir, up.Prefix, [], groups, ref totalBytes);
-            var images = groups.Values.SelectMany(g => g.Images).ToList();
-            if (images.Count > 0)
+            // The folder itself holds what is not sorted yet; its subfolders
+            // are the sorted ones, already named as the library shows them.
+            var rootName = Path.GetFileName(up.Dir)!;
+            var ordered = groups.Values.OrderBy(g => g.Name == rootName ? 1 : 0)
+                .ThenBy(g => g.Name, NaturalComparer.Instance).ToList();
+            foreach (var g in ordered)
+            {
+                if (g.Name == rootName) g.Name = UnsortedGroup;
+                if (uploadTags != null)
+                    foreach (var img in g.Images) img.Tags = uploadTags(img.Src[(img.Src.LastIndexOf('/') + 1)..]);
+            }
+            var count = ordered.Sum(g => g.Images.Count);
+            if (count > 0)
             {
                 // A mounted folder already called "Uploads" keeps its name.
                 var name = packs.Any(p => p.Name == UploadsPack) ? UploadsPack + " (kept by Refboard)" : UploadsPack;
-                totalImages += images.Count;
-                packs.Add(new PackRecord
-                {
-                    Name = name, Count = images.Count,
-                    Groups = [new GroupRecord { Name = name, Images = images }],
-                });
+                totalImages += count;
+                packs.Add(new PackRecord { Name = name, Count = count, Groups = ordered });
             }
         }
 

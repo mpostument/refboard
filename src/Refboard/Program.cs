@@ -16,6 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var options = RefboardOptions.FromEnvironment();
 builder.Services.AddSingleton(options);
+builder.Services.AddSingleton<UserStore>();
 builder.Services.AddHostedService<ReindexHostedService>();
 
 builder.WebHost.ConfigureKestrel(k => k.ListenAnyIP(options.Port));
@@ -96,13 +97,15 @@ app.MapGet("/healthz", () => Results.Ok(new { status = "ok", version = appVersio
 app.MapPost("/api/reindex", () =>
 {
     ReindexHostedService.ReindexRequested = true;
+    ReindexHostedService.Wake();
     return Results.Accepted();
 });
 
 // ---- what the app is given to keep - see UserStore. The page asks
 // /healthz whether a backend is there before using any of this; on GitHub
 // Pages there is none and it keeps things in the browser instead.
-var store = new UserStore(options);
+var store = app.Services.GetRequiredService<UserStore>();
+var typeOfExt = UserStore.Types.GroupBy(kv => kv.Value).ToDictionary(g => g.Key, g => g.First().Key);
 
 // The body is the file itself, its type in Content-Type. A video can be
 // large, so the limit is lifted from Kestrel's 30 MB for this one route.
@@ -117,6 +120,24 @@ app.MapPost("/api/uploads", async (HttpContext ctx) =>
     return Results.Ok(entry);
 });
 app.MapGet("/api/uploads", () => Results.Ok(store.ListFiles()));
+// A kept file by its id, whichever folder it has been sorted into - so the
+// page's own links to it (the uploads list, a backup) never go stale.
+app.MapGet("/api/uploads/{id}", (string id) =>
+    !UserStore.ValidFileId(id) ? Results.BadRequest()
+    // Rooted, or Results.File would look for it under wwwroot.
+    : store.FindFile(id) is { } at ? Results.File(Path.GetFullPath(at.Path), typeOfExt.GetValueOrDefault(Path.GetExtension(id), "application/octet-stream"))
+    : Results.NotFound());
+// Sorts a kept picture into one of UserStore.Folders; the library shows it
+// there after the index pass this asks for.
+app.MapPut("/api/uploads/{id}/folder", (string id, FolderRequest req) =>
+{
+    if (!UserStore.ValidFileId(id) || req.Folder is null || !UserStore.Folders.ContainsKey(req.Folder))
+        return Results.BadRequest();
+    if (store.MoveFile(id, req.Folder) is not { } entry) return Results.NotFound();
+    ReindexHostedService.ReindexRequested = true;
+    ReindexHostedService.Wake();
+    return Results.Ok(entry);
+});
 app.MapDelete("/api/uploads/{id}", (string id) =>
     !UserStore.ValidFileId(id) ? Results.BadRequest() : store.DeleteFile(id) ? Results.NoContent() : Results.NotFound());
 
@@ -137,3 +158,5 @@ app.MapDelete("/api/items/{kind}/{id}", (string kind, string id) =>
     : store.DeleteItem(kind, id) ? Results.NoContent() : Results.NotFound());
 
 app.Run();
+
+record FolderRequest(string? Folder);

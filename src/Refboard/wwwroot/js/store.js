@@ -36,7 +36,7 @@ function initStore() {
 
 function storeWhere() {
   return {
-    server: { saved: true, text: 'Saved on this server - kept with your library, and in it as the Uploads pack.' },
+    server: { saved: true, text: 'Saved on this server, and sorted: each picture is looked at, tagged and put in a folder - Figure, Portrait, Landscape... - in the Uploads pack of the library.' },
     browser: { saved: true, text: 'Kept in this browser, on this device only.' },
     memory: { saved: false, text: 'Not saved in this version - gone when the page is reloaded.' },
   }[storeMode];
@@ -119,8 +119,10 @@ async function storeFile(blob) {
   return { id, url: storeUrls.get(id), bytes: blob.size };
 }
 
+// On the server by id through the API, not by its path under uploads/,
+// which changes when it is sorted into a folder (js/sort.js).
 async function storeFileUrl(id) {
-  if (storeMode === 'server') return 'uploads/' + id;
+  if (storeMode === 'server') return 'api/uploads/' + id;
   if (!storeUrls.has(id)) {
     const blob = await storeFileBlob(id);
     if (!blob) return null;
@@ -130,7 +132,7 @@ async function storeFileUrl(id) {
 }
 
 async function storeFileBlob(id) {
-  if (storeMode === 'server') { const r = await fetch('uploads/' + id); return r.ok ? r.blob() : null; }
+  if (storeMode === 'server') { const r = await fetch('api/uploads/' + id); return r.ok ? r.blob() : null; }
   if (storeMode === 'browser') return (await idbGet('files', id))?.blob || null;
   return storeMem.files.get(id) || null;
 }
@@ -140,6 +142,13 @@ async function storeFiles() {
   if (storeMode === 'server') return apiJson('api/uploads');
   const all = storeMode === 'browser' ? (await idbAll('files')).map(f => [f.id, f.blob]) : [...storeMem.files];
   return all.map(([id, blob]) => ({ id, bytes: blob.size }));
+}
+
+// Moves a kept picture into one of the server's folders (UserStore.Folders).
+// Only behind the container - on the web page there are no folders.
+async function storeSortFile(id, folder) {
+  return apiJson(`api/uploads/${id}/folder`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder }) });
 }
 
 async function storeDeleteFile(id) {
@@ -157,6 +166,15 @@ async function storeItems(kind) {
   const all = storeMode === 'browser' ? (await idbAll('items')).map(i => [i.key, i.doc]) : [...storeMem.items];
   for (const [key, doc] of all) if (key.startsWith(pre)) out[key.slice(pre.length)] = doc;
   return out;
+}
+
+async function storeItem(kind, id) {
+  if (storeMode === 'server') {
+    const r = await fetch(`api/items/${kind}/${id}`);
+    return r.ok ? r.json() : null;
+  }
+  if (storeMode === 'browser') return (await idbGet('items', `${kind}/${id}`))?.doc || null;
+  return storeMem.items.get(`${kind}/${id}`) || null;
 }
 
 async function storeKinds() {
@@ -186,8 +204,15 @@ async function keepUpload(blob, { name = blob.name || 'picture', from = 'drop' }
   await initStore();
   const f = await storeFile(blob);
   const doc = { file: f.id, name, type: blob.type, from, bytes: blob.size, t: Date.now() };
+  // Kept before and sorted since - the server says which folder it is in:
+  // it stays there, with its tags.
+  if (f.folder) {
+    const had = await storeItem('uploads', uploadKey(f.id));
+    Object.assign(doc, { folder: f.folder, tags: (had && had.tags) || [] });
+  }
   await storePutItem('uploads', uploadKey(f.id), doc);
   storeChanged();
+  if (storeMode === 'server' && !doc.folder) queueSort(doc);
   return { ...doc, url: f.url };
 }
 
