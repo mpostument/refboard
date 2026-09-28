@@ -85,7 +85,7 @@ curl -fsS -o /dev/null "$BASE/api/uploads/$id" || fail "a sorted upload is not s
   || fail "a folder outside the list was not refused"
 group=0
 for _ in $(seq 1 30); do
-  if curl -fsS "$BASE/index.json" 2>/dev/null | grep -q "/uploads/Figure/$id"; then group=1; break; fi
+  if curl -fsS "$BASE/index.json" 2>/dev/null | grep -q "\"src\":\"uploads/Figure/$id"; then group=1; break; fi
   sleep 1
 done
 [ "$group" = 1 ] || fail "the sorted upload never showed in the library under Figure"

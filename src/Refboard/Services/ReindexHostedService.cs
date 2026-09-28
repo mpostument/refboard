@@ -60,8 +60,11 @@ public sealed class ReindexHostedService(RefboardOptions opts, UserStore store, 
         {
             try
             {
+                // "uploads/", relative: resolved against the page, so it works
+                // at the site root and behind a proxy that serves the app
+                // under a path (/refboard/) and forwards nothing else.
                 LastIndex = IndexBuilder.Build(opts.SourceDir, opts.RefsPrefix, opts.RotationPatterns,
-                    (store.UploadsDir, "/uploads/"), UploadTags());
+                    (store.UploadsDir, "uploads/"), UploadTags());
                 AtomicFile.WriteJson(Path.Combine(opts.DataDir, "index.json"), LastIndex);
                 logger.LogInformation("indexed {Total} images in {Packs} packs -> index.json",
                     LastIndex.TotalImages, LastIndex.Packs.Count);
