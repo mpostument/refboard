@@ -64,7 +64,10 @@ curl -fsS -o /dev/null "$BASE/$url" || fail "upload not served back at /$url"
 curl -fsS -X PUT -H 'Content-Type: application/json' --data '{"name":"smoke"}' "$BASE/api/items/smoke/one" || fail "item not stored"
 curl -fsS "$BASE/api/items/smoke/one" | grep -q '"name":"smoke"' || fail "item not read back"
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/.items/smoke/one.json")" = 404 ] || fail "items are served as static files"
-[ "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/items/..%2Fx/one")" = 400 ] || fail "a kind with ../ was accepted"
+# A write that tries to climb out of .items: refused - 400 from the name
+# check, or 404 from the rule that no dot-prefixed path is served, either way.
+code=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Content-Type: application/json' --data '{}' "$BASE/api/items/..%2Fx/one")
+case "$code" in 4??) ;; *) fail "a write to a kind with ../ was not refused (HTTP $code)" ;; esac
 pack=0
 for _ in $(seq 1 30); do
   if curl -fsS "$BASE/index.json" 2>/dev/null | grep -q '"name":"Uploads"'; then pack=1; break; fi
