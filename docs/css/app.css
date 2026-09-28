@@ -1435,3 +1435,37 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #dataMsg:empty { display: none; }
 #dataMsg { font-size: 12px; }
 #dataMsg.bad { color: var(--bad); }
+
+/* ---- Generate references (js/generate.js) */
+#viewGenerate h4 { margin: 14px 0 6px; font-size: 11px; color: var(--dim); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+#viewGenerate .gen-row:first-child h4 { margin-top: 0; }
+.gen-extra { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+.gen-extra input { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
+.gen-go { gap: 12px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
+.gen-go label { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+#genGo { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 8px 20px; font-weight: 600; cursor: pointer; }
+#genGo:disabled { opacity: .55; cursor: progress; }
+#genResults { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.gen-open { display: block; width: 100%; aspect-ratio: 2 / 3; padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); cursor: pointer; }
+.gen-open:hover { border-color: var(--accent); }
+.gen-open img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#genResults li { position: relative; }
+.gen-steps { position: absolute; left: 6px; bottom: 6px; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 0;
+  background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink); cursor: pointer; }
+.gen-steps:hover, .gen-steps:focus-visible { background: var(--accent); color: var(--on-accent); }
+
+/* ---- How to draw it (js/steps.js) */
+.sheet-box.steps-box { width: min(1080px, 100%); }
+.steps-main { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 18px; align-items: start; }
+#stepsFrame { width: 100%; height: auto; max-height: 62vh; object-fit: contain; border-radius: 8px; background: #fbfaf6; display: block; }
+.steps-text h3 { margin: 4px 0 8px; font-size: 18px; font-weight: 600; }
+.steps-text p { margin: 0 0 14px; line-height: 1.5; }
+.steps-nav { gap: 8px; }
+.steps-nav button:disabled { opacity: .45; cursor: default; }
+.steps-note { margin-top: 18px; }
+#stepsStrip { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; overflow-x: auto; }
+#stepsStrip button { display: flex; flex-direction: column; gap: 4px; align-items: center; padding: 4px; border: 1px solid var(--line); border-radius: 8px;
+  background: none; color: var(--dim); font-size: 11px; cursor: pointer; }
+#stepsStrip button[aria-current="true"] { border-color: var(--accent); color: var(--ink); }
+#stepsStrip canvas { display: block; border-radius: 4px; background: #fbfaf6; }
+@media (max-width: 760px) { .steps-main { grid-template-columns: 1fr; } }

@@ -23,6 +23,7 @@
 const SORT_FOLDERS = {
   figure: 'Figure', portrait: 'Portrait', animals: 'Animals', landscape: 'Landscape', city: 'City',
   plants: 'Plants', 'still-life': 'Still life', illustration: 'Illustration', 'my-work': 'My work', other: 'Other',
+  generated: 'Generated',
 };
 
 /* Which classifier labels (lower-case) mean which folder, when there is no

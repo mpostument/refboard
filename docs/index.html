@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=d8e27096">
+<link rel="stylesheet" href="css/app.css?v=7d2e5f72">
 </head>
 <body>
 <div id="setup">
@@ -64,6 +64,8 @@
       <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
       <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images - browse and search" aria-label="All images"></button>
       <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
+      <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
+      <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
     </div>
     <div class="rail-stage" role="group" aria-label="Practise" data-stage="Practise"
          data-blurb="The basics, a little every day.">
@@ -294,6 +296,28 @@
           <div class="count" id="formsHint">Click a form to select it, the selected one to light that spot · click the floor to throw the shadow there · drag to orbit · scroll to zoom · G / R / S move, rotate, scale the selected form, as in Blender</div>
         </div>
         <div id="formsPanel"></div>
+      </div>
+
+      <!-- Generate references - js/generate.js; only behind a server with a
+           ComfyUI (COMFY_URL). The choices are drawn by renderGenerate(). -->
+      <div id="viewGenerate" class="hidden">
+        <div class="col-wrap">
+          <div class="col-left gen-left">
+            <div id="genChoices"></div>
+            <label class="gen-extra">More tags <input type="text" id="genExtra" placeholder="e.g. hat, rain, holding umbrella" maxlength="200"></label>
+            <div class="row gen-go">
+              <label>How many <select id="genCount"><option>1</option><option selected>2</option><option>4</option></select></label>
+              <button type="button" id="genGo" class="primary">Generate</button>
+              <span class="count" id="genStatus" role="status"></span>
+            </div>
+            <p class="count" id="genWhere"></p>
+          </div>
+          <div class="col-right gen-right">
+            <h4>Made here</h4>
+            <ul id="genResults" aria-label="Generated pictures"></ul>
+            <div class="count" id="genEmpty">What you generate shows here - click one to open it with every tool.</div>
+          </div>
+        </div>
       </div>
 
       <!-- Trainers - see TRAINERS. Built by showTrain(). -->
@@ -784,6 +808,32 @@
     </div>
     <ul id="whatsNewList"></ul>
     <details id="whatsNewEarlier" class="hidden"><summary>Earlier</summary><ul id="whatsNewEarlierList" style="list-style:none;margin:0;padding:0"></ul></details>
+  </div>
+</div>
+
+<!-- How to draw it - js/steps.js: the picture in the workspace taken back to
+     the steps it is drawn in, in the medium picked. -->
+<div id="stepsSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="stepsTitle">
+  <div class="sheet-box steps-box">
+    <div class="row">
+      <h2 id="stepsTitle" class="grow">How to draw it</h2>
+      <button type="button" class="ghost" id="stepsClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="chips" id="stepsMedia" role="group" aria-label="Medium"></div>
+    <div class="steps-main">
+      <canvas id="stepsFrame" role="img" aria-labelledby="stepsStepTitle"></canvas>
+      <div class="steps-text">
+        <div class="count" id="stepsCount"></div>
+        <h3 id="stepsStepTitle"></h3>
+        <p id="stepsStepText"></p>
+        <div class="row steps-nav">
+          <button type="button" class="ghost" id="stepsPrev" title="The step before (Left arrow)">Back</button>
+          <button type="button" class="primary" id="stepsNext" title="The next step (Right arrow)">Next</button>
+        </div>
+        <p class="count steps-note">Worked out from the finished picture - a guide to the order, not a record of how it was made.</p>
+      </div>
+    </div>
+    <ol id="stepsStrip" aria-label="All the steps"></ol>
   </div>
 </div>
 
@@ -1432,28 +1482,30 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=27c5caf8"></script>
-<script src="js/setup.js?v=1f000a1c"></script>
+<script src="js/core.js?v=da247ced"></script>
+<script src="js/setup.js?v=e5f0c896"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
-<script src="js/uploads.js?v=638d268d"></script>
+<script src="js/uploads.js?v=69907552"></script>
 <script src="js/session.js?v=c661ddcf"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0bc3b11f"></script>
 <script src="js/tools.js?v=dbf4607e"></script>
 <script src="js/materials.js?v=a9b7eb53"></script>
 <script src="js/vision.js?v=2e157b5d"></script>
-<script src="js/sort.js?v=3be0d526"></script>
+<script src="js/sort.js?v=a54fa3a1"></script>
 <script src="js/study.js?v=80a3719e"></script>
 <script src="js/layers.js?v=a10c648e"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
 <script src="js/pins.js?v=1e8e7dd7"></script>
-<script src="js/workspace.js?v=28addd88"></script>
+<script src="js/workspace.js?v=45d835da"></script>
 <script src="js/train.js?v=9fd9bbc0"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=e12d93de"></script>
+<script src="js/command.js?v=e2067b65"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=6675ac6b"></script>
+<script src="js/whatsnew.js?v=34dbd86e"></script>
+<script src="js/steps.js?v=bb3e6dba"></script>
+<script src="js/generate.js?v=de84535d"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
