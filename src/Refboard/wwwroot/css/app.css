@@ -44,6 +44,27 @@ body {
 button, select, input { font: inherit; color: inherit; }
 .hidden { display: none !important; }
 
+/* ---- keyboard and screen reader (js/a11y.js). One focus ring for every
+   control, in the theme's accent, shown when the keyboard moved the focus -
+   not on every click. Thicker than the browser's own, which disappears on
+   the darker themes. */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#main:focus { outline: none; } /* the skip link's target: a landmark, not a control */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.skip-link {
+  position: fixed; left: 70px; top: 10px; z-index: 90; padding: 8px 14px; border-radius: 8px;
+  background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none;
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+/* Asked for in the system settings: no sliding and fading anywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
 /* ---------- setup: the app shell ----------
    Three columns, in the order the work actually happens: the library on the
    left, whatever you are looking at in the middle, what you are about to do
@@ -1310,18 +1331,29 @@ section { margin-bottom: 20px; }
 #tourNote .row { gap: 6px; }
 @media (prefers-reduced-motion: reduce) { #tourRing, #tourNote { transition: none; } }
 
-/* The theme editor - see js/theme-editor.js. */
-#themeEditor {
+/* Sheets: the dialogs that open beside the rail - the theme editor, My
+   materials, Your data - or, .sheet-center, in the middle (What's new).
+   One look and one behaviour for all: Esc and a click on the dimming close
+   one, Tab stays in it (initSheet() and the trap in js/a11y.js). */
+.sheet {
   position: fixed; inset: 0; z-index: 70; background: rgb(0 0 0 / .35);
   display: flex; justify-content: flex-start; align-items: flex-end; padding: 16px 16px 16px 64px;
 }
-#themeEditorBox {
-  width: min(400px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+.sheet.sheet-center { justify-content: center; align-items: center; padding: 16px; background: rgb(0 0 0 / .5); }
+.sheet-box {
+  width: min(420px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box;
   background: var(--panel); color: var(--ink); border: 1px solid var(--line-hi);
   border-radius: 12px; padding: 16px 18px; box-shadow: 0 24px 64px rgb(0 0 0 / .45);
   display: flex; flex-direction: column; gap: 12px;
 }
-#themeEditorBox h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.sheet-box h2 { margin: 0; font-size: 16px; font-weight: 600; }
+/* A button that reads as a link - the footer's What's new. */
+button.linkish { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+.sheet-box .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 6px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+@media (max-width: 700px) { .sheet { padding: 12px; } }
+
+/* The theme editor - see js/theme-editor.js. */
+#themeEditorBox { width: min(400px, 100%); }
 .te-name { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); }
 .te-name input { flex: 1; }
 .te-row { display: flex; align-items: center; gap: 12px; min-height: 40px; cursor: pointer; }
@@ -1340,22 +1372,9 @@ section { margin-bottom: 20px; }
 #themeEditorMsg:empty { display: none; }
 #themeEditorMsg { font-size: 12px; }
 .te-actions { gap: 8px; flex-wrap: wrap; }
-#themeSave { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 6px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 #themeMenu .theme-edit { border-top: 1px solid var(--line); border-radius: 0 0 7px 7px; margin-top: 4px; padding-top: 10px; color: var(--dim); }
 
-/* My materials - see js/materials.js. Opens beside the rail, like the
-   theme editor. */
-#materials {
-  position: fixed; inset: 0; z-index: 70; background: rgb(0 0 0 / .35);
-  display: flex; justify-content: flex-start; align-items: flex-end; padding: 16px 16px 16px 64px;
-}
-#materialsBox {
-  width: min(420px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box;
-  background: var(--panel); color: var(--ink); border: 1px solid var(--line-hi);
-  border-radius: 12px; padding: 16px 18px; box-shadow: 0 24px 64px rgb(0 0 0 / .45);
-  display: flex; flex-direction: column; gap: 12px;
-}
-#materialsBox h2 { margin: 0; font-size: 16px; font-weight: 600; }
+/* My materials - see js/materials.js. A sheet beside the rail. */
 #materialsList fieldset { border: 0; margin: 0 0 8px; padding: 0; }
 #materialsList legend { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); padding: 0 0 4px; }
 .mat-row { display: flex; align-items: center; min-height: 36px; padding: 0 6px; border-radius: 6px; }
@@ -1365,4 +1384,38 @@ section { margin-bottom: 20px; }
 .mat-row.off .mat-main { visibility: hidden; }
 #materialsBox input { accent-color: var(--accent); width: 16px; height: 16px; }
 #materialsNow span { color: var(--ink); }
-@media (max-width: 700px) { #materials { padding: 12px; } }
+
+/* What's new - see js/whatsnew.js. */
+#whatsNewList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.news { padding: 10px 12px; border-radius: 8px; background: var(--bg); }
+.news b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.news p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--dim); }
+.news button { margin-top: 8px; }
+#whatsNewEarlier summary { cursor: pointer; font-size: 12px; color: var(--dim); }
+#whatsNewEarlier .news { margin-top: 8px; }
+
+/* Your uploads (js/uploads.js) and Your data (js/backup.js). */
+#uploads h3 { margin: 0; font-size: 14px; font-weight: 600; }
+#uploadsWhere.unsaved { color: var(--bad); }
+#uploadsList { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+#uploadsList:empty { display: none; }
+.up-tile { position: relative; }
+.up-open {
+  display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel-2); overflow: hidden; cursor: pointer; color: var(--dim);
+}
+.up-open img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.up-open .icon { width: 28px; height: 28px; }
+.up-open:hover { border-color: var(--accent); }
+.up-name { display: block; font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+.up-forget {
+  position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px;
+  background: rgb(0 0 0 / .6); color: #fff; cursor: pointer; opacity: 0; display: grid; place-items: center;
+}
+.up-forget .icon { width: 14px; height: 14px; }
+.up-tile:hover .up-forget, .up-forget:focus-visible { opacity: 1; }
+#dataConfirm { padding: 10px 12px; border-radius: 8px; background: var(--bg); font-size: 13px; }
+#dataConfirm .row { gap: 8px; margin-top: 8px; }
+#dataMsg:empty { display: none; }
+#dataMsg { font-size: 12px; }
+#dataMsg.bad { color: var(--bad); }

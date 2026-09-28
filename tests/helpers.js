@@ -46,18 +46,29 @@ const quadrantsPng = () => makePng(200, 200, (x, y) =>
    does, with no server behind the page. */
 const EXPECTED_404 = /index\.json|features\.json|healthz|state\.js/;
 
+/* What's new would open over every test too: by default its items count
+   as seen - their ids read from js/whatsnew.js itself, so a new item needs
+   no change here. Its own spec turns this off - test.use({ seenNews: false }). */
+const NEWS_IDS = [...require('fs').readFileSync(require('path').join(__dirname, '../src/Refboard/wwwroot/js/whatsnew.js'), 'utf8')
+  .matchAll(/\{ id: '([a-z0-9-]+)'/g)].map(m => m[1]);
+
 const test = base.test.extend({
   // The first-time tour would sit over every other test; its own spec
   // turns this off - test.use({ seenTour: false }).
   seenTour: [true, { option: true }],
-  page: async ({ page, seenTour }, use) => {
+  seenNews: [true, { option: true }],
+  // A test that breaks something on purpose names the error it expects.
+  allowErrors: [null, { option: true }],
+  page: async ({ page, seenTour, seenNews, allowErrors }, use) => {
     if (seenTour) await page.addInitScript(() => localStorage.setItem('refboard.tour.v1', 'seen'));
+    if (seenNews) await page.addInitScript(ids => localStorage.setItem('refboard.news.v1', JSON.stringify(ids)), NEWS_IDS);
     const errors = [];
     page.on('pageerror', e => errors.push('pageerror: ' + e.message));
     page.on('console', m => {
       if (m.type() !== 'error') return;
       const url = m.location().url || '';
       if (/Failed to load resource/.test(m.text()) && EXPECTED_404.test(url)) return;
+      if (allowErrors && allowErrors.test(m.text() + ' ' + url)) return;
       errors.push('console.error: ' + m.text() + (url ? ` (${url})` : ''));
     });
     await use(page);
@@ -71,4 +82,4 @@ async function openApp(page) {
   await base.expect(page.locator('#summary')).not.toBeEmpty();
 }
 
-module.exports = { test, expect: base.expect, makePng, quadrantsPng, QUADS, openApp };
+module.exports = { test, expect: base.expect, makePng, quadrantsPng, QUADS, openApp, NEWS_IDS };

@@ -22,7 +22,15 @@ public static class IndexBuilder
     private static readonly HashSet<string> ImageExts =
         new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
 
-    public static IndexDocument Build(string sourceDir, string urlPrefix, string[] rotationPatterns)
+    /// <summary>The name the uploads pack takes in the library - see
+    /// <paramref name="uploads"/> on <see cref="Build"/>.</summary>
+    public const string UploadsPack = "Uploads";
+
+    /// <param name="uploads">What the app was given to keep (UserStore), as
+    /// one more pack after the mounted ones - so an uploaded reference can be
+    /// ticked and drawn from like any other. Null for none.</param>
+    public static IndexDocument Build(string sourceDir, string urlPrefix, string[] rotationPatterns,
+        (string Dir, string Prefix)? uploads = null)
     {
         if (!Directory.Exists(sourceDir))
             throw new DirectoryNotFoundException($"source directory not found: {sourceDir}");
@@ -48,6 +56,24 @@ public static class IndexBuilder
             var count = ordered.Sum(g => g.Images.Count);
             totalImages += count;
             packs.Add(new PackRecord { Name = packName, Count = count, Groups = ordered });
+        }
+
+        if (uploads is { } up && Directory.Exists(up.Dir))
+        {
+            var groups = new Dictionary<string, GroupRecord>();
+            WalkPack(up.Dir, up.Dir, up.Dir, up.Prefix, [], groups, ref totalBytes);
+            var images = groups.Values.SelectMany(g => g.Images).ToList();
+            if (images.Count > 0)
+            {
+                // A mounted folder already called "Uploads" keeps its name.
+                var name = packs.Any(p => p.Name == UploadsPack) ? UploadsPack + " (kept by Refboard)" : UploadsPack;
+                totalImages += images.Count;
+                packs.Add(new PackRecord
+                {
+                    Name = name, Count = images.Count,
+                    Groups = [new GroupRecord { Name = name, Images = images }],
+                });
+            }
         }
 
         var now = DateTimeOffset.UtcNow;

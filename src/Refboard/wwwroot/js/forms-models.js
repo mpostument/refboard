@@ -35,7 +35,6 @@
 
 const FORMS_KEY = 'refboard.forms.v1';
 const FORM_SCENES_KEY = 'refboard.formScenes.v1';
-const THREE_DEG = Math.PI / 180;
 // Exports match the stage's own proportions, at the same long edge as the
 // server's display copies (MAX_PX) - 4:3 when there is no stage to measure.
 const FORM_EXPORT_EDGE = 1600;

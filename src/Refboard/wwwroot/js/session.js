@@ -543,6 +543,7 @@ function show(src) {
     ? `${(state.cursor + 1).toLocaleString()} / ${state.pool.length.toLocaleString()}`
     : `#${state.drawn}` +
       (state.schedule ? `  ·  ${fmt(currentInterval())} × ${state.schedule[state.step][1] - state.doneInStep} left` : '');
+  announce(state.browse ? `Image ${el('pos').textContent}` : `Pose ${state.drawn}`);
 
   // A new pose is a new framing - a zoom level or a measured angle from the
   // last one describes nothing about this one, and would be actively

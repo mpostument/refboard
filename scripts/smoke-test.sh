@@ -49,4 +49,27 @@ if [ "$featured" != 1 ]; then
   exit 1
 fi
 
+# What the app is given to keep (UserStore): a file is stored under its
+# hash and served back, a type that could run as a page is refused, a JSON
+# document goes in and comes out - and only through the API - and the upload
+# joins the library as the Uploads pack on the next index pass.
+BASE="http://localhost:$PORT"
+fail() { echo "::error::[$PLATFORM] $1"; exit 1; }
+up=$(curl -fsS -X POST -H 'Content-Type: image/jpeg' --data-binary @/tmp/smoke/references/Test/a.jpg "$BASE/api/uploads") \
+  || fail "upload refused"
+url=$(echo "$up" | sed -n 's/.*"url":"\([^"]*\)".*/\1/p')
+curl -fsS -o /dev/null "$BASE/$url" || fail "upload not served back at /$url"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: text/html' --data '<b>' "$BASE/api/uploads")" = 400 ] \
+  || fail "an HTML upload was not refused"
+curl -fsS -X PUT -H 'Content-Type: application/json' --data '{"name":"smoke"}' "$BASE/api/items/smoke/one" || fail "item not stored"
+curl -fsS "$BASE/api/items/smoke/one" | grep -q '"name":"smoke"' || fail "item not read back"
+[ "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/.items/smoke/one.json")" = 404 ] || fail "items are served as static files"
+[ "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/items/..%2Fx/one")" = 400 ] || fail "a kind with ../ was accepted"
+pack=0
+for _ in $(seq 1 30); do
+  if curl -fsS "$BASE/index.json" 2>/dev/null | grep -q '"name":"Uploads"'; then pack=1; break; fi
+  sleep 1
+done
+[ "$pack" = 1 ] || fail "the upload never joined the library as the Uploads pack"
+
 echo "[$PLATFORM] smoke test passed"

@@ -34,16 +34,19 @@
   degrades gracefully without them - see boot() below - but index.json is
   what turns an empty page into a usable one.
 
-  All state is localStorage. There is one user and no account, so a
-  server-side session would be pure overhead.
+  Settings are localStorage. What you upload is kept by js/store.js - on the
+  container's disk when there is one, else in this browser if you ask. There
+  is one user and no account, so a server-side session would be pure overhead.
 -->
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=ce8d215f">
+<link rel="stylesheet" href="css/app.css?v=d51295f2">
 </head>
 <body>
 <div id="setup">
+  <!-- The first Tab: past the rail to the screen's content - see js/a11y.js. -->
+  <a class="skip-link" href="#main">Skip to the content</a>
   <!-- ---------------------------------------------- the rail: every section,
        grouped by the stage of work it is for - Prepare, Practise, Paint,
        Check - rather than by how it was built. data-view is read by
@@ -138,7 +141,7 @@
   </aside>
 
   <!-- ------------------------------------- middle: what you are looking at -->
-  <main id="main">
+  <main id="main" tabindex="-1">
     <header id="mainHead">
       <div class="row">
         <h1 class="grow" id="viewTitle">Dashboard</h1>
@@ -234,6 +237,17 @@
             <span class="count" id="dropSessionCount"></span>
             <button id="startDropped" class="ghost" type="button" style="margin-left:auto">Start session with these</button>
           </div>
+          <!-- What you have given the app, kept - see js/uploads.js. Where it
+               is kept is said here, never left to a reload to find out. -->
+          <div id="uploads">
+            <div class="row" style="margin-top:20px">
+              <h3 class="grow" id="uploadsTitle">Your uploads</h3>
+              <button class="ghost" type="button" id="btnData" title="Where things are kept, and a backup of everything">Your data...</button>
+            </div>
+            <p class="count" id="uploadsWhere" style="margin:6px 0"></p>
+            <label class="opt hidden" id="keepWrap"><input type="checkbox" id="optKeep"> Keep in this browser</label>
+            <ul id="uploadsList" aria-labelledby="uploadsTitle"></ul>
+          </div>
         </section>
 
         <!-- APP_VERSION below is the source of truth on GitHub Pages, which has
@@ -243,7 +257,8 @@
              container never shows a stale hand-typed number. -->
         <footer style="margin-top:40px; padding-top:16px; border-top:1px solid var(--line); color:var(--dim); font-size:11px;">
           <a href="https://github.com/mpostument/refboard" style="color:inherit">Refboard</a>
-          <span id="appVersion"></span>
+          <span id="appVersion"></span> ·
+          <button type="button" class="linkish" id="btnNewsFooter">What's new</button>
         </footer>
       </div>
 
@@ -508,6 +523,9 @@
   </filter>
 </svg>
 
+<!-- What changed, said by a screen reader - see announce() in js/a11y.js. -->
+<div id="announce" class="sr-only" role="status" aria-live="polite"></div>
+
 <div id="session" class="hidden">
   <div id="stage">
     <!-- .zoomwrap carries the zoom/pan transform, kept separate from #img's
@@ -718,8 +736,8 @@
 </div>
 
 <!-- The theme editor - see js/theme-editor.js. -->
-<div id="themeEditor" class="hidden" role="dialog" aria-modal="true" aria-labelledby="themeEditorTitle">
-  <div id="themeEditorBox">
+<div id="themeEditor" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="themeEditorTitle">
+  <div id="themeEditorBox" class="sheet-box">
     <div class="row">
       <h2 id="themeEditorTitle" class="grow">Theme editor</h2>
       <button type="button" class="ghost" id="themeEditorClose" title="Close without saving (Esc)">Close</button>
@@ -731,7 +749,7 @@
       session's stage, value scales and paint swatches never take a theme's colours.</p>
     <div id="themeEditorMsg" role="status"></div>
     <div class="row te-actions">
-      <button type="button" id="themeSave">Save</button>
+      <button type="button" id="themeSave" class="primary">Save</button>
       <button type="button" class="ghost" id="themeExport">Export file</button>
       <button type="button" class="ghost" id="themeImport">Import file</button>
       <button type="button" class="ghost hidden" id="themeDelete">Delete</button>
@@ -741,8 +759,8 @@
 </div>
 
 <!-- My materials - see js/materials.js. -->
-<div id="materials" class="hidden" role="dialog" aria-modal="true" aria-labelledby="materialsTitle">
-  <div id="materialsBox">
+<div id="materials" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="materialsTitle">
+  <div id="materialsBox" class="sheet-box">
     <div class="row">
       <h2 id="materialsTitle" class="grow">My materials</h2>
       <button type="button" class="ghost" id="materialsClose" title="Close (Esc)">Close</button>
@@ -756,10 +774,51 @@
   </div>
 </div>
 
+<!-- What's new - see js/whatsnew.js. -->
+<div id="whatsNew" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="whatsNewTitle">
+  <div class="sheet-box">
+    <div class="row">
+      <h2 id="whatsNewTitle" class="grow">What's new</h2>
+      <button type="button" class="ghost" id="whatsNewClose" title="Close (Esc)">Close</button>
+    </div>
+    <ul id="whatsNewList"></ul>
+    <details id="whatsNewEarlier" class="hidden"><summary>Earlier</summary><ul id="whatsNewEarlierList" style="list-style:none;margin:0;padding:0"></ul></details>
+  </div>
+</div>
+
+<!-- Your data - see js/uploads.js (the sheet) and js/backup.js (the archive). -->
+<div id="dataSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+  <div class="sheet-box">
+    <div class="row">
+      <h2 id="dataTitle" class="grow">Your data</h2>
+      <button type="button" class="ghost" id="dataClose" title="Close (Esc)">Close</button>
+    </div>
+    <p class="te-note" id="dataWhere"></p>
+    <label class="opt hidden" id="dataKeepWrap"><input type="checkbox" id="dataKeep"> Keep in this browser</label>
+    <p class="te-note" id="dataCounts"></p>
+    <p class="te-note">A backup is one .zip file: your settings, materials, themes, 3D scenes, practice log,
+      trainer scores and every upload. Keep it somewhere safe, or restore it on another computer.</p>
+    <div class="row te-actions">
+      <button type="button" class="primary" id="dataBackup">Download a backup</button>
+      <button type="button" class="ghost" id="dataRestore">Restore from a backup...</button>
+    </div>
+    <input type="file" id="dataRestoreInput" accept=".zip,application/zip" class="hidden">
+    <div id="dataConfirm" class="hidden">
+      <div id="dataConfirmText"></div>
+      <div class="row">
+        <button type="button" class="primary" id="dataConfirmYes">Restore</button>
+        <button type="button" class="ghost" id="dataConfirmNo">Cancel</button>
+      </div>
+    </div>
+    <div id="dataMsg" role="status"></div>
+  </div>
+</div>
+
 <div id="helpOverlay" class="hidden" role="dialog" aria-modal="true" aria-label="Help">
   <div id="helpModal">
     <div class="row" style="margin-bottom:18px">
       <div class="grow" style="font-size:17px;font-weight:600">How to use Refboard</div>
+      <button id="btnNewsHelp" class="ghost" type="button" title="The newest features, each with a way to try it">What's new</button>
       <button id="btnTour" class="ghost" type="button" title="Where things are, in six short notes">Take the tour</button>
       <button id="btnHelpClose" class="ghost" type="button" title="Close (Escape)">Close</button>
     </div>
@@ -1309,6 +1368,30 @@
     </section>
 
     <section>
+      <h2>Your uploads and your data</h2>
+      <p>Everything you give the app is kept: pictures and videos dropped on
+        <b>Check your own image</b>, photos of your drawing in Compare, the
+        Colour studio's pictures. They are listed under the drop zone as
+        <b>Your uploads</b> - click one to open it again in the workspace (a
+        video gives a new set of frames), or the cross on it to forget it.
+        The line above the list says plainly where they are kept.</p>
+      <p>Behind the container they are <b>saved on its disk</b>, with your
+        library, and join it as the <b>Uploads</b> pack - tick it and draw from
+        them like any pack. On the web page there is no server: they last
+        until the page is reloaded, unless you tick <b>Keep in this
+        browser</b>, which keeps them in this browser on this device.</p>
+      <p><b>Your data...</b> beside the list (or Ctrl+K, "backup") makes a
+        <b>backup</b>: one .zip with your settings, materials, themes, 3D
+        scenes, practice log, trainer scores and every upload. <b>Restore
+        from a backup</b> reads one, says what is in it and asks before it
+        puts it back. Keep one somewhere safe, or use it to move to another
+        computer - from the web page to the container or back.</p>
+      <p><b>What's new</b> - after an update, a short list of what came with
+        it, each with a button to try it. Again from the footer, Help or
+        Ctrl+K.</p>
+    </section>
+
+    <section>
       <h2>Rescan library</h2>
       <p>Shown on the setup screen once a library index has loaded. Click it
         to ask the container to reindex right away instead of waiting for
@@ -1323,6 +1406,12 @@
         A angle tool · C construction guides · E eyedropper · D compare your drawing · I info drawer ·
         R grid · H high-contrast overlays · M similar (when available) ·
         P pose skeleton · L Loomis head · S skip · Esc stop · ? this help</p>
+      <p class="sub" style="margin-bottom:0">Everywhere: Tab and Shift+Tab move
+        between controls, with a ring round the one you are on; in a dialog they
+        stay in it, and Esc closes it. ↑ ↓ walk the rail of sections, Home and
+        End go to its ends. The first Tab offers <b>Skip to the content</b>,
+        past the rail. A screen reader is told which section you opened and
+        which pose is up.</p>
     </section>
   </div>
 </div>
@@ -1334,26 +1423,40 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=cef4b061"></script>
-<script src="js/setup.js?v=6b96ebbd"></script>
-<script src="js/session.js?v=601473ba"></script>
+<script src="js/core.js?v=9429ed85"></script>
+<script src="js/setup.js?v=205d5859"></script>
+<script src="js/a11y.js?v=efccb1ab"></script>
+<script src="js/store.js?v=d077cc86"></script>
+<script src="js/uploads.js?v=d45014c1"></script>
+<script src="js/session.js?v=c661ddcf"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0bc3b11f"></script>
-<script src="js/tools.js?v=859c8bec"></script>
-<script src="js/materials.js?v=ee1ed197"></script>
+<script src="js/tools.js?v=dbf4607e"></script>
+<script src="js/materials.js?v=a9b7eb53"></script>
 <script src="js/vision.js?v=86d4847f"></script>
-<script src="js/study.js?v=4ac85720"></script>
+<script src="js/study.js?v=80a3719e"></script>
 <script src="js/layers.js?v=fdaf2ff2"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
 <script src="js/pins.js?v=9cc64b70"></script>
 <script src="js/workspace.js?v=24f8d0a0"></script>
-<script src="js/forms-models.js?v=2ce0b537"></script>
-<script src="js/forms.js?v=b129bd90"></script>
-<script src="js/train.js?v=087d7106"></script>
-<script src="js/theme-editor.js?v=eb90793b"></script>
-<script src="js/command.js?v=60e119ab"></script>
-<script src="js/colour.js?v=645241e3"></script>
-<script src="js/tour.js?v=be6ddada"></script>
-<script src="js/main.js?v=2fb9ba45"></script>
+<script src="js/train.js?v=9fd9bbc0"></script>
+<script src="js/theme-editor.js?v=0832e2ba"></script>
+<script src="js/command.js?v=8df47674"></script>
+<script src="js/tour.js?v=ab9d6df9"></script>
+<script src="js/whatsnew.js?v=ad4b115c"></script>
+<!-- Sections whose code loads the first time they are opened - see
+     loadSection() in js/core.js. Nothing in a <template> runs; the stamps
+     on these URLs are kept up to date like every other. -->
+<template id="lazy-forms">
+<script src="js/forms-models.js?v=a7d884e0"></script>
+<script src="js/forms.js?v=cdbc34fc"></script>
+</template>
+<template id="lazy-backup">
+<script src="js/backup.js?v=e7ec2fe2"></script>
+</template>
+<template id="lazy-colour">
+<script src="js/colour.js?v=0e55fcdf"></script>
+</template>
+<script src="js/main.js?v=108cddb7"></script>
 </body>
 </html>

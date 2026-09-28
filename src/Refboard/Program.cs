@@ -30,6 +30,21 @@ Directory.CreateDirectory(options.DisplayDir);
 // the original - a self-signed cert would just be one more thing to accept
 // on every device that opens it, for a page with nothing to protect.
 
+// Nothing with a dot-prefixed part in its path is ever served: UserStore's
+// documents (DataDir/.items) and its half-written uploads (.upload-*.tmp)
+// are reached only through the API. Said here rather than left to
+// PhysicalFileProvider's exclusion filters, which look only at a file's own
+// name - not at the folders above it.
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path.Value?.Split('/').Any(s => s.StartsWith('.')) == true)
+    {
+        ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await next();
+});
+
 // wwwroot/index.html is refboard.html under a conventional name, so it is
 // served at "/" with no extra configuration.
 app.UseDefaultFiles();
@@ -56,9 +71,12 @@ app.UseStaticFiles(new StaticFileOptions
 // URLs FeatureBuilder writes both already expect. No separate alias needed,
 // unlike the original nginx setup: the URL prefix and the folder name are
 // the same string on purpose (see RefboardOptions.DisplayPrefix).
+// Uploads are in here too (DataDir/uploads, see UserStore); nosniff so a
+// browser takes each at the type its extension says and never guesses.
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(options.DataDir),
+    OnPrepareResponse = ctx => ctx.Context.Response.Headers.XContentTypeOptions = "nosniff",
 });
 
 // The mounted reference library itself - read-only by convention (the
@@ -80,5 +98,42 @@ app.MapPost("/api/reindex", () =>
     ReindexHostedService.ReindexRequested = true;
     return Results.Accepted();
 });
+
+// ---- what the app is given to keep - see UserStore. The page asks
+// /healthz whether a backend is there before using any of this; on GitHub
+// Pages there is none and it keeps things in the browser instead.
+var store = new UserStore(options);
+
+// The body is the file itself, its type in Content-Type. A video can be
+// large, so the limit is lifted from Kestrel's 30 MB for this one route.
+app.MapPost("/api/uploads", async (HttpContext ctx) =>
+{
+    var type = (ctx.Request.ContentType ?? "").Split(';')[0].Trim().ToLowerInvariant();
+    if (!UserStore.Types.TryGetValue(type, out var ext))
+        return Results.BadRequest(new { error = "only images and video can be kept" });
+    var limit = ctx.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+    if (limit is { IsReadOnly: false }) limit.MaxRequestBodySize = 1L << 30;
+    var entry = await store.SaveFileAsync(ctx.Request.Body, ext, ctx.RequestAborted);
+    return Results.Ok(entry);
+});
+app.MapGet("/api/uploads", () => Results.Ok(store.ListFiles()));
+app.MapDelete("/api/uploads/{id}", (string id) =>
+    !UserStore.ValidFileId(id) ? Results.BadRequest() : store.DeleteFile(id) ? Results.NoContent() : Results.NotFound());
+
+app.MapGet("/api/items", () => Results.Ok(store.ListKinds()));
+app.MapGet("/api/items/{kind}", (string kind) =>
+    !UserStore.ValidName(kind) ? Results.BadRequest() : Results.Ok(store.ListItems(kind)));
+app.MapGet("/api/items/{kind}/{id}", (string kind, string id) =>
+    !UserStore.ValidName(kind) || !UserStore.ValidName(id) ? Results.BadRequest()
+    : store.GetItem(kind, id) is { } doc ? Results.Ok(doc) : Results.NotFound());
+app.MapPut("/api/items/{kind}/{id}", (string kind, string id, System.Text.Json.JsonElement doc) =>
+{
+    if (!UserStore.ValidName(kind) || !UserStore.ValidName(id)) return Results.BadRequest();
+    store.PutItem(kind, id, doc);
+    return Results.NoContent();
+});
+app.MapDelete("/api/items/{kind}/{id}", (string kind, string id) =>
+    !UserStore.ValidName(kind) || !UserStore.ValidName(id) ? Results.BadRequest()
+    : store.DeleteItem(kind, id) ? Results.NoContent() : Results.NotFound());
 
 app.Run();

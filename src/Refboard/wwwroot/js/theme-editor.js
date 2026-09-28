@@ -141,10 +141,6 @@ function initThemeEditor() {
   });
   // Keys stay in the editor - the session and the 3D view listen for
   // single letters on the document, and a name is typed here.
-  el('themeEditor').addEventListener('keydown', e => {
-    e.stopPropagation();
-    if (e.key === 'Escape') { e.preventDefault(); closeThemeEditor(); }
-  });
-  el('themeEditor').addEventListener('pointerdown', e => { if (e.target === el('themeEditor')) closeThemeEditor(); });
+  initSheet(el('themeEditor'), closeThemeEditor);
 }
 initThemeEditor();

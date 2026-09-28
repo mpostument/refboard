@@ -66,7 +66,7 @@ All via environment variables; every one has a default.
 | Variable | Default | Meaning |
 |---|---|---|
 | `SOURCE_DIR` | `/references` | Where your images are mounted |
-| `DATA_DIR` | `/data` | Where the generated index, features, and display copies live |
+| `DATA_DIR` | `/data` | Where the generated index, features, and display copies live - and what you upload (see Volumes) |
 | `PORT` | `8080` | HTTP port the app listens on |
 | `INDEX_INTERVAL_SECS` | `600` | How often the cheap directory-walk index rebuilds |
 | `FEATURES_INTERVAL_SECS` | `1800` | How often the expensive per-image feature pass rebuilds |
@@ -86,6 +86,29 @@ Two, deliberately kept separate:
   volume so it survives image updates - the first full feature pass over a
   large library can take a while, and there's no reason to pay that cost
   again just because the image was upgraded.
+
+  It also holds what you give the app, which cannot be regenerated: dropped
+  pictures and videos, photos of your drawings, the Colour studio's pictures
+  (`/data/uploads`, each file named by the SHA-256 of its contents, so the
+  same one uploaded twice is stored once), and the small JSON documents about
+  them (`/data/.items`). Uploaded pictures join the library as an **Uploads**
+  pack on the next index pass. Back the volume up - or use *Your data* in the
+  app, which downloads everything, settings included, as one .zip.
+
+### The storage API
+
+What the frontend's `js/store.js` calls; nothing else needs it. Only images
+and video are accepted (an HTML or SVG file served from this origin would run
+as the page), and nothing under a dot-prefixed path is served as a static file.
+
+| | |
+|---|---|
+| `POST /api/uploads` | The body is the file, its type in `Content-Type`. Returns `{ id, url, bytes }`. Up to 1 GB. |
+| `GET /api/uploads` | Every stored file. |
+| `DELETE /api/uploads/{id}` | |
+| `GET /api/items` | The kinds of document stored. |
+| `GET /api/items/{kind}` | Every document of a kind, as `{ id: document }`. |
+| `GET` / `PUT` / `DELETE /api/items/{kind}/{id}` | One JSON document. Kind and id: lower-case letters, digits, `-` and `_`. |
 
 ## Features
 
@@ -274,6 +297,18 @@ Two, deliberately kept separate:
 - Grid overlay, grayscale, random mirroring, keyboard shortcuts, installable
   as a home-screen app, and a screen wake lock so a tablet propped up next to
   your paper doesn't sleep mid-pose.
+- **Uploads kept, and a backup** - everything you give the app (dropped
+  pictures and videos, photos of your drawings, the Colour studio's pictures)
+  is listed under the drop zone to open again, and every screen that keeps
+  something says where: on the container's disk, in this browser (on GitHub
+  Pages, with *Keep in this browser* ticked), or not at all. *Your data*
+  downloads everything - settings, materials, themes, 3D scenes, practice
+  log, trainer scores, uploads - as one .zip, and restores from one.
+- **The keyboard, and screen readers** - a visible focus ring, Tab kept inside
+  dialogs, arrow keys along the rail, a *Skip to the content* link, and a
+  live region that says which section opened and which pose is up.
+- **What's new** - after an update, the features that came with it, each with
+  a button to try it; shown once, and never over a first visit's tour.
 - **In-app help** - a `? Help` button on the setup screen, a matching `?` in
   the HUD, or the `?` key from either, opens a card explaining every feature
   above and how to use it, without leaving the page.
@@ -284,8 +319,9 @@ One container, one process. An ASP.NET Core app serves the static frontend
 and the generated JSON/images, and a background hosted service does what a
 cron job would do outside a container: walk the mounted folder, decode new or
 changed images, write the manifest. No nginx, no separate cron daemon, no
-database - state that needs to persist is a couple of JSON files and a folder
-of resized copies, and everything else is `localStorage` in the browser.
+database - state that needs to persist is a couple of JSON files, a folder
+of resized copies and a folder of what you uploaded (with a JSON document
+about each), and everything else is `localStorage` in the browser.
 
 The frontend (`wwwroot/`) itself doesn't assume a backend exists at
 all - `boot()` falls back to a "no library" mode (see its own comment) when
@@ -300,6 +336,7 @@ src/Refboard/
     IndexBuilder.cs        - the cheap directory walk
     FeatureBuilder.cs      - the expensive per-image pass (Magick.NET)
     ReindexHostedService.cs - the background loop tying the two together
+    UserStore.cs           - what the app is given to keep: uploads and JSON documents
   wwwroot/
     index.html             - the frontend's markup; no build step, no JS framework
     css/app.css            - all of its styles
@@ -307,7 +344,9 @@ src/Refboard/
                               (see the note above the <script> tags in index.html:
                               a file may use at load time only what earlier files
                               define). Opens straight from disk too - classic
-                              scripts, unlike modules, load over file://.
+                              scripts, unlike modules, load over file://. The
+                              3D view, the Colour studio and the backup load
+                              when first opened: see loadSection() in core.js.
 docs/
   index.html               - GitHub Pages source (Settings > Pages > main /docs).
                               A copy of wwwroot/ (index.html, css/, js/, the icon
@@ -356,8 +395,10 @@ Browser tests for the frontend live in `tests/` (Playwright). They serve
 `src/Refboard/wwwroot` as GitHub Pages does - no backend - and fail on any
 uncaught error or `console.error`, as well as on their own checks: every
 section opens, a dropped image reaches the eyedropper's recipes, the colour
-studio finds a palette, and the paint engine keeps its rules. CI runs them
-on every push.
+studio finds a palette, the paint engine keeps its rules, every control has
+a name a screen reader can say, and a backup restores into an empty browser.
+CI runs them on every push. The storage API is checked against the real
+container by `scripts/smoke-test.sh`.
 
 ```bash
 cd tests

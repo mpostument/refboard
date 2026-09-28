@@ -51,20 +51,36 @@ with nothing left goes too), and is still in Ctrl+K. Each new section (oil
 paint, manga...) is one more tick there. A tour the first time the app
 opens (`js/tour.js`): six notes, each ringing the real control - the rail,
 Ctrl+K, the cards, Sections you use, Start drawing and the workspace,
-Help - and skipping a section you hid; again from Help or Ctrl+K.
-
-- **What's new.** After an update, a short panel of the new features with
-  a "try it" button - so new things are not lost among a hundred others.
+Help - and skipping a section you hid; again from Help or Ctrl+K. And
+What's new (`js/whatsnew.js`): after an update, the features that came with
+it, the newest four first and the rest folded, each with a button to try
+it - keyed by the feature, not the version, since Pages deploys on every
+push; never over a first visit's tour; again from the footer, Help or
+Ctrl+K. Each new feature adds its entry to `NEWS`. And sheets: the dialogs
+beside the rail (the theme editor, My materials, Your data) and What's new
+share one look and one behaviour (`.sheet`, `initSheet()`).
 
 ## Keeping it fast and working
 
 Browser tests (`tests/`, run in CI) and content-hashed file URLs are in
 place. Every new feature adds its own scenario to the tests.
 
-- **Fast loading.** Now the code is split, each section can load when it
-  is first opened (no 3D code until the 3D view).
-- **Accessibility.** Full keyboard control, labels for screen readers, a
-  visible focus - quicker for everyone, not only those who need it.
+In place: sections that load when first opened - the 3D view, the Colour
+studio and the backup wait in `<template id="lazy-...">` in index.html and
+come with `loadSection()` (`js/core.js`), starting as the pointer reaches the
+rail button; a new section's heavy code goes the same way. And accessibility
+(`js/a11y.js`): a focus ring in the theme's accent, Tab kept inside whichever
+modal dialog is on top, focus given back when one closes, arrow keys along
+the rail, Skip to the content, and a live region that says which section
+opened and which pose is up; a test checks that every control on every
+screen has a name a screen reader can say.
+
+- **Fast loading, the rest.** The trainers (`train.js`, 1100 lines) still
+  load with the page - its colour helpers are shared with the paint engine
+  and the Colour studio, and want moving out first.
+- **Accessibility, the rest.** The 3D view's canvas and the trainers'
+  canvases are pointer-only; each wants a keyboard way to do what a click
+  does there.
 
 ## Saving what is uploaded
 
@@ -73,19 +89,23 @@ frames, photos of your own work, reference boards, swatch photos and the
 colours taken from them, the materials profile - and what now lives only in
 localStorage (3D scenes, the session log, trainer stats).
 
-- **Local version (container):** saved by the backend. `POST /api/uploads`
-  stores a file in DataDir named by its SHA-256 (the same file uploaded
-  twice is stored once); `/api/items` stores JSON documents (boards,
-  profile, work entries, scenes). Uploaded references become an "Uploads"
-  pack in the library, indexed by the existing background pass like any
-  other image.
-- **GitHub Pages version:** no saving - as now, uploads last until the
-  page is reloaded, small settings in localStorage. Optionally, a "keep in
-  this browser" switch using IndexedDB.
-- **Frontend:** one storage layer; it asks `/healthz` (as it already does
-  for the version) whether a backend is there, and every place that keeps
-  something says plainly "Saved" or "Not saved in this version".
-- **Backup:** download everything as one archive, and restore from it.
+In place: one storage layer (`js/store.js`) that asks `/healthz` - the same
+answer the footer's version comes from - whether a backend is there. Behind
+the container, `POST /api/uploads` stores a file in DataDir named by its
+SHA-256 and `/api/items` stores JSON documents (`Services/UserStore.cs`);
+uploaded pictures join the library as the Uploads pack on the next index
+pass. On GitHub Pages they last until a reload, or, with "Keep in this
+browser", are kept in IndexedDB. Dropped pictures and videos, Compare's
+photos of your drawing and the Colour studio's pictures are kept, listed
+under the drop zone as Your uploads, and the line above them says plainly
+where they are kept. And a backup (`js/backup.js`): everything - every
+refboard setting in localStorage, every document, every upload - as one
+.zip, and restoring from one after saying what is in it.
+
+- **Settings on the server.** 3D scenes, the session log, trainer stats and
+  the rest are still in the browser's localStorage, in the backup but not
+  on the container's disk: they want to go through `/api/items` too, so a
+  second browser at home sees them.
 
 - **Several profiles.** If someone else at home paints too: each with
   their own boards, materials, log and stats, on the one server.

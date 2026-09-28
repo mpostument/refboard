@@ -34,7 +34,8 @@ public sealed class ReindexHostedService(RefboardOptions opts, ILogger<ReindexHo
         {
             try
             {
-                LastIndex = IndexBuilder.Build(opts.SourceDir, opts.RefsPrefix, opts.RotationPatterns);
+                LastIndex = IndexBuilder.Build(opts.SourceDir, opts.RefsPrefix, opts.RotationPatterns,
+                    (Path.Combine(opts.DataDir, "uploads"), "/uploads/"));
                 AtomicFile.WriteJson(Path.Combine(opts.DataDir, "index.json"), LastIndex);
                 logger.LogInformation("indexed {Total} images in {Packs} packs -> index.json",
                     LastIndex.TotalImages, LastIndex.Packs.Count);
