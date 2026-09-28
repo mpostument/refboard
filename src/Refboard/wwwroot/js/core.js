@@ -98,6 +98,9 @@ const THREE_DEG = Math.PI / 180;
 const wrap180 = a => ((a % 360) + 540) % 360 - 180;
 
 const INDEX_URL = 'index.json';
+// The page's own sample pack, for when there is no library (GitHub Pages)
+// or an empty one - see boot().
+const SAMPLES_INDEX_URL = 'samples/index.json';
 
 // Written by the server's background feature-builder pass: display copies
 // plus tone stats and a perceptual hash. Entirely optional - every feature it powers is skipped if the

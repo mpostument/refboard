@@ -3,11 +3,23 @@
 // test (see helpers.js).
 const { test, expect, quadrantsPng, openApp } = require('../helpers');
 
-test('boots with no library and shows the version', async ({ page }) => {
+test('with no library, the sample pack stands in, and draws', async ({ page }) => {
+  await openApp(page);
+  await expect(page.locator('#summary')).toContainText('sample pack');
+  await expect(page.locator('#appVersion')).toHaveText(/^v\d+\.\d+\.\d+/);
+  await expect(page.locator('#packsSection')).toContainText('Samples');
+  await page.click('.nav-item[data-view="all"]');
+  await expect(page.locator('#thumbGrid .cell')).toHaveCount(6);
+  // Every picture in it is there, and decodes.
+  await expect.poll(() => page.$$eval('#thumbGrid .cell img', is => is.filter(i => i.naturalWidth > 0).length)).toBe(6);
+  await page.locator('#thumbGrid .cell').first().click();
+  await expect(page.locator('#img')).toHaveAttribute('src', /samples\/.+\.jpg$/);
+});
+
+test('with neither a library nor the samples, the library parts stay hidden', async ({ page }) => {
+  await page.route('**/samples/index.json', r => r.fulfill({ status: 404, body: '' }));
   await openApp(page);
   await expect(page.locator('#summary')).toContainText('No image library connected');
-  await expect(page.locator('#appVersion')).toHaveText(/^v\d+\.\d+\.\d+/);
-  // No backend, so the library-only parts stay out of the way.
   await expect(page.locator('.nav-item[data-view="all"]')).toBeHidden();
 });
 

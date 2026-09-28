@@ -7,9 +7,9 @@ const card = (page, stage) => page.locator(`#stages .stage-card[data-stage="${st
 test('the dashboard has the four stages, each with what the rail has in it', async ({ page }) => {
   await openApp(page);
   await expect(page.locator('#stages .stage-card h2')).toHaveText(['Prepare', 'Practise', 'Paint', 'Check']);
-  // One card button for each rail button in the group - not All images,
-  // which the rail hides with no library behind it, as here.
-  await expect(card(page, 'Prepare').getByRole('button', { name: /All images/ })).toHaveCount(0);
+  // One card button for each rail button in the group - All images too,
+  // with the sample pack standing in for a library, as here.
+  await expect(card(page, 'Prepare').getByRole('button', { name: /All images/ })).toHaveCount(1);
   for (const stage of ['Prepare', 'Practise', 'Paint', 'Check']) {
     const onRail = await page.locator(`#rail .rail-stage[data-stage="${stage}"] button:visible`).count();
     await expect(card(page, stage).locator('.stage-tool')).toHaveCount(onRail);
@@ -24,6 +24,7 @@ test('the dashboard has the four stages, each with what the rail has in it', asy
 
 test('Start drawing with no pack ticked opens the Library, and says so', async ({ page }) => {
   await openApp(page);
+  await page.click('#btnPacksNone');
   await expect(card(page, 'Paint').locator('.stage-note')).toContainText('Tick a pack in the Library first');
   await page.click('#btnPaint');
   await expect(page.locator('#btnLibrary')).toHaveAttribute('aria-pressed', 'true');

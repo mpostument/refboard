@@ -24,11 +24,12 @@ jobs:
           cp src/Refboard/wwwroot/index.html docs/index.html
           cp src/Refboard/wwwroot/icon-refboard.svg docs/icon-refboard.svg
           cp src/Refboard/wwwroot/refboard.webmanifest docs/refboard.webmanifest
-          # The code and styles, whole folders - replaced rather than merged
-          # so a file removed from wwwroot is removed from Pages too.
-          rm -rf docs/js docs/css
+          # The code, styles and sample pack, whole folders - replaced rather
+          # than merged so a file removed from wwwroot is removed from Pages too.
+          rm -rf docs/js docs/css docs/samples
           cp -r src/Refboard/wwwroot/js docs/js
           cp -r src/Refboard/wwwroot/css docs/css
+          cp -r src/Refboard/wwwroot/samples docs/samples
 
       - name: Commit if changed
         run: |

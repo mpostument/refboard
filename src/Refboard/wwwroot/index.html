@@ -134,7 +134,7 @@
            checkbox's checked state, so narrowing the list to find one pack
            and then widening it again never silently drops a selection made
            while it was hidden. See applyPackFilter(). -->
-      <input type="search" id="packFilter" placeholder="Filter packs...">
+      <input type="search" id="packFilter" placeholder="Filter packs..." aria-label="Filter packs">
       <div class="count" id="packFilterCount" style="margin:6px 2px 0"></div>
       <div class="packs" id="packs" style="margin-top:8px"></div>
     </div>
@@ -1432,8 +1432,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=aeb0c607"></script>
-<script src="js/setup.js?v=af915991"></script>
+<script src="js/core.js?v=27c5caf8"></script>
+<script src="js/setup.js?v=1f000a1c"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=638d268d"></script>
@@ -1453,7 +1453,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=e12d93de"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=3de7703d"></script>
+<script src="js/whatsnew.js?v=6675ac6b"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->

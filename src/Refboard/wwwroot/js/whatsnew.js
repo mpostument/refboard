@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'samples', title: 'A sample pack to start with',
+    text: 'With no library connected - the web page, or a container with nothing mounted yet - there is now a Samples pack: six anime girls in watercolour and a fine line, to browse and draw from with every tool while your own pictures are not there yet.',
+    act: 'Show me', run: () => setView({ kind: 'all' }) },
   { id: 'sorted-uploads', title: 'Uploads sorted into folders',
     text: 'Behind your own server, every picture you drop is looked at - people, poses, faces, what it is of, its light and colour - tagged, and put in a folder: Figure, Portrait, Landscape, Animals... In the library they are groups of the Uploads pack, and the search finds them by tag: "sitting", "profile", "low key".',
     act: 'Show me', run: () => setView({ kind: 'drop' }) },
