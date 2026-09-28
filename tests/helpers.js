@@ -82,4 +82,41 @@ async function openApp(page) {
   await base.expect(page.locator('#summary')).not.toBeEmpty();
 }
 
-module.exports = { test, expect: base.expect, makePng, quadrantsPng, QUADS, openApp, NEWS_IDS };
+/* A backend in memory: /healthz says there is one, uploads and documents
+   are kept in these maps, and each move into a folder is recorded. */
+async function fakeServer(page) {
+  const files = new Map(), items = new Map(), moves = [];
+  const png = quadrantsPng();
+  await page.route('**/healthz', r => r.fulfill({ json: { status: 'ok', version: 'test' } }));
+  // As a server with no ComfyUI set up answers; a test that wants one routes it again.
+  await page.route('**/api/generate', r => r.fulfill({ json: { available: false, reason: 'No ComfyUI is set up (COMFY_URL).' } }));
+  await page.route('**/api/uploads**', async r => {
+    const url = new URL(r.request().url()), m = url.pathname.match(/api\/uploads\/?([^/]*)\/?(folder)?$/);
+    const [, id, folder] = m || [];
+    const method = r.request().method();
+    if (method === 'POST') {
+      const fid = 'a'.repeat(64) + '.png';
+      files.set(fid, null);
+      return r.fulfill({ json: { id: fid, url: 'uploads/' + fid, bytes: png.length } });
+    }
+    if (method === 'PUT' && folder) {
+      moves.push({ id, ...JSON.parse(r.request().postData()) });
+      files.set(id, moves.at(-1).folder);
+      return r.fulfill({ json: { id, bytes: png.length } });
+    }
+    if (method === 'GET' && id) return r.fulfill({ body: png, contentType: 'image/png' });
+    return r.fulfill({ json: [...files.keys()].map(k => ({ id: k, bytes: png.length })) });
+  });
+  await page.route('**/api/items/**', async r => {
+    const [, kind, id] = new URL(r.request().url()).pathname.match(/api\/items\/([^/]+)\/?([^/]*)$/) || [];
+    const method = r.request().method();
+    if (method === 'PUT') { items.set(`${kind}/${id}`, JSON.parse(r.request().postData())); return r.fulfill({ status: 204 }); }
+    if (id) return items.has(`${kind}/${id}`) ? r.fulfill({ json: items.get(`${kind}/${id}`) }) : r.fulfill({ status: 404, body: '' });
+    const out = {};
+    for (const [k, v] of items) if (k.startsWith(kind + '/')) out[k.slice(kind.length + 1)] = v;
+    return r.fulfill({ json: out });
+  });
+  return { files, items, moves };
+}
+
+module.exports = { test, expect: base.expect, makePng, quadrantsPng, QUADS, openApp, NEWS_IDS, fakeServer };

@@ -38,6 +38,8 @@ public sealed partial class UserStore(RefboardOptions opts)
         ["figure"] = "Figure", ["portrait"] = "Portrait", ["animals"] = "Animals", ["landscape"] = "Landscape",
         ["city"] = "City", ["plants"] = "Plants", ["still-life"] = "Still life", ["illustration"] = "Illustration",
         ["my-work"] = "My work", ["other"] = "Other",
+        // Not sorted into: what ComfyClient generates goes here itself.
+        ["generated"] = "Generated",
     };
 
     public string UploadsDir => Path.Combine(opts.DataDir, "uploads");

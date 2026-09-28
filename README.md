@@ -77,6 +77,8 @@ All via environment variables; every one has a default.
 | `QUALITY` | `85` | JPEG/WebP quality for display copies |
 | `DHASH_THRESHOLD` | `4` | Hamming distance at/below which two frames in one folder are flagged near-duplicate (advisory - off by default in the UI) |
 | `ROTATION_PATTERNS` | `360,turnaround` | Comma-separated folder-name substrings marking a rotation set |
+| `COMFY_URL` | *(empty - off)* | A [ComfyUI](https://github.com/comfyanonymous/ComfyUI) to generate references with, e.g. `http://192.168.1.20:8188` - on a machine with a GPU, started with `--listen` so this container can reach it. Empty: the page does not offer generating. |
+| `COMFY_CHECKPOINT` | `animagine-xl-4.0-opt.safetensors` | The SDXL checkpoint in that ComfyUI's `models/checkpoints`. The prompts are Danbooru tags, so an anime model trained on them ([Animagine XL 4.0](https://huggingface.co/cagliostrolab/animagine-xl-4.0) is the one it is tuned for). |
 
 ## Volumes
 
@@ -113,12 +115,20 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 | `GET /api/uploads/{id}` | One stored file, whichever folder it is in. |
 | `PUT /api/uploads/{id}/folder` | `{ "folder": "figure" }` - moves it into one of the fixed folders (keys: `figure`, `portrait`, `animals`, `landscape`, `city`, `plants`, `still-life`, `illustration`, `my-work`, `other`) and wakes the index pass. |
 | `DELETE /api/uploads/{id}` | |
+| `GET /api/generate` | Whether references can be generated: `{ available, checkpoint }`, or `{ available: false, reason }` - no `COMFY_URL`, ComfyUI not answering, or the model not in it. |
+| `POST /api/generate` | `{ prompt, tags, shape, seed }` - Danbooru tags (the server adds the quality tags and a negative prompt, nsfw always in it), the words to file it under, `portrait`/`square`/`landscape`, and a seed or none. Returns `202 { id }`: a picture can take longer than a proxy lets a request run. |
+| `GET /api/generate/{id}` | That job: `{ state, upload, error }` - state `running`, `done` or `error`. Done, the picture is kept like an upload, in the `generated` folder with its tags. |
 | `GET /api/items` | The kinds of document stored. |
 | `GET /api/items/{kind}` | Every document of a kind, as `{ id: document }`. |
 | `GET` / `PUT` / `DELETE /api/items/{kind}/{id}` | One JSON document. Kind and id: lower-case letters, digits, `-` and `_`. |
 
 ## Features
 
+- **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
+  on a machine with a GPU (`COMFY_URL`): anime references made to order - who,
+  the hair, how much of them, from where, the pose, the light, the medium
+  (watercolour, ink line, flat colour, pencil) - kept in the Uploads pack's
+  Generated group, tagged with those choices, and opened with every tool.
 - **A studio layout** - dark throughout, an icon rail down the left for the
   sections, and the library and session controls as panels either side that
   fold away, so the image gets the screen. The session panel and the 3D

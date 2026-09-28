@@ -53,6 +53,16 @@ public sealed class RefboardOptions
     /// <summary>Folder-name substrings marking a "one pose, many angles" set.</summary>
     public string[] RotationPatterns { get; set; } = ["360", "turnaround"];
 
+    /// <summary>A ComfyUI to generate references with (http://host:8188), on
+    /// a machine with a GPU - this one usually has none. Empty: no generating,
+    /// and the page does not offer it. See ComfyClient.</summary>
+    public string ComfyUrl { get; set; } = "";
+
+    /// <summary>The SDXL checkpoint in that ComfyUI's models/checkpoints to
+    /// generate with. The prompts are Danbooru tags, so an anime model
+    /// trained on them.</summary>
+    public string ComfyCheckpoint { get; set; } = "animagine-xl-4.0-opt.safetensors";
+
     /// <summary>URL prefix for images served straight from <see cref="SourceDir"/>.</summary>
     public string RefsPrefix { get; } = "/refs/";
 
@@ -83,6 +93,8 @@ public sealed class RefboardOptions
             ThumbPx = Int("THUMB_PX", 400),
             Quality = Int("QUALITY", 85),
             DhashThreshold = Int("DHASH_THRESHOLD", 4),
+            ComfyUrl = Str("COMFY_URL", "").TrimEnd('/'),
+            ComfyCheckpoint = Str("COMFY_CHECKPOINT", "animagine-xl-4.0-opt.safetensors"),
         };
 
         var patterns = Environment.GetEnvironmentVariable("ROTATION_PATTERNS");

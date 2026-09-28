@@ -17,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 var options = RefboardOptions.FromEnvironment();
 builder.Services.AddSingleton(options);
 builder.Services.AddSingleton<UserStore>();
+builder.Services.AddSingleton<ComfyClient>();
 builder.Services.AddHostedService<ReindexHostedService>();
 
 builder.WebHost.ConfigureKestrel(k => k.ListenAnyIP(options.Port));
@@ -140,6 +141,22 @@ app.MapPut("/api/uploads/{id}/folder", (string id, FolderRequest req) =>
 });
 app.MapDelete("/api/uploads/{id}", (string id) =>
     !UserStore.ValidFileId(id) ? Results.BadRequest() : store.DeleteFile(id) ? Results.NoContent() : Results.NotFound());
+
+// Generating references with a ComfyUI - see ComfyClient. The page asks
+// first whether it can; a picture is a job it then asks after.
+var comfy = app.Services.GetRequiredService<ComfyClient>();
+app.MapGet("/api/generate", async (CancellationToken ct) => Results.Ok(await comfy.StatusAsync(ct)));
+app.MapPost("/api/generate", (GenerateRequest req) =>
+{
+    if (!comfy.Configured) return Results.NotFound();
+    if (string.IsNullOrWhiteSpace(req.Prompt) || req.Prompt.Length > 800
+        || (req.Tags ?? []).Count > 24 || (req.Tags ?? []).Any(t => t.Length > 40)
+        || (req.Shape is not null && !ComfyClient.Shapes.ContainsKey(req.Shape)))
+        return Results.BadRequest();
+    return Results.Accepted(value: new { id = comfy.Start(req) });
+});
+app.MapGet("/api/generate/{id}", (string id) =>
+    comfy.Get(id) is { } job ? Results.Ok(new { state = job.State, upload = job.Upload, error = job.Error }) : Results.NotFound());
 
 app.MapGet("/api/items", () => Results.Ok(store.ListKinds()));
 app.MapGet("/api/items/{kind}", (string kind) =>

@@ -89,5 +89,9 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 [ "$group" = 1 ] || fail "the sorted upload never showed in the library under Figure"
+# Generating (ComfyClient): with no COMFY_URL it says so, and takes no job.
+curl -fsS "$BASE/api/generate" | grep -q '"available":false' || fail "generating offered with no ComfyUI set up"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"prompt":"1girl"}' "$BASE/api/generate")" = 404 ] \
+  || fail "a generate job was taken with no ComfyUI set up"
 
 echo "[$PLATFORM] smoke test passed"

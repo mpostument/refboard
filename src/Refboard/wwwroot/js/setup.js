@@ -1188,6 +1188,10 @@ function updateViewMeta() {
     m.textContent = 'Palette, colour wheel and gamut mask for any image - read in this browser, nothing is uploaded.';
     return;
   }
+  if (view.kind === 'generate') {
+    m.textContent = 'Anime references made to order by your own ComfyUI - pick who, how much, from where and the light.';
+    return;
+  }
   const parts = [gridItems.length === viewTotal
     ? `${viewTotal.toLocaleString()} image${viewTotal === 1 ? '' : 's'}`
     : `${gridItems.length.toLocaleString()} of ${viewTotal.toLocaleString()} images`];
@@ -1207,6 +1211,7 @@ function viewTitle() {
     case 'forms': return '3D forms';
     case 'train': return 'Train';
     case 'colour': return 'Colour studio';
+    case 'generate': return 'Generate references';
     default:      return 'Dashboard';
   }
 }
@@ -1221,17 +1226,19 @@ function setView(next) {
   const browsing = view.kind === 'all' || view.kind === 'pack' || view.kind === 'group';
 
   const forms = view.kind === 'forms', train = view.kind === 'train', colour = view.kind === 'colour';
+  const generate = view.kind === 'generate';
   el('viewBrowse').classList.toggle('hidden', !browsing);
   el('viewForms').classList.toggle('hidden', !forms);
   el('viewTrain').classList.toggle('hidden', !train);
   el('viewColour').classList.toggle('hidden', !colour);
+  el('viewGenerate').classList.toggle('hidden', !generate);
   el('mainBody').classList.toggle('forms-mode', forms);
   // The Session inspector is for drawing from the library. Here it only took
   // width from the stage; its one use in this view - the interval for Draw
   // random forms - has its own control in the 3D panel. The trainers have
   // no use for it at all.
-  el('setup').classList.toggle('forms-mode', forms || train || colour);
-  el('viewDashboard').classList.toggle('hidden', browsing || forms || train || colour);
+  el('setup').classList.toggle('forms-mode', forms || train || colour || generate);
+  el('viewDashboard').classList.toggle('hidden', browsing || forms || train || colour || generate);
   el('searchbar').classList.toggle('hidden', !browsing);
   el('viewTitle').textContent = viewTitle();
   if (changed) announce(viewTitle());
@@ -1247,6 +1254,7 @@ function setView(next) {
   if (forms) openLazyView('forms', () => showForms());
   if (train) showTrain();
   if (colour) openLazyView('colour', () => showColour());
+  if (generate) showGenerate();
   el('sidebar').classList.remove('peek');
   shellSync();
   el('mainBody').scrollTop = 0;

@@ -22,6 +22,7 @@ services:
       # - QUALITY=85                     # JPEG/WebP quality for display copies
       # - DHASH_THRESHOLD=4              # near-duplicate sensitivity (lower = stricter)
       # - ROTATION_PATTERNS=360,turnaround   # folder-name substrings marking a "one pose, many angles" set
+      # - COMFY_URL=http://192.168.1.20:8188   # a ComfyUI to generate references with (see README)
     restart: unless-stopped
 
 volumes:
