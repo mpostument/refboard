@@ -142,14 +142,29 @@ async function boot() {
   // and the "Start drawing" bar goes with them, but Interval, Session,
   // Options, and both drop-zone modes all work exactly the same with no
   // backend whatsoever.
-  let indexOk = false;
+  //
+  // Except that nothing to draw from is a poor first visit, so where there is
+  // no library - or an empty one, a container with nothing mounted yet - the
+  // page's own sample pack stands in for it (samples/, generated
+  // by scripts/samples): a few simple heads to practise on, browsed and drawn
+  // from like any pack.
+  let indexOk = false, samples = false;
   try {
     const res = await fetch(INDEX_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     INDEX = await res.json();
     indexOk = true;
     el('btnRescan').classList.remove('hidden');
-  } catch {
+  } catch { /* none: the samples, below */ }
+  if (!indexOk || !INDEX.totalImages) {
+    try {
+      const res = await fetch(SAMPLES_INDEX_URL);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      INDEX = await res.json();
+      indexOk = samples = true;
+    } catch { indexOk = false; }
+  }
+  if (!indexOk) {
     el('packsSection').classList.add('hidden');
     el('startbar').classList.add('hidden');
     // Nothing to browse and no pool to start one from, so the whole middle
@@ -164,7 +179,7 @@ async function boot() {
   // has been budgeted out part-way, or failed entirely must leave a working board
   // rather than an error page - so anything past this point is guarded on
   // FEATURES being non-null.
-  if (indexOk) {
+  if (indexOk && !samples) {
     try {
       const fres = await fetch(FEATURES_URL, { cache: 'no-store' });
       if (fres.ok) {
@@ -185,7 +200,12 @@ async function boot() {
   await Promise.all([syncSettings(), syncSkipped(), syncSessions()]);
 
   const saved = loadSettings();
-  if (indexOk) {
+  if (samples) {
+    el('summary').textContent =
+      `No library connected yet, so here is a sample pack: ${INDEX.totalImages} anime girls in ` +
+      'watercolour to practise on. Drop your own pictures below, or run this behind a container ' +
+      'with your library mounted (see the project README).';
+  } else if (indexOk) {
     const gb = (INDEX.totalBytes / 1073741824).toFixed(1);
     el('summary').textContent =
       `${INDEX.totalImages.toLocaleString()} images · ${INDEX.packs.length} packs · ${gb} GB · ` +
