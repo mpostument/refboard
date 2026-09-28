@@ -1438,7 +1438,7 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 
 /* ---- Generate references (js/generate.js) */
 #viewGenerate h4 { margin: 14px 0 6px; font-size: 11px; color: var(--dim); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
-#viewGenerate h4:first-child { margin-top: 0; }
+#viewGenerate .gen-row:first-child h4 { margin-top: 0; }
 .gen-extra { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
 .gen-extra input { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
 .gen-go { gap: 12px; margin-top: 16px; flex-wrap: wrap; align-items: center; }

@@ -1189,7 +1189,7 @@ function updateViewMeta() {
     return;
   }
   if (view.kind === 'generate') {
-    m.textContent = 'Anime references made to order by your own ComfyUI - pick who, how much, from where and the light.';
+    m.textContent = 'Anime references made to order by your own ComfyUI - a character, a landscape, buildings, nature or an animal, in the light and medium you pick.';
     return;
   }
   const parts = [gridItems.length === viewTotal

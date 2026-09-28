@@ -1,6 +1,7 @@
 /* refboard - Generate references: pictures made to order by a ComfyUI the
    server knows about (COMFY_URL; see Services/ComfyClient.cs) - who, the
-   hair, how much of them, from where, the light, the medium. Only behind a
+   hair, how much of them, from where - or a landscape, buildings, nature,
+   an animal - the light, the medium. Only behind a
    server that has one: the rail button stays hidden otherwise.
 
    Each picture is kept like a dropped one - in Uploads, in its own Generated
@@ -16,32 +17,50 @@
 const GEN_KEY = 'refboard.generate.v1';
 
 // Each choice: its label, the words it files the picture under, and its
-// tags for the model. 'any' leaves it to the model.
+// tags for the model; 'any' leaves it to the model. A row with `for` is shown,
+// and used, only for those subjects.
+const ANY = { id: 'any', label: 'Any', tags: '' };
+const PERSON = ['character'], OUTDOORS = ['landscape', 'building'];
 const GEN_CHOICES = [
-  { id: 'who', label: 'Who', options: [
+  // One style for now - the models behind this are anime models. A second
+  // one is a row here, and its tags.
+  { id: 'style', label: 'Style', options: [
+    { id: 'anime', label: 'Anime', tags: '', words: 'anime' },
+  ] },
+  // Anything but a character says "no humans": an anime model draws a girl
+  // into a landscape unless told not to - most of what it learnt from has one.
+  { id: 'subject', label: 'Subject', options: [
+    { id: 'character', label: 'Character', tags: '', words: '' },
+    { id: 'landscape', label: 'Landscape', tags: 'no humans, scenery, landscape' },
+    { id: 'building', label: 'Buildings', tags: 'no humans, scenery, building, architecture', words: 'buildings' },
+    { id: 'nature', label: 'Nature', tags: 'no humans, nature, still life, close-up' },
+    { id: 'animal', label: 'Animal', tags: 'no humans, animal focus, solo' },
+  ] },
+
+  { id: 'who', label: 'Who', for: PERSON, options: [
     { id: 'girl', label: 'Girl', tags: '1girl, solo' },
     { id: 'boy', label: 'Boy', tags: '1boy, solo' },
   ] },
-  { id: 'hair', label: 'Hair', options: [
-    { id: 'any', label: 'Any', tags: '' },
+  { id: 'hair', label: 'Hair', for: PERSON, options: [
+    ANY,
     { id: 'short', label: 'Short', tags: 'short hair' },
     { id: 'bob', label: 'Bob', tags: 'short hair, bob cut' },
     { id: 'long', label: 'Long', tags: 'long hair' },
     { id: 'ponytail', label: 'Ponytail', tags: 'ponytail' },
     { id: 'twintails', label: 'Twin tails', tags: 'twintails' },
   ] },
-  { id: 'colour', label: 'Hair colour', options: [
-    { id: 'any', label: 'Any', tags: '' },
+  { id: 'colour', label: 'Hair colour', for: PERSON, options: [
+    ANY,
     ...['black', 'brown', 'blonde', 'red', 'pink', 'silver', 'blue', 'green']
       .map(c => ({ id: c, label: c[0].toUpperCase() + c.slice(1), tags: c + ' hair', words: c + ' hair' })),
   ] },
-  { id: 'framing', label: 'How much', options: [
+  { id: 'framing', label: 'How much', for: PERSON, options: [
     { id: 'head', label: 'Head', tags: 'portrait, close-up', words: 'head' },
     { id: 'bust', label: 'Bust', tags: 'upper body', words: 'bust' },
     { id: 'half', label: 'Half figure', tags: 'cowboy shot', words: 'half figure' },
     { id: 'full', label: 'Whole figure', tags: 'full body', words: 'whole figure' },
   ] },
-  { id: 'view', label: 'From', options: [
+  { id: 'view', label: 'From', for: PERSON, options: [
     { id: 'front', label: 'Front', tags: 'straight-on, looking at viewer', words: 'front' },
     { id: 'three', label: 'Three-quarter', tags: 'three quarter view', words: 'three-quarter' },
     { id: 'profile', label: 'Profile', tags: 'profile, from side', words: 'profile' },
@@ -49,16 +68,81 @@ const GEN_CHOICES = [
     { id: 'above', label: 'Above', tags: 'from above', words: 'from above' },
     { id: 'back', label: 'Behind', tags: 'from behind, looking back', words: 'from behind' },
   ] },
-  { id: 'pose', label: 'Pose', options: [
-    { id: 'any', label: 'Any', tags: '' },
+  { id: 'pose', label: 'Pose', for: PERSON, options: [
+    ANY,
     { id: 'standing', label: 'Standing', tags: 'standing' },
     { id: 'sitting', label: 'Sitting', tags: 'sitting' },
     { id: 'walking', label: 'Walking', tags: 'walking' },
     { id: 'arms', label: 'Arms up', tags: 'arms up', words: 'arms raised' },
     { id: 'lying', label: 'Lying', tags: 'lying', words: 'lying' },
   ] },
+
+  { id: 'place', label: 'Where', for: ['landscape'], options: [
+    { id: 'mountains', label: 'Mountains', tags: 'mountain, valley' },
+    { id: 'sea', label: 'Sea', tags: 'ocean, beach, horizon' },
+    { id: 'lake', label: 'Lake', tags: 'lake, reflection' },
+    { id: 'fields', label: 'Fields', tags: 'field, grass, rural, path' },
+    { id: 'forest', label: 'Forest', tags: 'forest, tree, path' },
+    { id: 'river', label: 'River', tags: 'river, rock, tree' },
+    { id: 'sky', label: 'Sky', tags: 'sky, cloud, horizon, wide shot' },
+  ] },
+  { id: 'building', label: 'What', for: ['building'], options: [
+    { id: 'street', label: 'Street', tags: 'street, city, road, building' },
+    { id: 'town', label: 'Old town', tags: 'town, old building, stone floor' },
+    { id: 'house', label: 'House', tags: 'house, garden, fence' },
+    { id: 'shrine', label: 'Shrine', tags: 'shrine, torii, stairs' },
+    { id: 'castle', label: 'Castle', tags: 'castle, tower' },
+    { id: 'cafe', label: 'Cafe inside', tags: 'cafe, indoors, table, window', words: 'interior' },
+    { id: 'station', label: 'Station', tags: 'train station, railroad tracks' },
+  ] },
+  { id: 'seen', label: 'Seen from', for: ['building'], options: [
+    { id: 'street', label: 'The street', tags: 'eye level', words: 'eye level' },
+    { id: 'above', label: 'Above', tags: 'from above, cityscape', words: 'from above' },
+    { id: 'below', label: 'Below', tags: 'from below', words: 'from below' },
+  ] },
+  { id: 'thing', label: 'What', for: ['nature'], options: [
+    { id: 'flowers', label: 'Flowers', tags: 'flower, petals' },
+    { id: 'tree', label: 'A tree', tags: 'tree, branch, leaf', words: 'tree' },
+    { id: 'leaves', label: 'Leaves', tags: 'leaf, branch' },
+    { id: 'mushrooms', label: 'Mushrooms', tags: 'mushroom, moss' },
+    { id: 'fruit', label: 'Fruit', tags: 'fruit, food focus' },
+    { id: 'water', label: 'Water and stones', tags: 'water, stone, stream', words: 'water' },
+  ] },
+  { id: 'animal', label: 'Animal', for: ['animal'], options: [
+    ...['cat', 'dog', 'fox', 'rabbit', 'bird', 'horse', 'deer', 'owl']
+      .map(a => ({ id: a, label: a[0].toUpperCase() + a.slice(1), tags: a })),
+    { id: 'koi', label: 'Koi', tags: 'koi, fish, water' },
+  ] },
+  { id: 'size', label: 'How much', for: ['animal'], options: [
+    { id: 'close', label: 'Head', tags: 'portrait, close-up', words: 'head' },
+    { id: 'whole', label: 'Whole', tags: 'full body', words: 'whole' },
+  ] },
+
+  { id: 'time', label: 'Time of day', for: OUTDOORS, options: [
+    ANY,
+    { id: 'day', label: 'Day', tags: 'day, blue sky' },
+    { id: 'dawn', label: 'Morning', tags: 'morning, dawn' },
+    { id: 'sunset', label: 'Sunset', tags: 'sunset, orange sky, evening' },
+    { id: 'night', label: 'Night', tags: 'night, night sky, starry sky' },
+  ] },
+  { id: 'weather', label: 'Weather', for: OUTDOORS, options: [
+    ANY,
+    { id: 'clear', label: 'Clear', tags: 'clear sky' },
+    { id: 'cloudy', label: 'Cloudy', tags: 'cloudy sky, overcast' },
+    { id: 'rain', label: 'Rain', tags: 'rain, wet' },
+    { id: 'snow', label: 'Snow', tags: 'snow, snowing' },
+    { id: 'fog', label: 'Fog', tags: 'fog, mist' },
+  ] },
+  { id: 'season', label: 'Season', for: ['landscape', 'nature'], options: [
+    ANY,
+    { id: 'spring', label: 'Spring', tags: 'spring (season), cherry blossoms' },
+    { id: 'summer', label: 'Summer', tags: 'summer' },
+    { id: 'autumn', label: 'Autumn', tags: 'autumn, autumn leaves' },
+    { id: 'winter', label: 'Winter', tags: 'winter, snow' },
+  ] },
+
   { id: 'light', label: 'Light', options: [
-    { id: 'any', label: 'Any', tags: '' },
+    ANY,
     { id: 'soft', label: 'Soft', tags: 'soft lighting', words: 'soft light' },
     { id: 'side', label: 'From the side', tags: 'sidelighting', words: 'side light' },
     { id: 'back', label: 'Backlit', tags: 'backlighting, rim lighting', words: 'backlit' },
@@ -70,28 +154,38 @@ const GEN_CHOICES = [
     { id: 'flat', label: 'Flat colour', tags: 'flat color, cel shading', words: 'flat colour' },
     { id: 'sketch', label: 'Pencil sketch', tags: 'sketch, traditional media, graphite (medium), monochrome', words: 'sketch' },
   ] },
-  { id: 'ground', label: 'Background', options: [
+  // A landscape or a street is its own background.
+  { id: 'ground', label: 'Background', for: ['character', 'nature', 'animal'], options: [
     { id: 'plain', label: 'Plain', tags: 'simple background, white background', words: '' },
     { id: 'scene', label: 'A place', tags: 'outdoors, scenery', words: 'scene' },
   ] },
 ];
 
-const GEN_DEFAULTS = { who: 'girl', hair: 'any', colour: 'any', framing: 'bust', view: 'front', pose: 'any',
-  light: 'any', medium: 'watercolour', ground: 'plain' };
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', framing: 'bust',
+  view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
+  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', ground: 'plain' };
+
+// Whether a row is asked, and used, for this subject.
+const genApplies = (c, subject) => !c.for || c.for.includes(subject);
 
 /* The choices as the model's prompt, the plain words the picture is filed
-   under, and its shape - tall for a figure, which is most of them. extra is
-   what was typed under More tags, passed on as it is. */
+   under, and its shape: tall for a figure, wide for a landscape or a
+   street, square for a head or a close look at something. extra is what was
+   typed under More tags, passed on as it is. */
 function genPrompt(choices, extra = '') {
+  const subjects = GEN_CHOICES.find(c => c.id === 'subject').options;
+  const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
   const tags = [], words = [];
   for (const c of GEN_CHOICES) {
+    if (!genApplies(c, subject)) continue;
     const o = c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id]);
     if (o.tags) tags.push(o.tags);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
     if (w) words.push(w);
   }
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
-  const shape = choices.framing === 'head' ? 'square' : 'portrait';
+  const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : 'portrait')
+    : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
   return { prompt: [...tags, ...more].join(', '), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
 
@@ -107,11 +201,19 @@ function saveGenChoices() {
 
 function renderGenerate() {
   el('genChoices').innerHTML = GEN_CHOICES.map(c =>
-    `<h4 id="genL-${c.id}">${esc(c.label)}</h4><div class="chips" role="group" aria-labelledby="genL-${c.id}">` +
+    `<div class="gen-row" data-row="${c.id}"><h4 id="genL-${c.id}">${esc(c.label)}</h4>` +
+    `<div class="chips" role="group" aria-labelledby="genL-${c.id}">` +
     c.options.map(o => `<button type="button" class="chip" data-gen="${c.id}" data-opt="${o.id}" ` +
-      `aria-pressed="${genChoices[c.id] === o.id}">${esc(o.label)}</button>`).join('') + '</div>').join('');
+      `aria-pressed="${genChoices[c.id] === o.id}">${esc(o.label)}</button>`).join('') + '</div></div>').join('');
+  syncGenRows();
   el('genWhere').textContent = 'Made by the ComfyUI your server is set up with, and kept in Uploads - ' +
     'the Generated group of the Uploads pack in the library, tagged with these choices.';
+}
+
+// Only the rows the subject asks: a landscape has no hair colour.
+function syncGenRows() {
+  for (const c of GEN_CHOICES)
+    el('genChoices').querySelector(`[data-row="${c.id}"]`).classList.toggle('hidden', !genApplies(c, genChoices.subject));
 }
 
 async function showGenerate() {
@@ -179,6 +281,7 @@ async function initGenerate() {
     saveGenChoices();
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
+    if (b.dataset.gen === 'subject') syncGenRows();
   });
   el('genGo').addEventListener('click', runGenerate);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });

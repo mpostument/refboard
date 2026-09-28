@@ -9,12 +9,27 @@ test('the choices become the model\'s tags and the words it is filed under', asy
   const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, hair: 'twintails', colour: 'pink', view: 'three', light: 'back' }, 'hat, rain'));
   expect(r.prompt).toBe('1girl, solo, twintails, pink hair, upper body, three quarter view, backlighting, rim lighting, ' +
     'watercolor (medium), traditional media, lineart, simple background, white background, hat, rain');
-  expect(r.tags).toEqual(['girl', 'twin tails', 'pink hair', 'bust', 'three-quarter', 'backlit', 'watercolour', 'hat', 'rain']);
+  expect(r.tags).toEqual(['anime', 'girl', 'twin tails', 'pink hair', 'bust', 'three-quarter', 'backlit', 'watercolour', 'hat', 'rain']);
   expect(r.shape).toBe('portrait');
   // A head is square; "any" adds nothing.
   const head = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, framing: 'head' }));
   expect(head.shape).toBe('square');
   expect(head.prompt.startsWith('1girl, solo, portrait, close-up, straight-on')).toBe(true);
+});
+
+test('a landscape or an animal: no one in it, and only its own choices', async ({ page }) => {
+  await openApp(page);
+  // The character's choices are still set - and left out.
+  const land = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'landscape', hair: 'long',
+    place: 'lake', time: 'sunset', weather: 'fog', season: 'autumn' }));
+  expect(land.prompt).toBe('no humans, scenery, landscape, lake, reflection, sunset, orange sky, evening, fog, mist, ' +
+    'autumn, autumn leaves, watercolor (medium), traditional media, lineart');
+  expect(land.tags).toEqual(['anime', 'landscape', 'lake', 'sunset', 'fog', 'autumn', 'watercolour']);
+  expect(land.shape).toBe('landscape');
+  const fox = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'animal', animal: 'fox', size: 'close' }));
+  expect(fox.prompt).toContain('no humans, animal focus, solo, fox, portrait, close-up');
+  expect(fox.prompt).not.toContain('1girl');
+  expect(fox.shape).toBe('square');
 });
 
 test('not offered without a server, or with one that has no ComfyUI', async ({ page }) => {
@@ -43,6 +58,12 @@ test('with a ComfyUI behind the server: made, kept, shown, opened', async ({ pag
   await expect(page.locator('#stages .stage-card[data-stage="Prepare"]').getByRole('button', { name: /Generate references/ })).toHaveCount(1);
 
   await nav.click();
+  // A landscape asks nothing about hair; back to a character, it does.
+  await page.click('[data-gen="subject"][data-opt="landscape"]');
+  await expect(page.locator('[data-row="hair"]')).toBeHidden();
+  await expect(page.locator('[data-row="place"]')).toBeVisible();
+  await page.click('[data-gen="subject"][data-opt="character"]');
+  await expect(page.locator('[data-row="place"]')).toBeHidden();
   await page.click('[data-gen="hair"][data-opt="long"]');
   await page.fill('#genExtra', 'hat');
   await page.selectOption('#genCount', '2');

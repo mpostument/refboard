@@ -125,10 +125,12 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 ## Features
 
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
-  on a machine with a GPU (`COMFY_URL`): anime references made to order - who,
-  the hair, how much of them, from where, the pose, the light, the medium
-  (watercolour, ink line, flat colour, pencil) - kept in the Uploads pack's
-  Generated group, tagged with those choices, and opened with every tool.
+  on a machine with a GPU (`COMFY_URL`): anime references made to order - a
+  character (who, the hair, how much of them, from where, the pose), a
+  landscape (where, the time of day, the weather, the season), buildings,
+  nature or an animal, in the light and medium you pick (watercolour, ink
+  line, flat colour, pencil) - kept in the Uploads pack's Generated group,
+  tagged with those choices, and opened with every tool.
 - **A studio layout** - dark throughout, an icon rail down the left for the
   sections, and the library and session controls as panels either side that
   fold away, so the image gets the screen. The session panel and the 3D

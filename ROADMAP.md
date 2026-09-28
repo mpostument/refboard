@@ -150,7 +150,9 @@ in flat washes.
 
 In place: generating references on request - Generate references
 (`js/generate.js`, `Services/ComfyClient.cs`), with a ComfyUI the container
-knows about (`COMFY_URL`): the choices as Danbooru tags, a job the page asks
+knows about (`COMFY_URL`): a character, a landscape, buildings, nature or an
+animal - one style, anime, for now - the choices as Danbooru tags ("no
+humans" for all but a character, or the model draws a girl in), a job the page asks
 after, the picture kept in Uploads > Generated with the choices as its tags.
 Next: the pose and the light from the 3D figure - its depth or OpenPose
 render through a ControlNet - so the reference is the pose you set; a photo
