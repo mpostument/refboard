@@ -116,7 +116,7 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 | `PUT /api/uploads/{id}/folder` | `{ "folder": "figure" }` - moves it into one of the fixed folders (keys: `figure`, `portrait`, `animals`, `landscape`, `city`, `plants`, `still-life`, `illustration`, `my-work`, `other`) and wakes the index pass. |
 | `DELETE /api/uploads/{id}` | |
 | `GET /api/generate` | Whether references can be generated: `{ available, checkpoint }`, or `{ available: false, reason }` - no `COMFY_URL`, ComfyUI not answering, or the model not in it. |
-| `POST /api/generate` | `{ prompt, tags, shape, seed }` - Danbooru tags (the server adds the quality tags and a negative prompt, nsfw always in it), the words to file it under, `portrait`/`square`/`landscape`, and a seed or none. Returns `202 { id }`: a picture can take longer than a proxy lets a request run. |
+| `POST /api/generate` | `{ prompt, avoid, tags, shape, seed }` - Danbooru tags, and more to keep out (the server adds the quality tags and its own negative prompt, nsfw always in it), the words to file it under, `portrait`/`square`/`landscape`, and a seed or none. Returns `202 { id }`: a picture can take longer than a proxy lets a request run. |
 | `GET /api/generate/{id}` | That job: `{ state, upload, error }` - state `running`, `done` or `error`. Done, the picture is kept like an upload, in the `generated` folder with its tags. |
 | `GET /api/items` | The kinds of document stored. |
 | `GET /api/items/{kind}` | Every document of a kind, as `{ id: document }`. |
@@ -129,8 +129,10 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   character (who, the hair, how much of them, from where, the pose), a
   landscape (where, the time of day, the weather, the season), buildings,
   nature or an animal, in the light and medium you pick (watercolour, ink
-  line, flat colour, pencil) - kept in the Uploads pack's Generated group,
-  tagged with those choices, and opened with every tool.
+  and hatching, flat colour, pencil and hatching) - simple by default, a few
+  big shapes to copy rather than a finished illustration - kept in the
+  Uploads pack's Generated group, tagged with those choices, and opened with
+  every tool.
 - **A studio layout** - dark throughout, an icon rail down the left for the
   sections, and the library and session controls as panels either side that
   fold away, so the image gets the screen. The session panel and the 3D

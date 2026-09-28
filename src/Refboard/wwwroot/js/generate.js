@@ -16,8 +16,9 @@
 
 const GEN_KEY = 'refboard.generate.v1';
 
-// Each choice: its label, the words it files the picture under, and its
-// tags for the model; 'any' leaves it to the model. A row with `for` is shown,
+// Each choice: its label, the words it files the picture under, its tags for
+// the model, and what it keeps out (avoid - the negative prompt); 'any'
+// leaves it to the model. A row with `for` is shown,
 // and used, only for those subjects.
 const ANY = { id: 'any', label: 'Any', tags: '' };
 const PERSON = ['character'], OUTDOORS = ['landscape', 'building'];
@@ -148,11 +149,25 @@ const GEN_CHOICES = [
     { id: 'back', label: 'Backlit', tags: 'backlighting, rim lighting', words: 'backlit' },
     { id: 'dramatic', label: 'Dramatic', tags: 'dramatic lighting, chiaroscuro', words: 'low key' },
   ] },
+  // Ink is lines and hatching - "greyscale" alone had it fill the shadows
+  // solid black, like oil paint - and pencil is hatched graphite: both are
+  // the marks a beginner copies stroke by stroke.
   { id: 'medium', label: 'Medium', options: [
     { id: 'watercolour', label: 'Watercolour', tags: 'watercolor (medium), traditional media, lineart', words: 'watercolour' },
-    { id: 'ink', label: 'Ink line', tags: 'lineart, monochrome, greyscale, ink (medium)', words: 'ink' },
+    { id: 'ink', label: 'Ink and hatching', words: 'ink',
+      tags: 'monochrome, lineart, hatching (texture), cross-hatching, ink (medium), pen (medium), traditional media',
+      avoid: 'color, gradient, screentone, solid black, black fill, grey wash, greyscale shading' },
     { id: 'flat', label: 'Flat colour', tags: 'flat color, cel shading', words: 'flat colour' },
-    { id: 'sketch', label: 'Pencil sketch', tags: 'sketch, traditional media, graphite (medium), monochrome', words: 'sketch' },
+    { id: 'sketch', label: 'Pencil and hatching', words: 'pencil',
+      tags: 'monochrome, greyscale, sketch, graphite (medium), hatching (texture), traditional media',
+      avoid: 'color, digital' },
+  ] },
+  // Simple, the default: a few big shapes to copy, not a finished
+  // illustration to be daunted by.
+  { id: 'detail', label: 'Detail', options: [
+    { id: 'simple', label: 'Simple', tags: 'minimalist, simple drawing', words: 'simple',
+      avoid: 'detailed, intricate details, complex background, gradient, shiny skin, shiny hair' },
+    { id: 'normal', label: 'Normal', tags: '', words: '' },
   ] },
   // A landscape or a street is its own background.
   { id: 'ground', label: 'Background', for: ['character', 'nature', 'animal'], options: [
@@ -163,30 +178,32 @@ const GEN_CHOICES = [
 
 const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', framing: 'bust',
   view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', ground: 'plain' };
+  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', detail: 'simple',
+  ground: 'plain' };
 
 // Whether a row is asked, and used, for this subject.
 const genApplies = (c, subject) => !c.for || c.for.includes(subject);
 
-/* The choices as the model's prompt, the plain words the picture is filed
-   under, and its shape: tall for a figure, wide for a landscape or a
+/* The choices as the model's prompt, what to keep out of it, the plain words
+   the picture is filed under, and its shape: tall for a figure, wide for a landscape or a
    street, square for a head or a close look at something. extra is what was
    typed under More tags, passed on as it is. */
 function genPrompt(choices, extra = '') {
   const subjects = GEN_CHOICES.find(c => c.id === 'subject').options;
   const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
-  const tags = [], words = [];
+  const tags = [], words = [], avoid = [];
   for (const c of GEN_CHOICES) {
     if (!genApplies(c, subject)) continue;
     const o = c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id]);
     if (o.tags) tags.push(o.tags);
+    if (o.avoid) avoid.push(o.avoid);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
     if (w) words.push(w);
   }
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
   const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
-  return { prompt: [...tags, ...more].join(', '), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
+  return { prompt: [...tags, ...more].join(', '), avoid: avoid.join(', '), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
 
 let genChoices = { ...GEN_DEFAULTS };

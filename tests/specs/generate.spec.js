@@ -8,9 +8,13 @@ test('the choices become the model\'s tags and the words it is filed under', asy
   await openApp(page);
   const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, hair: 'twintails', colour: 'pink', view: 'three', light: 'back' }, 'hat, rain'));
   expect(r.prompt).toBe('1girl, solo, twintails, pink hair, upper body, three quarter view, backlighting, rim lighting, ' +
-    'watercolor (medium), traditional media, lineart, simple background, white background, hat, rain');
-  expect(r.tags).toEqual(['anime', 'girl', 'twin tails', 'pink hair', 'bust', 'three-quarter', 'backlit', 'watercolour', 'hat', 'rain']);
+    'watercolor (medium), traditional media, lineart, minimalist, simple drawing, simple background, white background, hat, rain');
+  expect(r.tags).toEqual(['anime', 'girl', 'twin tails', 'pink hair', 'bust', 'three-quarter', 'backlit', 'watercolour',
+    'simple', 'hat', 'rain']);
   expect(r.shape).toBe('portrait');
+  // Simple, the default, keeps the intricate out.
+  expect(r.avoid).toContain('intricate details');
+  expect((await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, detail: 'normal' }))).avoid).toBe('');
   // A head is square; "any" adds nothing.
   const head = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, framing: 'head' }));
   expect(head.shape).toBe('square');
@@ -23,13 +27,23 @@ test('a landscape or an animal: no one in it, and only its own choices', async (
   const land = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'landscape', hair: 'long',
     place: 'lake', time: 'sunset', weather: 'fog', season: 'autumn' }));
   expect(land.prompt).toBe('no humans, scenery, landscape, lake, reflection, sunset, orange sky, evening, fog, mist, ' +
-    'autumn, autumn leaves, watercolor (medium), traditional media, lineart');
-  expect(land.tags).toEqual(['anime', 'landscape', 'lake', 'sunset', 'fog', 'autumn', 'watercolour']);
+    'autumn, autumn leaves, watercolor (medium), traditional media, lineart, minimalist, simple drawing');
+  expect(land.tags).toEqual(['anime', 'landscape', 'lake', 'sunset', 'fog', 'autumn', 'watercolour', 'simple']);
   expect(land.shape).toBe('landscape');
   const fox = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'animal', animal: 'fox', size: 'close' }));
   expect(fox.prompt).toContain('no humans, animal focus, solo, fox, portrait, close-up');
   expect(fox.prompt).not.toContain('1girl');
   expect(fox.shape).toBe('square');
+});
+
+test('ink is lines and hatching, never filled black', async ({ page }) => {
+  await openApp(page);
+  const ink = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'nature', thing: 'mushrooms', medium: 'ink' }));
+  expect(ink.prompt).toContain('hatching (texture), cross-hatching, ink (medium)');
+  expect(ink.prompt).not.toContain('greyscale');
+  expect(ink.avoid).toContain('solid black');
+  const pencil = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, medium: 'sketch' }));
+  expect(pencil.prompt).toContain('graphite (medium), hatching (texture)');
 });
 
 test('not offered without a server, or with one that has no ComfyUI', async ({ page }) => {

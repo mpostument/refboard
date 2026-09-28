@@ -5,9 +5,11 @@ using System.Text.Json.Nodes;
 namespace Refboard.Services;
 
 /// <summary>What the page asks for: the picture's tags (see js/generate.js,
-/// which builds them from the choices), the tags to file it under, its
-/// shape, and a seed - none for a new picture each time.</summary>
-public sealed record GenerateRequest(string? Prompt, List<string>? Tags, string? Shape, long? Seed);
+/// which builds them from the choices), what to keep out of it on top of the
+/// server's own negative prompt (a simple picture avoids "intricate details",
+/// an ink one "solid black"), the tags to file it under, its shape, and a
+/// seed - none for a new picture each time.</summary>
+public sealed record GenerateRequest(string? Prompt, List<string>? Tags, string? Shape, long? Seed, string? Avoid = null);
 
 /// <summary>
 /// Generates references with a ComfyUI (<see cref="RefboardOptions.ComfyUrl"/>)
@@ -100,7 +102,8 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
         {
             ["1"] = Node("CheckpointLoaderSimple", new() { ["ckpt_name"] = opts.ComfyCheckpoint }),
             ["2"] = Node("CLIPTextEncode", new() { ["clip"] = Link("1", 1), ["text"] = $"{req.Prompt}, {Quality}" }),
-            ["3"] = Node("CLIPTextEncode", new() { ["clip"] = Link("1", 1), ["text"] = Negative }),
+            ["3"] = Node("CLIPTextEncode", new() { ["clip"] = Link("1", 1),
+                ["text"] = string.IsNullOrWhiteSpace(req.Avoid) ? Negative : $"{Negative}, {req.Avoid}" }),
             ["4"] = Node("EmptyLatentImage", new() { ["width"] = w, ["height"] = h, ["batch_size"] = 1 }),
             ["5"] = Node("KSampler", new()
             {
