@@ -561,6 +561,7 @@ const TRAINERS = [TRAIN_VALUE, TRAIN_COLOUR, TRAIN_ANATOMY, TRAIN_MEASURE, TRAIN
    rendered off screen by the same engine as the 3D view (which it loads on
    first use); a library image comes from the index when there is one. */
 async function trainFigureUrl({ plain = false } = {}) {
+  await loadSection('forms');
   showForms();
   await formsLoading;
   if (!forms) throw new Error('the 3D engine could not load');

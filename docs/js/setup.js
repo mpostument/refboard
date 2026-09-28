@@ -48,10 +48,8 @@ const el = id => document.getElementById(id);
    boot(), it just leaves the fallback showing. */
 function updateFooterVersion() {
   el('appVersion').textContent = 'v' + APP_VERSION;
-  fetch('healthz', { cache: 'no-store' })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => { if (data && data.version) el('appVersion').textContent = 'v' + data.version; })
-    .catch(() => { /* no backend, or it's down - the fallback already covers this */ });
+  // The same question the store asks - see backendInfo in js/store.js.
+  backendInfo.then(data => { if (data && data.version) el('appVersion').textContent = 'v' + data.version; });
 }
 
 /* A tab left open for days - a tablet by the easel - never sees a deploy.
@@ -62,7 +60,7 @@ function updateFooterVersion() {
    but the page itself. At most every ten minutes, and never on file://. */
 const UPDATE_CHECK_MS = 10 * 60 * 1000;
 let lastUpdateCheck = Date.now();
-const assetStamps = text => [...text.matchAll(/(?:js|css)\/[^"?]+\?v=[0-9a-f]+/g)].map(m => m[0]).sort().join(' ');
+const assetStamps = text => [...new Set([...text.matchAll(/(?:js|css)\/[^"?]+\?v=[0-9a-f]+/g)].map(m => m[0]))].sort().join(' ');
 // Read in initUpdateCheck(), not here: while this file runs, the parser
 // has not reached the script tags after it yet.
 let loadedStamps = '';
@@ -79,8 +77,9 @@ async function checkForUpdate() {
 }
 
 function initUpdateCheck() {
-  loadedStamps = assetStamps(
-    [...document.querySelectorAll('script[src], link[rel="stylesheet"]')].map(n => `"${n.getAttribute('src') || n.getAttribute('href')}"`).join(''));
+  // The page as served, so the lazy sections' scripts count too: their tags
+  // are inside <template>s, where querySelectorAll does not look.
+  loadedStamps = assetStamps(document.documentElement.outerHTML);
   el('updateReady').addEventListener('click', () => location.reload());
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') checkForUpdate();
@@ -220,6 +219,7 @@ async function boot() {
   renderValueTools(saved);
   renderValueSteps(saved);
   initDropZone();
+  renderUploads();
   initEyedropper();
   initShell(saved);
   // Last, so the tree it highlights and the grid it may draw both exist. The
@@ -661,10 +661,12 @@ function initDropZone() {
     sessionInfo.classList.remove('hidden');
   }
 
-  async function showDropped(fileList) {
+  async function showDropped(fileList, { keep = true } = {}) {
     const files = [...fileList].filter(f => f && f.type);
     const images = files.filter(f => f.type.startsWith('image/'));
     const videos = files.filter(f => f.type.startsWith('video/'));
+    // Kept - a video whole, not its frames: opened again, it gives new ones.
+    if (keep) for (const f of [...images, ...videos]) keepUploadQuietly(f, { from: f.type.startsWith('video/') ? 'video' : 'drop' });
     if (!videos.length) {
       if (images.length === 1) showOne(images[0]);
       else if (images.length) showMany(images);
@@ -717,7 +719,11 @@ function initDropZone() {
     if (e.dataTransfer.files) showDropped(e.dataTransfer.files);
   });
   input.addEventListener('change', () => showDropped(input.files));
+  takeDropped = showDropped;
 }
+// A kept video opened again goes the same way as a dropped one - set by
+// initDropZone(), whose closure holds the staged pool.
+let takeDropped = () => {};
 
 /* Stills out of a video, for gesture drawing from real movement - a dancer,
    a match, an animal - rather than poses held still for a camera. One random
@@ -1203,6 +1209,7 @@ function setView(next) {
   el('viewDashboard').classList.toggle('hidden', browsing || forms || train || colour);
   el('searchbar').classList.toggle('hidden', !browsing);
   el('viewTitle').textContent = viewTitle();
+  if (changed) announce(viewTitle());
 
   for (const b of document.querySelectorAll('.nav-item[data-view]')) {
     b.setAttribute('aria-current', String(b.dataset.view === view.kind));
@@ -1212,9 +1219,9 @@ function setView(next) {
   if (browsing) refreshGrid(); else updateViewMeta();
   // Initialised on first visit, not at boot: a WebGL context and a shadow map
   // are real GPU memory, and most visits to the board never open this view.
-  if (forms) showForms();
+  if (forms) openLazyView('forms', () => showForms());
   if (train) showTrain();
-  if (colour) showColour();
+  if (colour) openLazyView('colour', () => showColour());
   el('sidebar').classList.remove('peek');
   shellSync();
   el('mainBody').scrollTop = 0;
@@ -1229,6 +1236,15 @@ function setView(next) {
     zone.focus();
   }
   closeDrawers();
+}
+
+/* A view whose code loads the first time it opens (loadSection()). Drawn
+   only if it is still the view when its code arrives - a quick click on to
+   somewhere else must not have it drawn over that. */
+function openLazyView(kind, show) {
+  loadSection(kind).then(() => { if (view.kind === kind) show(); }, () => {
+    if (view.kind === kind) el('viewMeta').textContent = 'This section could not load - check the connection, then open it again.';
+  });
 }
 
 /* Highlights whichever tree row the middle column is showing, and opens the
@@ -1310,6 +1326,13 @@ function initShell(saved = {}) {
 
   for (const b of document.querySelectorAll('.nav-item[data-view]')) {
     b.addEventListener('click', () => setView({ kind: b.dataset.view }));
+    // A lazy section's code starts coming as the pointer reaches its
+    // button, so by the click it is usually here.
+    if (el('lazy-' + b.dataset.view)) {
+      const warm = () => loadSection(b.dataset.view).catch(() => { /* the click will say */ });
+      b.addEventListener('pointerenter', warm, { once: true });
+      b.addEventListener('focus', warm, { once: true });
+    }
   }
 
   /* The two side panels. On a wide screen each folds away and stays that

@@ -2341,7 +2341,6 @@ function bindFormsOrbit() {
   new ResizeObserver(requestFormsRender).observe(stage);
 }
 
-const wrap180 = a => ((a % 360) + 540) % 360 - 180;
 const formatLightDist = v => v >= LIGHT_SUN ? '∞' : '×' + v.toFixed(1);
 
 // Takes a form away; the lamp stays on its own form if that one is left,

@@ -740,7 +740,8 @@ el('btnInfo').addEventListener('click', toggleValueTools);
 function toggleHelp() {
   const opening = el('helpOverlay').classList.contains('hidden');
   el('helpOverlay').classList.toggle('hidden');
-  if (opening) el('helpModal').scrollTop = 0;
+  if (opening) { el('helpModal').scrollTop = 0; dialogOpened(el('helpOverlay'), el('btnHelpClose')); }
+  else dialogClosed(el('helpOverlay'));
 }
 el('btnHelpSetup').addEventListener('click', toggleHelp);
 el('btnHelpHud').addEventListener('click', toggleHelp);

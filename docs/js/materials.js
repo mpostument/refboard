@@ -144,11 +144,7 @@ function initMaterials() {
   });
   el('materialsClose').addEventListener('click', closeMaterials);
   el('btnMaterials').addEventListener('click', openMaterials);
-  el('materials').addEventListener('keydown', e => {
-    e.stopPropagation();
-    if (e.key === 'Escape') { e.preventDefault(); closeMaterials(); }
-  });
-  el('materials').addEventListener('pointerdown', e => { if (e.target === el('materials')) closeMaterials(); });
+  initSheet(el('materials'), closeMaterials);
   const sel = el('mediumSelect');
   sel.addEventListener('change', () => {
     if (sel.value === 'edit') { sel.value = materialsProfile().main; openMaterials(); return; }

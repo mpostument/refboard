@@ -90,12 +90,7 @@ function initTour() {
     if (e.key === 'Escape') { e.preventDefault(); endTour(); }
     else if (e.key === 'ArrowRight' && tourAt < tourSteps.length - 1) showTourStep(tourAt + 1);
     else if (e.key === 'ArrowLeft' && tourAt > 0) showTourStep(tourAt - 1);
-    // Tab goes round the note's own buttons, not out under the dimming.
-    else if (e.key === 'Tab') {
-      const bs = [...el('tourNote').querySelectorAll('button:not(.hidden):not(:disabled)')];
-      const j = bs.indexOf(document.activeElement), k = (j + (e.shiftKey ? -1 : 1) + bs.length) % bs.length;
-      e.preventDefault(); bs[k].focus();
-    }
+    // Tab goes round the note's own buttons: js/a11y.js, as for every dialog.
   });
   addEventListener('resize', placeTour);
 }

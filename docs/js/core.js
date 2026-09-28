@@ -70,6 +70,33 @@ function setIcon(id, name, title) {
   if (title) { b.title = title; b.setAttribute('aria-label', title.replace(/ \(.*\)$/, '')); }
 }
 
+/* ---- sections that load when first opened. Their scripts wait in
+   index.html inside <template id="lazy-NAME">: a template's scripts are
+   never run, but their stamped URLs (scripts/stamp-assets.js) are there to
+   copy. Added one after another, not async, so a file may use the one
+   before it at load time exactly as the static list allows. A failed load
+   is forgotten, so opening the section again tries again. */
+const lazySections = {};
+function loadSection(name) {
+  if (lazySections[name]) return lazySections[name];
+  const tpl = document.getElementById('lazy-' + name);
+  if (!tpl) return Promise.resolve();
+  const srcs = [...tpl.content.querySelectorAll('script[src]')].map(s => s.getAttribute('src'));
+  lazySections[name] = srcs.reduce((prev, src) => prev.then(() => new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = res;
+    s.onerror = () => { s.remove(); rej(new Error('could not load ' + src)); };
+    document.body.appendChild(s);
+  })), Promise.resolve()).catch(err => { delete lazySections[name]; throw err; });
+  return lazySections[name];
+}
+
+// Small angle helpers the 3D view and the session's Compare both use - here,
+// not in the 3D view's files, which load only when it is opened.
+const THREE_DEG = Math.PI / 180;
+const wrap180 = a => ((a % 360) + 540) % 360 - 180;
+
 const INDEX_URL = 'index.json';
 
 // Written by the server's background feature-builder pass: display copies

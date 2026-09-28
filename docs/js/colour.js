@@ -481,7 +481,11 @@ function initColour() {
     colourRenderPalette();
   });
 
-  const take = file => { if (file && file.type.startsWith('image/')) colourLoad(trainKeepUrl(URL.createObjectURL(file))); };
+  const take = file => {
+    if (!file || !file.type.startsWith('image/')) return;
+    keepUploadQuietly(file, { from: 'colour' });
+    colourLoad(trainKeepUrl(URL.createObjectURL(file)));
+  };
   el('colPick').addEventListener('click', () => el('colInput').click());
   el('colInput').addEventListener('change', e => { take(e.target.files[0]); e.target.value = ''; });
   // The same picture with every other tool: value, construction, the pose.

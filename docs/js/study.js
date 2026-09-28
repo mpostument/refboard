@@ -73,6 +73,8 @@ async function inkFromPhoto(img) {
 
 function openCompare(file) {
   if (!file || !/^image\//.test(file.type)) return;
+  // A photo of your own work: kept, like everything the app is given.
+  keepUploadQuietly(file, { from: 'work' });
   // Comparing takes longer than any timer - stop the clock rather than lose
   // the pose under you.
   if (!state.browse && !state.paused) togglePause();
