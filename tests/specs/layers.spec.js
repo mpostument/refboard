@@ -11,7 +11,7 @@ test('every overlay is a layer: on/off is the tool itself, opacity is kept', asy
   await openSession(page);
   await page.click('#btnLayers');
   await expect(page.locator('#layersPanel')).toBeVisible();
-  await expect(page.locator('#layersList .layer-row')).toHaveCount(10);
+  await expect(page.locator('#layersList .layer-row')).toHaveCount(11);
   await expect(page.locator('#layersCount')).toHaveText('none on');
 
   // The grid's checkbox is the same thing as "r" and the setup checkbox.

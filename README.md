@@ -164,6 +164,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   lighter; strong where the area has detail that will be lost (the spread of
   L* in a small window), faint where it is a flat mass, which loses nothing.
   The note gives each share and what to do, in the medium's own ladder.
+- **Temperature map** - in a session (`t`, Workspace > Colour, Layers): which
+  areas are warm and which cool, and white lines where the temperature
+  turns. Temperature is the colour on OKLab's orange-blue axis, measured
+  against the picture's own middle (the mean of its middle half), so a
+  lamplit picture shows the warm and cool within its light, and the cast is
+  a sentence in the note. The note tells warm light / cool shadow from the
+  reverse, for cel shading and for mixing in your medium. Every overlay's
+  part of the note has an x that turns just that layer off.
 - **Character sheet** - the Colour studio's second tab: a character's hair,
   skin, eyes, clothes and an accent, each clicked on a picture, with its
   shadow and light worked out as anime cel shading paints them (a value

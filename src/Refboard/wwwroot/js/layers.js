@@ -34,6 +34,8 @@ const LAYERS = [
     on: () => !!state.edgesOn, toggle: () => toggleEdges() },
   { id: 'range', label: "Paper's range", els: ['rangeOverlay'], base: 1,
     on: () => !!state.rangeOn, toggle: () => toggleRange() },
+  { id: 'temp', label: 'Temperature map', els: ['tempOverlay'], base: 1,
+    on: () => !!state.tempOn, toggle: () => toggleTemp() },
   { id: 'pose', label: 'Pose skeleton', els: ['poseOverlay'], base: 1,
     on: () => !!state.poseOn, toggle: () => togglePose() },
   { id: 'grid', label: 'Grid', els: ['grid', 'gridValue'], base: 0.3,

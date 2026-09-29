@@ -504,6 +504,7 @@ function show(src) {
     if (state.headOn) runHead();
     if (state.edgesOn) runEdges();
     if (state.rangeOn) runRange();
+    if (state.tempOn) runTemp();
     refreshValueTools();
   };
   img.onerror = () => {
@@ -560,6 +561,7 @@ function show(src) {
   clearHead();
   clearEdges();
   clearRange();
+  clearTemp();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);

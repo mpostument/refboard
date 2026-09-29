@@ -25,6 +25,7 @@ const HUD_TOOLS = [
   { id: 'head', label: 'Head construction', els: ['btnHead'], key: 'l', group: 'look' },
   { id: 'edges', label: 'Edge map', els: ['btnEdges'], key: 'x', group: 'look' },
   { id: 'range', label: "Paper's range", els: ['btnRange'], key: 'b', group: 'look' },
+  { id: 'temp', label: 'Temperature map', els: ['btnTemp'], key: 't', group: 'look' },
   { id: 'compare', label: 'Compare your drawing', els: ['btnCompare'], key: 'd', group: 'look' },
   { id: 'workspace', label: 'Workspace - tools by question', els: ['btnWorkspace'], key: 'w', group: 'look' },
   { id: 'layers', label: 'Layers', els: ['btnLayers'], key: '', group: 'look' },

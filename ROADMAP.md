@@ -528,8 +528,13 @@ Any medium:
 - **Skin tones.** Palettes of skin across complexions and light (sun,
   shade, evening, lamplight), with watercolour recipes for the light,
   half-tone, shadow and reflected light.
-- **Temperature map.** Over the reference: which areas are warm, which are
-  cool, and where the temperature turns between light and shadow.
+- **Temperature map, the rest.** In place (`js/temperature.js`, `t`,
+  Workspace > Colour, a layer): each area's colour on OKLab's orange-blue
+  axis, against the picture's own middle, orange warmer and blue cooler,
+  white lines where it turns; the note tells warm light / cool shadow from
+  the reverse. Still to come: temperature read against the local colour
+  (a red shadow on a red dress is still a cool red), and a picker for which
+  hue counts as neutral under a coloured light.
 - **Palette generator, the rest.** In place (`js/palette.js`, Prepare >
   Palettes): the row, Space, locks, reordering, tints and shades, the
   harmonies, a value structure, recipes for your paints, Only what my

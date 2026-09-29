@@ -79,14 +79,20 @@ function loadVision(kind) {
   return visionLoading[kind];
 }
 
-// The one note box is shared: the head's note above the pose's when both
-// are on.
-const overlayNotes = { head: '', pose: '', edges: '', range: '' };
+// The one note box is shared, in this order: the head's note above the
+// pose's when both are on. Each part has its own x, which turns that layer
+// off - with three maps on, the note is how you find what to close. The
+// keys are LAYERS' ids (js/layers.js).
+const overlayNotes = { head: '', pose: '', edges: '', range: '', temp: '' };
 function overlayNote(key, html) {
   overlayNotes[key] = html || '';
-  const all = [overlayNotes.head, overlayNotes.pose, overlayNotes.edges, overlayNotes.range].filter(Boolean).join('<hr>');
-  el('poseNote').classList.toggle('hidden', !all);
-  el('poseNote').innerHTML = all;
+  const parts = Object.entries(overlayNotes).filter(([, h]) => h).map(([k, h]) => {
+    const layer = typeof LAYERS !== 'undefined' && LAYERS.find(l => l.id === k);
+    const off = layer ? `<button type="button" class="note-off" data-note-off="${k}" title="Turn off ${esc(layer.label)}" aria-label="Turn off ${esc(layer.label)}">×</button>` : '';
+    return `<div class="note-part" data-note="${k}">${off}${h}</div>`;
+  });
+  el('poseNote').classList.toggle('hidden', !parts.length);
+  el('poseNote').innerHTML = parts.join('');
 }
 const poseNote = html => overlayNote('pose', html);
 function clearPose() {
@@ -757,4 +763,6 @@ el('poseNote').addEventListener('click', e => {
   if (b) setHeadStyle(b.dataset.headStyle);
   if (build) setPoseBuild(build.dataset.poseBuild);
   if (eyes) setHeadEyes(eyes.dataset.headEyes);
+  const off = e.target.closest('[data-note-off]');
+  if (off) LAYERS.find(l => l.id === off.dataset.noteOff).toggle();
 });

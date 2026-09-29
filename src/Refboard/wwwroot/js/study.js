@@ -457,6 +457,7 @@ document.addEventListener('keydown', e => {
     case 'l': case 'L': toggleHead(); break;
     case 'x': case 'X': if (!e.ctrlKey && !e.metaKey) toggleEdges(); break;
     case 'b': case 'B': if (!e.ctrlKey && !e.metaKey) toggleRange(); break;
+    case 't': case 'T': if (!e.ctrlKey && !e.metaKey) toggleTemp(); break;
     case 'Backspace':
       if (state.constructMode === 'persp' && state.persp && state.persp.length) { e.preventDefault(); state.persp.pop(); renderConstructOverlay(); }
       break;

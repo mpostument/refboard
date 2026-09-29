@@ -23,6 +23,7 @@ const WS_TABS = [
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [
     { hud: 'eyedropper', about: 'one spot: its colour, its value step, a recipe in your medium' },
+    { hud: 'temp', about: 'warm and cool areas, and where the temperature turns - is the shadow cooler than the light?' },
     { hud: 'info', about: 'the main colours of the picture' },
     { hud: 'gray', about: 'is it the colour that is off, or the value?' },
   ] },

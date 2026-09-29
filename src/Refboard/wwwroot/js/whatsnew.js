@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'temperature', title: 'Temperature map',
+    text: "Over any picture in a session (t, or Workspace > Colour): orange where it is warmer than the picture as a whole, blue where it is cooler, and white lines where the temperature turns - most often at the edge of a shadow. The note says whether the light is warm and the shadows cool or the other way round, and what that means for cel shading and for mixing in your medium. Every overlay's note now has its own x, to turn just that one off.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'range', title: "What the paper can do",
     text: "Over any picture in a session (b, or Workspace > Value): where your medium cannot follow the photo. Violet is darker than the darkest mix you can make - watercolour goes to about L* 18, a liner to solid black - and amber is lighter than the paper, which is never quite white. Strong where there is detail that will be lost, faint where it is a flat mass that loses nothing; the note says how much of each, and what to do with it in your medium's terms. Change the main medium in My materials and the range follows.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
