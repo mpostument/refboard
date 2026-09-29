@@ -507,10 +507,14 @@ Any medium:
 - **Palette generator, the rest.** In place (`js/palette.js`, Prepare >
   Palettes): the row, Space, locks, reordering, tints and shades, the
   harmonies, a value structure, recipes for your paints, Only what my
-  paints mix, saved palettes and a picture's palette from the Colour
-  studio. Still to come: a palette kept to a board or a project, sent to a
-  Generate prompt as its colours, and recipes for pencils and markers by
-  their own names once My materials lists them.
+  paints mix, saved palettes, a picture's palette from the Colour studio,
+  and a palette sent to Generate as its Colours (`genPaletteTags()` in
+  `js/generate.js`: limited palette, the leading hue family's theme,
+  muted/pastel, dark/high contrast - checked on Animagine XL 4.0, one seed:
+  the theme tag is strong, the picture comes out nearly in one hue).
+  Still to come: a palette kept to a project (once Projects are in), and
+  recipes for pencils and markers by their own names once My materials
+  lists them.
 
 - **The best limited palette for a reference.** Choose "3 paints" or
   "5 markers": from your own materials, the ones that cover the most of

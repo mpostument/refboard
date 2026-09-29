@@ -1,7 +1,8 @@
 // The palette generator (js/palette.js): Space for a new palette, locks,
 // Undo, harmonies, values spread out, only what your paints mix, recipes,
-// reordering, saved palettes, and a picture's palette from the Colour studio.
-const { test, expect, openApp, quadrantsPng, QUADS } = require('../helpers');
+// reordering, saved palettes, a picture's palette from the Colour studio, and a
+// palette sent to Generate as a reference's colours.
+const { test, expect, openApp, quadrantsPng, QUADS, fakeServer } = require('../helpers');
 
 const hexes = page => page.locator('#pgRow .pg-hex').allTextContents();
 const open = async page => {
@@ -60,11 +61,14 @@ test('only what my paints mix: every colour inside what Zorn can reach', async (
       const reach = paintReach('zorn', paintMedium());
       return pg.swatches.filter(s => {
         const [, a, b] = linToOklab(...s.rgb.map(c => srgbToLin(c / 255)));
-        // On the edge counts as in: rounding to whole sRGB steps.
-        return !pointInPolygon([a, b], reach) && Math.hypot(...[a, b].map((v, i) => v - mapIntoGamut([a, b], reach)[i])) > 0.01;
-      }).length;
+        // On the edge counts as in: rounding to whole sRGB steps. Measured to
+        // the nearest point of the edge - not along the ray from grey, which
+        // for a hue the paints cannot reach at all (green, in Zorn) meets the
+        // edge somewhere else entirely.
+        return !pointInPolygon([a, b], reach) && Math.hypot(...[a, b].map((v, i) => v - nearestOnPolygon([a, b], reach)[i])) > 0.01;
+      }).map(s => s.rgb);
     });
-    expect(outside).toBe(0);
+    expect(outside).toEqual([]);
   }
   // The same paints chosen in the Colour studio - one setting for the app.
   await page.click('.nav-item[data-view="colour"]');
@@ -142,4 +146,49 @@ test("a picture's palette goes from the Colour studio to the generator", async (
   for (const want of Object.values(QUADS)) {
     expect(got.some(c => c.every((v, i) => Math.abs(v - want[i]) <= 2)), String(want)).toBe(true);
   }
+});
+
+test('a palette goes to Generate: its colours in the prompt, not for ink', async ({ page }) => {
+  await fakeServer(page);
+  const asked = [];
+  await page.route('**/api/generate**', r => {
+    const req = r.request();
+    if (req.method() === 'POST') { asked.push(JSON.parse(req.postData())); return r.fulfill({ status: 202, json: { id: 'job1' } }); }
+    if (!req.url().endsWith('/api/generate')) return r.fulfill({ json: { state: 'error', error: 'stopped' } });
+    return r.fulfill({ json: { available: true, quality: '', negative: '' } });
+  });
+  await openApp(page);
+  await expect(page.locator('.nav-item[data-view="generate"]')).toBeVisible();
+  // Nothing sent yet: Your palette waits for one.
+  await page.click('.nav-item[data-view="generate"]');
+  await expect(page.locator('[data-gen="colours"][data-opt="palette"]')).toBeDisabled();
+  await page.click('#genToPalettes');
+  await expect(page.locator('#pgRow .pg-sw')).toHaveCount(5);
+  const sent = await page.evaluate(() => pg.swatches.map(s => s.rgb));
+
+  await page.click('#pgToGenerate');
+  await expect(page.locator('.nav-item[data-view="generate"]')).toHaveAttribute('aria-current', 'true');
+  const chip = page.locator('[data-gen="colours"][data-opt="palette"]');
+  await expect(chip).toHaveAttribute('aria-pressed', 'true');
+  await expect(chip.locator('.gen-strip i')).toHaveCount(5);
+  const tags = await page.evaluate(rgbs => genPaletteTags(rgbs), sent);
+  expect(tags.length).toBeGreaterThan(0);
+  await page.click('#genGo');
+  await expect.poll(() => asked.length).toBe(1);
+  for (const t of tags) expect(asked[0].prompt).toContain(t);
+
+  // Kept over a reload; and ink, drawn in grey, has no Colours row.
+  await page.reload();
+  await page.click('.nav-item[data-view="generate"]');
+  await expect(page.locator('[data-gen="colours"][data-opt="palette"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.click('[data-gen="medium"][data-opt="ink"]');
+  await expect(page.locator('[data-row="colours"]')).toBeHidden();
+  const ink = await page.evaluate(() => genRequest().prompt);
+  for (const t of tags) expect(ink).not.toContain(t);
+});
+
+test('without a ComfyUI, no Use in Generate', async ({ page }) => {
+  await openApp(page);
+  await open(page);
+  await expect(page.locator('#pgToGenerate')).toBeHidden();
 });

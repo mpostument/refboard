@@ -83,6 +83,7 @@ const rgbOklch = rgb => {
   const [L, a, b] = linToOklab(...rgb.map(c => srgbToLin(c / 255)));
   return [L, Math.hypot(a, b), (Math.atan2(b, a) * 180 / Math.PI + 360) % 360];
 };
+const colHexOf = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
 // A colour of this hue and chroma at the given L* - bisection on OKLCH's
 // lightness, which runs the same way as L*.
 function colourAtLstar(target, C, h) {

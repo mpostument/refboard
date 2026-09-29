@@ -134,7 +134,10 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   your paints in your medium (the same Kubelka-Munk and Beer-Lambert
   recipes as the eyedropper's); *Only what my paints mix* pulls every new
   colour in along its hue to what those paints can reach. A picture's own
-  palette comes from the Colour studio's To the palette generator.
+  palette comes from the Colour studio's To the palette generator; with a
+  ComfyUI, *Use in Generate* makes it Generate's Colours - as the few tags
+  the model knows for a palette as a whole (limited palette, its leading
+  hue's theme, muted or pastel, dark or high contrast), not one per colour.
 - **How to draw it** - any picture in the workspace (Learn tab, Ctrl+K, or
   Steps on a generated one) taken back to the steps it is drawn in, for the
   medium: the big shapes blocked in with a few straight lines, the lines,

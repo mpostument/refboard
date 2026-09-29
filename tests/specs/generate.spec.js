@@ -140,3 +140,28 @@ test('an error from the server is said, and the button comes back', async ({ pag
   await expect(page.locator('#genStatus')).toHaveText('ComfyUI stopped answering.');
   await expect(page.locator('#genGo')).toBeEnabled();
 });
+
+test('a palette as a few tags for the whole of it', async ({ page }) => {
+  await openApp(page);
+  const t = rgbs => page.evaluate(r => genPaletteTags(r), rgbs);
+  // Muted blues, grey-ish, light to dark.
+  expect(await t([[138, 180, 217], [70, 90, 120], [30, 40, 60], [150, 155, 165], [200, 210, 225]]))
+    .toEqual(['limited palette', 'blue theme', 'muted color', 'high contrast']);
+  // Light and soft: pastel.
+  expect(await t([[250, 215, 225], [240, 225, 245], [220, 235, 250], [250, 240, 215]])).toContain('pastel colors');
+  // Mostly dark, one orange accent; a dark ochre is brown.
+  const dark = await t([[20, 25, 35], [60, 40, 30], [200, 110, 30], [40, 45, 60]]);
+  expect(dark).toEqual(expect.arrayContaining(['orange theme', 'dark']));
+  expect(await page.evaluate(() => genHueTag(0.4, 75))).toBe('brown');
+  // Peach, orange and browns are one warm family - orange, not split in two.
+  expect(await t([[250, 215, 180], [220, 120, 50], [150, 70, 40], [90, 50, 40], [240, 190, 120]])).toContain('orange theme');
+  // All of it dark ochre and umber: brown.
+  expect(await t([[110, 80, 40], [80, 55, 30], [140, 100, 50]])).toContain('brown theme');
+  // Two opposites, as strong: no one hue leads. The stronger of them does.
+  const even = await page.evaluate(() => genPaletteTags([lchRgb(0.6, 0.12, 25), lchRgb(0.6, 0.12, 205)]));
+  expect(even.some(x => x.endsWith('theme'))).toBe(false);
+  expect(await t([[200, 60, 60], [40, 160, 160]])).toContain('red theme');
+  // A grey palette, and none at all.
+  expect((await t([[40, 40, 40], [128, 128, 128], [220, 220, 220]])).some(x => x.endsWith('theme'))).toBe(false);
+  expect(await t([])).toEqual([]);
+});
