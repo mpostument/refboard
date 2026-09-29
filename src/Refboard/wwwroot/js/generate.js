@@ -22,6 +22,9 @@ const GEN_KEY = 'refboard.generate.v1';
 // those subjects; one with `when`, only when the other choices say so.
 const ANY = { id: 'any', label: 'Any', tags: '' };
 const PERSON = ['character'], OUTDOORS = ['landscape', 'building'];
+// Detail's Beginner, whatever the subject.
+const BEGIN = '(minimalist:1.4), (simple drawing:1.3), flat color, simple coloring, thick outlines';
+const BEGIN_AVOID = '(detailed:1.3), intricate details, complex background, gradient, shiny skin, shiny hair';
 const GEN_CHOICES = [
   // One style for now - the models behind this are anime models. A second
   // one is a row here, and its tags.
@@ -122,7 +125,27 @@ const GEN_CHOICES = [
     { id: 'street', label: 'Street', tags: 'street, city, road, building' },
     { id: 'town', label: 'Old town', tags: 'town, old building, stone floor' },
     { id: 'house', label: 'House', tags: 'house, garden, fence' },
-    { id: 'shrine', label: 'Shrine', tags: 'shrine, torii, stairs' },
+    // A temple is a different building in each Setting: to the model
+    // "shrine" alone is a Japanese one, torii and all, whatever was chosen.
+    // Its tags stand in for the Setting's (`owns`) - a Slavic street's log
+    // houses drew a hut, not the idols.
+    { id: 'shrine', label: 'Temple', words: 'temple', owns: 'setting',
+      hint: 'Its own in each Setting - a pagan grove, a cathedral, a mosque...',
+      tags: {
+        _: 'temple, stairs, pillar',
+        east: 'shrine, torii, stairs',
+        // Before Christianity (see Setting): the idols in an oak grove.
+        slavic: '(pagan shrine:1.3), (wooden idol:1.4), (wooden statue:1.2), sacred grove, oak tree, stone circle, wooden palisade, ancient',
+        west: 'cathedral, church, gothic architecture, spire, stained glass',
+        nordic: 'stave church, wooden church, runestone, dragon carving',
+        mideast: 'mosque, minaret, dome, arch, courtyard',
+        southasia: '(hindu temple:1.4), gopuram, stone carving, tiered tower, stairs, indian architecture',
+        fantasy: 'temple, ruins, pillar, magic circle',
+        scifi: 'futuristic temple, monolith, pillar, glowing',
+      },
+      avoid: { east: '', any: '', slavic: 'torii, japanese architecture, pagoda, church, cross, onion dome, house, hut, thatched roof',
+        southasia: 'torii, japanese architecture, pagoda, dome, onion dome, palace',
+        _: 'torii, japanese architecture, pagoda' } },
     { id: 'castle', label: 'Castle', tags: 'castle, tower' },
     { id: 'cafe', label: 'Cafe inside', tags: 'cafe, indoors, table, window', words: 'interior' },
     { id: 'station', label: 'Station', tags: 'train station, railroad tracks' },
@@ -226,15 +249,26 @@ const GEN_CHOICES = [
   // Ink is lines and hatching - "greyscale" alone had it fill the shadows
   // solid black, like oil paint - and pencil is hatched graphite: both are
   // the marks a beginner copies stroke by stroke.
+  // No "pen (medium)" or "graphite (medium)": the model drew the pen into
+  // the picture, and a pencil beside it - hence the tools in what to avoid.
   { id: 'medium', label: 'Medium', options: [
     { id: 'watercolour', label: 'Watercolour', tags: 'watercolor (medium), traditional media, lineart', words: 'watercolour' },
     { id: 'ink', label: 'Ink and hatching', words: 'ink',
-      tags: 'monochrome, lineart, hatching (texture), cross-hatching, ink (medium), pen (medium), traditional media',
-      avoid: 'color, gradient, screentone, solid black, black fill, grey wash, greyscale shading' },
+      tags: 'monochrome, greyscale, lineart, (hatching (texture):1.3), (cross-hatching:1.2), ink (medium), traditional media',
+      // Red, sepia: without them the lines came out reddish on warm paper.
+      avoid: 'color, gradient, screentone, solid black, black fill, grey wash, greyscale shading, (color:1.2), red, sepia, brown, orange, pen, holding pen, art tools' },
     { id: 'flat', label: 'Flat colour', tags: 'flat color, cel shading', words: 'flat colour' },
     { id: 'sketch', label: 'Pencil and hatching', words: 'pencil',
-      tags: 'monochrome, greyscale, sketch, graphite (medium), hatching (texture), traditional media',
-      avoid: 'color, digital' },
+      tags: 'monochrome, greyscale, sketch, (hatching (texture):1.2), traditional media',
+      avoid: 'color, digital, sepia, pencil, holding pencil, art tools' },
+    // Watercolour's two cousins: the marker's even strokes side by side, the
+    // pencil's grain with a wash over it.
+    { id: 'wmarker', label: 'Watercolour markers', words: 'watercolour markers',
+      tags: 'watercolor (medium), marker (medium), traditional media, lineart, visible strokes, colored',
+      avoid: 'marker, holding marker, pen, art tools, digital, paint splatter, splashes, monochrome, greyscale' },
+    { id: 'wpencil', label: 'Watercolour pencils', words: 'watercolour pencils',
+      tags: 'watercolor pencil (medium), colored pencil (medium), watercolor (medium), traditional media, sketch, visible strokes',
+      avoid: 'pencil, holding pencil, art tools, digital' },
   ] },
   // Watercolour's own question - are the colours run together wet, or laid
   // crisp on dry paper: a reference to practise the one or the other from.
@@ -245,11 +279,26 @@ const GEN_CHOICES = [
       avoid: 'blurry, color bleeding' },
   ] },
   // Simple, the default: a few big shapes to copy, not a finished
-  // illustration to be daunted by.
+  // illustration to be daunted by. Beginner goes further, with weights
+  // ("(tag:1.3)"): Simple still gave hair of a hundred strands, and a
+  // street of a thousand windows. Tags per subject, as Setting's are.
   { id: 'detail', label: 'Detail', options: [
-    { id: 'simple', label: 'Simple', tags: 'minimalist, simple drawing', words: 'simple',
+    { id: 'beginner', label: 'Beginner', words: 'beginner', hint: 'The fewest shapes - straight hair, flat colour, thick outlines, one building on white',
+      tags: {
+        character: BEGIN + ', straight hair',
+        landscape: BEGIN + ', simple shapes, (few details:1.2)',
+        building: BEGIN + ', simple shapes, (few buildings:1.3), simple background, white background',
+        nature: BEGIN + ', simple shapes',
+        animal: BEGIN + ', simple shapes' },
+      avoid: {
+        character: BEGIN_AVOID + ', hair strand, flyaway hair, messy hair, ahoge, hair ornament, ribbon, frills, lace, jewelry, pattern',
+        landscape: BEGIN_AVOID + ', clutter, (detailed foliage:1.2)',
+        building: BEGIN_AVOID + ', (many windows:1.2), crowd, ornament, sign, text, power lines, clutter, cityscape, skyscraper, car',
+        nature: BEGIN_AVOID + ', clutter',
+        animal: BEGIN_AVOID + ', detailed fur' } },
+    { id: 'simple', label: 'Simple', tags: 'minimalist, simple drawing', words: 'simple', hint: 'A few big shapes, no fine detail',
       avoid: 'detailed, intricate details, complex background, gradient, shiny skin, shiny hair' },
-    { id: 'normal', label: 'Normal', tags: '', words: '' },
+    { id: 'normal', label: 'Normal', tags: '', words: '', hint: 'As the model draws it - a finished illustration' },
   ] },
   // A landscape or a street is its own background.
   { id: 'ground', label: 'Background', for: ['character', 'nature', 'animal'], options: [
@@ -285,22 +334,33 @@ const genApplies = (c, ch) => (!c.for || c.for.includes(ch.subject)) && (!c.when
 function genPrompt(choices, extra = '') {
   const subjects = GEN_CHOICES.find(c => c.id === 'subject').options;
   const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
+  const setting = choices.setting || GEN_DEFAULTS.setting;
+  // Tags, and what to keep out, may differ by subject (Setting's and
+  // Beginner's do) or by setting (a temple's); _ is every other one.
+  const pick = v => v && typeof v === 'object' ? v[subject] ?? v[setting] ?? v._ ?? '' : v;
+  const rows = GEN_CHOICES.filter(c => genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })).map(c =>
+    [c, c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id])]);
+  // A row whose tags another choice has taken over (a temple, Setting's).
+  const owned = new Set(rows.map(([, o]) => o.owns).filter(Boolean));
   const tags = [], words = [], avoid = [];
-  for (const c of GEN_CHOICES) {
-    if (!genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })) continue;
-    const o = c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id]);
-    // Tags may differ by subject (Setting's do).
-    const t = typeof o.tags === 'object' ? o.tags[subject] : o.tags;
+  for (const [c, o] of rows) {
+    const t = owned.has(c.id) ? '' : pick(o.tags), a = owned.has(c.id) ? '' : pick(o.avoid);
     if (t) tags.push(t);
-    if (o.avoid) avoid.push(o.avoid);
+    if (a) avoid.push(a);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
     if (w) words.push(w);
   }
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
   const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' || choices.framing === 'expressions' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
-  return { prompt: [...tags, ...more].join(', '), avoid: avoid.join(', '), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
+  return { prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
+
+/* "watercolor (medium)" is the Danbooru tag, but to ComfyUI bare brackets
+   are emphasis: "watercolor" and a louder "medium" - "pen (medium)" drew a
+   pen into every ink picture. Escaped, the tag reaches the model whole;
+   a weight, "(tag:1.3)", stays one. */
+const comfyTags = s => s.replace(/(\S) \(([^():]+)\)/g, '$1 \\($2\\)');
 
 let genChoices = { ...GEN_DEFAULTS };
 // Whether this server has a ComfyUI to ask - its rail button shows once it
@@ -319,7 +379,7 @@ function renderGenerate() {
   const row = c => `<div class="gen-row" data-row="${c.id}"><h4 id="genL-${c.id}">${esc(c.label)}</h4>` +
     `<div class="chips" role="group" aria-labelledby="genL-${c.id}">` +
     c.options.map(o => `<button type="button" class="chip" data-gen="${c.id}" data-opt="${o.id}" ` +
-      `aria-pressed="${genChoices[c.id] === o.id}">${esc(o.label)}</button>`).join('') + '</div></div>';
+      `aria-pressed="${genChoices[c.id] === o.id}"${o.hint ? ` title="${esc(o.hint)}"` : ''}>${esc(o.label)}</button>`).join('') + '</div></div>';
   el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
     `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` +
     ids.map(id => row(GEN_CHOICES.find(c => c.id === id))).join('') + '</section>').join('');
@@ -338,23 +398,34 @@ function syncGenRows() {
     g.classList.toggle('hidden', !g.querySelector('.gen-row:not(.hidden)'));
 }
 
+const genMade = async () => (await listUploads()).filter(u => u.from === 'generate');
+
 async function showGenerate() {
   if (!el('genChoices').children.length) renderGenerate();
-  const list = (await listUploads()).filter(u => u.from === 'generate').slice(0, 24);
-  renderGenResults(list);
+  const all = await genMade();
+  renderGenResults(all.slice(0, 24), all.length);
 }
 
-function renderGenResults(list) {
+function renderGenResults(list, total = list.length) {
   const host = el('genResults');
   host.innerHTML = '';
+  el('genMadeCount').textContent = total ? String(total) : '';
+  el('genClear').classList.toggle('hidden', !total);
+  disarmGenClear();
   for (const u of list) {
     const li = document.createElement('li');
     li.innerHTML = `<button type="button" class="gen-open" title="${esc((u.tags || []).join(', '))}" ` +
       `aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
+      `<button type="button" class="gen-del" aria-label="Delete ${esc(u.name)}" title="Delete it - from Uploads too">${iconSvg('close')}</button>` +
       `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>` +
       `<button type="button" class="gen-colours" aria-label="Character sheet from ${esc(u.name)}" title="Her colours, with how to mix them - the Colour studio's Character sheet">Colours</button>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
     li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
+    li.querySelector('.gen-del').addEventListener('click', async () => {
+      await forgetUpload(u);
+      await showGenerate();
+      el('genResults').querySelector('.gen-open')?.focus();
+    });
     li.querySelector('.gen-steps').addEventListener('click', async () => {
       const url = await storeFileUrl(u.file);
       if (!url) return;
@@ -368,6 +439,40 @@ function renderGenResults(list) {
     host.appendChild(li);
   }
   el('genEmpty').classList.toggle('hidden', list.length > 0);
+}
+
+/* Delete all: every generated picture, not only the 24 shown. Asked twice
+   - the first click only says how many, for a few seconds - rather than
+   in a browser dialog, which would stop the page. */
+let genClearTimer = 0;
+function disarmGenClear() {
+  clearTimeout(genClearTimer);
+  const b = el('genClear');
+  delete b.dataset.armed;
+  b.textContent = 'Delete all';
+}
+async function clearGenerated() {
+  const b = el('genClear');
+  const all = await genMade();
+  if (!b.dataset.armed) {
+    b.dataset.armed = '1';
+    b.textContent = `Delete all ${all.length}? Click again`;
+    genClearTimer = setTimeout(disarmGenClear, 4000);
+    return;
+  }
+  disarmGenClear();
+  b.disabled = true;
+  try {
+    for (const u of all) {
+      await storeDeleteItem('uploads', uploadKey(u.file));
+      await storeDeleteFile(u.file);
+    }
+  } finally {
+    b.disabled = false;
+    storeChanged();
+    await showGenerate();
+    el('genStatus').textContent = `${all.length} deleted.`;
+  }
 }
 
 // One picture: start the job, then ask after it once a second.
@@ -418,6 +523,7 @@ async function initGenerate() {
     if (['subject', 'medium', 'framing'].includes(b.dataset.gen)) syncGenRows();
   });
   el('genGo').addEventListener('click', runGenerate);
+  el('genClear').addEventListener('click', clearGenerated);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });
 
   // Offered only where it can work: a server, with a ComfyUI it can reach.

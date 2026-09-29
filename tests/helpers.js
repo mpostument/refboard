@@ -104,6 +104,7 @@ async function fakeServer(page) {
       files.set(id, moves.at(-1).folder);
       return r.fulfill({ json: { id, bytes: png.length } });
     }
+    if (method === 'DELETE') { files.delete(id); return r.fulfill({ status: 204 }); }
     if (method === 'GET' && id) return r.fulfill({ body: png, contentType: 'image/png' });
     return r.fulfill({ json: [...files.keys()].map(k => ({ id: k, bytes: png.length })) });
   });
@@ -111,6 +112,7 @@ async function fakeServer(page) {
     const [, kind, id] = new URL(r.request().url()).pathname.match(/api\/items\/([^/]+)\/?([^/]*)$/) || [];
     const method = r.request().method();
     if (method === 'PUT') { items.set(`${kind}/${id}`, JSON.parse(r.request().postData())); return r.fulfill({ status: 204 }); }
+    if (method === 'DELETE') { items.delete(`${kind}/${id}`); return r.fulfill({ status: 204 }); }
     if (id) return items.has(`${kind}/${id}`) ? r.fulfill({ json: items.get(`${kind}/${id}`) }) : r.fulfill({ status: 404, body: '' });
     const out = {};
     for (const [k, v] of items) if (k.startsWith(kind + '/')) out[k.slice(kind.length + 1)] = v;

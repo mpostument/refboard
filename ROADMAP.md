@@ -165,6 +165,14 @@ shot, Light and time, The picture; `GEN_GROUPS`) in two columns, a group
 hidden with its rows, and More tags and Generate stay at the bottom of the
 view. Still to come on it: a setting for the 3D forms' scene, and eras
 (ancient, medieval, modern) apart from places.
+In place too: Detail's Beginner - weighted tags ("(minimalist:1.4)") per
+subject, since Simple still drew hair of a hundred strands and a street of
+a thousand windows; a building on white. A Temple per Setting (`owns`: its
+tags stand in for the Setting's, whose log houses drew a Slavic hut, not
+idols). Tags escaped for ComfyUI (`comfyTags()`): bare brackets are its
+emphasis, so "pen (medium)" drew a pen into ink pictures; ink avoids sepia,
+which had made its lines reddish. Watercolour markers and pencils, and
+deleting generated pictures, one or all.
 In place too: How to draw it (`js/steps.js`) - any picture taken back to its
 steps, per medium, worked out from the picture (an image model asked for an
 earlier stage draws a different picture; Paints-Undo, the model trained to

@@ -8,7 +8,7 @@ test('the choices become the model\'s tags and the words it is filed under', asy
   await openApp(page);
   const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, hair: 'twintails', colour: 'pink', view: 'three', light: 'back' }, 'hat, rain'));
   expect(r.prompt).toBe('1girl, solo, twintails, pink hair, upper body, three quarter view, backlighting, rim lighting, ' +
-    'watercolor (medium), traditional media, lineart, minimalist, simple drawing, simple background, white background, hat, rain');
+    'watercolor \\(medium\\), traditional media, lineart, minimalist, simple drawing, simple background, white background, hat, rain');
   expect(r.tags).toEqual(['anime', 'girl', 'twin tails', 'pink hair', 'bust', 'three-quarter', 'backlit', 'watercolour',
     'simple', 'hat', 'rain']);
   expect(r.shape).toBe('portrait');
@@ -35,7 +35,7 @@ test('a landscape or an animal: no one in it, and only its own choices', async (
   const land = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'landscape', hair: 'long',
     place: 'lake', time: 'sunset', weather: 'fog', season: 'autumn' }));
   expect(land.prompt).toBe('no humans, scenery, landscape, lake, reflection, sunset, orange sky, evening, fog, mist, ' +
-    'autumn, autumn leaves, watercolor (medium), traditional media, lineart, minimalist, simple drawing');
+    'autumn, autumn leaves, watercolor \\(medium\\), traditional media, lineart, minimalist, simple drawing');
   expect(land.tags).toEqual(['anime', 'landscape', 'lake', 'sunset', 'fog', 'autumn', 'watercolour', 'simple']);
   expect(land.shape).toBe('landscape');
   const fox = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'animal', animal: 'fox', size: 'close' }));
@@ -47,11 +47,15 @@ test('a landscape or an animal: no one in it, and only its own choices', async (
 test('ink is lines and hatching, never filled black', async ({ page }) => {
   await openApp(page);
   const ink = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'nature', thing: 'mushrooms', medium: 'ink' }));
-  expect(ink.prompt).toContain('hatching (texture), cross-hatching, ink (medium)');
-  expect(ink.prompt).not.toContain('greyscale');
+  expect(ink.prompt).toContain('(hatching \\(texture\\):1.3), (cross-hatching:1.2), ink \\(medium\\)');
   expect(ink.avoid).toContain('solid black');
+  // Black, not the reddish lines on warm paper it gave; and no pen drawn in.
+  expect(ink.avoid).toContain('sepia');
+  expect(ink.prompt).not.toContain('pen');
+  expect(ink.avoid).toContain('holding pen');
   const pencil = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, medium: 'sketch' }));
-  expect(pencil.prompt).toContain('graphite (medium), hatching (texture)');
+  expect(pencil.prompt).toContain('(hatching \\(texture\\):1.2)');
+  expect(pencil.avoid).toContain('holding pencil');
 });
 
 test('watercolour asks for soft or hard edges; other media do not', async ({ page }) => {

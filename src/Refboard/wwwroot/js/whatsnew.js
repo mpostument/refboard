@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-beginner', title: 'Generate: Beginner, temples everywhere, two more media',
+    text: "Detail has Beginner: the fewest shapes - straight hair, flat colour, thick outlines, one building on white instead of a street of a thousand windows. A Temple is the Setting's own - Slavic idols in an oak grove, a cathedral, a stave church, a mosque, a Hindu temple - not always a Japanese shrine. Ink is black lines and hatching, with no pen drawn into the picture. New media: Watercolour markers and Watercolour pencils. Each generated picture can be deleted with its cross, or all of them with Delete all.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-setting', title: 'Generate: a setting, and a shorter page',
     text: "A Setting row: Slavic (before Christianity - linen, a wreath, log houses behind a palisade, birch and oak), East Asian, Western Europe, Nordic, Middle East, South Asian, Fantasy or Sci-fi - clothes on a character, the buildings on a street, what grows in a landscape. The choices are in groups, two columns of them, and Generate stays at the bottom of the view.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
