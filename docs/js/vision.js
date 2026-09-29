@@ -85,6 +85,20 @@ function togglePose() {
   if (state.poseOn) runPose(); else clearPose();
 }
 
+/* The picture as the models must be given it: a canvas at its own size.
+   Given the <img> itself, MediaPipe reads it at the size it is shown - a
+   photo shown at 700 of its 900 pixels came back with every point at 7/9
+   of where it is, the whole construction shrunk toward the top left. Grey
+   round it `pad` of its size each side, for the face model (detectFaces()). */
+function visionCanvas(img, pad = 0) {
+  const W = img.naturalWidth, H = img.naturalHeight, c = document.createElement('canvas');
+  c.width = Math.round(W * (1 + 2 * pad)); c.height = Math.round(H * (1 + 2 * pad));
+  const g = c.getContext('2d');
+  if (pad) { g.fillStyle = '#808080'; g.fillRect(0, 0, c.width, c.height); }
+  g.drawImage(img, W * pad, H * pad, W, H);
+  return c;
+}
+
 async function runPose() {
   const img = el('img'), run = ++poseRun;
   if (!img.naturalWidth) return;
@@ -98,7 +112,7 @@ async function runPose() {
   }
   if (run !== poseRun || !state.poseOn) return;   // the pose changed while it loaded
   let res;
-  try { res = model.detect(img); }
+  try { res = model.detect(visionCanvas(img)); }
   catch (err) { console.error('pose detect:', err); poseNote('<i>Could not read a pose from this image.</i>'); return; }
   drawPose(res.landmarks || []);
 }
@@ -398,14 +412,7 @@ async function runHead() {
 function detectFaces(model, img) {
   const W = img.naturalWidth, H = img.naturalHeight;
   for (const pad of [0, 0.3, 0.6]) {
-    let src = img;
-    if (pad) {
-      src = document.createElement('canvas');
-      src.width = Math.round(W * (1 + 2 * pad)); src.height = Math.round(H * (1 + 2 * pad));
-      const g = src.getContext('2d');
-      g.fillStyle = '#808080'; g.fillRect(0, 0, src.width, src.height);
-      g.drawImage(img, W * pad, H * pad);
-    }
+    const src = visionCanvas(img, pad);
     const found = model.detect(src).faceLandmarks || [];
     if (found.length) {
       const kx = src.width / W, ky = src.height / H;
@@ -521,10 +528,10 @@ function animeFace(curve, at, s) {
 // The Loomis / Anime switch at the head of the note - and, for Anime, the
 // eye's style beside it: the same kind of switch, for the same kind of choice.
 function headStyleSwitch() {
-  const group = (label, attr, entries, on) => `<span class="head-style" role="group" aria-label="${label}">${entries.map(([k, t]) =>
-    `<button type="button" data-${attr}="${k}" aria-pressed="${k === on}">${t}</button>`).join('')}</span>`;
+  const group = (label, attr, entries, on) => `<span class="head-style" role="group" aria-label="${label}">${entries.map(([k, t, title = '']) =>
+    `<button type="button" data-${attr}="${k}" aria-pressed="${k === on}" title="${esc(title)}">${t}</button>`).join('')}</span>`;
   return group('Head construction style', 'head-style', Object.entries(HEAD_STYLES), headStyle) +
-    (headStyle === 'anime' ? group('Anime eye style', 'head-eyes', Object.entries(ANIME_EYES).map(([k, e]) => [k, e.label]), headEyes) : '');
+    (headStyle === 'anime' ? group('Anime eye style', 'head-eyes', Object.entries(ANIME_EYES).map(([k, e]) => [k, e.label, e.hint[0].toUpperCase() + e.hint.slice(1)]), headEyes) : '');
 }
 
 function drawHead(faces) {
@@ -604,11 +611,10 @@ function drawHead(faces) {
         ? ' The far eye is <b>narrower</b> and tucked against the centre line; turned much further, it goes behind the bridge of the nose, and the cheek bulges out past it.'
         : ' The far half of the face is <b>narrower</b>: its eye smaller and closer to the centre line.';
       const legend = headStyle === 'anime'
-        ? '<b class="pink">Pink</b>: where anime puts the eyes, nose, mouth and chin at this angle - eyes lower and bigger than a real face\'s, ' +
-          'nose and mouth close under them, a pointed chin. ' +
-          `<b class="pink">${ANIME_EYES[headEyes].label} eyes</b>: ${ANIME_EYES[headEyes].hint} ` +
-          '<i>Red</i>: the centre line - the eyes are one eye apart across it. ' +
-          '<u>Blue</u>: the side plane - the ear runs from the eye line down to the nose.'
+        // Short: it sits over the picture. What each eye style is, is on
+        // its button (headStyleSwitch()).
+        ? `<b class="pink">Pink</b>: this head drawn the anime way, ${ANIME_EYES[headEyes].label} eyes - lower and bigger than its own, ` +
+          'nose and mouth close under them, a pointed chin. <i>Red</i>: the centre line, one eye between the eyes. <u>Blue</u>: the side plane.'
         : '<b>Yellow</b>: hairline, brow, nose, chin - three equal thirds. <i>Red</i>: the centre line. ' +
           '<u>Blue</u>: the side plane - the ear sits just behind its middle.';
       note = headStyleSwitch() + `<b>Head</b>: ${parts.join(', ')}.${tip}<br>${legend}` +

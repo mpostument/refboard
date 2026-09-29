@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=ceac60b0">
+<link rel="stylesheet" href="css/app.css?v=823caa4b">
 </head>
 <body>
 <div id="setup">
@@ -306,11 +306,14 @@
         <div class="col-wrap">
           <div class="col-left gen-left">
             <div id="genChoices"></div>
-            <label class="gen-extra">More tags <input type="text" id="genExtra" placeholder="e.g. hat, rain, holding umbrella" maxlength="200"></label>
-            <div class="row gen-go">
-              <label>How many <select id="genCount"><option>1</option><option selected>2</option><option>4</option></select></label>
-              <button type="button" id="genGo" class="primary">Generate</button>
-              <span class="count" id="genStatus" role="status"></span>
+            <!-- Stays at the bottom of the view while the choices scroll. -->
+            <div class="gen-bar">
+              <label class="gen-extra">More tags <input type="text" id="genExtra" placeholder="e.g. hat, rain, holding umbrella" maxlength="200"></label>
+              <div class="row gen-go">
+                <label>How many <select id="genCount"><option>1</option><option selected>2</option><option>4</option></select></label>
+                <button type="button" id="genGo" class="primary">Generate</button>
+                <span class="count" id="genStatus" role="status"></span>
+              </div>
             </div>
             <p class="count" id="genWhere"></p>
           </div>
@@ -1550,7 +1553,7 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=2eb75152"></script>
+<script src="js/core.js?v=784877b1"></script>
 <script src="js/setup.js?v=db80fa7c"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
@@ -1560,7 +1563,7 @@
 <script src="js/paint.js?v=0bc3b11f"></script>
 <script src="js/tools.js?v=fcba4643"></script>
 <script src="js/materials.js?v=a9b7eb53"></script>
-<script src="js/vision.js?v=09f576f0"></script>
+<script src="js/vision.js?v=7152a7bc"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
 <script src="js/study.js?v=65c224d1"></script>
 <script src="js/layers.js?v=8269cbf6"></script>
@@ -1571,10 +1574,10 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=94249973"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=e9f18694"></script>
+<script src="js/whatsnew.js?v=843f5664"></script>
 <script src="js/edges.js?v=5393fa8f"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
-<script src="js/generate.js?v=2e086c47"></script>
+<script src="js/generate.js?v=28bf9504"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
