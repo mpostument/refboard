@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-beginner-2', title: 'Generate: a better Beginner figure',
+    text: "Beginner no longer strips a figure down to a flat vector drawing with legs like sticks: she keeps the medium you picked - watercolour, ink, pencil, markers - with ordinary proportions, and with no Setting she wears a t-shirt and trousers instead of a gown with a train.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-prompt', title: 'Generate: see the prompt, switch off what it keeps out',
     text: "Prompt, above More tags, shows what goes to the model: the tags, and what your choices keep out - each of those a switch, so a tag like sepia or holding pen can be let back in; they stay off until you turn them back on. What the server always keeps out is shown too.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
