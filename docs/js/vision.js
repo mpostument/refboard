@@ -240,11 +240,61 @@ let headFaces = null;
    the jaw runs almost straight to a pointed chin. Same units as Loomis's:
    the ball's radius, y up from the brow, z out of the face. */
 const ANIME_HEAD = {
-  eyeY: -0.38, eyeX: 0.36, eyeA: 0.2, eyeB: 0.16,  // eye centres, half-width, half-height
-  irisA: 0.085, irisB: 0.13,                        // the iris - a tall ellipse
+  eyeY: -0.38, eyeX: 0.36,                          // eye centres; the eye itself is ANIME_EYES'
   nose: -0.84, mouth: -1.07,
   jaw: [[1, -0.4, -0.25], [0.78, -0.92, 0.3], [0.12, -1.27, 0.8], [0, -2 * LOOMIS_U, 0.88]], // x of the first two in side-plane widths
 };
+
+/* The anime eye, in the few styles most drawing is in - one eye apart and
+   on the same eye line in all of them; what differs is the eye. In the
+   head's units: a, the half-width; up and down, how high the upper lash
+   line arches and how low the lower lid runs; the iris, a tall ellipse
+   (irisA, irisB) with its top cut off by the lash line; lash, the upper
+   lash line's weight; flick, where its outer end sweeps to [out, up];
+   lower, the run of the lower lid in fractions of the half-turn from the
+   outer corner; tilt, how much higher the outer corner sits than the inner
+   (tsurime up, tareme down); gleams, [toward the light, up, radius] from
+   the eye's centre - the first the big one; brow, its height above the
+   eye. gen: Generate's Eye shape for it. */
+const ANIME_EYES = {
+  tv: { label: 'TV anime', gen: 'any', a: 0.2, up: 0.12, down: 0.144, irisA: 0.085, irisB: 0.13, lash: 1,
+    flick: [0.06, -0.05], lower: [0.12, 0.55], tilt: 0, gleams: [[0.035, 0.05, 0.033], [-0.03, -0.07, 0.013]], brow: 0.29,
+    hint: 'the everyday look of TV anime: an eye a little taller than wide, the lash line heavy at the outer corner, two gleams.' },
+  shojo: { label: 'Shōjo', gen: 'shojo', a: 0.2, up: 0.17, down: 0.17, irisA: 0.1, irisB: 0.18, lash: 1.35,
+    flick: [0.08, -0.07], lower: [0.06, 0.7], tilt: 0.01, gleams: [[0.04, 0.065, 0.04], [-0.035, -0.08, 0.018], [0.05, -0.045, 0.012]], brow: 0.33, lashes: 3,
+    hint: 'big and tall, the iris nearly fills the eye; three or more gleams, and lashes drawn as separate flicks past the corner.' },
+  sharp: { label: 'Sharp', gen: 'sharp', a: 0.21, up: 0.075, down: 0.09, irisA: 0.07, irisB: 0.09, lash: 1.25,
+    flick: [0.07, 0.025], lower: [0.1, 0.45], tilt: 0.05, gleams: [[0.025, 0.02, 0.02]], brow: 0.21,
+    hint: 'narrow, the outer corner up (tsurime): the lash line nearly straight, the iris cut by it top and bottom, one small gleam; the brow low and close.' },
+  soft: { label: 'Soft', gen: 'soft', a: 0.17, up: 0.12, down: 0.12, irisA: 0.07, irisB: 0.1, lash: 0.6,
+    flick: [0.02, -0.02], lower: [0.15, 0.5], tilt: -0.03, gleams: [[0.03, 0.035, 0.024]], brow: 0.3,
+    hint: 'round and gentle, the outer corner down (tareme): a small iris with white round it, thin lines, a single gleam.' },
+};
+const animeEyeStyle = k => ANIME_EYES[k] || ANIME_EYES.tv;
+
+/* One eye of a style, on the flat of the face: sx -1 for the face's right,
+   1 for its left. Every curve runs from the outer corner (t = 0) to the
+   inner (t = π). Shared by the drawing on a photo and the 3D head's face. */
+function animeEyeShape(style, sx) {
+  const E = animeEyeStyle(style), A = ANIME_HEAD, ex = sx * A.eyeX, ey = A.eyeY;
+  const lift = c => E.tilt * (1 + c) / 2;   // c = cos t: 1 at the outer corner
+  const upper = t => [ex + sx * E.a * Math.cos(t), ey + E.up * Math.sin(t) + lift(Math.cos(t))];
+  const lower = t => [ex + sx * E.a * 0.95 * Math.cos(t), ey - E.down * Math.sin(t) + lift(Math.cos(t))];
+  // The lash line's height over any x - the iris is tucked under it.
+  const lashAt = x => { const c = Math.max(-1, Math.min(1, (x - ex) / (sx * E.a))); return ey + E.up * Math.sqrt(1 - c * c) + lift(c); };
+  const lidAt = x => { const c = Math.max(-1, Math.min(1, (x - ex) / (sx * E.a * 0.95))); return ey - E.down * Math.sqrt(1 - c * c) + lift(c); };
+  const iris = t => {
+    const x = ex + E.irisA * Math.cos(t), y = ey - 0.01 + E.irisB * Math.sin(t);
+    return [x, Math.max(lidAt(x), Math.min(lashAt(x), y))];
+  };
+  // The lash line's weight at t: thick at the outer corner, thinning inward
+  // and running out to nothing at the inner corner.
+  const weight = t => (0.05 - 0.035 * t / Math.PI) * E.lash * Math.min(1, (Math.PI - t) / (0.2 * Math.PI)) ** 0.7;
+  const flick = [ex + sx * (E.a + E.flick[0]), ey + lift(1) + E.flick[1]];
+  // A gleam's centre, `side` the way the light comes from (-1 the face's right).
+  const gleam = (g, side) => [ex + side * g[0], ey + g[1]];
+  return { E, ex, ey, upper, lower, iris, weight, flick, gleam, corner: upper(0) };
+}
 const HEAD_STYLES = { loomis: 'Loomis', anime: 'Anime' };
 const HEAD_STYLE_KEY = 'refboard.headStyle.v1';
 let headStyle = (() => { try { return HEAD_STYLES[localStorage.getItem(HEAD_STYLE_KEY)] ? localStorage.getItem(HEAD_STYLE_KEY) : 'loomis'; } catch { return 'loomis'; } })();
@@ -252,6 +302,15 @@ function setHeadStyle(style) {
   if (!HEAD_STYLES[style] || style === headStyle) return;
   headStyle = style;
   try { localStorage.setItem(HEAD_STYLE_KEY, style); } catch {}
+  if (state.headOn && headFaces) drawHead(headFaces);
+}
+// The anime eye's style on a photo (ANIME_EYES), kept like the head's.
+const HEAD_EYES_KEY = 'refboard.headEyes.v1';
+let headEyes = (() => { try { const k = localStorage.getItem(HEAD_EYES_KEY); return ANIME_EYES[k] ? k : 'tv'; } catch { return 'tv'; } })();
+function setHeadEyes(style) {
+  if (!ANIME_EYES[style] || style === headEyes) return;
+  headEyes = style;
+  try { localStorage.setItem(HEAD_EYES_KEY, style); } catch {}
   if (state.headOn && headFaces) drawHead(headFaces);
 }
 
@@ -394,19 +453,18 @@ function animeFace(curve, at, s) {
   curve('eyeline', t => [r * Math.sin(t), A.eyeY, r * Math.cos(t)], -lim, lim);
   let marks = '';
   for (const sx of [-1, 1]) {
-    const ex = sx * A.eyeX, ey = A.eyeY;
-    // t = 0 at the outer corner, π at the inner one.
-    const lidAt = (a, b, dy = 0) => t => onBall(ex + sx * a * Math.cos(t), ey + dy + b * Math.sin(t));
-    // The upper lash line - the heaviest line of an anime face - flatter
-    // than the eye is tall, flicked down past the outer corner.
-    curve('lash', lidAt(A.eyeA, A.eyeB * 0.75), 0, Math.PI, undefined, 24);
-    curve('lash', t => onBall(ex + sx * (A.eyeA + 0.05 * t), ey - 0.06 * t), 0, 1, undefined, 3);
-    // The lower lid: short, on the outer half only.
-    curve('lid', lidAt(A.eyeA * 0.95, A.eyeB * 0.9), -0.12 * Math.PI, -0.55 * Math.PI, undefined, 10);
+    // In the style chosen in the note (animeEyeShape()).
+    const e = animeEyeShape(headEyes, sx), on = f => t => onBall(...f(t));
+    // The upper lash line - the heaviest line of an anime face - flicked
+    // past the outer corner.
+    curve('lash', on(e.upper), 0, Math.PI, undefined, 24);
+    curve('lash', t => onBall(e.corner[0] + (e.flick[0] - e.corner[0]) * t, e.corner[1] + (e.flick[1] - e.corner[1]) * t), 0, 1, undefined, 3);
+    // The lower lid: short, on the outer part only.
+    curve('lid', on(e.lower), e.E.lower[0] * Math.PI, e.E.lower[1] * Math.PI, undefined, 10);
     // The iris, tall, its top tucked under the lash line.
-    curve('iris', lidAt(A.irisA, A.irisB, -0.01), 0, 2 * Math.PI, undefined, 32);
-    // The gleam - on the same side in both eyes, as one light makes it.
-    marks += headDot(at, onBall(ex - 0.035, ey + 0.055), s * 1.3, 'gleam');
+    curve('iris', on(e.iris), 0, 2 * Math.PI, undefined, 32);
+    // The gleams - on the same side in both eyes, as one light makes it.
+    for (const g of e.E.gleams) marks += headDot(at, onBall(...e.gleam(g, -1)), s * g[2] / 0.025, 'gleam');
   }
   // The nose, a small mark; the mouth, a short line - both on the front of
   // the face, which below the ball stands out in front of it.
@@ -418,10 +476,13 @@ function animeFace(curve, at, s) {
   return marks + headDot(at, A.jaw[A.jaw.length - 1], s, 'dot pink');
 }
 
-// The Loomis / Anime switch at the head of the note.
+// The Loomis / Anime switch at the head of the note - and, for Anime, the
+// eye's style beside it: the same kind of switch, for the same kind of choice.
 function headStyleSwitch() {
-  return `<span class="head-style" role="group" aria-label="Head construction style">${Object.entries(HEAD_STYLES).map(([k, label]) =>
-    `<button type="button" data-head-style="${k}" aria-pressed="${k === headStyle}">${label}</button>`).join('')}</span>`;
+  const group = (label, attr, entries, on) => `<span class="head-style" role="group" aria-label="${label}">${entries.map(([k, t]) =>
+    `<button type="button" data-${attr}="${k}" aria-pressed="${k === on}">${t}</button>`).join('')}</span>`;
+  return group('Head construction style', 'head-style', Object.entries(HEAD_STYLES), headStyle) +
+    (headStyle === 'anime' ? group('Anime eye style', 'head-eyes', Object.entries(ANIME_EYES).map(([k, e]) => [k, e.label]), headEyes) : '');
 }
 
 function drawHead(faces) {
@@ -502,7 +563,9 @@ function drawHead(faces) {
         : ' The far half of the face is <b>narrower</b>: its eye smaller and closer to the centre line.';
       const legend = headStyle === 'anime'
         ? '<b class="pink">Pink</b>: where anime puts the eyes, nose, mouth and chin at this angle - eyes lower and bigger than a real face\'s, ' +
-          'nose and mouth close under them, a pointed chin. <i>Red</i>: the centre line - the eyes are one eye apart across it. ' +
+          'nose and mouth close under them, a pointed chin. ' +
+          `<b class="pink">${ANIME_EYES[headEyes].label} eyes</b>: ${ANIME_EYES[headEyes].hint} ` +
+          '<i>Red</i>: the centre line - the eyes are one eye apart across it. ' +
           '<u>Blue</u>: the side plane - the ear runs from the eye line down to the nose.'
         : '<b>Yellow</b>: hairline, brow, nose, chin - three equal thirds. <i>Red</i>: the centre line. ' +
           '<u>Blue</u>: the side plane - the ear sits just behind its middle.';
@@ -521,6 +584,7 @@ el('btnHead').addEventListener('click', toggleHead);
 // a press on the switch is the switch's alone.
 el('poseNote').addEventListener('pointerdown', e => { if (e.target.closest('button')) e.stopPropagation(); });
 el('poseNote').addEventListener('click', e => {
-  const b = e.target.closest('[data-head-style]');
+  const b = e.target.closest('[data-head-style]'), eyes = e.target.closest('[data-head-eyes]');
   if (b) setHeadStyle(b.dataset.headStyle);
+  if (eyes) setHeadEyes(eyes.dataset.headEyes);
 });

@@ -60,6 +60,15 @@ const GEN_CHOICES = [
     ...['blue', 'green', 'brown', 'red', 'purple', 'yellow', 'pink', 'aqua', 'grey', 'black']
       .map(c => ({ id: c, label: c[0].toUpperCase() + c.slice(1), tags: c + ' eyes', words: c + ' eyes' })),
   ] },
+  // The eye's style as anime draws it (ANIME_EYES in js/vision.js): tsurime,
+  // the outer corner up; tareme, down. Not "sparkling eyes" for shojo: to the
+  // model that is star shapes in the iris - a gimmick, not an eye to learn.
+  { id: 'eyeShape', label: 'Eye shape', for: PERSON, options: [
+    ANY,
+    { id: 'shojo', label: 'Shōjo', tags: 'large eyes, long eyelashes, eyelashes', avoid: 'sparkling eyes, star-shaped pupils', words: 'shojo eyes' },
+    { id: 'sharp', label: 'Sharp', tags: 'tsurime, narrowed eyes', words: 'sharp eyes' },
+    { id: 'soft', label: 'Soft', tags: 'tareme, round eyes', words: 'soft eyes' },
+  ] },
   { id: 'framing', label: 'How much', for: PERSON, options: [
     { id: 'head', label: 'Head', tags: 'portrait, close-up', words: 'head' },
     { id: 'bust', label: 'Bust', tags: 'upper body', words: 'bust' },
@@ -191,7 +200,7 @@ const GEN_CHOICES = [
   ] },
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', framing: 'bust',
   view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', detail: 'simple',
   ground: 'plain' };

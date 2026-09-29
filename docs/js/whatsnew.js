@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-eye', title: 'The anime eye, in four styles',
+    text: "TV anime, Shōjo, Sharp (tsurime) or Soft (tareme): the lash line's weight, the iris cut by the lids, where the gleams go - on a photo's anime head (the switch in the note) and on the 3D one, where the eyes take a colour too. The note under the 3D view says what the eyes do at that angle; a character sheet gives the head her hair and eyes in one click; Draw it at this angle asks the ComfyUI for the same eyes.",
+    act: 'Show me', run: () => { setView({ kind: 'forms' }); showAnimeHead('shojo'); } },
   { id: 'anime-hair', title: 'Anime hair, in locks',
     text: "The anime head in 3D has hair: Short, Bob or Long, in locks as anime draws it, with the ring of light round the head - a band broken at each lock, which slides as you turn the head or move the light - and the fringe's shadow on the forehead. In the colours Generate knows, or a character sheet's; Draw it at this angle takes the hair along.",
     act: 'Show me', run: () => { setView({ kind: 'forms' }); showAnimeHead(); } },

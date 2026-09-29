@@ -224,17 +224,19 @@ button, select, input { font: inherit; color: inherit; }
 #formShapes { display: grid; gap: 8px; }
 #formShapes .shape-kind { display: flex; flex-wrap: wrap; gap: 6px; }
 #formShapes .shape-kind > span { flex-basis: 100%; font-size: 11px; color: var(--dim); }
-/* The anime head's hair colours: round swatches, named on hover as
+/* The anime head's hair and eye colours: round swatches, named on hover as
    Generate names them, then your own colour; the pressed one ringed. */
-#formHairColours { align-items: center; gap: 5px; }
-#formHairColours .swatch {
+#formsPanel .hair-colours { align-items: center; gap: 5px; }
+#formsPanel .hair-colours .swatch {
   width: 22px; height: 22px; min-height: 0; padding: 0; border-radius: 50%;
   background: var(--swatch); border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-hi);
 }
-#formHairColours .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent); }
-#formHairColours .swatch-own { display: inline-flex; margin-left: 4px; cursor: pointer; }
-#formHairColours .swatch-own input { width: 26px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
+#formsPanel .hair-colours .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent); }
+#formsPanel .hair-colours .swatch-own { display: inline-flex; margin-left: 4px; cursor: pointer; }
+#formsPanel .hair-colours .swatch-own input { width: 26px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
+/* A character's chip: her hair's dot, and her eyes' overlapping it. */
 #formHairChars .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; background: var(--swatch); vertical-align: -1px; }
+#formHairChars .dot + .dot { margin-left: -9px; box-shadow: 0 0 0 1.5px var(--panel); }
 /* The anime head's angle note - see syncAnimeNote(). Under the cover, and
    out of the way of the view drill's task and of a clean view. */
 #formAnimeNote {
