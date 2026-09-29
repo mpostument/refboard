@@ -88,6 +88,17 @@ function collectCommands() {
         run: () => { setHeadStyle(k); if (!state.headOn) toggleHead(); },
       });
     }
+    // And the anime face with each of the other eye styles (the one in use
+    // is the plain Anime above) - named as that one's variants, so "anime"
+    // still finds the head first.
+    for (const [k, e] of Object.entries(ANIME_EYES)) {
+      if (k === headEyes) continue;
+      out.push({
+        id: 'head-eyes-' + k, label: `Head construction: Anime, ${e.label} eyes`, hint: 'L',
+        words: 'eye iris lashes gleam highlight manga ' + { shojo: 'shojo shoujo sparkle', sharp: 'tsurime narrow', soft: 'tareme round ghibli', tv: 'tv standard' }[k],
+        run: () => { setHeadEyes(k); setHeadStyle('anime'); if (!state.headOn) toggleHead(); },
+      });
+    }
   } else {
     for (const b of el('rail').querySelectorAll('button')) {
       // A section you hid (js/stages.js) is off the rail, not out of reach.
@@ -113,7 +124,7 @@ function collectCommands() {
   }
   if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
     run: () => openColour('character') });
-  if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes turn angle three-quarter manga model hair ring locks fringe bangs',
+  if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes iris lashes turn angle three-quarter manga model hair ring locks fringe bangs',
     run: () => { setView({ kind: 'forms' }); showAnimeHead(); } });
   out.push({ id: 'theme-editor', label: 'Theme editor', hint: 'Appearance', words: 'colours customise custom own import export', run: openThemeEditor });
   out.push({ id: 'help', label: 'Help - how everything works', hint: '?', words: 'manual guide', run: toggleHelp });

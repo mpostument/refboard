@@ -63,6 +63,8 @@ const FORM_OBJECT_DEFAULTS = {
   color: '#d4cec4', finish: 'matte', gloss: 0.05,
   // The anime head's hair (HAIR_STYLES) and its colour - brown, from HAIR_COLOURS.
   hair: 'bob', hairColor: '#6e4a37',
+  // Its eyes: a style from ANIME_EYES (js/vision.js), and a colour from EYE_COLOURS.
+  eyes: 'tv', eyeColor: '#3f6fb5',
   // The figure's joints, { joint: [bend, twist, lean] } in degrees - see
   // FORM_RIG. Frozen, and only ever replaced, never edited in place: objects
   // are copied with a plain spread, which would share it.
@@ -558,7 +560,7 @@ function formAnimeHeadGeometry(T, wSeg, hSeg) {
 
 /* The face, drawn: the part of the head that looks forward, given UVs that
    are a straight view from the front, and a picture of the features laid on
-   it (animeFaceTexture()). Two layers - the features, lit like the head, and
+   it (drawAnimeFace()). Two layers - the features, lit like the head, and
    the gleams, which are the light itself and stay bright in any shadow. */
 const ANIME_FACE_BOX = { x0: -0.75, x1: 0.75, y0: -1.3, y1: 0.12 };
 function formAnimeFaceGeometry(T, head) {
@@ -597,82 +599,82 @@ function formFacePoint(head, x, y) {
   return [x, y, z];
 }
 
-/* The features, drawn onto a canvas that covers ANIME_FACE_BOX. `gleams`:
-   draw only the gleams, on the side the light comes from (side -1 is the
-   face's right, the viewer's left), and leave everything else clear. */
-function animeFaceTexture(gleams, side = -1) {
-  const B = ANIME_FACE_BOX, A = ANIME_HEAD, k = 700;
-  const c = document.createElement('canvas');
+/* The features, drawn onto a canvas that covers ANIME_FACE_BOX, in an eye
+   style (ANIME_EYES, animeEyeShape() in js/vision.js) and an eye colour.
+   `gleams`: draw only the gleams, on the side the light comes from (side -1
+   is the face's right, the viewer's left), and leave everything else clear. */
+const ANIME_FACE_PX = 700;
+function drawAnimeFace(c, style, eyeColor, gleams, side = -1) {
+  const B = ANIME_FACE_BOX, A = ANIME_HEAD, k = ANIME_FACE_PX;
   c.width = Math.round((B.x1 - B.x0) * k); c.height = Math.round((B.y1 - B.y0) * k);
   const g = c.getContext('2d');
-  const X = x => (x - B.x0) * k, Y = y => (B.y1 - y) * k;
-  const ink = '#2b1d24', iris = '#3f6fb5';
+  const X = x => (x - B.x0) * k, Y = y => (B.y1 - y) * k, P = ([x, y]) => [X(x), Y(y)];
+  const ink = '#2b1d24';
+  // The iris from its one colour: dark under the lashes, which shade it,
+  // light at the bottom where the light comes through; the pupil darker still.
+  const rgb = hexToRgb(eyeColor), mix = (to, t) => `rgb(${rgb.map((v, i) => Math.round(v + (to[i] - v) * t)).join(',')})`;
+  const dark = mix([12, 10, 24], 0.6), pale = mix([255, 255, 255], 0.45);
   g.lineCap = g.lineJoin = 'round';
   for (const sx of [-1, 1]) {
-    const ex = sx * A.eyeX, ey = A.eyeY;
+    const e = animeEyeShape(style, sx), E = e.E;
     if (gleams) {
-      // One light, so the gleam is on the same side in both eyes: a big one
-      // high toward the light, a small one low on the other side.
+      // One light, so the gleams are on the same side in both eyes: the big
+      // one high toward the light, the small ones low on the other side.
       g.fillStyle = '#fff';
-      g.beginPath(); g.ellipse(X(ex + side * 0.035), Y(ey + 0.05), 0.03 * k, 0.036 * k, 0, 0, 7); g.fill();
-      g.beginPath(); g.arc(X(ex - side * 0.03), Y(ey - 0.07), 0.013 * k, 0, 7); g.fill();
+      E.gleams.forEach((gl, i) => {
+        const [x, y] = P(e.gleam(gl, side)), r = gl[2];
+        g.beginPath(); g.ellipse(x, y, r * (i ? 1 : 0.9) * k, r * (i ? 1 : 1.1) * k, 0, 0, 7); g.fill();
+      });
       continue;
     }
-    // t = 0 at the outer corner, π at the inner one - as animeFace() draws it.
-    const lid = (a, b, t) => [X(ex + sx * a * Math.cos(t)), Y(ey + b * Math.sin(t))];
-    const eye = () => {
-      g.beginPath();
-      for (let i = 0; i <= 24; i++) g.lineTo(...lid(A.eyeA, A.eyeB * 0.75, Math.PI * i / 24));
-      for (let i = 0; i <= 24; i++) g.lineTo(...lid(A.eyeA * 0.95, A.eyeB * 0.9, -Math.PI + Math.PI * i / 24));
-      g.closePath();
+    const path = (f, t0, t1, n, move = true) => {
+      for (let i = 0; i <= n; i++) g[i || !move ? 'lineTo' : 'moveTo'](...P(f(t0 + (t1 - t0) * i / n)));
     };
-    // The white, and inside it the iris - tall, its top under the lash
-    // line, darker there where the lashes shade it - and the pupil.
+    // The white, and inside it the iris - tall, its top under the lash line -
+    // and the pupil.
     g.save();
-    eye(); g.fillStyle = '#fbf8f6'; g.fill(); g.clip();
-    const top = Y(ey + A.irisB), grad = g.createLinearGradient(0, top, 0, Y(ey - A.irisB));
-    grad.addColorStop(0, '#1d2f5a'); grad.addColorStop(0.55, iris); grad.addColorStop(1, '#8fc0ee');
+    g.beginPath(); path(e.upper, 0, Math.PI, 24); path(e.lower, Math.PI, 0, 24, false); g.closePath();
+    g.fillStyle = '#fbf8f6'; g.fill(); g.clip();
+    const grad = g.createLinearGradient(0, Y(e.ey + E.irisB), 0, Y(e.ey - E.irisB));
+    grad.addColorStop(0, dark); grad.addColorStop(0.55, eyeColor); grad.addColorStop(1, pale);
     g.fillStyle = grad;
-    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.01), A.irisA * k, A.irisB * k, 0, 0, 7); g.fill();
-    g.fillStyle = '#16152a';
-    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.005), A.irisA * 0.45 * k, A.irisB * 0.5 * k, 0, 0, 7); g.fill();
-    g.strokeStyle = '#1d2f5a'; g.lineWidth = 0.008 * k;
-    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.01), A.irisA * k, A.irisB * k, 0, 0, 7); g.stroke();
+    g.beginPath(); g.ellipse(X(e.ex), Y(e.ey - 0.01), E.irisA * k, E.irisB * k, 0, 0, 7); g.fill();
+    g.fillStyle = mix([8, 6, 16], 0.85);
+    g.beginPath(); g.ellipse(X(e.ex), Y(e.ey - 0.005), E.irisA * 0.45 * k, E.irisB * 0.5 * k, 0, 0, 7); g.fill();
+    g.strokeStyle = dark; g.lineWidth = 0.008 * k;
+    g.beginPath(); g.ellipse(X(e.ex), Y(e.ey - 0.01), E.irisA * k, E.irisB * k, 0, 0, 7); g.stroke();
     g.restore();
-    // The upper lash line - the heaviest line of the face: thick at the
-    // outer corner, thinning to the inner, flicked out and down past the end.
+    // The upper lash line - the heaviest line of the face: its weight from
+    // the style, thick at the outer corner and thinning to the inner, pushed
+    // outward from the eye's middle.
     g.fillStyle = ink;
     g.beginPath();
-    const up = [], th = [];
-    for (let i = 0; i <= 24; i++) {
-      const t = Math.PI * i / 24;
-      up.push(lid(A.eyeA, A.eyeB * 0.75, t));
-      th.push((0.05 - 0.035 * i / 24) * k);
-    }
-    up.forEach(p => g.lineTo(p[0], p[1]));
-    for (let i = 24; i >= 0; i--) {
-      const t = Math.PI * i / 24, [px, py] = up[i];
-      // Outward from the eye's middle.
-      const nx = sx * Math.cos(t) * A.eyeB * 0.75, ny = -Math.sin(t) * A.eyeA, l = Math.hypot(nx, ny) || 1;
-      g.lineTo(px + nx / l * th[i], py + ny / l * th[i]);
+    const ts = Array.from({ length: 25 }, (_, i) => Math.PI * i / 24);
+    ts.forEach(t => g.lineTo(...P(e.upper(t))));
+    for (const t of [...ts].reverse()) {
+      const [px, py] = e.upper(t), nx = px - e.ex, ny = py - e.ey + 0.02, l = Math.hypot(nx, ny) || 1;
+      g.lineTo(...P([px + nx / l * e.weight(t), py + ny / l * e.weight(t)]));
     }
     g.closePath(); g.fill();
-    g.beginPath();
-    const o = lid(A.eyeA, 0, 0);
-    g.moveTo(o[0], o[1] - 0.04 * k); g.lineTo(X(ex + sx * (A.eyeA + 0.06)), Y(ey - 0.05)); g.lineTo(o[0], o[1] + 0.005 * k);
-    g.closePath(); g.fill();
-    // The lower lid: a short, light stroke on the outer half.
-    g.strokeStyle = ink; g.lineWidth = 0.009 * k; g.globalAlpha = 0.7;
-    g.beginPath();
-    for (let i = 0; i <= 10; i++) g.lineTo(...lid(A.eyeA * 0.95, A.eyeB * 0.9, -0.12 * Math.PI - 0.43 * Math.PI * i / 10));
-    g.stroke(); g.globalAlpha = 1;
-    // The brow: a thin arc well above the eye.
+    // Its flick past the outer corner - a wedge from the line's thick end.
+    const [cx, cy] = e.corner, w = e.weight(0);
+    g.beginPath(); g.moveTo(...P([cx, cy + w * 0.9])); g.lineTo(...P(e.flick)); g.lineTo(...P([cx, cy - w * 0.15])); g.closePath(); g.fill();
+    // Separate lashes past the corner, where the style has them.
+    for (let i = 0; i < (E.lashes || 0); i++) {
+      const t = (0.1 + 0.13 * i) * Math.PI, [bx, by] = e.upper(t), len = 0.055 - 0.01 * i;
+      const ox = sx * (0.6 - 0.15 * i), oy = 0.8, l = Math.hypot(ox, oy);
+      g.beginPath();
+      g.moveTo(...P([bx - sx * 0.012, by])); g.lineTo(...P([bx + ox / l * len, by + oy / l * len])); g.lineTo(...P([bx + sx * 0.012, by]));
+      g.closePath(); g.fill();
+    }
+    // The lower lid: a short, light stroke on the outer part.
+    g.strokeStyle = ink; g.lineWidth = 0.009 * k * Math.max(0.7, E.lash); g.globalAlpha = 0.7;
+    g.beginPath(); path(e.lower, E.lower[0] * Math.PI, E.lower[1] * Math.PI, 10); g.stroke(); g.globalAlpha = 1;
+    // The brow: a thin arc over the eye, at the style's height, rising
+    // toward the outer end as far as the eye's corner does.
     g.lineWidth = 0.014 * k;
     g.beginPath();
-    for (let i = 0; i <= 12; i++) {
-      const u = i / 12;
-      g.lineTo(X(sx * (0.17 + 0.36 * u)), Y(ey + 0.29 + 0.035 * Math.sin(Math.PI * (0.35 + 0.65 * u))));
-    }
+    path(u => [sx * (0.17 + 0.36 * u), e.ey + E.brow + 0.035 * Math.sin(Math.PI * (0.35 + 0.65 * u)) + E.tilt * 0.6 * u], 0, 1, 12);
     g.stroke();
   }
   if (!gleams) {
@@ -687,32 +689,47 @@ function animeFaceTexture(gleams, side = -1) {
   return c;
 }
 
-// Shared by every anime head in the scene: the face's geometry, its two
-// textures (the gleam's in two, one for each side a light can come from),
-// and the points the angle note measures.
+/* Shared by every anime head in the scene: the face's geometry, and the
+   points the angle note measures - each eye's corners, for each eye style,
+   on the head and on Loomis's ball for the comparison. */
 function formAnimeFace() {
   const F = forms, T = F.T;
   if (F.animeFace) return F.animeFace;
-  const head = formGeometry('anime');
-  const tex = c => { const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t; };
-  const mat = (map, lit) => new (lit ? T.MeshStandardMaterial : T.MeshBasicMaterial)({
-    map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  const head = formGeometry('anime'), cache = {};
+  const marks = style => {
+    if (cache[style]) return cache[style];
+    const m = {};
+    for (const [name, sx] of [['right', -1], ['left', 1]]) {
+      const e = animeEyeShape(style, sx), outer = e.upper(0), inner = e.upper(Math.PI);
+      m[name] = [formFacePoint(head, ...outer), formFacePoint(head, ...inner)];
+      const ball = ([x, y]) => [x, y, Math.sqrt(Math.max(0, 1 - x * x - y * y))];
+      m[name + 'Ball'] = [ball(outer), ball(inner)];
+    }
+    return (cache[style] = m);
+  };
+  return (F.animeFace = { geo: formAnimeFaceGeometry(T, head), marks });
+}
+
+/* One head's face materials: the features, lit like the head, and the
+   gleams - the light itself, bright in any shadow - drawn for each side a
+   light can come from. Each head has its own, since each has its own eyes;
+   drawn again in place when they change. */
+function formFaceMaterials(T) {
+  const tex = () => { const t = new T.CanvasTexture(document.createElement('canvas')); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t; };
+  const mat = lit => new (lit ? T.MeshStandardMaterial : T.MeshBasicMaterial)({
+    map: tex(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
     ...(lit ? { roughness: 0.85, metalness: 0 } : {}) });
-  const A = ANIME_HEAD, corner = sx => [sx * (A.eyeX + A.eyeA), sx * (A.eyeX - A.eyeA)];
-  const marks = {};
-  for (const [name, sx] of [['right', -1], ['left', 1]]) {
-    const [outer, inner] = corner(sx);
-    marks[name] = [formFacePoint(head, outer, A.eyeY), formFacePoint(head, inner, A.eyeY)];
-    // The same eye on Loomis's ball, for the comparison.
-    const ball = x => [x, A.eyeY, Math.sqrt(1 - x * x - A.eyeY * A.eyeY)];
-    marks[name + 'Ball'] = [ball(outer), ball(inner)];
-  }
-  return (F.animeFace = {
-    geo: formAnimeFaceGeometry(T, head),
-    features: mat(tex(animeFaceTexture(false)), true),
-    gleam: { '-1': mat(tex(animeFaceTexture(true, -1)), false), '1': mat(tex(animeFaceTexture(true, 1)), false) },
-    marks,
-  });
+  const fm = { key: '', features: mat(true), gleam: { '-1': mat(false), '1': mat(false) } };
+  const all = () => [fm.features, fm.gleam['-1'], fm.gleam['1']];
+  fm.draw = (style, eyeColor) => {
+    if (fm.key === style + eyeColor) return;
+    fm.key = style + eyeColor;
+    drawAnimeFace(fm.features.map.image, style, eyeColor, false);
+    for (const side of [-1, 1]) drawAnimeFace(fm.gleam[side].map.image, style, eyeColor, true, side);
+    for (const m of all()) m.map.needsUpdate = true;
+  };
+  fm.dispose = () => { for (const m of all()) { m.map.dispose(); m.dispose(); } };
+  return fm;
 }
 
 /* ---- the anime head's hair, in clumps. Anime draws hair as a few big
@@ -734,13 +751,21 @@ const HAIR_COLOURS = {
   black: '#2d2a36', brown: '#6e4a37', blonde: '#ecc87e', red: '#b9453b', orange: '#e38a45', pink: '#f2a7c0',
   purple: '#8b6cc2', silver: '#c8ccd8', white: '#f2efe8', blue: '#5073c6', green: '#62a172',
 };
+// The anime head's eyes, named as Generate's Eyes row names them - blue,
+// as the face was first drawn.
+const EYE_COLOURS = {
+  blue: '#3f6fb5', aqua: '#3fb0c0', green: '#4f9a5c', brown: '#7a4b2f', red: '#b8333a', purple: '#7b55b8',
+  yellow: '#d9a82e', pink: '#e07aa6', grey: '#8a8f99', black: '#2e2a33',
+};
 // The named colour nearest to any other - from a character sheet, say - in
 // OKLab, where near means looks near.
-function hairColourName(hex) {
+const hairColourName = hex => nearestColourName(hex, HAIR_COLOURS);
+const eyeColourName = hex => nearestColourName(hex, EYE_COLOURS);
+function nearestColourName(hex, table) {
   const lab = rgb => { const [L, C, h] = rgbToOklch(rgb); return [L, C * Math.cos(h * THREE_DEG), C * Math.sin(h * THREE_DEG)]; };
   const a = lab(hexToRgb(hex));
-  let best = 'brown', d = Infinity;
-  for (const [name, h] of Object.entries(HAIR_COLOURS)) {
+  let best = Object.keys(table)[0], d = Infinity;
+  for (const [name, h] of Object.entries(table)) {
     const b = lab(hexToRgb(h)), e = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
     if (e < d) { d = e; best = name; }
   }
