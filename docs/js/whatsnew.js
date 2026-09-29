@@ -15,15 +15,18 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'expressions', title: 'Anime expressions, and a sheet of them',
+    text: "The 3D anime head in Joy, Anger, Surprise or Sadness - brows, lids, iris and mouth as anime draws them, with the blush, the vein and the tears - on its own Face tab, beside its hair and eyes. Expression sheet shows every expression at three angles in one picture. With a ComfyUI, Draw it at this angle takes the expression along, and Draw a sheet asks for one character's expressions.",
+    act: 'Show me', run: () => openForms(() => showAnimeHead(undefined, 'joy')) },
   { id: 'anime-eye', title: 'The anime eye, in four styles',
     text: "TV anime, Shōjo, Sharp (tsurime) or Soft (tareme): the lash line's weight, the iris cut by the lids, where the gleams go - on a photo's anime head (the switch in the note) and on the 3D one, where the eyes take a colour too. The note under the 3D view says what the eyes do at that angle; a character sheet gives the head her hair and eyes in one click; Draw it at this angle asks the ComfyUI for the same eyes.",
-    act: 'Show me', run: () => { setView({ kind: 'forms' }); showAnimeHead('shojo'); } },
+    act: 'Show me', run: () => openForms(() => showAnimeHead('shojo')) },
   { id: 'anime-hair', title: 'Anime hair, in locks',
     text: "The anime head in 3D has hair: Short, Bob or Long, in locks as anime draws it, with the ring of light round the head - a band broken at each lock, which slides as you turn the head or move the light - and the fringe's shadow on the forehead. In the colours Generate knows, or a character sheet's; Draw it at this angle takes the hair along.",
-    act: 'Show me', run: () => { setView({ kind: 'forms' }); showAnimeHead(); } },
+    act: 'Show me', run: () => openForms(() => showAnimeHead()) },
   { id: 'anime-head-3d', title: 'An anime head in 3D',
     text: 'In 3D forms, Anime head: a head built the anime way, eyes drawn on, to turn and light. Its face is a flat mask - so the far eye narrows far less than on a real head, and the note under the view gives both numbers at the angle you see it from, with what to watch there. With a ComfyUI, Draw it at this angle makes anime heads from the same side.',
-    act: 'Show me', run: () => { setView({ kind: 'forms' }); showAnimeHead(); } },
+    act: 'Show me', run: () => openForms(() => showAnimeHead()) },
   { id: 'edges', title: 'Edge map',
     text: 'Over any picture in a session (x, or Workspace > Value): its edges in red where they are hard and blue where they are soft - on dry paper, or wet-in-wet - with how the two are shared out. Hard is how quickly the change happens, not how big it is. Also a step of How to draw it in watercolour, and Generate asks for soft or hard edges.',
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

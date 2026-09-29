@@ -69,6 +69,15 @@ const GEN_CHOICES = [
     { id: 'sharp', label: 'Sharp', tags: 'tsurime, narrowed eyes', words: 'sharp eyes' },
     { id: 'soft', label: 'Soft', tags: 'tareme, round eyes', words: 'soft eyes' },
   ] },
+  // The four the 3D head's Expression has (ANIME_EXPRESSIONS in js/vision.js),
+  // with anime's signs for them. Not on an expression sheet, which has them all.
+  { id: 'expression', label: 'Expression', for: PERSON, when: ch => ch.framing !== 'expressions', options: [
+    ANY,
+    { id: 'joy', label: 'Joy', tags: 'happy, smile, open mouth, blush', words: 'joy' },
+    { id: 'anger', label: 'Anger', tags: 'angry, v-shaped eyebrows, open mouth, teeth, anger vein', words: 'anger' },
+    { id: 'surprise', label: 'Surprise', tags: 'surprised, wide-eyed, open mouth, :o', words: 'surprise' },
+    { id: 'sadness', label: 'Sadness', tags: 'sad, frown, tears, tearing up', words: 'sadness' },
+  ] },
   { id: 'framing', label: 'How much', for: PERSON, options: [
     { id: 'head', label: 'Head', tags: 'portrait, close-up', words: 'head' },
     { id: 'bust', label: 'Bust', tags: 'upper body', words: 'bust' },
@@ -76,6 +85,12 @@ const GEN_CHOICES = [
     { id: 'full', label: 'Whole figure', tags: 'full body', words: 'whole figure' },
     // The model sheet an animator draws from: one character, turned round.
     { id: 'sheet', label: 'Turnaround', tags: 'reference sheet, multiple views, turnaround, full body, standing', words: 'turnaround' },
+    // Its other half: the one head, again and again, in its expressions.
+    // Named one by one: "expressions" alone drew the same calm face ten times,
+    // each over a caption in made-up script.
+    { id: 'expressions', label: 'Expression sheet', words: 'expression sheet',
+      tags: 'expression chart, multiple views, reference sheet, portrait, smile, angry, surprised, sad, crying, blush',
+      avoid: 'text, speech bubble, english text, japanese text' },
   ] },
   { id: 'view', label: 'From', for: PERSON, options: [
     { id: 'front', label: 'Front', tags: 'straight-on, looking at viewer', words: 'front' },
@@ -200,7 +215,7 @@ const GEN_CHOICES = [
   ] },
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', framing: 'bust',
   view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', detail: 'simple',
   ground: 'plain' };
@@ -225,12 +240,15 @@ function genPrompt(choices, extra = '') {
     if (w) words.push(w);
   }
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
-  const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' ? 'landscape' : 'portrait')
+  const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' || choices.framing === 'expressions' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
   return { prompt: [...tags, ...more].join(', '), avoid: avoid.join(', '), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
 
 let genChoices = { ...GEN_DEFAULTS };
+// Whether this server has a ComfyUI to ask - its rail button shows once it
+// has (initGenerate()), so the other views offer a button for it or not.
+const genAvailable = () => !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
 let genBusy = false;
 
 function loadGenChoices() {
@@ -335,7 +353,7 @@ async function initGenerate() {
     saveGenChoices();
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
-    if (b.dataset.gen === 'subject' || b.dataset.gen === 'medium') syncGenRows();
+    if (['subject', 'medium', 'framing'].includes(b.dataset.gen)) syncGenRows();
   });
   el('genGo').addEventListener('click', runGenerate);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });

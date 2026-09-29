@@ -196,7 +196,7 @@ function charRender() {
 
   const set = doc ? CHAR_PARTS.filter(p => doc.parts[p.id] && doc.parts[p.id].base).length : 0;
   el('charCopy').disabled = !set;
-  const gen = !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
+  const gen = genAvailable();
   el('charGenerate').classList.toggle('hidden', !gen);
   el('charGenerate').disabled = !(doc && doc.parts.hair && doc.parts.hair.base);
   el('charWhere').textContent = {
