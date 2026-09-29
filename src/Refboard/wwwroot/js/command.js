@@ -10,6 +10,16 @@
 
 // The words each build (FIGURE_BUILDS) is looked for by - the pose's and the 3D figure's.
 const BUILD_WORDS = { real: 'eight realistic', anime: 'seven', tall: 'long legs fashion nine', chibi: 'sd super deformed cute small' };
+// The 3D camera's anime shots (ANIME_SHOTS, in the 3D view's own code, which
+// loads only when the view opens - so named here too), with their words.
+const SHOT_COMMANDS = [
+  ['worm', "Worm's eye", 'low from below floor looking up heroic menacing'],
+  ['bird', "Bird's eye", 'high from above overhead top down'],
+  ['wide', 'Wide, close', 'wide angle lens foreshortening close up punch action'],
+  ['dutch', 'Dutch angle', 'tilted canted roll horizon'],
+  ['tele', 'Telephoto', 'long lens flat compressed far'],
+  ['fish', 'Fisheye', 'fish eye distortion curved bent lens'],
+];
 // Other words a tool is looked for by, keyed by its element's id.
 const COMMAND_WORDS = {
   btnHead: 'face construction ball thirds loomis anime eyes',
@@ -149,6 +159,9 @@ function collectCommands() {
       id: 'figure-build-' + k, label: `Figure in 3D: ${b.label}`, hint: '3D forms',
       words: 'proportions heads tall body mannequin grid anime ' + BUILD_WORDS[k],
       run: () => openForms(() => showFigureBuild(k)) });
+    for (const [k, label, words] of SHOT_COMMANDS) out.push({
+      id: 'anime-shot-' + k, label: `3D camera: ${label}`, hint: '3D forms', words: 'anime shot angle camera storyboard ' + words,
+      run: () => openForms(() => showAnimeShot(k)) });
     out.push({ id: 'anime-expr-sheet', label: 'Expression sheet', hint: '3D forms', words: 'expressions emotions faces anime head model sheet joy anger surprise sadness',
       run: () => openForms(async () => { showAnimeHead(); await formsReady(); openExpressionSheet(); }) });
   }

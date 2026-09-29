@@ -327,12 +327,21 @@ Anime in watercolour:
 
 Clothes, movement, settings:
 
+In place: anime camera angles - the 3D view's Anime shots (`ANIME_SHOTS` in
+`js/forms-models.js`), each a height, lens, distance and roll, never a turn:
+Worm's eye, Bird's eye, Wide and close, Dutch angle, Telephoto, Fisheye. The
+camera may now go below the forms' middle with the floor showing, as far as
+the floor (`formFloorPitch()`); a Roll slider; and a fisheye rendered all
+round the camera into a cube and bent stereographically (`renderFisheye()`),
+with the overlay, the picking and the eye-level line through the same
+projection (`formProject()`) - the fog measured by distance now, or the
+cube's faces showed. Draw this shot sends it to Generate's Lens row (wide and
+close, Dutch angle, fisheye) and From. Still to come on it: over the
+shoulder and other two-figure shots, and a lens's distortion on a photo.
+
 - **Pleated skirt and school uniform.** 3D simulation of pleats and a
   sailor collar, how they behave in motion and foreshortening - pleats in
   perspective being one of the hardest things in anime.
-- **Anime camera angles.** 3D camera presets: from below, a wide lens with
-  strong perspective, fisheye, from above - the dynamic shots of anime.
-  The 3D view already has the focal length; these are the presets.
 - **Pose library for the mannequin.** Dynamic poses ready - running,
   jumping, striking, falling, anime sitting - from any angle, not only
   from photos.

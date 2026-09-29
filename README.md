@@ -354,6 +354,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     halftone, terminator, core shadow, reflected light and cast shadow onto the
     forms from the actual lighting; 1-, 2- and 3-point camera presets and a
     lens in millimetres (the camera dollies, so only convergence changes);
+    anime shots - worm's eye down at the floor, bird's eye, wide and close,
+    a Dutch angle (a Roll slider), telephoto and a fisheye (rendered all
+    round the camera and bent stereographically), sent to Generate's Lens row;
     vanishing points of the box around a form, cross-section ellipses and their
     axis, cross-contour lines, a floor grid and an eye-level line.
   - *Using it:* **Open in viewer** puts the render in the same full-screen

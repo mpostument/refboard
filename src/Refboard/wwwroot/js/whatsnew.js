@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-shots', title: 'Anime camera angles in 3D',
+    text: "The 3D view's Camera group has Anime shots: Worm's eye (down on the floor, looking up - the figure towers), Bird's eye, Wide and close (the fist thrust at you comes out huge), Dutch angle (a new Roll slider tilts the picture), Telephoto (depth flattened) and a real Fisheye, where straight lines bow round the middle. Each moves only the camera - which side you see stays yours - and Draw this shot sends it to Generate's new Lens row.",
+    act: 'Show me', run: () => openForms(() => showAnimeShot('worm')) },
   { id: 'pose-builds', title: "A photo's pose in anime proportions",
     text: "The pose skeleton (P) redraws the pose in the 3D figure's builds - Anime, Long-legged, Chibi - switched at the top of its note, or Ctrl+K \"pose anime\". Each bone keeps the photo's angle and only its length changes, standing on the same foot: a real pose, seen as anime would draw it, over the photo's skeleton kept faint, with a tick for every head down its side.",
     act: 'Open a photo', run: () => setView({ kind: 'drop' }) },
