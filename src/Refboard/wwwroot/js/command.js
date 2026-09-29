@@ -113,6 +113,8 @@ function collectCommands() {
   }
   if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
     run: () => openColour('character') });
+  if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes turn angle three-quarter manga model',
+    run: () => { setView({ kind: 'forms' }); showAnimeHead(); } });
   out.push({ id: 'theme-editor', label: 'Theme editor', hint: 'Appearance', words: 'colours customise custom own import export', run: openThemeEditor });
   out.push({ id: 'help', label: 'Help - how everything works', hint: '?', words: 'manual guide', run: toggleHelp });
   out.push({ id: 'tour', label: 'Tour - where things are', hint: 'Help', words: 'intro start new guide walkthrough', run: startTour });

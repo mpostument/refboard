@@ -220,6 +220,20 @@ button, select, input { font: inherit; color: inherit; }
 }
 #formsTask b { color: #ffd54f; font-weight: 600; }
 #formsTask .chip { padding: 3px 9px; font-size: 12px; background: rgba(255,255,255,.08); color: #eee; border-color: rgba(255,255,255,.2); }
+/* The shapes, in kinds - see syncFormsPanel(). */
+#formShapes { display: grid; gap: 8px; }
+#formShapes .shape-kind { display: flex; flex-wrap: wrap; gap: 6px; }
+#formShapes .shape-kind > span { flex-basis: 100%; font-size: 11px; color: var(--dim); }
+/* The anime head's angle note - see syncAnimeNote(). Under the cover, and
+   out of the way of the view drill's task and of a clean view. */
+#formAnimeNote {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 1; max-width: 560px;
+  display: flex; align-items: flex-end; gap: 10px; padding: 7px 10px; border-radius: 7px;
+  background: rgba(20, 20, 22, .78); color: #ddd; font-size: 12px; line-height: 1.45;
+}
+#formAnimeNote b { color: #ffd54f; font-weight: 600; }
+#formAnimeNote .chip { flex: none; padding: 3px 9px; font-size: 11.5px; background: rgba(255,255,255,.08); color: #eee; border-color: rgba(255,255,255,.2); }
+#formsTask:not(.hidden) ~ #formAnimeNote, #formsStage.clean #formAnimeNote { display: none; }
 #formsCover.study { pointer-events: none; }
 #formsCover.study span {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%); padding: 4px 10px; border-radius: 6px;

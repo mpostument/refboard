@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-head-3d', title: 'An anime head in 3D',
+    text: 'In 3D forms, Anime head: a head built the anime way, eyes drawn on, to turn and light. Its face is a flat mask - so the far eye narrows far less than on a real head, and the note under the view gives both numbers at the angle you see it from, with what to watch there. With a ComfyUI, Draw it at this angle makes anime heads from the same side.',
+    act: 'Show me', run: () => { setView({ kind: 'forms' }); showAnimeHead(); } },
   { id: 'edges', title: 'Edge map',
     text: 'Over any picture in a session (x, or Workspace > Value): its edges in red where they are hard and blue where they are soft - on dry paper, or wet-in-wet - with how the two are shared out. Hard is how quickly the change happens, not how big it is. Also a step of How to draw it in watercolour, and Generate asks for soft or hard edges.',
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

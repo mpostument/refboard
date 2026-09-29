@@ -362,6 +362,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   the ball, side planes and centre line fitted to the head's angle, with the
   face drawn as anime does - eyes lower and bigger, a small nose and mouth, a
   pointed chin. Switched in the note under the picture, or from Ctrl+K.
+- **Anime head in 3D** - in 3D forms, a head built to the same proportions
+  with its face drawn on (the heavy lash line, the tall iris, the gleam on the
+  light's side), to turn and light like any form. Its face is a flat mask, so
+  the far eye narrows far less than on a round head; the note under the view
+  gives both numbers at the angle it is seen from, with what to watch there,
+  and - with a ComfyUI - *Draw it at this angle* asks Generate for anime heads
+  from the same side. The shapes are listed in kinds: forms, figure and head,
+  cloth, your models.
 - **The keyboard, and screen readers** - a visible focus ring, Tab kept inside
   dialogs, arrow keys along the rail, a *Skip to the content* link, and a
   live region that says which section opened and which pose is up.

@@ -187,10 +187,15 @@ anime face on them - eyes lower and bigger, one eye apart, with the lash
 line, iris and gleam; a small nose and mouth; a pointed chin. Still to come
 on it: a choice of anime styles (the proportions differ from studio to
 studio), and the eye's angle-by-angle detail - see The anime eye.
+In place too: the anime head in 3D - Anime head among the 3D forms
+(`formAnimeHeadGeometry()`, `formAnimeFace()` in `js/forms-models.js`), the
+same proportions made solid with its face a flat mask and the features drawn
+on as a decal, the gleam on the light's side; the note under the view
+(`animeHeadReading()` in `js/forms.js`) gives the far eye's width against the
+near one's, on the mask and on a ball, with what to watch at that angle, and
+sends the angle to Generate. Still to come on it: hair (see Hair in clumps),
+expressions, and eye colour from a character sheet.
 
-- **An anime head in 3D.** A stylised head to turn: how flat anime eyes,
-  a dot of a nose and the mouth shift and squeeze as it turns - anime
-  features do not foreshorten the way real ones do.
 - **The anime eye.** The weight of the upper lash line, the iris ellipse,
   where the highlights go, how the eye changes with angle and expression -
   in a few common styles.

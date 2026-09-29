@@ -341,6 +341,24 @@ function dropFormRig(m) {
   for (const c of [...m.children]) m.remove(c);
   m.userData.rig = null;
 }
+
+/* The anime head's drawn face (formAnimeFace()): the features and the
+   gleams, hung on the head so they turn and stretch with it. Clicks go
+   through them to the head. */
+function syncFormFace(m, def) {
+  const has = m.userData.face;
+  if (!def.face) { if (has) { m.remove(has); m.userData.face = null; } return; }
+  if (has) return;
+  const T = forms.T, f = formAnimeFace(), face = new T.Group();
+  const features = new T.Mesh(f.geo, f.features), gleam = new T.Mesh(f.geo, f.gleam['-1']);
+  features.receiveShadow = true;
+  features.renderOrder = 1; gleam.renderOrder = 2;
+  for (const x of [features, gleam]) x.raycast = () => {};
+  face.add(features, gleam);
+  face.userData.gleam = gleam;
+  m.add(face);
+  m.userData.face = face;
+}
 /* Proportions stretch each part in its own frame - Height makes limbs
    longer, Width and Depth thicker - rather than stretching the figure as a
    whole: a stretched parent shears whatever is turned inside it, so a
@@ -437,6 +455,7 @@ function formsRender(sc, w, h, clean = false) {
     m.geometry = formGeometry(o.shape);
     // A figure turned into a hand is a different rig, not a re-pose.
     if (m.userData.rig && m.userData.rig.kind !== def.rig) dropFormRig(m);
+    syncFormFace(m, def);
     if (def.rig && !m.userData.rig) buildFormRig(m, def.rig);
     applyFormFinish(m.material, o, def);
     const u = m.material.userData.u;
@@ -569,6 +588,14 @@ function formsRender(sc, w, h, clean = false) {
   // spot (the occlusion shadow) that must be darkest.
   bulb.shadow.bias = 0;
   bulb.shadow.normalBias = rad * 0.02;
+
+  // An anime eye's gleam is on the side the light comes from, in both eyes.
+  for (const m of F.meshes) {
+    const face = m.userData.face;
+    if (!face) continue;
+    const d = L.clone().applyQuaternion(m.getWorldQuaternion(new T.Quaternion()).invert());
+    face.userData.gleam.material = formAnimeFace().gleam[d.x > 0 ? '1' : '-1'];
+  }
 
   const Lf = dirFrom(sc.fillAz, sc.fillEl);
   F.fill.visible = sc.fillOn;
@@ -1569,6 +1596,95 @@ function requestFormsRender() {
     formsRender(formScene, Math.round(stage.clientWidth * dpr), Math.round(stage.clientHeight * dpr), !!forms.clean);
     syncOrbitLimits();
     drawFormsOverlay();
+    syncAnimeNote();
+  });
+}
+
+/* ---- what to watch on the anime head at the angle it is seen from. Worked
+   out from the render: which way the face points in the camera's frame,
+   and how wide each eye comes out on screen - on the head's flat mask, and
+   the same eyes on Loomis's round ball, to show the difference. */
+function animeHeadReading(sc = formScene) {
+  const F = forms, T = F.T;
+  const i = formShapeDef(sc.objects[sc.active]?.shape).face ? sc.active
+    : sc.objects.findIndex(o => formShapeDef(o.shape).face);
+  const m = F.meshes[i];
+  if (i < 0 || !m || !m.userData.face) return null;
+  const cam = F.camera;
+  const fwd = new T.Vector3(0, 0, 1).transformDirection(m.matrixWorld).transformDirection(cam.matrixWorldInverse);
+  const turn = Math.atan2(fwd.x, fwd.z) / THREE_DEG, tilt = Math.asin(Math.max(-1, Math.min(1, fwd.y))) / THREE_DEG;
+  // Screen widths: the aspect matters, NDC is squashed to a square.
+  const px = p => { const v = new T.Vector3(...p).applyMatrix4(m.matrixWorld).project(cam); return [v.x * cam.aspect, v.y]; };
+  const width = ([a, b]) => { const [p, q] = [px(a), px(b)]; return Math.hypot(p[0] - q[0], p[1] - q[1]); };
+  const marks = formAnimeFace().marks;
+  const ratio = (a, b) => { const [x, y] = [width(marks[a]), width(marks[b])]; return Math.min(x, y) / Math.max(x, y); };
+  return { turn, tilt, mask: ratio('right', 'left'), ball: ratio('rightBall', 'leftBall') };
+}
+
+// The angle as a drawing book names it - and as Generate's From row does.
+function animeHeadView(r) {
+  const a = Math.abs(r.turn);
+  if (a > 115) return 'back';
+  if (Math.abs(r.tilt) > 22 && a < 60) return r.tilt > 0 ? 'below' : 'above';
+  return a < 12 ? 'front' : a < 65 ? 'three' : 'profile';
+}
+
+function animeHeadNote(r) {
+  const view = animeHeadView(r), pct = v => Math.round(v * 100) + '%';
+  const text = {
+    front: '<b>Front</b> - both eyes the same, one eye apart. The nose is a mark, the mouth a short line: nothing breaks the outline of the face.',
+    three: `<b>Three-quarter, ${Math.round(Math.abs(r.turn))}°</b> - the far eye is <b>${pct(r.mask)}</b> of the near one: ` +
+      `it narrows, but on a real, round head it would be ${pct(r.ball)}. Anime keeps the face a flat mask. ` +
+      'The far cheek bulges past the far eye; the nose points toward the far cheek, and the mouth is shorter on that side.',
+    profile: '<b>Profile</b> - one eye, seen side-on: the iris a narrow upright ellipse, the lash line a wedge sweeping back. The nose is a point on the outline, the chin the lowest one.',
+    below: '<b>From below</b> - the eye line curves up (⌒), the eyes move up the face and the chin and jaw grow; the nose tip may hide the nostrils\' mark.',
+    above: '<b>From above</b> - the eye line curves down (◡), the forehead and the hair take most of the head, and the features crowd toward the chin.',
+    back: '<b>From behind</b> - no face: the round back of the skull, the ears, the jaw\'s corner past the cheek.',
+  }[view];
+  return { view, text };
+}
+
+function syncAnimeNote() {
+  const note = el('formAnimeNote'), r = forms.frame ? animeHeadReading() : null;
+  note.classList.toggle('hidden', !r);
+  if (!r) return;
+  const { view, text } = animeHeadNote(r);
+  const gen = !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
+  const key = text + gen;
+  if (note.dataset.key === key) return;
+  note.dataset.key = key;
+  note.innerHTML = `<span>${text}</span>` + (gen ? `<button class="chip" type="button" id="formAnimeGen" data-view="${view}" ` +
+    'title="With your ComfyUI: anime heads drawn from this angle, to hold against the 3D one">Draw it at this angle</button>' : '');
+}
+
+/* To Generate: anime heads from the angle the 3D one is seen at - the
+   drawing a studio would make of it, beside the construction. */
+function animeHeadToGenerate(view) {
+  Object.assign(genChoices, { subject: 'character', framing: 'head', view });
+  saveGenChoices();
+  renderGenerate();
+  setView({ kind: 'generate' });
+  const seen = { front: 'from the front', three: 'at three-quarters', profile: 'in profile', below: 'from below',
+    above: 'from above', back: 'from behind' }[view];
+  el('genStatus').textContent = `The anime head's angle: a head ${seen}. Change anything, then Generate.`;
+}
+
+// The anime head on the selected form, turned three-quarters - for What's
+// new and Ctrl+K. Before the view has loaded it goes into the saved scene,
+// which the view opens with.
+function showAnimeHead() {
+  formScene = formScene || loadFormScene();
+  Object.assign(activeFormObject(), { shape: 'anime', pose: FORM_OBJECT_DEFAULTS.pose, rx: 0, ry: 35, rz: 0, sx: 1, sy: 1, sz: 1 });
+  if (forms) formsChanged(); else saveFormScene();
+}
+
+function bindAnimeNote() {
+  const note = el('formAnimeNote');
+  // Its own clicks: the stage under it would take them as a pick or a drag.
+  for (const ev of ['pointerdown', 'pointerup', 'click']) note.addEventListener(ev, e => e.stopPropagation());
+  note.addEventListener('click', e => {
+    const b = e.target.closest('#formAnimeGen');
+    if (b) animeHeadToGenerate(b.dataset.view);
   });
 }
 
@@ -1991,9 +2107,18 @@ function syncFormsPanel() {
   // and which scenes are saved all change their count, not just their state.
   el('formObjects').innerHTML = formScene.objects.map((ob, i) =>
     `<button class="chip" type="button" data-obj="${i}" aria-pressed="${i === formScene.active}">${i + 1} · ${esc(formShapeDef(ob.shape).label)}</button>`).join('');
-  const shapes = [...Object.entries(FORM_SHAPES), ...Object.entries(forms.models).map(([k, m]) => [k, { label: m.name }])];
-  el('formShapes').innerHTML = shapes.map(([k, s]) =>
-    `<button class="chip" type="button" data-shape="${k}" aria-pressed="${k === o.shape}">${esc(s.label)}</button>`).join('');
+  // In kinds, not one long row: the forms to shade, the subjects (a figure,
+  // a hand, the heads), cloth, and your own models.
+  const kinds = [
+    ['Forms', Object.entries(FORM_SHAPES).filter(([, s]) => !s.rig && !s.subject && !s.cloth)],
+    ['Figure and head', Object.entries(FORM_SHAPES).filter(([, s]) => s.rig || s.subject)],
+    ['Cloth', Object.entries(FORM_SHAPES).filter(([, s]) => s.cloth)],
+    ['Your models', Object.entries(forms.models).map(([k, m]) => [k, { label: m.name }])],
+  ];
+  const shapesHtml = kinds.filter(([, list]) => list.length).map(([title, list]) =>
+    `<div class="shape-kind"><span>${title}</span>${list.map(([k, s]) =>
+      `<button class="chip" type="button" data-shape="${k}" aria-pressed="${k === o.shape}">${esc(s.label)}</button>`).join('')}</div>`).join('');
+  if (el('formShapes').innerHTML !== shapesHtml) el('formShapes').innerHTML = shapesHtml;
   el('formScenes').innerHTML = loadSavedFormScenes().map((e, i) =>
     `<span class="scene-chip"><button class="chip" type="button" data-scene="${i}">${esc(e.name)}</button><button class="icon-btn" type="button" data-scene-del="${i}" title="Delete this saved scene">&times;</button></span>`).join('');
   el('formRemove').disabled = formScene.objects.length < 2;
@@ -2571,6 +2696,7 @@ function showForms() {
     panel.innerHTML = formsPanelHtml();
     bindFormsPanel();
     bindFormsOrbit();
+    bindAnimeNote();
     bindFormsKeys();
     bindViewDrill();
     syncFormsPanel();

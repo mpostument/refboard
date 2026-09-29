@@ -254,6 +254,8 @@ const FORM_SHAPES = {
   // out as one more random shape.
   head:     { label: 'Head',     lines: [12, 8], subject: true, build: T => formHeadGeometry(T, 128, 96) },
   planes:   { label: 'Head planes', lines: [12, 8], subject: true, flat: true, build: T => formHeadGeometry(T, 30, 22) },
+  // Sculpted the anime way, with its face drawn on (formAnimeFace()) - `face`.
+  anime:    { label: 'Anime head', lines: [12, 8], subject: true, face: true, build: T => formAnimeHeadGeometry(T, 128, 96) },
   // Drapery - a cloth simulated once, when first picked (formClothGeometry()),
   // for each of the fold types a drawing book names. `cloth`: seen from both
   // sides, and never dealt out as a random shape.
@@ -503,6 +505,212 @@ function formHeadUv(g) {
     uv[i * 2 + 1] = (pos.getY(i) - b.min.y) / h;
   }
   g.setAttribute('uv', new forms.T.BufferAttribute(uv, 2));
+}
+
+/* ---- the anime head. The same construction as the anime face drawn on a
+   photo (ANIME_HEAD in js/vision.js, in the same units: the ball's radius,
+   y up from the brow, z out of the face), made solid: a big round cranium,
+   the jaw running almost straight to a pointed chin, a nose that is barely
+   there - and the face a flat mask, not the front of a ball. That flatness
+   is the whole lesson: features on a ball wrap round it as it turns, and the
+   far eye all but disappears; on the mask both eyes narrow together, the far
+   one only a little more - which is how anime draws a turned head. */
+function formAnimeHeadGeometry(T, wSeg, hSeg) {
+  const g = new T.SphereGeometry(1, wSeg, hSeg, -Math.PI / 2);
+  const pos = g.attributes.position, A = ANIME_HEAD;
+  const ss = (a, b, t) => { t = Math.min(Math.max((t - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+  const bump = (dx, dy, sx, sy) => Math.exp(-(dx * dx) / (2 * sx * sx) - (dy * dy) / (2 * sy * sy));
+  const chinY = A.jaw[A.jaw.length - 1][1], cheekY = A.eyeY - 0.12;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const r0 = Math.sqrt(Math.max(1e-6, 1 - y * y));
+    const front = ss(-0.25, 0.55, z), low = ss(0.05, -0.95, y);
+    // The cranium: big and round, only a touch narrower than it is deep.
+    x *= 0.9;
+    // The lower face drawn down and forward to the chin...
+    y -= low * front * 0.5;
+    z += low * front * 0.32;
+    // ...and in, to a jaw that is nearly a straight line from the cheek to
+    // the chin: its half-width falls evenly with the height.
+    if (y < cheekY) {
+      const w = 0.12 + 0.73 * (y - chinY) / (cheekY - chinY);
+      const k = Math.min(1, Math.max(w, 0.12) / (0.9 * r0));
+      x *= 1 - front * (1 - k);
+    }
+    // The back tucked in over where the neck would go.
+    z *= 1 - 0.18 * low * (1 - front);
+    // The mask: the front of the face flattened to nearly a plane - eased in
+    // (tanh has slope 1 at the knee), so no crease shows where it starts.
+    if (z > 0.55) z = 0.55 + 0.2 * Math.tanh((z - 0.55) / 0.2);
+    // The nose: a small ridge to a point, no more.
+    z += front * (0.025 * ss(A.eyeY, A.nose, y) * (1 - ss(A.nose, A.nose - 0.06, y)) * bump(x, 0, 0.05, 1)
+      + 0.05 * bump(x, y - A.nose, 0.035, 0.05));
+    // Ears, level with the eyes and the nose.
+    const fx = Math.abs(x);
+    x += Math.sign(x) * 0.06 * bump(z + 0.1, y - (A.eyeY + A.nose) / 2, 0.1, 0.17) * ss(0.55, 0.65, fx);
+    pos.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/* The face, drawn: the part of the head that looks forward, given UVs that
+   are a straight view from the front, and a picture of the features laid on
+   it (animeFaceTexture()). Two layers - the features, lit like the head, and
+   the gleams, which are the light itself and stay bright in any shadow. */
+const ANIME_FACE_BOX = { x0: -0.75, x1: 0.75, y0: -1.3, y1: 0.12 };
+function formAnimeFaceGeometry(T, head) {
+  const B = ANIME_FACE_BOX, pos = head.getAttribute('position'), nor = head.getAttribute('normal');
+  const idx = head.index ? head.index.array : null, n = idx ? idx.length : pos.count;
+  const inBox = v => nor.getZ(v) > 0.2 && pos.getX(v) > B.x0 && pos.getX(v) < B.x1 && pos.getY(v) > B.y0 && pos.getY(v) < B.y1;
+  const P = [], N = [], U = [];
+  for (let t = 0; t < n; t += 3) {
+    const vs = [0, 1, 2].map(k => idx ? idx[t + k] : t + k);
+    if (!vs.every(inBox)) continue;
+    for (const v of vs) {
+      // Just off the surface, so the two never fight over which is in front.
+      const nx = nor.getX(v), ny = nor.getY(v), nz = nor.getZ(v), x = pos.getX(v), y = pos.getY(v);
+      P.push(x + nx * 0.004, y + ny * 0.004, pos.getZ(v) + nz * 0.004);
+      N.push(nx, ny, nz);
+      U.push((x - B.x0) / (B.x1 - B.x0), (y - B.y0) / (B.y1 - B.y0));
+    }
+  }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(P, 3));
+  g.setAttribute('normal', new T.Float32BufferAttribute(N, 3));
+  g.setAttribute('uv', new T.Float32BufferAttribute(U, 2));
+  return g;
+}
+
+// Where a point of the face drawing (x, y) is on the head: the surface
+// straight behind it, from the nearest point of the head that faces forward.
+function formFacePoint(head, x, y) {
+  const pos = head.getAttribute('position'), nor = head.getAttribute('normal');
+  let best = Infinity, z = 0;
+  for (let v = 0; v < pos.count; v++) {
+    if (nor.getZ(v) < 0.2) continue;
+    const d = (pos.getX(v) - x) ** 2 + (pos.getY(v) - y) ** 2;
+    if (d < best) { best = d; z = pos.getZ(v); }
+  }
+  return [x, y, z];
+}
+
+/* The features, drawn onto a canvas that covers ANIME_FACE_BOX. `gleams`:
+   draw only the gleams, on the side the light comes from (side -1 is the
+   face's right, the viewer's left), and leave everything else clear. */
+function animeFaceTexture(gleams, side = -1) {
+  const B = ANIME_FACE_BOX, A = ANIME_HEAD, k = 700;
+  const c = document.createElement('canvas');
+  c.width = Math.round((B.x1 - B.x0) * k); c.height = Math.round((B.y1 - B.y0) * k);
+  const g = c.getContext('2d');
+  const X = x => (x - B.x0) * k, Y = y => (B.y1 - y) * k;
+  const ink = '#2b1d24', iris = '#3f6fb5';
+  g.lineCap = g.lineJoin = 'round';
+  for (const sx of [-1, 1]) {
+    const ex = sx * A.eyeX, ey = A.eyeY;
+    if (gleams) {
+      // One light, so the gleam is on the same side in both eyes: a big one
+      // high toward the light, a small one low on the other side.
+      g.fillStyle = '#fff';
+      g.beginPath(); g.ellipse(X(ex + side * 0.035), Y(ey + 0.05), 0.03 * k, 0.036 * k, 0, 0, 7); g.fill();
+      g.beginPath(); g.arc(X(ex - side * 0.03), Y(ey - 0.07), 0.013 * k, 0, 7); g.fill();
+      continue;
+    }
+    // t = 0 at the outer corner, π at the inner one - as animeFace() draws it.
+    const lid = (a, b, t) => [X(ex + sx * a * Math.cos(t)), Y(ey + b * Math.sin(t))];
+    const eye = () => {
+      g.beginPath();
+      for (let i = 0; i <= 24; i++) g.lineTo(...lid(A.eyeA, A.eyeB * 0.75, Math.PI * i / 24));
+      for (let i = 0; i <= 24; i++) g.lineTo(...lid(A.eyeA * 0.95, A.eyeB * 0.9, -Math.PI + Math.PI * i / 24));
+      g.closePath();
+    };
+    // The white, and inside it the iris - tall, its top under the lash
+    // line, darker there where the lashes shade it - and the pupil.
+    g.save();
+    eye(); g.fillStyle = '#fbf8f6'; g.fill(); g.clip();
+    const top = Y(ey + A.irisB), grad = g.createLinearGradient(0, top, 0, Y(ey - A.irisB));
+    grad.addColorStop(0, '#1d2f5a'); grad.addColorStop(0.55, iris); grad.addColorStop(1, '#8fc0ee');
+    g.fillStyle = grad;
+    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.01), A.irisA * k, A.irisB * k, 0, 0, 7); g.fill();
+    g.fillStyle = '#16152a';
+    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.005), A.irisA * 0.45 * k, A.irisB * 0.5 * k, 0, 0, 7); g.fill();
+    g.strokeStyle = '#1d2f5a'; g.lineWidth = 0.008 * k;
+    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.01), A.irisA * k, A.irisB * k, 0, 0, 7); g.stroke();
+    g.restore();
+    // The upper lash line - the heaviest line of the face: thick at the
+    // outer corner, thinning to the inner, flicked out and down past the end.
+    g.fillStyle = ink;
+    g.beginPath();
+    const up = [], th = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = Math.PI * i / 24;
+      up.push(lid(A.eyeA, A.eyeB * 0.75, t));
+      th.push((0.05 - 0.035 * i / 24) * k);
+    }
+    up.forEach(p => g.lineTo(p[0], p[1]));
+    for (let i = 24; i >= 0; i--) {
+      const t = Math.PI * i / 24, [px, py] = up[i];
+      // Outward from the eye's middle.
+      const nx = sx * Math.cos(t) * A.eyeB * 0.75, ny = -Math.sin(t) * A.eyeA, l = Math.hypot(nx, ny) || 1;
+      g.lineTo(px + nx / l * th[i], py + ny / l * th[i]);
+    }
+    g.closePath(); g.fill();
+    g.beginPath();
+    const o = lid(A.eyeA, 0, 0);
+    g.moveTo(o[0], o[1] - 0.04 * k); g.lineTo(X(ex + sx * (A.eyeA + 0.06)), Y(ey - 0.05)); g.lineTo(o[0], o[1] + 0.005 * k);
+    g.closePath(); g.fill();
+    // The lower lid: a short, light stroke on the outer half.
+    g.strokeStyle = ink; g.lineWidth = 0.009 * k; g.globalAlpha = 0.7;
+    g.beginPath();
+    for (let i = 0; i <= 10; i++) g.lineTo(...lid(A.eyeA * 0.95, A.eyeB * 0.9, -0.12 * Math.PI - 0.43 * Math.PI * i / 10));
+    g.stroke(); g.globalAlpha = 1;
+    // The brow: a thin arc well above the eye.
+    g.lineWidth = 0.014 * k;
+    g.beginPath();
+    for (let i = 0; i <= 12; i++) {
+      const u = i / 12;
+      g.lineTo(X(sx * (0.17 + 0.36 * u)), Y(ey + 0.29 + 0.035 * Math.sin(Math.PI * (0.35 + 0.65 * u))));
+    }
+    g.stroke();
+  }
+  if (!gleams) {
+    // The nose: a small mark under its tip. The mouth: a short line.
+    g.strokeStyle = ink; g.lineWidth = 0.011 * k;
+    g.beginPath(); g.moveTo(X(-0.02), Y(A.nose - 0.02)); g.lineTo(X(0.015), Y(A.nose - 0.035)); g.stroke();
+    g.lineWidth = 0.013 * k;
+    g.beginPath();
+    for (let i = 0; i <= 10; i++) { const t = -0.1 + 0.2 * i / 10; g.lineTo(X(t), Y(A.mouth + 0.25 * t * t)); }
+    g.stroke();
+  }
+  return c;
+}
+
+// Shared by every anime head in the scene: the face's geometry, its two
+// textures (the gleam's in two, one for each side a light can come from),
+// and the points the angle note measures.
+function formAnimeFace() {
+  const F = forms, T = F.T;
+  if (F.animeFace) return F.animeFace;
+  const head = formGeometry('anime');
+  const tex = c => { const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t; };
+  const mat = (map, lit) => new (lit ? T.MeshStandardMaterial : T.MeshBasicMaterial)({
+    map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    ...(lit ? { roughness: 0.85, metalness: 0 } : {}) });
+  const A = ANIME_HEAD, corner = sx => [sx * (A.eyeX + A.eyeA), sx * (A.eyeX - A.eyeA)];
+  const marks = {};
+  for (const [name, sx] of [['right', -1], ['left', 1]]) {
+    const [outer, inner] = corner(sx);
+    marks[name] = [formFacePoint(head, outer, A.eyeY), formFacePoint(head, inner, A.eyeY)];
+    // The same eye on Loomis's ball, for the comparison.
+    const ball = x => [x, A.eyeY, Math.sqrt(1 - x * x - A.eyeY * A.eyeY)];
+    marks[name + 'Ball'] = [ball(outer), ball(inner)];
+  }
+  return (F.animeFace = {
+    geo: formAnimeFaceGeometry(T, head),
+    features: mat(tex(animeFaceTexture(false)), true),
+    gleam: { '-1': mat(tex(animeFaceTexture(true, -1)), false), '1': mat(tex(animeFaceTexture(true, 1)), false) },
+    marks,
+  });
 }
 
 /* ---- the figure. A wooden mannequin, about eight heads tall (4 units -

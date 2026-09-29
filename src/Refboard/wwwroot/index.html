@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=8b0cc39b">
+<link rel="stylesheet" href="css/app.css?v=f919449d">
 </head>
 <body>
 <div id="setup">
@@ -291,6 +291,8 @@
             </div>
             <!-- The view drill's task and its answer - see startViewDrill(). -->
             <div id="formsTask" class="hidden"></div>
+            <!-- The anime head's angle, read from the render - see syncAnimeNote(). -->
+            <div id="formAnimeNote" class="hidden"></div>
             <div id="formsNoGl" class="hidden">This browser has no WebGL 2, which the 3D forms need. Every other part of the board still works.</div>
           </div>
           <div class="count" id="formsHint">Click a form to select it, the selected one to light that spot · click the floor to throw the shadow there · drag to orbit · scroll to zoom · G / R / S move, rotate, scale the selected form, as in Blender</div>
@@ -1330,6 +1332,18 @@
         relaxed, spread, fist, pointing, pinching, gripping. In <b>Draw random
         forms</b> a head nods, tilts and turns and a hand takes a new pose,
         instead of being swapped for a random shape.</p>
+      <p><b>Anime head</b> is built the anime way - the same proportions as
+        the Anime style of Head construction on a photo: a big round cranium,
+        the jaw almost straight to a pointed chin, a nose that is barely there,
+        and the eyes drawn on - the heavy upper lash line, the tall iris
+        darker under it, the gleam on the side the light comes from. Its face
+        is a flat mask, not the front of a ball, which is why anime eyes do
+        not turn the way real ones do: the note under the view gives the far
+        eye's width against the near one's at the angle you see it from, and
+        what it would be on a round head, with what to watch at that angle.
+        With a ComfyUI, <b>Draw it at this angle</b> asks Generate for anime
+        heads from the same side, to hold against the 3D one. The shapes are
+        listed in kinds: forms, figure and head, cloth, your models.</p>
       <p><b>Cloth over a ball</b>, <b>Hanging cloth</b> and <b>Curtain</b>
         are drapery, each one of the fold types drawing books teach: drop
         folds falling from what holds the cloth up, diaper folds sagging
@@ -1543,9 +1557,9 @@
 <script src="js/workspace.js?v=21389bc9"></script>
 <script src="js/train.js?v=9fd9bbc0"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=bb6d8263"></script>
+<script src="js/command.js?v=818ead24"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=01084076"></script>
+<script src="js/whatsnew.js?v=060af95a"></script>
 <script src="js/edges.js?v=5393fa8f"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
 <script src="js/generate.js?v=dc354b59"></script>
@@ -1553,8 +1567,8 @@
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
-<script src="js/forms-models.js?v=033ccb9f"></script>
-<script src="js/forms.js?v=e7d1d119"></script>
+<script src="js/forms-models.js?v=28029ff2"></script>
+<script src="js/forms.js?v=ec690cba"></script>
 </template>
 <template id="lazy-backup">
 <script src="js/backup.js?v=e7ec2fe2"></script>
