@@ -133,6 +133,13 @@ function collectCommands() {
       id: 'anime-expr-' + k, label: `Anime head in 3D: ${x.label}`, hint: '3D forms',
       words: 'expression emotion face feeling ' + { joy: 'happy smile laugh blush', anger: 'angry mad rage vein', surprise: 'shock surprised wide', sadness: 'sad cry tears crying' }[k],
       run: () => openForms(() => showAnimeHead(undefined, k)) });
+    // The figure in each of its proportions, with the heads grid. Named here,
+    // not read from FIGURE_BUILDS: that loads with the 3D view, after this list.
+    for (const [k, label, words] of [['real', 'Realistic', 'eight'], ['anime', 'Anime', 'seven'],
+      ['tall', 'Long-legged', 'long legs fashion nine'], ['chibi', 'Chibi', 'sd super deformed cute small']]) out.push({
+      id: 'figure-build-' + k, label: `Figure in 3D: ${label}`, hint: '3D forms',
+      words: 'proportions heads tall body mannequin grid anime ' + words,
+      run: () => openForms(() => showFigureBuild(k)) });
     out.push({ id: 'anime-expr-sheet', label: 'Expression sheet', hint: '3D forms', words: 'expressions emotions faces anime head model sheet joy anger surprise sadness',
       run: () => openForms(async () => { showAnimeHead(); await formsReady(); openExpressionSheet(); }) });
   }

@@ -67,6 +67,8 @@ const FORM_OBJECT_DEFAULTS = {
   eyes: 'tv', eyeColor: '#3f6fb5',
   // And its expression, from ANIME_EXPRESSIONS - at rest.
   expression: 'calm',
+  // The figure's proportions, from FIGURE_BUILDS - a real body's by default.
+  build: 'real',
   // The figure's joints, { joint: [bend, twist, lean] } in degrees - see
   // FORM_RIG. Frozen, and only ever replaced, never edited in place: objects
   // are copied with a plain spread, which would share it.
@@ -92,6 +94,8 @@ const FORM_DEFAULTS = {
   focal: 50, yaw: 35, pitch: 22, zoom: 1,
   lines: false, horizon: false, lightMarker: true, vp: false, ellipses: false, floorGrid: false, zones: false,
   count: 10, anyShape: true, memorySecs: 15,
+  // A figure's height in heads, drawn across it - see drawFormHeads().
+  heads: false,
   // Atmospheric perspective - see formsRender(). 0 is the clean studio.
   haze: 0, hazeColor: '#b9c6d6',
 };
@@ -1077,6 +1081,41 @@ const FORM_RIG = [
     ];
   }),
 ];
+/* The figure's proportions. Each part of the body is [girth, length] times
+   the real one's - girth across and through it, length along it - and a
+   joint hangs where its parent's length puts it: a longer thigh carries the
+   knee down with it. The rig itself stays one table, so a pose fits every
+   build. Worked out to the heads count each is known by (figureHeights()):
+   anime shortens the torso and lengthens the legs round a bigger head;
+   chibi is a head as big as the rest of the body. */
+const FIGURE_BUILDS = {
+  real: { label: 'Realistic', hint: 'A real body, about eight heads tall: the crotch halfway down, the elbow at the waist.' },
+  anime: { label: 'Anime', torso: [0.9, 0.9], arm: [0.85, 0.98], hand: [0.85, 0.9], leg: [0.88, 1.1], foot: [0.8, 0.9], head: [1.15, 1.15],
+    hint: 'Standard anime, about seven heads: a bigger head, a shorter torso and longer, slimmer legs - a little more than half the height.' },
+  tall: { label: 'Long-legged', torso: [0.85, 0.92], neck: [0.9, 1.15], arm: [0.85, 1.08], hand: [0.85, 0.95], leg: [0.85, 1.25], head: [0.95, 0.95],
+    hint: 'Stylised, about nine heads, as fashion drawing and some anime do it: a small head and legs more than half the height.' },
+  chibi: { label: 'Chibi', torso: [0.85, 0.45], neck: [0.8, 0.3], arm: [1.05, 0.5], hand: [1.1, 0.7], leg: [1.05, 0.5], foot: [1.1, 0.8], head: [2.2, 2.2],
+    hint: 'Chibi, about two and a half heads: the head is as big as the body under it, the limbs short stubs with no elbows or knees to speak of.' },
+};
+// Which part of the body a joint is: its row in a build. The pelvis (null) is the torso's.
+const FIGURE_PART = { spine: 'torso', chest: 'torso', neck: 'neck', head: 'head', upperArm: 'arm', forearm: 'arm', hand: 'hand', thigh: 'leg', shin: 'leg', foot: 'foot' };
+// A joint's scale, [x, y, z], in a build and under the Proportions sliders.
+function figureScale(build, joint, sc) {
+  const [g, l] = (FIGURE_BUILDS[build] || FIGURE_BUILDS.real)[joint ? FIGURE_PART[joint.split('.')[0]] : 'torso'] || [1, 1];
+  return [g * sc[0], l * sc[1], g * sc[2]];
+}
+/* Standing straight, in the figure's own frame: the top of the head, the
+   soles, a head's height and how many heads the whole is. The Height slider
+   stretches the head with the rest, so it never changes the count. */
+function figureHeights(build, sy = 1) {
+  const row = j => FORM_RIG.find(r => r[0] === j), up = (j, parent) => row(j)[2][1] * figureScale(build, parent, [1, sy, 1])[1];
+  const head = row('head')[4][0], foot = row('foot.L')[4][1], hs = figureScale(build, 'head', [1, sy, 1])[1];
+  const top = up('spine', null) + up('chest', 'spine') + up('neck', 'chest') + up('head', 'neck') + (head.at[1] + head.size[1]) * hs;
+  const bottom = up('thigh.L', null) + up('shin.L', 'thigh.L') + up('foot.L', 'shin.L') +
+    (foot.at[1] - foot.size[1] / 2) * figureScale(build, 'foot', [1, sy, 1])[1];
+  const unit = 2 * head.size[1] * hs;
+  return { top, bottom, unit, heads: (top - bottom) / unit };
+}
 // Of the joint being named, on the rig being posed - see FORM_RIGS.
 const formJointLabel = (j, rig = activeFormRig() || FORM_RIGS.figure) => j ? rig.jointMap.get(j)[3] : rig.whole;
 

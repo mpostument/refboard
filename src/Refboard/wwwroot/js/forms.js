@@ -39,6 +39,7 @@ function normalizeFormScene(raw) {
     if (!ANIME_EYES[n.eyes]) n.eyes = FORM_OBJECT_DEFAULTS.eyes;
     if (!/^#[0-9a-f]{6}$/i.test(n.eyeColor)) n.eyeColor = FORM_OBJECT_DEFAULTS.eyeColor;
     if (!ANIME_EXPRESSIONS[n.expression]) n.expression = FORM_OBJECT_DEFAULTS.expression;
+    if (!FIGURE_BUILDS[n.build]) n.build = FORM_OBJECT_DEFAULTS.build;
     n.pose = cleanFormPose(n.pose, FORM_RIGS[(FORM_SHAPES[n.shape] || {}).rig] || FORM_RIGS.figure);
     return n;
   });
@@ -442,15 +443,19 @@ function formCelUniforms(u, color, gloss, sc, rimDir) {
 /* Proportions stretch each part in its own frame - Height makes limbs
    longer, Width and Depth thicker - rather than stretching the figure as a
    whole: a stretched parent shears whatever is turned inside it, so a
-   raised arm would come out wide instead of long. */
+   raised arm would come out wide instead of long. A figure's build
+   (FIGURE_BUILDS) scales each part the same way: a joint sits where its
+   parent's scale puts it, its own parts take its own. */
 function poseFormRig(m, o) {
-  const rig = m.userData.rig, sc = [o.sx, o.sy, o.sz];
-  for (const [name, , at] of rig.def.joints) {
-    const node = rig.nodes[name], r = o.pose[name] || [0, 0, 0];
+  const rig = m.userData.rig, base = [o.sx, o.sy, o.sz];
+  const scaleOf = rig.kind === 'figure' ? j => figureScale(o.build, j, base) : () => base;
+  for (const [name, parent, at] of rig.def.joints) {
+    const node = rig.nodes[name], r = o.pose[name] || [0, 0, 0], sc = scaleOf(parent);
     rig.pivots[name].position.set(at[0] * sc[0], at[1] * sc[1], at[2] * sc[2]);
     node.rotation.set(r[0] * THREE_DEG, r[1] * THREE_DEG, r[2] * THREE_DEG);
   }
   for (const [pm, { at, size }] of rig.parts) {
+    const sc = scaleOf(pm.userData.joint);
     pm.position.set(at[0] * sc[0], at[1] * sc[1], at[2] * sc[2]);
     pm.scale.set(size[0] * sc[0], size[1] * sc[1], size[2] * sc[2]);
   }
@@ -790,6 +795,7 @@ function drawFormsOverlay() {
     });
   }
 
+  if (formScene.heads) drawFormHeads(ctx, dpr, toScreen);
   drawFormRig(ctx, dpr, toScreen);
   drawFormGizmo(ctx, dpr, toScreen);
 
@@ -879,6 +885,43 @@ function drawFormsOverlay() {
    joint - the dots are what you click to pick a joint to bend (the pelvis
    dot is the whole figure). The line of the spine and limbs is also the
    gesture, which is what a figure drawing starts from. */
+/* The heads grid: across each figure, a line every head's height from the
+   crown down, numbered, as a proportion chart draws it - the chin on the
+   first, the crotch near the middle one on a real body. It measures the
+   figure standing straight, from the floor it stands on, and turns with it
+   but never tilts: a posed figure is held against its standing height. */
+function drawFormHeads(ctx, dpr, toScreen) {
+  const T = forms.T;
+  ctx.save();
+  ctx.font = `${11 * dpr}px system-ui, sans-serif`;
+  ctx.lineWidth = 1 * dpr;
+  formScene.objects.forEach((o, i) => {
+    const m = forms.meshes[i];
+    if (!m || formShapeDef(o.shape).rig !== 'figure') return;
+    const h = figureHeights(o.build, o.sy), tall = h.top - h.bottom, half = 0.6 * o.sx;
+    const ry = o.ry * THREE_DEG, across = new T.Vector3(Math.cos(ry), 0, -Math.sin(ry));
+    const at = (y, side) => toScreen(new T.Vector3(m.position.x, o.y + y, m.position.z).addScaledVector(across, side * half));
+    const levels = [];
+    for (let k = 0; k * h.unit < tall - 1e-6; k++) levels.push(tall - k * h.unit);
+    levels.push(0);
+    levels.forEach((y, k) => {
+      const a = at(y, -1), b = at(y, 1);
+      if (a[2] >= 1 || b[2] >= 1) return;
+      ctx.strokeStyle = k === 0 || y === 0 ? 'rgba(216, 162, 74, .9)' : 'rgba(216, 162, 74, .6)';
+      ctx.setLineDash(k === 0 || y === 0 ? [] : [4 * dpr, 3 * dpr]);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      if (k === levels.length - 1) return;
+      // The number between this line and the next, past the right-hand end.
+      const [x, yy] = at((y + levels[k + 1]) / 2, 1.15);
+      ctx.lineWidth = 3 * dpr; ctx.strokeStyle = 'rgba(0, 0, 0, .7)'; ctx.fillStyle = '#f0d9a8';
+      ctx.setLineDash([]);
+      ctx.strokeText(String(k + 1), x, yy + 4 * dpr); ctx.fillText(String(k + 1), x, yy + 4 * dpr);
+      ctx.lineWidth = 1 * dpr;
+    });
+  });
+  ctx.restore();
+}
+
 function drawFormRig(ctx, dpr, toScreen) {
   const F = forms, T = F.T, m = F.meshes[formScene.active], rig = m && m.userData.rig;
   if (!rig) return;
@@ -1869,6 +1912,18 @@ function showAnimeHead(eyes, expression) {
   if (forms) { formsChanged(); pickFormTab('face'); } else { saveFormScene(); try { localStorage.setItem(FORM_TAB_KEY, 'face'); } catch {} }
 }
 
+// The figure on the selected form in `build`'s proportions, standing, with
+// the heads grid on - for What's new and Ctrl+K. Its pose, if it is already
+// a figure, is kept: the point is the same pose in other proportions.
+function showFigureBuild(build = 'anime') {
+  formScene = formScene || loadFormScene();
+  const o = activeFormObject();
+  if (o.shape !== 'figure') Object.assign(o, { shape: 'figure', pose: FORM_OBJECT_DEFAULTS.pose, rx: 0, ry: 20, rz: 0, sx: 1, sy: 1, sz: 1 });
+  o.build = FIGURE_BUILDS[build] ? build : 'anime';
+  formScene.heads = true;
+  if (forms) { formsChanged(); pickFormTab('object'); } else { saveFormScene(); try { localStorage.setItem(FORM_TAB_KEY, 'object'); } catch {} }
+}
+
 function bindAnimeNote() {
   const note = el('formAnimeNote');
   // Its own clicks: the stage under it would take them as a pick or a drag.
@@ -2229,7 +2284,11 @@ function formsPanelHtml() {
       <div class="count" id="formModelStatus"></div>
       <h4>Shape of the selected form</h4>
       <div class="chips" id="formShapes"></div>`,
-    pose: `<select id="formJoint" title="Which joint to bend - or click its dot in the view"></select>
+    // A figure's proportions first - what kind of body, then how it stands.
+    pose: `<div id="formBuildWrap"><h4>Body</h4>` + chips('formBuilds', Object.entries(FIGURE_BUILDS), 'build', b => b.hint) +
+      `<label class="opt"><input type="checkbox" data-k="heads"> Heads grid</label>
+      <div class="count" id="formBuildNote"></div><h4>Pose</h4></div>
+      <select id="formJoint" title="Which joint to bend - or click its dot in the view"></select>
       <div class="count" id="formJointHint"></div>
       <div id="formJointRows">${[['Bend', 'Forward and back'], ['Twist', 'About its own length'], ['Lean', 'Out to the side']]
         .map(([l, t], i) => `<label class="frow" title="${t}"><span>${l}</span><input type="range" data-jaxis="${i}" min="-180" max="180" step="1"><output data-unit="°"></output></label>`).join('')}</div>
@@ -2380,6 +2439,13 @@ function syncFormsPanel() {
     const poses = Object.entries(rig.poses).map(([k, p]) =>
       `<button class="chip" type="button" data-pose-preset="${k}">${esc(p.label)}</button>`).join('');
     if (el('formPoses').dataset.rig !== rig.whole) { el('formPoses').innerHTML = poses; el('formPoses').dataset.rig = rig.whole; }
+    const figure = rig === FORM_RIGS.figure;
+    el('formBuildWrap').classList.toggle('hidden', !figure);
+    if (figure) {
+      for (const b of panel.querySelectorAll('[data-build]')) b.setAttribute('aria-pressed', String(b.dataset.build === o.build));
+      const B = FIGURE_BUILDS[o.build];
+      el('formBuildNote').innerHTML = `<b>${figureHeights(o.build).heads.toFixed(1)} heads.</b> ${esc(B.hint)}`;
+    }
     el('formPoseMirror').classList.toggle('hidden', !rig.mirror);
     el('formPoseReset').title = rig.reset;
     el('formJointRows').classList.toggle('hidden', !joint);
@@ -2507,6 +2573,12 @@ function bindFormsPanel() {
       // A figure's joints mean nothing to a hand: a new rig starts at rest.
       if (formShapeDef(o.shape).rig !== formShapeDef(b.dataset.shape).rig) o.pose = {};
       o.shape = b.dataset.shape; formsChanged(); return;
+    }
+    if ((b = hit('[data-build]'))) {
+      pushFormUndo(formObjectsSnapshot());
+      activeFormObject().build = b.dataset.build;
+      formsChanged();
+      return;
     }
     if ((b = hit('[data-hair]'))) { activeFormObject().hair = b.dataset.hair; formsChanged(); return; }
     if ((b = hit('[data-hair-colour]'))) { activeFormObject().hairColor = b.dataset.hairColour; formsChanged(); return; }

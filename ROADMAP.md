@@ -262,9 +262,17 @@ head read for its expression.
 
 Body:
 
-- **Anime proportions for the mannequin.** Chibi (2-3 heads), standard
-  anime (6-7), stylised long-legged - with a heads-count grid over the
-  figure. Beside the body types under From photo to 3D.
+In place: anime proportions for the mannequin - the figure's Body row
+above its pose (`FIGURE_BUILDS`, `figureScale()` in `js/forms-models.js`):
+Realistic (7.8 heads), Anime (7), Long-legged (9), Chibi (2.5), each part
+of the body a girth and a length times the real one's, a joint hung where
+its parent's length puts it - so one rig and every pose fit all four. The
+count is worked out from the rig (`figureHeights()`), not written down, and
+the Heads grid (`drawFormHeads()` in `js/forms.js`) draws it across the
+figure, from the floor as it would stand. Still to come on it: body types
+(slim, heavy, muscular), a child's proportions by age, and the build sent
+to Generate.
+
 - **A photo's pose in anime proportions.** The pose model finds the
   skeleton, and it is redrawn in anime proportions - shorter torso,
   longer legs, larger head: a real pose, seen as it would be in anime.

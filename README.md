@@ -330,7 +330,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     own **.glb / .gltf / .obj** model (a planes-of-the-head bust, a skull)
     loaded in the browser - or a jointed wooden **figure**: pick a joint by its
     dot and bend it with rings, R or sliders, from classic poses (contrapposto,
-    walk, kneel...), random ones, or a mirror of the last. Each with its own placement, proportions, rotation,
+    walk, kneel...), random ones, or a mirror of the last, in realistic, anime
+    (7 heads), long-legged (9) or chibi (2.5) proportions, with a numbered
+    heads grid across it. Each with its own placement, proportions, rotation,
     colour and surface: matte, satin, glossy, metal, glass or velvet - or
     **Anime**, cel shading: a flat colour, one hard-edged shadow tone of its
     own (pulled toward blue-violet, as anime colours it), a highlight, and the

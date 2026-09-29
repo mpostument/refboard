@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'figure-builds', title: 'Anime proportions for the 3D figure',
+    text: 'The 3D figure has a Body row above its pose: Realistic (about eight heads), Anime (seven - a bigger head, a shorter torso, longer legs), Long-legged (nine) and Chibi (two and a half). A pose carries over from one to another, so the same contrapposto can be seen in each. Heads grid draws a line every head down the figure, numbered, to check your own drawing against.',
+    act: 'Show me', run: () => openForms(() => showFigureBuild('anime')) },
   { id: 'palette-generate', title: 'A palette to Generate',
     text: "In Palettes, Use in Generate sends the palette to Generate, where The picture has a Colours row: Your palette, with its colours on it, or Any. The model knows no hex, so the palette goes as the words it does know for a palette as a whole - limited palette, the hue that leads it, muted or pastel, dark or high contrast: the picture comes out in that range and mood, not in five exact colours - those, and how to mix them, stay in Palettes. Not for ink or pencil, which are grey.",
     act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
