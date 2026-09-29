@@ -21,6 +21,14 @@ test('the choices become the model\'s tags and the words it is filed under', asy
   expect(head.prompt.startsWith('1girl, solo, portrait, close-up, straight-on')).toBe(true);
 });
 
+test('a character sheet made again: her eyes, and a turnaround, wide', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, colour: 'purple', eyes: 'aqua', framing: 'sheet' }));
+  expect(r.prompt).toContain('purple hair, aqua eyes, reference sheet, multiple views, turnaround, full body');
+  expect(r.tags).toEqual(expect.arrayContaining(['purple hair', 'aqua eyes', 'turnaround']));
+  expect(r.shape).toBe('landscape');
+});
+
 test('a landscape or an animal: no one in it, and only its own choices', async ({ page }) => {
   await openApp(page);
   // The character's choices are still set - and left out.

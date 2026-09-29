@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'character', title: 'Character sheet',
+    text: 'Her colours in one place, so the next picture of her matches: in the Colour studio, Character sheet - click the hair, the skin, the eyes, the clothes on a picture; the shadow and the light are worked out the anime way, each with how to mix it from your paints. Colours on a generated picture opens it there, and with a ComfyUI, Generate her draws her again as a turnaround.',
+    act: 'Open it', run: () => openColour('character') },
   { id: 'whites', title: 'Save the whites',
     text: 'How to draw it in watercolour has a step before the first wash: the whites the paper must keep. Yellow for the small ones - a catchlight, a streak of shine on the hair - to cover with masking fluid; a blue outline round the big ones, to paint round. In watercolour a white painted over does not come back.',
     act: 'Show me', run: () => setView({ kind: 'drop' }) },

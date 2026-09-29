@@ -134,6 +134,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   Worked out from the picture itself in the browser (Otsu thresholds, XDoG
   lines, a traced and simplified silhouette), so it needs no server and no
   model, and every frame is the same composition.
+- **Character sheet** - the Colour studio's second tab: a character's hair,
+  skin, eyes, clothes and an accent, each clicked on a picture, with its
+  shadow and light worked out as anime cel shading paints them (a value
+  step darker and cooler, skin's warmer; lighter and paler) or clicked too,
+  and a recipe for each from your paints and medium. Kept like your uploads,
+  copied as text, and - with a ComfyUI - drawn again as a turnaround in her
+  hair and eye colours. Colours on a generated picture opens it here.
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
   on a machine with a GPU (`COMFY_URL`): anime references made to order - a
   character (who, the hair, how much of them, from where, the pose), a

@@ -52,14 +52,21 @@ const GEN_CHOICES = [
   ] },
   { id: 'colour', label: 'Hair colour', for: PERSON, options: [
     ANY,
-    ...['black', 'brown', 'blonde', 'red', 'pink', 'silver', 'blue', 'green']
+    ...['black', 'brown', 'blonde', 'red', 'orange', 'pink', 'purple', 'silver', 'white', 'blue', 'green']
       .map(c => ({ id: c, label: c[0].toUpperCase() + c.slice(1), tags: c + ' hair', words: c + ' hair' })),
+  ] },
+  { id: 'eyes', label: 'Eyes', for: PERSON, options: [
+    ANY,
+    ...['blue', 'green', 'brown', 'red', 'purple', 'yellow', 'pink', 'aqua', 'grey', 'black']
+      .map(c => ({ id: c, label: c[0].toUpperCase() + c.slice(1), tags: c + ' eyes', words: c + ' eyes' })),
   ] },
   { id: 'framing', label: 'How much', for: PERSON, options: [
     { id: 'head', label: 'Head', tags: 'portrait, close-up', words: 'head' },
     { id: 'bust', label: 'Bust', tags: 'upper body', words: 'bust' },
     { id: 'half', label: 'Half figure', tags: 'cowboy shot', words: 'half figure' },
     { id: 'full', label: 'Whole figure', tags: 'full body', words: 'whole figure' },
+    // The model sheet an animator draws from: one character, turned round.
+    { id: 'sheet', label: 'Turnaround', tags: 'reference sheet, multiple views, turnaround, full body, standing', words: 'turnaround' },
   ] },
   { id: 'view', label: 'From', for: PERSON, options: [
     { id: 'front', label: 'Front', tags: 'straight-on, looking at viewer', words: 'front' },
@@ -176,7 +183,7 @@ const GEN_CHOICES = [
   ] },
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', framing: 'bust',
   view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', detail: 'simple',
   ground: 'plain' };
@@ -201,7 +208,7 @@ function genPrompt(choices, extra = '') {
     if (w) words.push(w);
   }
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
-  const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : 'portrait')
+  const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
   return { prompt: [...tags, ...more].join(', '), avoid: avoid.join(', '), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
@@ -246,7 +253,8 @@ function renderGenResults(list) {
     const li = document.createElement('li');
     li.innerHTML = `<button type="button" class="gen-open" title="${esc((u.tags || []).join(', '))}" ` +
       `aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
-      `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>`;
+      `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>` +
+      `<button type="button" class="gen-colours" aria-label="Character sheet from ${esc(u.name)}" title="Her colours, with how to mix them - the Colour studio's Character sheet">Colours</button>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
     li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-steps').addEventListener('click', async () => {
@@ -254,6 +262,10 @@ function renderGenResults(list) {
       if (!url) return;
       stepsKnown.set(url, u.tags || []);
       openSteps(url);
+    });
+    li.querySelector('.gen-colours').addEventListener('click', async () => {
+      const url = await storeFileUrl(u.file);
+      if (url) openColour('character', url);
     });
     host.appendChild(li);
   }

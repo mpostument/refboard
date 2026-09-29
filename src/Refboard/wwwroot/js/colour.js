@@ -53,7 +53,17 @@ function loadColourPrefs() {
   return {};
 }
 function saveColourPrefs() {
-  try { localStorage.setItem(COLOUR_KEY, JSON.stringify({ mode: col.mode, mask: col.mask })); } catch {}
+  try { localStorage.setItem(COLOUR_KEY, JSON.stringify({ mode: col.mode, mask: col.mask, tab: col.tab })); } catch {}
+}
+
+// The right column's two tabs: the picture's colours, or a character's sheet.
+function colourTab(name) {
+  col.tab = name === 'character' ? 'character' : 'picture';
+  for (const b of el('colTabs').children) b.setAttribute('aria-selected', String(b.dataset.tab === col.tab));
+  for (const t of document.querySelectorAll('.col-tab')) t.classList.toggle('on', t.dataset.tab === col.tab);
+  el('viewColour').classList.toggle('picking', col.tab === 'character');
+  saveColourPrefs();
+  colourRender();
 }
 
 /* ---- the mask's geometry, in wheel units: [a, b] / COL_CMAX, so the rim
@@ -407,6 +417,7 @@ function colourRender() {
   colourRenderImage();
   colourRenderWheel();
   colourRenderPalette();
+  if (col.tab === 'character') charRender();
 }
 
 // Coalesced to a frame: dragging the mask repaints the whole image.
@@ -420,7 +431,8 @@ function initColour() {
   // The mask's outline is drawn in the theme's accent.
   document.addEventListener('refboard:theme', colourRenderWheel);
   const prefs = loadColourPrefs();
-  col = { mode: ['colour', 'value', 'mapped'].includes(prefs.mode) ? prefs.mode : 'colour', mask: null, maskKey: null, paints: paintPaletteKey(), medium: paintMedium() };
+  col = { mode: ['colour', 'value', 'mapped'].includes(prefs.mode) ? prefs.mode : 'colour', mask: null, maskKey: null, paints: paintPaletteKey(), medium: paintMedium(),
+    tab: prefs.tab === 'character' ? 'character' : 'picture' };
   if (Array.isArray(prefs.mask) && prefs.mask.length >= 3 &&
       prefs.mask.every(p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) col.mask = prefs.mask;
   el('colMasks').innerHTML = `<button class="chip" type="button" data-col-mask="">Off</button>` +
@@ -511,10 +523,27 @@ function initColour() {
     col.hover = [col.lab[j + 1] / COL_CMAX, col.lab[j + 2] / COL_CMAX];
     const [, C, h] = rgbOklch(rgb);
     const inMask = col.mask ? (pointInPolygon(col.hover, col.mask) ? ' · inside the mask' : ' · outside the mask') : '';
-    el('colReadout').textContent = `${colHex(rgb)} · value L* ${Math.round(lstar(rgb))} · ${colChromaWord(C)}${C >= 0.03 ? ' ' + hueName(h) : ''} · palette ${col.assign[p] + 1}${inMask}`;
+    const pick = col.tab === 'character' ? charArmedText() : '';
+    el('colReadout').textContent = `${colHex(rgb)} · value L* ${Math.round(lstar(rgb))} · ${colChromaWord(C)}${C >= 0.03 ? ' ' + hueName(h) : ''}` +
+      (pick ? ' · ' + pick : ` · palette ${col.assign[p] + 1}${inMask}`);
     colourRenderWheel();
   });
   el('colImg').addEventListener('pointerleave', () => { col.hover = null; colourRenderWheel(); });
+  // On the Character tab a click takes the colour for the sheet.
+  el('colImg').addEventListener('click', e => {
+    if (col.tab !== 'character' || !col.data) return;
+    const r = el('colImg').getBoundingClientRect();
+    charPickAt(Math.floor((e.clientX - r.left) / r.width * col.w), Math.floor((e.clientY - r.top) / r.height * col.h));
+  });
+  el('colTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) colourTab(b.dataset.tab); });
+  el('colTabs').addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const next = col.tab === 'picture' ? 'character' : 'picture';
+    colourTab(next);
+    el('colTabs').querySelector(`[data-tab="${next}"]`).focus();
+  });
+  colourTab(col.tab);
+  initCharacter().then(() => { if (col.tab === 'character') charRender(); });
 
   // The mask on the wheel: a corner drags that corner; inside, the whole
   // shape turns about the centre - which is how a mask is used, since the

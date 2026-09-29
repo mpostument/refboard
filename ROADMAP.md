@@ -163,6 +163,11 @@ In place too: the masking plan, as How to draw it's "Save the whites" step
 for watercolour - the near-white areas with colour round them (not the
 paper round the subject, not a pale face cut up by its lines), the small
 or thin ones for masking fluid, the big ones to paint round.
+In place too: the character sheet, the Colour studio's second tab - hair,
+skin, eyes, clothes and an accent clicked on a picture, the shadow and the
+light worked out the cel-shading way (a value step down and toward violet,
+skin toward red), each with a recipe from your paints; kept, and made
+again through the ComfyUI as a turnaround in her hair and eye colours.
 Next: the pose and the light from the 3D figure - its depth or OpenPose
 render through a ControlNet - so the reference is the pose you set; a photo
 simplified into a study (img2img); variations of one you like (its seed).
@@ -231,10 +236,6 @@ Anime in watercolour:
   sketch on copy paper shown at full brightness, cleaned of the paper,
   mirrored if wanted - to trace it onto watercolour paper. The usual
   anime-in-watercolour workflow: sketch apart, final on good paper.
-- **Character sheet.** A character's palette in one place - hair, skin,
-  eyes, clothes, each with base, shadow and highlight and a recipe for
-  your materials. Kept in the project, so the character matches from one
-  illustration to the next.
 
 Clothes, movement, settings:
 

@@ -110,6 +110,8 @@ function collectCommands() {
   for (const [id, t] of Object.entries(allThemes())) {
     if (id !== themeId()) out.push({ id: 'theme-' + id, label: 'Theme: ' + t.label, hint: 'Appearance', words: 'colours dark light', run: () => setTheme(id) });
   }
+  if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
+    run: () => openColour('character') });
   out.push({ id: 'theme-editor', label: 'Theme editor', hint: 'Appearance', words: 'colours customise custom own import export', run: openThemeEditor });
   out.push({ id: 'help', label: 'Help - how everything works', hint: '?', words: 'manual guide', run: toggleHelp });
   out.push({ id: 'tour', label: 'Tour - where things are', hint: 'Help', words: 'intro start new guide walkthrough', run: startTour });

@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=d53de531">
+<link rel="stylesheet" href="css/app.css?v=168ada28">
 </head>
 <body>
 <div id="setup">
@@ -344,19 +344,45 @@
             </div>
             <div class="count" id="colReadout"></div>
           </div>
+          <!-- The paints first: both tabs mix from them. Then what is asked
+               of the picture - its palette, wheel and mask - or of the
+               character in it, one at a time. -->
           <div class="col-right">
-            <canvas id="colWheel" title="Hue round the circle, chroma out from grey in the middle. Dots: every colour in the image. Numbers: its palette."></canvas>
-            <h4>Gamut mask</h4>
-            <div class="chips" id="colMasks"></div>
-            <div class="count" id="colMaskHint"></div>
-            <h4>Paints</h4>
+            <h4 class="col-first">Paints</h4>
             <div class="chips" id="colMedium" role="group" aria-label="Medium"></div>
             <div class="chips" id="colPaints"></div>
             <div class="count" id="colPaintHint"></div>
-            <h4>Palette - colour, value and how to mix it</h4>
-            <div class="count">Point at a colour to see where it is in the picture; click to keep it.</div>
-            <div id="colPalette" class="count">No image yet.</div>
-            <div class="count" id="colValueNote"></div>
+            <div class="tabs col-tabs" role="tablist" id="colTabs" aria-label="Colour studio">
+              <button type="button" role="tab" data-tab="picture" aria-selected="true">Picture</button>
+              <button type="button" role="tab" data-tab="character" aria-selected="false">Character sheet</button>
+            </div>
+            <div class="col-tab on" data-tab="picture" role="tabpanel">
+              <canvas id="colWheel" title="Hue round the circle, chroma out from grey in the middle. Dots: every colour in the image. Numbers: its palette."></canvas>
+              <h4>Gamut mask</h4>
+              <div class="chips" id="colMasks"></div>
+              <div class="count" id="colMaskHint"></div>
+              <h4>Palette - colour, value and how to mix it</h4>
+              <div class="count">Point at a colour to see where it is in the picture; click to keep it.</div>
+              <div id="colPalette" class="count">No image yet.</div>
+              <div class="count" id="colValueNote"></div>
+            </div>
+            <div class="col-tab" data-tab="character" role="tabpanel">
+              <div class="row char-bar">
+                <img id="charThumb" class="hidden" alt="">
+                <input type="text" id="charName" class="char-name" maxlength="60" aria-label="Her name" placeholder="Name">
+                <button class="ghost" type="button" id="charNew" title="A new, empty sheet">New</button>
+                <button class="ghost" type="button" id="charDelete" aria-label="Delete this character sheet" title="Delete this sheet">Delete</button>
+              </div>
+              <select id="charSelect" class="char-select hidden" aria-label="Another character"></select>
+              <div class="count" id="charHint"></div>
+              <div id="charParts"></div>
+              <div class="count char-note">Shadows are worked out the anime way: a value step darker and turned toward violet - the cool sky lights them - but skin's toward red, where light comes back out of it. Lights are paler and warmer. In watercolour a light is the same paint with more water, and an eye's catchlight is the paper.</div>
+              <div class="row char-go">
+                <button class="ghost" type="button" id="charCopy">Copy as text</button>
+                <button class="ghost hidden" type="button" id="charGenerate" title="With your ComfyUI: her hair and eyes, drawn as a turnaround - front, side and back">Generate her</button>
+              </div>
+              <div class="count" id="charWhere"></div>
+            </div>
           </div>
         </div>
         <input type="file" id="colInput" accept="image/*" class="hidden">
@@ -1484,7 +1510,7 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=da247ced"></script>
-<script src="js/setup.js?v=e5f0c896"></script>
+<script src="js/setup.js?v=092e07be"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
@@ -1502,11 +1528,11 @@
 <script src="js/workspace.js?v=45d835da"></script>
 <script src="js/train.js?v=9fd9bbc0"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=e2067b65"></script>
+<script src="js/command.js?v=bd89993e"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=d80987fe"></script>
+<script src="js/whatsnew.js?v=d0258a5d"></script>
 <script src="js/steps.js?v=04e4fe01"></script>
-<script src="js/generate.js?v=de84535d"></script>
+<script src="js/generate.js?v=a46b49ca"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
@@ -1518,7 +1544,8 @@
 <script src="js/backup.js?v=e7ec2fe2"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=0e55fcdf"></script>
+<script src="js/colour.js?v=b6a9ad6d"></script>
+<script src="js/character.js?v=cc244b5b"></script>
 </template>
 <script src="js/main.js?v=108cddb7"></script>
 </body>
