@@ -157,7 +157,12 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   and hatching, flat colour, pencil and hatching) - simple by default, a few
   big shapes to copy rather than a finished illustration - kept in the
   Uploads pack's Generated group, tagged with those choices, and opened with
-  every tool.
+  every tool. A *Setting* puts it somewhere in the world - *Slavic* (before
+  Christianity: linen and a wreath, log houses behind a palisade, birch and
+  oak), *East Asian*, *Western Europe*, *Nordic*, *Middle East*, *South
+  Asian*, *Fantasy*, *Sci-fi* - as clothes on a character, the buildings on a
+  street, what grows in a landscape. The choices are in groups, two columns
+  of them, with Generate kept at the bottom of the view.
 - **A studio layout** - dark throughout, an icon rail down the left for the
   sections, and the library and session controls as panels either side that
   fold away, so the image gets the screen. The session panel and the 3D

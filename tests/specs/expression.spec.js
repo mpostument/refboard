@@ -83,7 +83,8 @@ test('the Face tab: an expression redraws the face, says how to draw it, and is 
   await expect(page.locator('#formAnimeNote')).toContainText('Sadness:');
   expect(await faceKey()).not.toBe(calm);
   // Kept with the scene - and a stale or made-up one is calm.
-  await page.waitForTimeout(400);
+  // Saved a moment after the change (saveFormScene()) - wait for it, not a guess.
+  await page.waitForFunction(() => (localStorage.getItem(FORMS_KEY) || '').includes('"sadness"'));
   await page.reload();
   await page.click('.nav-item[data-view="forms"]');
   // Back on the Face tab, which is kept too.

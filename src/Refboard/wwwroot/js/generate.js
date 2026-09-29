@@ -150,6 +150,49 @@ const GEN_CHOICES = [
     { id: 'whole', label: 'Whole', tags: 'full body', words: 'whole' },
   ] },
 
+  // Where and when in the world it is: what a character wears, how the
+  // buildings are built, what grows in the land. Tags per subject - a
+  // Slavic character is her embroidered shirt and wreath, a Slavic street
+  // its wooden houses. Nature and animals are much the same anywhere.
+  { id: 'setting', label: 'Setting', for: ['character', 'landscape', 'building'], options: [
+    ANY,
+    // Before Christianity: the gord behind its palisade, log houses, the
+    // wooden idols of a shrine in an oak grove - no churches, no onion
+    // domes, and no sunflowers (they came from America in the 1700s).
+    { id: 'slavic', label: 'Slavic', words: 'slavic', tags: {
+      character: 'embroidered linen tunic, white tunic, flower wreath, head wreath, braid, amber necklace, sash, ancient',
+      landscape: 'birch, oak tree, primeval forest, river, wooden idol, log house, thatched roof, mist',
+      building: 'log house, thatched roof, wooden palisade, wooden fortress, wooden idol, pagan shrine, ancient village' } },
+    { id: 'east', label: 'East Asian', words: 'east asian', tags: {
+      character: 'kimono, japanese clothes, hair ornament, hair stick',
+      landscape: 'bamboo forest, rice paddy, pagoda, east asian architecture',
+      building: 'east asian architecture, pagoda, tiled roof, paper lantern, wooden building' } },
+    { id: 'west', label: 'Western Europe', words: 'european', tags: {
+      character: 'european clothes, long dress, corset, cape, medieval',
+      landscape: 'european countryside, rolling hills, stone wall, windmill',
+      building: 'european architecture, half-timbered house, cobblestone, gothic architecture' } },
+    { id: 'nordic', label: 'Nordic', words: 'nordic', tags: {
+      character: 'viking, fur trim, fur cloak, braid, celtic knot',
+      landscape: 'fjord, pine forest, snowy mountain, rocky shore',
+      building: 'viking, longhouse, wooden building, stave church, fjord' } },
+    { id: 'mideast', label: 'Middle East', words: 'middle eastern', tags: {
+      character: 'arabian clothes, veil, gold jewelry, long dress, shawl',
+      landscape: 'desert, oasis, sand dune, palm tree',
+      building: 'arabian architecture, mosque, dome, bazaar, arch' } },
+    { id: 'southasia', label: 'South Asian', words: 'south asian', tags: {
+      character: 'sari, indian clothes, bindi, bangle',
+      landscape: 'jungle, river, palm tree, temple ruins',
+      building: 'indian architecture, hindu temple, palace, arch' } },
+    { id: 'fantasy', label: 'Fantasy', words: 'fantasy', tags: {
+      character: 'fantasy, adventurer, cloak, leather armor, satchel',
+      landscape: 'fantasy, floating island, crystal, waterfall, magic',
+      building: 'fantasy, castle, tower, magic, bridge' } },
+    { id: 'scifi', label: 'Sci-fi', words: 'sci-fi', tags: {
+      character: 'science fiction, cyberpunk, bodysuit, jacket, headphones',
+      landscape: 'science fiction, alien planet, futuristic, ringed planet',
+      building: 'science fiction, cyberpunk, futuristic city, neon lights, skyscraper' } },
+  ] },
+
   { id: 'time', label: 'Time of day', for: OUTDOORS, options: [
     ANY,
     { id: 'day', label: 'Day', tags: 'day, blue sky' },
@@ -215,7 +258,19 @@ const GEN_CHOICES = [
   ] },
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', framing: 'bust',
+/* The rows in groups on the page - what it is, the character, the shot,
+   the light and time, the picture - in two columns, so the whole panel
+   and the Generate button fit on a screen. Only the page's order: the
+   prompt keeps GEN_CHOICES' own, which puts "1girl, solo" first. */
+const GEN_GROUPS = [
+  ['what', 'What', ['style', 'subject', 'setting']],
+  ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression']],
+  ['shot', 'The shot', ['framing', 'view', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
+  ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
+  ['picture', 'The picture', ['medium', 'edges', 'detail', 'ground']],
+];
+
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', framing: 'bust',
   view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', detail: 'simple',
   ground: 'plain' };
@@ -234,7 +289,9 @@ function genPrompt(choices, extra = '') {
   for (const c of GEN_CHOICES) {
     if (!genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })) continue;
     const o = c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id]);
-    if (o.tags) tags.push(o.tags);
+    // Tags may differ by subject (Setting's do).
+    const t = typeof o.tags === 'object' ? o.tags[subject] : o.tags;
+    if (t) tags.push(t);
     if (o.avoid) avoid.push(o.avoid);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
     if (w) words.push(w);
@@ -259,11 +316,13 @@ function saveGenChoices() {
 }
 
 function renderGenerate() {
-  el('genChoices').innerHTML = GEN_CHOICES.map(c =>
-    `<div class="gen-row" data-row="${c.id}"><h4 id="genL-${c.id}">${esc(c.label)}</h4>` +
+  const row = c => `<div class="gen-row" data-row="${c.id}"><h4 id="genL-${c.id}">${esc(c.label)}</h4>` +
     `<div class="chips" role="group" aria-labelledby="genL-${c.id}">` +
     c.options.map(o => `<button type="button" class="chip" data-gen="${c.id}" data-opt="${o.id}" ` +
-      `aria-pressed="${genChoices[c.id] === o.id}">${esc(o.label)}</button>`).join('') + '</div></div>').join('');
+      `aria-pressed="${genChoices[c.id] === o.id}">${esc(o.label)}</button>`).join('') + '</div></div>';
+  el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
+    `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` +
+    ids.map(id => row(GEN_CHOICES.find(c => c.id === id))).join('') + '</section>').join('');
   syncGenRows();
   el('genWhere').textContent = 'Made by the ComfyUI your server is set up with, and kept in Uploads - ' +
     'the Generated group of the Uploads pack in the library, tagged with these choices.';
@@ -274,6 +333,9 @@ function renderGenerate() {
 function syncGenRows() {
   for (const c of GEN_CHOICES)
     el('genChoices').querySelector(`[data-row="${c.id}"]`).classList.toggle('hidden', !genApplies(c, genChoices));
+  // A group with none of its rows asked (a landscape has no character) goes too.
+  for (const g of el('genChoices').querySelectorAll('.gen-group'))
+    g.classList.toggle('hidden', !g.querySelector('.gen-row:not(.hidden)'));
 }
 
 async function showGenerate() {

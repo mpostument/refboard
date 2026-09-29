@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-setting', title: 'Generate: a setting, and a shorter page',
+    text: "A Setting row: Slavic (before Christianity - linen, a wreath, log houses behind a palisade, birch and oak), East Asian, Western Europe, Nordic, Middle East, South Asian, Fantasy or Sci-fi - clothes on a character, the buildings on a street, what grows in a landscape. The choices are in groups, two columns of them, and Generate stays at the bottom of the view.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'head-fit', title: 'Head construction, on the head',
     text: "The head construction (L) and the pose (P) now sit where they belong: on a picture shown smaller than its own size - nearly every one - they were drawn shrunk toward its top left, the chin on the nose. The anime face over a photo is bolder and its note shorter; what each eye style is, is on its button.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

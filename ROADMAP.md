@@ -154,6 +154,17 @@ knows about (`COMFY_URL`): a character, a landscape, buildings, nature or an
 animal - one style, anime, for now - the choices as Danbooru tags ("no
 humans" for all but a character, or the model draws a girl in), a job the page asks
 after, the picture kept in Uploads > Generated with the choices as its tags.
+In place too: its Setting row - Slavic, East Asian, Western Europe, Nordic,
+Middle East, South Asian, Fantasy, Sci-fi - with tags per subject (clothes on
+a character, buildings, what grows in a land), placed in the prompt after the
+character and the shot. Checked on Animagine XL 4.0: "harem pants" made the
+Middle East a dancer's costume, so a long dress and a shawl; Slavic is
+before Christianity - no church or onion dome, and no sunflowers, which came
+from America in the 1700s. The rows are grouped (What, The character, The
+shot, Light and time, The picture; `GEN_GROUPS`) in two columns, a group
+hidden with its rows, and More tags and Generate stay at the bottom of the
+view. Still to come on it: a setting for the 3D forms' scene, and eras
+(ancient, medieval, modern) apart from places.
 In place too: How to draw it (`js/steps.js`) - any picture taken back to its
 steps, per medium, worked out from the picture (an image model asked for an
 earlier stage draws a different picture; Paints-Undo, the model trained to

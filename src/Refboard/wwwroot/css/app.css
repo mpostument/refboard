@@ -122,7 +122,7 @@ button, select, input { font: inherit; color: inherit; }
 /* ---- middle: what you are looking at ---- */
 #main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 #mainHead { padding: 16px 22px 14px; border-bottom: 1px solid var(--line); }
-#mainBody { flex: 1; overflow-y: auto; padding: 18px 22px 64px; }
+#mainBody { --main-pad-b: 64px; flex: 1; overflow-y: auto; padding: 18px 22px var(--main-pad-b); }
 /* Capped, unlike the grid beside it: the dashboard is a document, and at
    full column width its session list becomes a thin ribbon with the pose
    counts a screen away from the dates they belong to. */
@@ -1064,7 +1064,7 @@ body { font-size: 13px; }
 #mainHead { padding: 9px 16px; background: var(--panel); }
 #mainHead h1 { font-size: 15px; }
 #mainHead .row { gap: 10px; }
-#mainBody { padding: 14px 16px 48px; }
+#mainBody { --main-pad-b: 48px; padding: 14px 16px var(--main-pad-b); }
 #viewMeta { margin-top: 2px !important; }
 .narrow-only { display: none !important; }
 #btnOpenSession { display: grid; }
@@ -1507,7 +1507,16 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 
 /* ---- Generate references (js/generate.js) */
 #viewGenerate h4 { margin: 14px 0 6px; font-size: 11px; color: var(--dim); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
-#viewGenerate .gen-row:first-child h4 { margin-top: 0; }
+#viewGenerate .gen-row:first-of-type h4 { margin-top: 4px; }
+/* The groups two to a row where there is room; What, the first, across. */
+#genChoices { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px 28px; align-items: start; }
+.gen-group[data-group="what"] { grid-column: 1 / -1; }
+.gen-group h3 { margin: 0 0 2px; padding-bottom: 5px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--ink); }
+/* More tags, how many and Generate, always in reach at the bottom. */
+.gen-bar { position: sticky; bottom: calc(-1 * var(--main-pad-b, 0px)); z-index: 2; margin-top: 18px; padding: 10px 0 12px; background: var(--bg); border-top: 1px solid var(--line);
+  display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+.gen-bar .gen-extra { flex: 1 1 260px; margin-top: 0; }
+.gen-bar .gen-go { margin-top: 0; }
 .gen-extra { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
 .gen-extra input { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
 .gen-go { gap: 12px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
