@@ -455,6 +455,7 @@ document.addEventListener('keydown', e => {
     // the whole session.
     case 'p': case 'P': togglePose(); break;
     case 'l': case 'L': toggleHead(); break;
+    case 'x': case 'X': if (!e.ctrlKey && !e.metaKey) toggleEdges(); break;
     case 'Backspace':
       if (state.constructMode === 'persp' && state.persp && state.persp.length) { e.preventDefault(); state.persp.pop(); renderConstructOverlay(); }
       break;

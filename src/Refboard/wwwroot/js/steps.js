@@ -402,6 +402,20 @@ function stepsFinal(p) {
   return c;
 }
 
+// The edge map (js/edges.js), worked out once for the text and the frame.
+const stepsEdges = (p, a) => a.edges || (a.edges = edgeMap(p));
+function stepsEdgesText(m) {
+  const w = edgeWords('water');
+  return `Look at every edge before you paint it, and decide. Red: hard - ${w.hard}. Blue: soft - ${w.soft}. ${edgeVerdict(m)}`;
+}
+// The picture paled, for marks drawn over it to read.
+function stepsFaded(p) {
+  const c = stepsFinal(p), g = c.getContext('2d');
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  g.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
 const PENCIL = [70, 70, 76], PEN = [20, 18, 24];
 
 /* The steps for each medium: what to do, and the frame that shows it. The
@@ -419,6 +433,9 @@ const STEPS = {
       frame: (p, a) => stepsLines(stepsWash(stepsCanvas(p), p, 0.55), a, PENCIL, 0.45) },
     { title: 'Shadows', text: 'On dry paper, the shadow shapes in one stronger glaze over the first: one clean pass, not scrubbed. The darkest go last, small.',
       frame: (p, a) => stepsLines(stepsShadows(stepsWash(stepsCanvas(p), p, 0.35), a), a, PENCIL, 0.45) },
+    { title: 'Hard and soft edges', text: (p, a) => stepsEdgesText(stepsEdges(p, a)),
+      key: [[EDGE_HARD, 'Hard - on dry paper'], [EDGE_SOFT, 'Soft - wet-in-wet']],
+      frame: (p, a) => edgeDraw(stepsEdges(p, a), stepsFaded(p)) },
     { title: 'Finish', text: 'The few darkest accents and the edges that must be sharp - eyes, the line of the jaw. When it is all bone dry, rub the masking fluid off with a clean finger, and soften any edge it left too hard with a damp brush. Then stop.',
       frame: p => stepsFinal(p) },
   ] },

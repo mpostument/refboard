@@ -27,6 +27,7 @@ const ICONS = {
   moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
   more: '<circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/>',
   brush: '<path d="M18.5 3.5a2 2 0 0 1 2.8 2.8L12 15.6 8.4 12z"/><path d="M8 13.2c-2.4 0-4 1.6-4 4 0 1.4-.6 2.3-1.5 2.8 4.5.8 8.3-.7 8.3-4z"/>',
+  edges: '<path d="M12 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7"/><path d="M12 4h7a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-7" stroke-dasharray="1.2 2.6"/><path d="M12 4v16"/>',
   layers: '<path d="M12 3 21 8l-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7v.3"/><circle cx="12" cy="17" r=".7" fill="currentColor"/>',
   sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -177,7 +178,7 @@ const VALUE_SCHEMES = {
     label: 'Heatmap',
     stops: [[8, 8, 64], [0, 128, 200], [0, 190, 120], [230, 210, 40], [230, 90, 20], [250, 250, 230]],
   },
-  edges: { label: 'Edges', stops: null },
+  edges: { label: 'Outlines', stops: null },
 };
 
 // stdDeviation for the optional feGaussianBlur stage - see buildValueFilter().
@@ -517,6 +518,7 @@ const state = {
   memPhase: null,
   poseOn: false,              // pose skeleton shown - see togglePose()
   headOn: false,              // Loomis head shown - see toggleHead()
+  edgesOn: false,             // edge map shown - see toggleEdges()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,
   // Browse mode - the stage opened on a grid cell rather than on a session.

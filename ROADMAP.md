@@ -25,7 +25,7 @@ clickable mock-up of it - workspace, easel mode, settings - is agreed.
   A library image opens there from the grid, a dropped photo opens with
   the panel at Value, and the Colour studio's picture with "Open in
   workspace", at Colour (`openInWorkspace()`). Still to come: the tools
-  the tabs are waiting for - the paper's range and edges (Value), temperature (Colour),
+  the tabs are waiting for - the paper's range (Value), temperature (Colour),
   tangents (Construction), eyes and rhythms (Figure), a painting check and
   likeness (My work).
 - **Easel mode for a tablet.** Big controls, gestures, one hand, the
@@ -37,7 +37,7 @@ your own (`js/theme.js`, `js/theme-editor.js`); and Find a tool, Ctrl+K,
 over every section, trainer, theme and session tool (`js/command.js`);
 and layers - every session overlay in one list with on/off and opacity,
 "o" to hide them all for a moment (`js/layers.js`). Each new overlay
-(the edge map, colour temperature, a palette highlight) joins that list;
+(the edge map has, colour temperature and a palette highlight will) joins that list;
 and pinned tools - the session toolbar holds what you pin, the rest wait
 under More with their keys and in Ctrl+K (`js/pins.js`); and My materials
 (`js/materials.js`) - see Materials; and navigation by the stage of work -
@@ -168,6 +168,11 @@ skin, eyes, clothes and an accent clicked on a picture, the shadow and the
 light worked out the cel-shading way (a value step down and toward violet,
 skin toward red), each with a recipe from your paints; kept, and made
 again through the ComfyUI as a turnaround in her hair and eye colours.
+In place too: the edge map (`js/edges.js`) - over the picture in a session
+(`x`, Workspace > Value, a layer), each edge hard or soft by the width of
+its change, not its size, with the line art closed out first; a step of How
+to draw it in watercolour; and Generate's Edges row, soft or hard, for a
+reference to practise either from.
 Next: the pose and the light from the 3D figure - its depth or OpenPose
 render through a ControlNet - so the reference is the pose you set; a photo
 simplified into a study (img2img); variations of one you like (its seed).
@@ -308,9 +313,6 @@ packs (below), and moving a picture to another folder by hand.
   wash, the mid-tones, the last darks - each step as its own picture with
   its mixing recipe (paint.js). A watercolour counterpart to the session's
   build-up stages.
-- **Edge map.** Over the reference: which edges are soft (wet-in-wet) and
-  which are hard (wet-on-dry, or lifted). The Edges trainer teaches this in
-  the abstract; this shows it on the picture being painted.
 - **Mixing chart.** A printable grid of the palette's pigments mixed in
   pairs, at a few dilutions. Paint it with real paint, photograph it, and
   the photo calibrates the pigments' colours in PIGMENTS - so the recipes

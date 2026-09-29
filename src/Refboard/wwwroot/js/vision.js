@@ -64,10 +64,10 @@ function loadVision(kind) {
 
 // The one note box is shared: the head's note above the pose's when both
 // are on.
-const overlayNotes = { head: '', pose: '' };
+const overlayNotes = { head: '', pose: '', edges: '' };
 function overlayNote(key, html) {
   overlayNotes[key] = html || '';
-  const all = [overlayNotes.head, overlayNotes.pose].filter(Boolean).join('<hr>');
+  const all = [overlayNotes.head, overlayNotes.pose, overlayNotes.edges].filter(Boolean).join('<hr>');
   el('poseNote').classList.toggle('hidden', !all);
   el('poseNote').innerHTML = all;
 }

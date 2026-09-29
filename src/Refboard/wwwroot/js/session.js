@@ -502,6 +502,7 @@ function show(src) {
     if (el('optGrid').checked) drawGrid();
     if (state.poseOn) runPose();
     if (state.headOn) runHead();
+    if (state.edgesOn) runEdges();
     refreshValueTools();
   };
   img.onerror = () => {
@@ -556,6 +557,7 @@ function show(src) {
   // A skeleton belongs to the pose it was found on - and a head to its face.
   clearPose();
   clearHead();
+  clearEdges();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);

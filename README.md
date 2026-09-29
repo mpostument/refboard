@@ -129,11 +129,19 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   medium: the big shapes blocked in with a few straight lines, the lines,
   the whites to save for watercolour (the small ones - catchlights, a
   streak of shine - under masking fluid, the big ones painted round), then
-  the first wash and the shadows, hatching one way and
+  the first wash, the shadows and the hard and soft edges, hatching one way and
   across for ink, three values for pencil - each step with what to do.
   Worked out from the picture itself in the browser (Otsu thresholds, XDoG
   lines, a traced and simplified silhouette), so it needs no server and no
   model, and every frame is the same composition.
+- **Edge map** - in a session (`x`, Workspace > Value, Layers): every edge
+  of the picture worth painting, red where it is hard, blue where it is soft
+  - on dry paper or wet-in-wet, said in your own medium's terms - with how
+  the two are shared out. Hardness is measured as the width of the change
+  (its contrast over its steepest step), not its size, and the line art is
+  taken out first (a morphological closing), so the map is of the edges
+  between the washes. For watercolour it is a step of How to draw it too,
+  and Generate asks for soft or hard edges.
 - **Character sheet** - the Colour studio's second tab: a character's hair,
   skin, eyes, clothes and an accent, each clicked on a picture, with its
   shadow and light worked out as anime cel shading paints them (a value

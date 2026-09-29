@@ -54,6 +54,18 @@ test('ink is lines and hatching, never filled black', async ({ page }) => {
   expect(pencil.prompt).toContain('graphite (medium), hatching (texture)');
 });
 
+test('watercolour asks for soft or hard edges; other media do not', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => [
+    genPrompt({ ...GEN_DEFAULTS, edges: 'soft' }), genPrompt({ ...GEN_DEFAULTS, edges: 'hard' }),
+    genPrompt({ ...GEN_DEFAULTS, medium: 'ink', edges: 'soft' })]);
+  expect(r[0].prompt).toContain('wet-on-wet, color bleeding, soft edges');
+  expect(r[0].tags).toContain('soft edges');
+  expect(r[1].prompt).toContain('hard edges');
+  expect(r[1].avoid).toContain('color bleeding');
+  expect(r[2].prompt).not.toContain('soft edges');
+});
+
 test('not offered without a server, or with one that has no ComfyUI', async ({ page }) => {
   await openApp(page);
   await expect(page.locator('.nav-item[data-view="generate"]')).toBeHidden();
@@ -86,6 +98,11 @@ test('with a ComfyUI behind the server: made, kept, shown, opened', async ({ pag
   await expect(page.locator('[data-row="place"]')).toBeVisible();
   await page.click('[data-gen="subject"][data-opt="character"]');
   await expect(page.locator('[data-row="place"]')).toBeHidden();
+  // Wet-in-wet is watercolour's question: not asked for ink.
+  await expect(page.locator('[data-row="edges"]')).toBeVisible();
+  await page.click('[data-gen="medium"][data-opt="ink"]');
+  await expect(page.locator('[data-row="edges"]')).toBeHidden();
+  await page.click('[data-gen="medium"][data-opt="watercolour"]');
   await page.click('[data-gen="hair"][data-opt="long"]');
   await page.fill('#genExtra', 'hat');
   await page.selectOption('#genCount', '2');

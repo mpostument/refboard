@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=168ada28">
+<link rel="stylesheet" href="css/app.css?v=8b0cc39b">
 </head>
 <body>
 <div id="setup">
@@ -599,7 +599,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -726,6 +726,7 @@
     <button id="btnEyedropper" data-icon="pipette" title="Eyedropper (e): click the reference to read its exact colour and value" aria-label="Eyedropper"></button>
     <button id="btnPose" data-icon="person" title="Pose skeleton (p): the gesture, the tilt of shoulders and hips, and where the weight is - found by a pose model that runs in this browser" aria-label="Pose skeleton"></button>
     <button id="btnHead" data-icon="head" title="Head construction (l): the ball, side plane and face - Loomis's thirds, or where anime puts the features - turned to match each head in the picture, found by a face model that runs in this browser" aria-label="Head construction"></button>
+    <button id="btnEdges" data-icon="edges" title="Edge map (x): which edges are hard and which soft - where to paint on dry paper, and where wet-in-wet" aria-label="Edge map" aria-pressed="false"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <button id="btnWorkspace" data-icon="sliders" title="Workspace (w): the tools sorted by the question you ask of the picture - value, colour, construction, figure, your own work" aria-label="Workspace" aria-pressed="false"></button>
     <button id="btnLayers" data-icon="layers" title="Layers: every overlay in one list, each on or off and with its own opacity" aria-label="Layers" aria-pressed="false"></button>
@@ -750,7 +751,7 @@
     <button id="btnHelpHud" data-icon="help" title="What every feature does and how to use it (?)" aria-label="Help"></button>
     <button id="btnStop" data-icon="stop" title="Stop (Esc)" aria-label="Stop"></button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · p pose · l head · x edges · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
   </div>
 </div>
 
@@ -1036,7 +1037,8 @@
       <ul>
         <li><b>Scheme</b> - swap the tonal-value view's colour: grayscale,
           three duotones (Van Dyke brown, Payne's grey, sepia/burnt umber),
-          a false-colour heatmap, or edge detection.</li>
+          a false-colour heatmap, or outlines only (for hard and soft
+          edges, the Edge map, <kbd>x</kbd>).</li>
         <li><b>Blur</b> - softens the reference before posterizing, so tone
           blocks in as soft masses instead of hard edges around every small
           bit of local contrast.</li>
@@ -1178,6 +1180,19 @@
         Take a photo of anyone at a hard angle - from below, three-quarter,
         tilted - and see where anime features sit on it. The choice is
         kept.</p>
+    </section>
+
+    <section>
+      <h2>Edge map - hard and soft</h2>
+      <p><b>Edge map</b> (<b>X</b>, or Workspace &gt; Value) draws every edge
+        of the picture worth painting, coloured by how hard it is: <b>red</b>
+        where the change happens at once, <b>blue</b> where it fades over a
+        distance. Hardness is how quick the change is, not how big - a soft
+        edge between black and white is still soft. In watercolour, red is
+        laid on dry paper, blue run in wet-in-wet or softened with a damp
+        brush; the note says it in the terms of your medium (My materials),
+        and how the hard and the soft are shared out. Its opacity is in
+        Layers. For watercolour, How to draw it has the same map as a step.</p>
     </section>
 
     <section>
@@ -1509,30 +1524,31 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=da247ced"></script>
+<script src="js/core.js?v=ea47319d"></script>
 <script src="js/setup.js?v=092e07be"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
-<script src="js/session.js?v=c661ddcf"></script>
+<script src="js/session.js?v=42e088a2"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0bc3b11f"></script>
-<script src="js/tools.js?v=dbf4607e"></script>
+<script src="js/tools.js?v=fcba4643"></script>
 <script src="js/materials.js?v=a9b7eb53"></script>
-<script src="js/vision.js?v=2e157b5d"></script>
+<script src="js/vision.js?v=b42087ac"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
-<script src="js/study.js?v=80a3719e"></script>
-<script src="js/layers.js?v=a10c648e"></script>
+<script src="js/study.js?v=65c224d1"></script>
+<script src="js/layers.js?v=8269cbf6"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=1e8e7dd7"></script>
-<script src="js/workspace.js?v=45d835da"></script>
+<script src="js/pins.js?v=67470c8d"></script>
+<script src="js/workspace.js?v=21389bc9"></script>
 <script src="js/train.js?v=9fd9bbc0"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=bd89993e"></script>
+<script src="js/command.js?v=bb6d8263"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=d0258a5d"></script>
-<script src="js/steps.js?v=04e4fe01"></script>
-<script src="js/generate.js?v=a46b49ca"></script>
+<script src="js/whatsnew.js?v=01084076"></script>
+<script src="js/edges.js?v=5393fa8f"></script>
+<script src="js/steps.js?v=54a51fb5"></script>
+<script src="js/generate.js?v=dc354b59"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->

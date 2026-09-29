@@ -27,7 +27,7 @@ test('the thresholds, the block-in and the frames', async ({ page }) => {
   expect(r.t).toBeLessThan(80);
   expect(r.run).toBe(2);
   expect(r.corner).toBe(3);
-  expect(r.frames.watercolour).toHaveLength(6);
+  expect(r.frames.watercolour).toHaveLength(7);
   expect(r.frames.ink).toHaveLength(4);
   for (const sizes of Object.values(r.frames)) expect(new Set(sizes)).toEqual(new Set(['300x200']));
   // The disc on paper: one shape, blocked in with a few straight lines.
@@ -85,17 +85,16 @@ test('from the workspace: step by step, and the medium kept', async ({ page }) =
   await page.click('#wsList button[data-row="0"]');
   const sheet = page.locator('#stepsSheet');
   await expect(sheet).toBeVisible();
-  await expect(page.locator('#stepsCount')).toHaveText('Step 1 of 6');
+  await expect(page.locator('#stepsCount')).toHaveText('Step 1 of 7');
   await expect(page.locator('#stepsKey')).toBeHidden();
   await expect(page.locator('#stepsPrev')).toBeDisabled();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#stepsStepTitle')).toHaveText('Lines');
-  // The whites: the only step whose frame marks things, so the only one
-  // with a key to them.
+  // The whites: a step whose frame marks things, so one with a key to them.
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#stepsStepTitle')).toHaveText('Save the whites');
   await expect(page.locator('#stepsKey li')).toHaveText(['Masking fluid', 'Paint round it']);
-  await page.locator('#stepsStrip [data-step="5"]').click();
+  await page.locator('#stepsStrip [data-step="6"]').click();
   await expect(page.locator('#stepsKey')).toBeHidden();
   await expect(page.locator('#stepsNext')).toBeDisabled();
   // Another medium: its own steps, from the first, and remembered.

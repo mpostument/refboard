@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'edges', title: 'Edge map',
+    text: 'Over any picture in a session (x, or Workspace > Value): its edges in red where they are hard and blue where they are soft - on dry paper, or wet-in-wet - with how the two are shared out. Hard is how quickly the change happens, not how big it is. Also a step of How to draw it in watercolour, and Generate asks for soft or hard edges.',
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'character', title: 'Character sheet',
     text: 'Her colours in one place, so the next picture of her matches: in the Colour studio, Character sheet - click the hair, the skin, the eyes, the clothes on a picture; the shadow and the light are worked out the anime way, each with how to mix it from your paints. Colours on a generated picture opens it there, and with a ComfyUI, Generate her draws her again as a turnaround.',
     act: 'Open it', run: () => openColour('character') },
