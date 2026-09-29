@@ -115,7 +115,7 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 | `GET /api/uploads/{id}` | One stored file, whichever folder it is in. |
 | `PUT /api/uploads/{id}/folder` | `{ "folder": "figure" }` - moves it into one of the fixed folders (keys: `figure`, `portrait`, `animals`, `landscape`, `city`, `plants`, `still-life`, `illustration`, `my-work`, `other`) and wakes the index pass. |
 | `DELETE /api/uploads/{id}` | |
-| `GET /api/generate` | Whether references can be generated: `{ available, checkpoint }`, or `{ available: false, reason }` - no `COMFY_URL`, ComfyUI not answering, or the model not in it. |
+| `GET /api/generate` | Whether references can be generated: `{ available, checkpoint, quality, negative }` (the tags it always adds, shown in the page's Prompt), or `{ available: false, reason }` - no `COMFY_URL`, ComfyUI not answering, or the model not in it. |
 | `POST /api/generate` | `{ prompt, avoid, tags, shape, seed }` - Danbooru tags, and more to keep out (the server adds the quality tags and its own negative prompt, nsfw always in it), the words to file it under, `portrait`/`square`/`landscape`, and a seed or none. Returns `202 { id }`: a picture can take longer than a proxy lets a request run. |
 | `GET /api/generate/{id}` | That job: `{ state, upload, error }` - state `running`, `done` or `error`. Done, the picture is kept like an upload, in the `generated` folder with its tags. |
 | `GET /api/items` | The kinds of document stored. |
@@ -166,7 +166,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   street, what grows in a landscape, and which temple - pagan idols in an
   oak grove, a cathedral, a mosque, a Hindu temple. The choices are in
   groups, two columns of them, with Generate kept at the bottom of the view;
-  what was made can be deleted one at a time or all at once.
+  what was made can be deleted one at a time or all at once. *Prompt* shows
+  the tags as sent and what the choices keep out, each a switch.
 - **A studio layout** - dark throughout, an icon rail down the left for the
   sections, and the library and session controls as panels either side that
   fold away, so the image gets the screen. The session panel and the 3D

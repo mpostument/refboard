@@ -61,7 +61,8 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
             cts.CancelAfter(TimeSpan.FromSeconds(3));
             var models = await Http.GetFromJsonAsync<List<string>>($"{opts.ComfyUrl}/models/checkpoints", cts.Token) ?? [];
             return models.Contains(opts.ComfyCheckpoint)
-                ? new { available = true, checkpoint = opts.ComfyCheckpoint }
+                // What it always adds, for the page's Prompt to show.
+                ? new { available = true, checkpoint = opts.ComfyCheckpoint, quality = Quality, negative = Negative }
                 : new { available = false, reason = $"ComfyUI has no {opts.ComfyCheckpoint} in models/checkpoints." };
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
