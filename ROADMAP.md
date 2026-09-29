@@ -164,7 +164,17 @@ from America in the 1700s. The rows are grouped (What, The character, The
 shot, Light and time, The picture; `GEN_GROUPS`) in two columns, a group
 hidden with its rows, and More tags and Generate stay at the bottom of the
 view. Still to come on it: a setting for the 3D forms' scene, and eras
-(ancient, medieval, modern) apart from places.
+(ancient, medieval, Victorian, Kyivan Rus) apart from places.
+In place too: Modern, Steampunk and Post-apocalyptic Settings, each with a
+temple, and a Clothes row - Setting's (the default), Everyday, Festive,
+Uniform, Armour, Winter, each with tags per Setting (`wear(girl, boy)` for
+the ones that differ: a prince's cape, not a ball gown), and Sportswear,
+Close-fitting, Swimsuit, Leotard for figure study, which keep out anything
+revealing (`MODEST`). A choice other than the Setting's `owns` its
+clothes. On a character "post-apocalypse" drew the ruins behind her,
+whatever the background, so there she is a survivor in torn clothes; the
+ruins are for streets and land. Long rows are captioned in kinds (an
+option's `group`: The world, Genre; Figure study), each on its own line.
 In place too: Detail's Beginner - weighted tags ("(minimalist:1.4)") per
 subject, since Simple still drew hair of a hundred strands and a street of
 a thousand windows; a building on white. A figure is weighted lighter

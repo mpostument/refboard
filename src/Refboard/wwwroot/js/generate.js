@@ -31,6 +31,11 @@ const BEGIN = '(minimalist:1.4), (simple drawing:1.3), flat color, simple colori
 // to dress her, a t-shirt and trousers.
 const BEGIN_FIGURE = '(minimalist:1.2), simple drawing, simple coloring, clean lineart, straight hair';
 const BEGIN_AVOID = '(detailed:1.3), intricate details, complex background, gradient, shiny skin, shiny hair';
+// Clothes that differ for a girl and a boy: a ball gown or a prince's cape.
+const wear = (girl, boy) => ch => ch.who === 'boy' ? boy : girl;
+// Close-fitting clothes are for seeing the figure's shape, as in a life
+// class - never revealing ones.
+const MODEST = 'cleavage, underwear, lingerie, see-through, bikini, highleg, midriff';
 const GEN_CHOICES = [
   // One style for now - the models behind this are anime models. A second
   // one is a row here, and its tags.
@@ -86,6 +91,88 @@ const GEN_CHOICES = [
     { id: 'anger', label: 'Anger', tags: 'angry, v-shaped eyebrows, open mouth, teeth, anger vein', words: 'anger' },
     { id: 'surprise', label: 'Surprise', tags: 'surprised, wide-eyed, open mouth, :o', words: 'surprise' },
     { id: 'sadness', label: 'Sadness', tags: 'sad, frown, tears, tearing up', words: 'sadness' },
+  ] },
+  // What she wears, as her Setting would have it: festive is a wreath and
+  // embroidery in a Slavic one, a furisode in an East Asian one. Any choice
+  // but the first stands in for the Setting's own clothes (`owns`) - a
+  // kimono under armour made neither. The last four show the figure's shape,
+  // to study it as in a life class: close-fitting, never revealing.
+  { id: 'clothes', label: 'Clothes', for: PERSON, options: [
+    { id: 'setting', label: "Setting's", words: '', hint: "What the Setting dresses her in; with Any, what the model picks" },
+    { id: 'casual', label: 'Everyday', words: 'everyday clothes', owns: 'setting', tags: {
+      _: 'casual, shirt, pants, shoes',
+      modern: 'casual, hoodie, jeans, sneakers',
+      slavic: 'simple clothes, white tunic, linen, sash, braid',
+      east: 'yukata, sandals',
+      west: wear('peasant, blouse, long skirt, apron', 'peasant, tunic, pants, boots'),
+      nordic: wear('apron dress, tunic, brooch, belt', 'tunic, belt, pants, boots'),
+      mideast: 'arabian clothes, loose clothes, shawl, sandals',
+      southasia: 'kurta, indian clothes, sandals',
+      fantasy: 'fantasy, tunic, cloak, boots, satchel',
+      scifi: 'science fiction, jacket, cargo pants, headphones',
+      steampunk: 'steampunk, vest, white shirt, goggles on head, boots',
+      postapoc: 'survivor, dirty clothes, torn clothes, hooded jacket, scarf, backpack' } },
+    { id: 'festive', label: 'Festive', words: 'festive clothes', owns: 'setting', tags: {
+      _: wear('formal, long dress, long sleeves', 'formal, suit, necktie'),
+      slavic: wear('embroidered dress, white dress, red embroidery, (flower wreath:1.2), ribbon, necklace, ancient',
+        'embroidered shirt, red embroidery, sash, belt, ancient'),
+      east: wear('furisode, kimono, obi, hair flower', 'formal kimono, hakama, haori'),
+      west: wear('royal, ball gown, gold trim, tiara', 'prince, royal, cape, gold trim'),
+      nordic: 'fur cloak, brooch, gold jewelry, circlet, embroidered',
+      mideast: 'arabian clothes, gold jewelry, veil, silk, embroidered',
+      southasia: wear('sari, gold jewelry, bangle, bindi, embroidered', 'sherwani, turban, embroidered'),
+      fantasy: wear('fantasy, elegant dress, circlet, cape', 'fantasy, noble, cape, gold trim'),
+      scifi: 'science fiction, sleek, formal, high collar, glowing',
+      steampunk: wear('steampunk, victorian, corset, bustle, top hat', 'steampunk, victorian, tailcoat, top hat, monocle'),
+      postapoc: 'survivor, patchwork clothes, feathers, beads, cape' },
+      avoid: 'cleavage' },
+    { id: 'uniform', label: 'Uniform', words: 'uniform', owns: 'setting',
+      hint: "The dress of a calling - a school uniform, a mage's robe, a pilot's suit", tags: {
+      _: wear('school uniform, blazer, pleated skirt', 'school uniform, blazer, necktie'),
+      east: wear('serafuku, pleated skirt', 'gakuran'),
+      // A priest before Christianity: the volkhv's white robe, the völva's staff.
+      slavic: 'white robe, long sleeves, belt, staff, head wreath, ancient',
+      nordic: 'robe, staff, fur trim, runes',
+      west: wear('maid, apron, long dress', 'butler, tailcoat'),
+      fantasy: 'fantasy, mage, robe, cloak, staff',
+      scifi: 'science fiction, pilot suit, military uniform, jacket',
+      steampunk: 'steampunk, aviator cap, goggles, leather jacket, military uniform',
+      postapoc: 'survivor, military jacket, cargo pants, gas mask around neck' } },
+    { id: 'armour', label: 'Armour', words: 'armour', owns: 'setting', tags: {
+      _: 'armor, breastplate, gauntlets',
+      slavic: 'chainmail, round shield, spear, ancient',
+      east: 'japanese armor, samurai',
+      west: 'knight, plate armor, cape',
+      nordic: 'viking, chainmail, round shield, fur cloak',
+      mideast: 'arabian clothes, chainmail, scimitar, shawl',
+      southasia: 'armor, indian clothes, gold trim',
+      fantasy: 'fantasy, armor, cape, sword',
+      scifi: 'power armor, science fiction',
+      modern: 'tactical clothes, bulletproof vest, helmet',
+      steampunk: 'steampunk, armor, brass, gears',
+      postapoc: 'survivor, makeshift armor, shoulder pads, gas mask' },
+      avoid: 'bikini armor, cleavage' },
+    { id: 'winter', label: 'Winter', words: 'winter clothes', owns: 'setting', tags: {
+      _: 'winter clothes, coat, scarf, gloves',
+      modern: 'winter coat, scarf, beanie, gloves',
+      slavic: 'fur coat, fur hat, sheepskin, mittens, ancient',
+      east: 'winter clothes, kimono, haori, scarf',
+      west: 'cloak, fur-trimmed cloak, hood',
+      nordic: 'fur cloak, fur hat, fur boots, winter clothes',
+      mideast: 'cloak, shawl, hood, layered clothes',
+      southasia: 'shawl, long sleeves, indian clothes',
+      fantasy: 'fantasy, fur-trimmed cloak, hood',
+      scifi: 'science fiction, parka, glowing',
+      steampunk: 'steampunk, greatcoat, goggles, scarf',
+      postapoc: 'survivor, tattered coat, hood, scarf, gloves' } },
+    { id: 'sport', label: 'Sportswear', group: 'Figure study', words: 'sportswear', owns: 'setting',
+      tags: 'sportswear, track jacket, shorts, sneakers', avoid: MODEST },
+    { id: 'tight', label: 'Close-fitting', words: 'close-fitting', owns: 'setting', hint: 'A bodysuit or leggings - the shape of the figure',
+      tags: 'bodysuit, long sleeves, leggings, plain clothes', avoid: MODEST },
+    { id: 'swimsuit', label: 'Swimsuit', words: 'swimsuit', owns: 'setting', hint: 'A one-piece swimsuit',
+      tags: wear('one-piece swimsuit, sporty', 'swim trunks, rash guard'), avoid: MODEST },
+    { id: 'leotard', label: 'Leotard', words: 'leotard', owns: 'setting', hint: "A dancer's or a gymnast's",
+      tags: wear('leotard, long sleeves, tights, ballet', 'leotard, gymnastics, tights'), avoid: MODEST },
   ] },
   { id: 'framing', label: 'How much', for: PERSON, options: [
     { id: 'head', label: 'Head', tags: 'portrait, close-up', words: 'head' },
@@ -148,6 +235,9 @@ const GEN_CHOICES = [
         southasia: '(hindu temple:1.4), gopuram, stone carving, tiered tower, stairs, indian architecture',
         fantasy: 'temple, ruins, pillar, magic circle',
         scifi: 'futuristic temple, monolith, pillar, glowing',
+        modern: 'church, modern architecture, concrete, glass, plaza',
+        steampunk: 'steampunk, cathedral, clock tower, gears, brass, stained glass',
+        postapoc: 'post-apocalypse, ruined church, overgrown, broken stained glass, rubble',
       },
       avoid: { east: '', any: '', slavic: 'torii, japanese architecture, pagoda, church, cross, onion dome, house, hut, thatched roof',
         southasia: 'torii, japanese architecture, pagoda, dome, onion dome, palace',
@@ -185,10 +275,14 @@ const GEN_CHOICES = [
   // its wooden houses. Nature and animals are much the same anywhere.
   { id: 'setting', label: 'Setting', for: ['character', 'landscape', 'building'], options: [
     ANY,
+    { id: 'modern', label: 'Modern', words: 'modern', tags: {
+      character: 'casual, hoodie, jeans, sneakers, contemporary',
+      landscape: 'suburb, park, road, power lines, contemporary',
+      building: 'modern, city, street, glass, storefront, contemporary' } },
     // Before Christianity: the gord behind its palisade, log houses, the
     // wooden idols of a shrine in an oak grove - no churches, no onion
     // domes, and no sunflowers (they came from America in the 1700s).
-    { id: 'slavic', label: 'Slavic', words: 'slavic', tags: {
+    { id: 'slavic', label: 'Slavic', group: 'The world', words: 'slavic', tags: {
       character: 'embroidered linen tunic, white tunic, flower wreath, head wreath, braid, amber necklace, sash, ancient',
       landscape: 'birch, oak tree, primeval forest, river, wooden idol, log house, thatched roof, mist',
       building: 'log house, thatched roof, wooden palisade, wooden fortress, wooden idol, pagan shrine, ancient village' } },
@@ -212,7 +306,7 @@ const GEN_CHOICES = [
       character: 'sari, indian clothes, bindi, bangle',
       landscape: 'jungle, river, palm tree, temple ruins',
       building: 'indian architecture, hindu temple, palace, arch' } },
-    { id: 'fantasy', label: 'Fantasy', words: 'fantasy', tags: {
+    { id: 'fantasy', label: 'Fantasy', group: 'Genre', words: 'fantasy', tags: {
       character: 'fantasy, adventurer, cloak, leather armor, satchel',
       landscape: 'fantasy, floating island, crystal, waterfall, magic',
       building: 'fantasy, castle, tower, magic, bridge' } },
@@ -220,6 +314,14 @@ const GEN_CHOICES = [
       character: 'science fiction, cyberpunk, bodysuit, jacket, headphones',
       landscape: 'science fiction, alien planet, futuristic, ringed planet',
       building: 'science fiction, cyberpunk, futuristic city, neon lights, skyscraper' } },
+    { id: 'steampunk', label: 'Steampunk', words: 'steampunk', tags: {
+      character: 'steampunk, victorian, goggles on head, brass, gears, corset, gloves',
+      landscape: 'steampunk, airship, smokestack, gears, industrial, smoke',
+      building: 'steampunk, victorian architecture, clock tower, gears, brass, airship, smoke' } },
+    { id: 'postapoc', label: 'Post-apocalyptic', words: 'post-apocalyptic', tags: {
+      character: 'survivor, dirty clothes, torn clothes, hooded jacket, scarf, backpack, bandages',
+      landscape: 'post-apocalypse, ruins, overgrown, abandoned, rubble, wasteland',
+      building: 'post-apocalypse, ruins, abandoned building, overgrown, broken window, rubble' } },
   ] },
 
   { id: 'time', label: 'Time of day', for: OUTDOORS, options: [
@@ -291,7 +393,7 @@ const GEN_CHOICES = [
   { id: 'detail', label: 'Detail', options: [
     { id: 'beginner', label: 'Beginner', words: 'beginner', hint: 'The fewest shapes - straight hair, plain clothes, clean lines; one building on white',
       tags: {
-        character: ch => BEGIN_FIGURE + (ch.setting === 'any' ? ', casual, t-shirt, pants' : ''),
+        character: ch => BEGIN_FIGURE + (ch.setting === 'any' && ch.clothes === 'setting' ? ', casual, t-shirt, pants' : ''),
         landscape: BEGIN + ', simple shapes, (few details:1.2)',
         building: BEGIN + ', simple shapes, (few buildings:1.3), simple background, white background',
         nature: BEGIN + ', simple shapes',
@@ -319,13 +421,13 @@ const GEN_CHOICES = [
    prompt keeps GEN_CHOICES' own, which puts "1girl, solo" first. */
 const GEN_GROUPS = [
   ['what', 'What', ['style', 'subject', 'setting']],
-  ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression']],
+  ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
   ['picture', 'The picture', ['medium', 'edges', 'detail', 'ground']],
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', detail: 'simple',
   ground: 'plain' };
@@ -421,7 +523,7 @@ function renderGenPrompt() {
 function renderGenerate() {
   const row = c => `<div class="gen-row" data-row="${c.id}"><h4 id="genL-${c.id}">${esc(c.label)}</h4>` +
     `<div class="chips" role="group" aria-labelledby="genL-${c.id}">` +
-    c.options.map(o => `<button type="button" class="chip" data-gen="${c.id}" data-opt="${o.id}" ` +
+    c.options.map(o => (o.group ? `<span class="chips-break"></span><span class="chips-group">${esc(o.group)}</span>` : '') + `<button type="button" class="chip" data-gen="${c.id}" data-opt="${o.id}" ` +
       `aria-pressed="${genChoices[c.id] === o.id}"${o.hint ? ` title="${esc(o.hint)}"` : ''}>${esc(o.label)}</button>`).join('') + '</div></div>';
   el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
     `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` +

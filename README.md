@@ -159,12 +159,17 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   than a finished illustration, or *Beginner*: the fewest shapes, straight
   hair, flat colour, one building on white - kept in the
   Uploads pack's Generated group, tagged with those choices, and opened with
-  every tool. A *Setting* puts it somewhere in the world - *Slavic* (before
-  Christianity: linen and a wreath, log houses behind a palisade, birch and
-  oak), *East Asian*, *Western Europe*, *Nordic*, *Middle East*, *South
-  Asian*, *Fantasy*, *Sci-fi* - as clothes on a character, the buildings on a
+  every tool. A *Setting* puts it somewhere in the world - *Modern*, *Slavic*
+  (before Christianity: linen and a wreath, log houses behind a palisade,
+  birch and oak), *East Asian*, *Western Europe*, *Nordic*, *Middle East*,
+  *South Asian*, or a genre: *Fantasy*, *Sci-fi*, *Steampunk*,
+  *Post-apocalyptic* - as clothes on a character, the buildings on a
   street, what grows in a landscape, and which temple - pagan idols in an
-  oak grove, a cathedral, a mosque, a Hindu temple. The choices are in
+  oak grove, a cathedral, a mosque, a Hindu temple. *Clothes* dresses the
+  character as her Setting would - *Everyday*, *Festive*, *Uniform*,
+  *Armour*, *Winter* (festive is a wreath and embroidery in a Slavic one, a
+  furisode in an East Asian one) - or, for figure study, in *Sportswear*,
+  *Close-fitting*, a one-piece *Swimsuit* or a *Leotard*. The choices are in
   groups, two columns of them, with Generate kept at the bottom of the view;
   what was made can be deleted one at a time or all at once. *Prompt* shows
   the tags as sent and what the choices keep out, each a switch.
