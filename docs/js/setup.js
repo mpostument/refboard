@@ -1185,7 +1185,7 @@ function updateViewMeta() {
     return;
   }
   if (view.kind === 'colour') {
-    m.textContent = 'Palette, colour wheel and gamut mask for any image - read in this browser, nothing is uploaded.';
+    m.textContent = 'Palette, colour wheel and gamut mask for any image - and a character sheet: her colours, with how to mix them.';
     return;
   }
   if (view.kind === 'generate') {
@@ -1278,6 +1278,15 @@ function openLazyView(kind, show) {
   loadSection(kind).then(() => { if (view.kind === kind) show(); }, () => {
     if (view.kind === kind) el('viewMeta').textContent = 'This section could not load - check the connection, then open it again.';
   });
+}
+
+// The Colour studio on one of its tabs - and on a picture, if one is given.
+async function openColour(tab, src) {
+  setView({ kind: 'colour' });
+  await loadSection('colour');
+  if (!col) initColour();
+  colourTab(tab);
+  if (src) colourLoad(src);
 }
 
 /* Highlights whichever tree row the middle column is showing, and opens the

@@ -220,6 +220,31 @@ button, select, input { font: inherit; color: inherit; }
 }
 #formsTask b { color: #ffd54f; font-weight: 600; }
 #formsTask .chip { padding: 3px 9px; font-size: 12px; background: rgba(255,255,255,.08); color: #eee; border-color: rgba(255,255,255,.2); }
+/* The shapes, in kinds - see syncFormsPanel(). */
+#formShapes { display: grid; gap: 8px; }
+#formShapes .shape-kind { display: flex; flex-wrap: wrap; gap: 6px; }
+#formShapes .shape-kind > span { flex-basis: 100%; font-size: 11px; color: var(--dim); }
+/* The anime head's hair colours: round swatches, named on hover as
+   Generate names them, then your own colour; the pressed one ringed. */
+#formHairColours { align-items: center; gap: 5px; }
+#formHairColours .swatch {
+  width: 22px; height: 22px; min-height: 0; padding: 0; border-radius: 50%;
+  background: var(--swatch); border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-hi);
+}
+#formHairColours .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent); }
+#formHairColours .swatch-own { display: inline-flex; margin-left: 4px; cursor: pointer; }
+#formHairColours .swatch-own input { width: 26px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
+#formHairChars .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; background: var(--swatch); vertical-align: -1px; }
+/* The anime head's angle note - see syncAnimeNote(). Under the cover, and
+   out of the way of the view drill's task and of a clean view. */
+#formAnimeNote {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 1; max-width: 560px;
+  display: flex; align-items: flex-end; gap: 10px; padding: 7px 10px; border-radius: 7px;
+  background: rgba(20, 20, 22, .78); color: #ddd; font-size: 12px; line-height: 1.45;
+}
+#formAnimeNote b { color: #ffd54f; font-weight: 600; }
+#formAnimeNote .chip { flex: none; padding: 3px 9px; font-size: 11.5px; background: rgba(255,255,255,.08); color: #eee; border-color: rgba(255,255,255,.2); }
+#formsTask:not(.hidden) ~ #formAnimeNote, #formsStage.clean #formAnimeNote { display: none; }
 #formsCover.study { pointer-events: none; }
 #formsCover.study span {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%); padding: 4px 10px; border-radius: 6px;
@@ -762,8 +787,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
    it only once its slider has been moved; until then the stylesheet's own
    value (the var() fallback) holds. */
-#poseOverlay, #headOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
-#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #angleOverlay,
+#poseOverlay, #headOverlay, #edgeOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #angleOverlay,
   #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
 #peekBadge {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
@@ -856,6 +881,13 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
   position: absolute; left: 12px; bottom: 12px; z-index: 4; max-width: min(520px, calc(100% - 24px));
   padding: 7px 11px; border-radius: 7px; background: rgba(0,0,0,.72); color: #fff; font-size: 13px; line-height: 1.45;
 }
+/* Edge map - see js/edges.js. A canvas in the image's own pixels, sized to
+   it like #poseOverlay, and mirrored with it: drawn once, the right way
+   round, whichever way the picture is flipped. */
+#edgeOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #edgeOverlay { transform: scaleX(-1); }
+#poseNote .edge-h { color: #ff5470; }
+#poseNote .edge-s { color: #50beff; }
 #poseNote hr { border: 0; border-top: 1px solid rgba(255,255,255,.25); margin: 6px 0; }
 /* Loomis head - see runHead(). Same box and scaling as #poseOverlay; each
    line is drawn twice, a dark wide one under a coloured one, so it reads
@@ -1154,6 +1186,40 @@ section { margin-bottom: 20px; }
 .col-sw:hover { background: var(--hover); }
 .col-sw.pinned { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 /* A palette colour's mixes, under its row. */
+/* The right column: the paints over two tabs - the picture's colours, a
+   character's sheet (js/character.js). */
+.col-right h4.col-first { margin-top: 0; }
+.col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; }
+.col-tab { display: none; }
+.col-tab.on { display: block; }
+.col-tab > h4:first-of-type { margin-top: 12px; }
+.char-bar { gap: 6px; align-items: center; }
+.char-select { width: 100%; margin-top: 6px; }
+#charThumb { width: 34px; height: 34px; object-fit: cover; border-radius: 5px; border: 1px solid var(--line); }
+.char-name { flex: 1 1 auto; min-width: 0; box-sizing: border-box; font-size: 14px; font-weight: 600; color: var(--ink);
+  background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 5px 7px; }
+.char-name:hover, .char-name:focus { border-color: var(--line); background: var(--panel); }
+.char-part { margin-top: 12px; }
+.char-part h5 { margin: 0 0 5px; font-size: 12px; font-weight: 600; color: var(--ink); display: flex; gap: 6px; align-items: baseline; }
+.char-part h5 span { font-weight: 400; color: var(--dim); font-size: 11px; }
+.char-part.unset .char-tones { opacity: .55; }
+.char-clear { margin-left: auto; background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; }
+.char-clear:hover { color: var(--ink); }
+.char-tones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.char-cell { position: relative; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.char-cell small { font-size: 10.5px; line-height: 1.3; color: var(--dim); }
+.char-sw { display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 3px; border-radius: 7px; cursor: pointer;
+  background: none; border: 2px solid transparent; color: var(--dim); font-size: 11px; text-align: left; }
+.char-sw i { display: block; height: 30px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
+.char-sw.empty i { border: 1px dashed var(--line); }
+.char-sw:hover { color: var(--ink); background: var(--hover); }
+.char-sw[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); }
+.char-auto { position: absolute; top: 6px; right: 6px; font-size: 9.5px; padding: 1px 5px; border-radius: 999px; border: 0; cursor: pointer;
+  background: color-mix(in srgb, var(--panel) 80%, transparent); color: var(--ink); }
+.char-note { margin-top: 12px; }
+.char-go { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.picking #colImg { cursor: copy; }
+
 .col-mix { margin: 0 0 6px 50px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
 .col-mix summary { cursor: pointer; color: var(--dim); list-style: none; }
 .col-mix summary::-webkit-details-marker { display: none; }
@@ -1452,7 +1518,9 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #genResults li { position: relative; }
 .gen-steps { position: absolute; left: 6px; bottom: 6px; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 0;
   background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink); cursor: pointer; }
-.gen-steps:hover, .gen-steps:focus-visible { background: var(--accent); color: var(--on-accent); }
+.gen-colours { position: absolute; right: 6px; bottom: 6px; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 0;
+  background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink); cursor: pointer; }
+.gen-steps:hover, .gen-steps:focus-visible, .gen-colours:hover, .gen-colours:focus-visible { background: var(--accent); color: var(--on-accent); }
 
 /* ---- How to draw it (js/steps.js) */
 .sheet-box.steps-box { width: min(1080px, 100%); }
@@ -1460,6 +1528,10 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #stepsFrame { width: 100%; height: auto; max-height: 62vh; object-fit: contain; border-radius: 8px; background: #fbfaf6; display: block; }
 .steps-text h3 { margin: 4px 0 8px; font-size: 18px; font-weight: 600; }
 .steps-text p { margin: 0 0 14px; line-height: 1.5; }
+.steps-key { list-style: none; margin: -4px 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+.steps-key[hidden] { display: none; }
+.steps-key li { display: flex; align-items: center; gap: 6px; }
+.steps-key .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; }
 .steps-nav { gap: 8px; }
 .steps-nav button:disabled { opacity: .45; cursor: default; }
 .steps-note { margin-top: 18px; }

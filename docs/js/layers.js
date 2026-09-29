@@ -30,6 +30,8 @@ const LAYERS = [
     note: () => el('optGhost').checked && !state.ghostSrc ? 'from the next pose' : '' },
   { id: 'head', label: 'Head construction', els: ['headOverlay'], base: 1,
     on: () => !!state.headOn, toggle: () => toggleHead() },
+  { id: 'edges', label: 'Edge map', els: ['edgeOverlay'], base: 1,
+    on: () => !!state.edgesOn, toggle: () => toggleEdges() },
   { id: 'pose', label: 'Pose skeleton', els: ['poseOverlay'], base: 1,
     on: () => !!state.poseOn, toggle: () => togglePose() },
   { id: 'grid', label: 'Grid', els: ['grid', 'gridValue'], base: 0.3,

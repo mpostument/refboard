@@ -185,13 +185,15 @@ function stepsPolygon(loop, eps) {
   return stepsSimplify(loop.slice(0, half + 1), eps).slice(0, -1).concat(stepsSimplify(loop.slice(half), eps));
 }
 
-/* What every frame is drawn from: the masses, the lines and three values. */
+/* What every frame is drawn from: the masses, the lines, three values and
+   the whites to save. */
 function stepsAnalyse(p) {
   const { w, h, L } = p;
   // Masses: the subject against the paper, or where there is no paper the
   // darker half of the picture blurred hard - and each blocked in as a few
   // straight lines.
-  let mass = stepsSubject(p);
+  const subject = stepsSubject(p);
+  let mass = subject;
   if (!mass) {
     const big = stepsBlur(L, w, h, Math.max(w, h) * 0.02);
     const tBig = stepsOtsu(big);
@@ -225,7 +227,7 @@ function stepsAnalyse(p) {
   const t2 = stepsOtsu(soft, 0, t1);
   const tone = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) tone[i] = soft[i] < t2 ? 2 : soft[i] < t1 ? 1 : 0;
-  return { mass, blocks, inner, line, tone };
+  return { mass, blocks, inner, line, tone, whites: stepsWhites(p, subject) };
 }
 
 // A frame to draw on: paper, at the working size.
@@ -300,10 +302,117 @@ function stepsShadows(c, a) {
   return stepsPaint(c, (i, r, g, b) => a.tone[i] ? [r * (a.tone[i] === 2 ? 0.62 : 0.8), g * (a.tone[i] === 2 ? 0.62 : 0.8), b * (a.tone[i] === 2 ? 0.66 : 0.84)] : null);
 }
 
+/* The whites to save before the first wash - in watercolour the white is
+   the paper, and once painted over it does not come back. Near-white,
+   near-grey pixels in connected areas; not those that reach the paper
+   round the subject (where there is one) - that white is the paper going
+   on, left by painting the subject - and not those mostly among other
+   whites: a pale face cut into pieces by its lines is not a highlight but
+   the lightest wash. A highlight has colour round it. Each is:
+   - fluid: small, or thin - a catchlight, a streak of shine on the hair.
+     A brush cannot go round it; masking fluid, before any paint.
+   - around: big enough to paint round - a white shirt, a cloud. Fluid
+     there would only leave a hard, cut-out edge.
+   label is per pixel 0, 1 (fluid) or 2 (around); spots are the fluid
+   areas' centres and sizes, to ring them where they are too small to see. */
+function stepsWhites(p, inside) {
+  const { w, h, rgba, L } = p;
+  const white = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const r = rgba[4 * i], g = rgba[4 * i + 1], b = rgba[4 * i + 2];
+    white[i] = L[i] >= 90 && Math.max(r, g, b) - Math.min(r, g, b) < 30 ? 1 : 0;
+  }
+  const label = new Uint8Array(w * h), seen = new Uint8Array(w * h), spots = [];
+  const minArea = Math.max(6, 0.00006 * w * h), thin = Math.max(4, Math.max(w, h) / 90);
+  const ring = Math.max(5, Math.round(Math.max(w, h) / 70));
+  let fluid = 0, around = 0;
+  for (let s = 0; s < w * h; s++) {
+    if (!white[s] || seen[s]) continue;
+    const part = [s], stack = [s]; seen[s] = 1;
+    let x0 = w, x1 = 0, y0 = h, y1 = 0, outside = !!inside && !inside[s];
+    while (stack.length) {
+      const i = stack.pop(), x = i % w, y = (i / w) | 0;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      for (const j of [x ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w])
+        if (j >= 0 && j < w * h && white[j] && !seen[j]) {
+          seen[j] = 1; stack.push(j); part.push(j);
+          if (inside && !inside[j]) outside = true;
+        }
+    }
+    if (part.length < minArea || outside) continue;   // a speck of noise; the paper round the subject
+    // What is round it, a few pixels out: how much of it is white too. Its
+    // own pixels are marked first, to be left out of the count.
+    for (const i of part) label[i] = 3;
+    let n = 0, whites = 0;
+    for (let y = Math.max(0, y0 - ring); y <= Math.min(h - 1, y1 + ring); y++)
+      for (let x = Math.max(0, x0 - ring); x <= Math.min(w - 1, x1 + ring); x++) {
+        const i = y * w + x;
+        if (label[i] === 3) continue;
+        n++; whites += white[i];
+      }
+    if (n && whites / n > 0.3) { for (const i of part) label[i] = 0; continue; }
+    // How thick it is: its area over its longer side - a disc's is most of
+    // its width, a streak's is its width.
+    const thick = part.length / (Math.max(x1 - x0, y1 - y0) + 1);
+    const k = part.length < 0.001 * w * h || thick < thin ? 1 : 2;
+    for (const i of part) label[i] = k;
+    if (k === 1) { fluid++; spots.push({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, r: Math.max(x1 - x0, y1 - y0) / 2 }); }
+    else around++;
+  }
+  return { label, spots, fluid, around };
+}
+
+// Masking fluid's colour in the frame (it is often tinted, to be seen), and
+// the line round a white to paint round.
+const STEPS_FLUID = [236, 178, 36], STEPS_AROUND = [58, 120, 200];
+
+function stepsWhitesFrame(p, a) {
+  const { label } = a.whites, w = p.w;
+  const c = stepsPaint(stepsLines(stepsCanvas(p), a, PENCIL, 0.45), (i, r, g, b) => {
+    if (label[i] === 1) return STEPS_FLUID;
+    if (label[i] !== 2) return null;
+    const x = i % w;
+    const edge = [x ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w].some(j => j < 0 || j >= label.length || label[j] !== 2);
+    return edge ? STEPS_AROUND : null;
+  });
+  // A catchlight is a few pixels: a ring round each, to find it by.
+  const g = c.getContext('2d');
+  g.strokeStyle = `rgb(${STEPS_FLUID.join(',')})`;
+  g.lineWidth = Math.max(1.2, p.w / 400);
+  for (const s of a.whites.spots) {
+    if (s.r > p.w / 40) continue;
+    g.beginPath(); g.arc(s.x + 0.5, s.y + 0.5, s.r + Math.max(5, p.w / 80), 0, 2 * Math.PI); g.stroke();
+  }
+  return c;
+}
+
+function stepsWhitesText(a) {
+  const { fluid, around } = a.whites;
+  if (!fluid && !around) return 'Nothing here is left pure white: the lightest parts take the first pale wash. Look again for the whites you want - it is now or never.';
+  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+  return 'Before any paint, the whites - the paper is the only white watercolour has. ' +
+    (fluid ? `Yellow: ${n(fluid, 'small white', 'small whites')} - catchlights, a streak of shine - cover with masking fluid on an old or rubber brush, and let it dry. ` : '') +
+    (around ? `Blue outline: ${n(around, 'white', 'whites')} big enough to paint round - no fluid there, it would leave a hard, cut-out edge. ` : '');
+}
+
 function stepsFinal(p) {
   const c = document.createElement('canvas');
   c.width = p.w; c.height = p.h;
   c.getContext('2d').drawImage(p.img, 0, 0, p.w, p.h);
+  return c;
+}
+
+// The edge map (js/edges.js), worked out once for the text and the frame.
+const stepsEdges = (p, a) => a.edges || (a.edges = edgeMap(p));
+function stepsEdgesText(m) {
+  const w = edgeWords('water');
+  return `Look at every edge before you paint it, and decide. Red: hard - ${w.hard}. Blue: soft - ${w.soft}. ${edgeVerdict(m)}`;
+}
+// The picture paled, for marks drawn over it to read.
+function stepsFaded(p) {
+  const c = stepsFinal(p), g = c.getContext('2d');
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  g.fillRect(0, 0, c.width, c.height);
   return c;
 }
 
@@ -317,11 +426,17 @@ const STEPS = {
       frame: (p, a) => stepsShapes(p, a, PENCIL) },
     { title: 'Lines', text: 'Firm up the contours in pencil, lightly enough to vanish under the paint. Watercolour keeps its lines - make only the ones you want.',
       frame: (p, a) => stepsLines(stepsCanvas(p), a, PENCIL, 0.6) },
-    { title: 'First wash', text: 'The local colour of each area, pale and wet, and leave the highlights as bare paper - white is the paper, never paint. Let it dry.',
+    { title: 'Save the whites', text: (p, a) => stepsWhitesText(a),
+      key: [[STEPS_FLUID, 'Masking fluid'], [STEPS_AROUND, 'Paint round it']],
+      frame: (p, a) => stepsWhitesFrame(p, a) },
+    { title: 'First wash', text: 'The local colour of each area, pale and wet - freely over the dry masking fluid, carefully round the big whites. Let it dry.',
       frame: (p, a) => stepsLines(stepsWash(stepsCanvas(p), p, 0.55), a, PENCIL, 0.45) },
     { title: 'Shadows', text: 'On dry paper, the shadow shapes in one stronger glaze over the first: one clean pass, not scrubbed. The darkest go last, small.',
       frame: (p, a) => stepsLines(stepsShadows(stepsWash(stepsCanvas(p), p, 0.35), a), a, PENCIL, 0.45) },
-    { title: 'Finish', text: 'The few darkest accents and the edges that must be sharp - eyes, the line of the jaw - then stop. What is left soft stays soft.',
+    { title: 'Hard and soft edges', text: (p, a) => stepsEdgesText(stepsEdges(p, a)),
+      key: [[EDGE_HARD, 'Hard - on dry paper'], [EDGE_SOFT, 'Soft - wet-in-wet']],
+      frame: (p, a) => edgeDraw(stepsEdges(p, a), stepsFaded(p)) },
+    { title: 'Finish', text: 'The few darkest accents and the edges that must be sharp - eyes, the line of the jaw. When it is all bone dry, rub the masking fluid off with a clean finger, and soften any edge it left too hard with a damp brush. Then stop.',
       frame: p => stepsFinal(p) },
   ] },
   ink: { label: 'Ink and hatching', steps: [
@@ -367,7 +482,8 @@ function stepsMedium(tags = []) {
 // Every frame of one medium, for a picture already read.
 function stepsFrames(p, medium) {
   const a = stepsAnalyse(p);
-  return STEPS[medium].steps.map(s => ({ title: s.title, text: s.text, canvas: s.frame(p, a) }));
+  return STEPS[medium].steps.map(s => ({ title: s.title, text: typeof s.text === 'function' ? s.text(p, a) : s.text,
+    key: s.key, canvas: s.frame(p, a) }));
 }
 
 /* ---- the sheet. */
@@ -421,6 +537,10 @@ function showStep(i) {
   el('stepsCount').textContent = `Step ${stepsNow.i + 1} of ${frames.length}`;
   el('stepsStepTitle').textContent = f.title;
   el('stepsStepText').textContent = f.text;
+  // What the colours in the frame mean, on a step that marks things.
+  el('stepsKey').innerHTML = (f.key || []).map(([rgb, label]) =>
+    `<li><span class="swatch" style="background:rgb(${rgb.join(',')})"></span>${esc(label)}</li>`).join('');
+  el('stepsKey').hidden = !f.key;
   el('stepsPrev').disabled = stepsNow.i === 0;
   el('stepsNext').disabled = stepsNow.i === frames.length - 1;
   for (const b of el('stepsStrip').querySelectorAll('button'))

@@ -34,6 +34,8 @@ function normalizeFormScene(raw) {
     // back to a cube rather than vanishing and shifting every index after it.
     if (!isFormShape(n.shape)) n.shape = 'cube';
     if (!FORM_FINISHES[n.finish]) n.finish = 'matte';
+    if (!HAIR_STYLES[n.hair]) n.hair = FORM_OBJECT_DEFAULTS.hair;
+    if (!/^#[0-9a-f]{6}$/i.test(n.hairColor)) n.hairColor = FORM_OBJECT_DEFAULTS.hairColor;
     n.pose = cleanFormPose(n.pose, FORM_RIGS[(FORM_SHAPES[n.shape] || {}).rig] || FORM_RIGS.figure);
     return n;
   });
@@ -341,6 +343,93 @@ function dropFormRig(m) {
   for (const c of [...m.children]) m.remove(c);
   m.userData.rig = null;
 }
+
+/* The anime head's drawn face (formAnimeFace()): the features and the
+   gleams, hung on the head so they turn and stretch with it. Clicks go
+   through them to the head. */
+function syncFormFace(m, def) {
+  const has = m.userData.face;
+  if (!def.face) { if (has) { m.remove(has); m.userData.face = null; } return; }
+  if (has) return;
+  const T = forms.T, f = formAnimeFace(), face = new T.Group();
+  const features = new T.Mesh(f.geo, f.features), gleam = new T.Mesh(f.geo, f.gleam['-1']);
+  features.receiveShadow = true;
+  features.renderOrder = 1; gleam.renderOrder = 2;
+  for (const x of [features, gleam]) x.raycast = () => {};
+  face.add(features, gleam);
+  face.userData.gleam = gleam;
+  m.add(face);
+  m.userData.face = face;
+}
+/* The anime head's hair (formAnimeHairGeometry()): a mesh of its own on the
+   head, so it turns with it, with a material of its own - its colour, and
+   the ring. It shades like the head it is on: cel tones on an Anime head,
+   a soft sheen on any other finish. Clicks on it pick the head. */
+function formHairMaterial() {
+  const T = forms.T, mat = new T.MeshPhysicalMaterial({ metalness: 0 });
+  mat.defines = { ...mat.defines, USE_UV: '' };
+  mat.userData.u = { ...formGuideUniforms(T, 4), uRingColor: { value: new T.Color() }, uRingEdge: { value: 0.988 } };
+  mat.onBeforeCompile = injectHairRing;
+  mat.shadowSide = T.FrontSide;
+  return mat;
+}
+
+/* The ring - the band of light anime paints round a head of hair. A hair is
+   a line, not a surface, and a line shines wherever it lies square to the
+   halfway direction between the light and the eye (Kajiya and Kay): all
+   along the hair, that is a band round the head, not a spot. Each lock's
+   hairs are tipped a little toward its normal (hairShift - more toward its
+   edges), which moves its piece of the band up or down: the sawtooth. */
+function injectHairRing(sh) {
+  injectFormGuides.call(this, sh);
+  sh.vertexShader = 'attribute vec3 hairT;\nattribute float hairShift;\nvarying vec3 vHairT;\nvarying float vHairShift;\n' +
+    sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+    vHairT = normalize((modelViewMatrix * vec4(hairT, 0.0)).xyz);
+    vHairShift = hairShift;`);
+  sh.fragmentShader = 'varying vec3 vHairT;\nvarying float vHairShift;\nuniform vec3 uRingColor;\nuniform float uRingEdge;\n' +
+    sh.fragmentShader.replace('#include <opaque_fragment>', `{${FORM_KEY_LIGHT_GLSL}
+      vec3 n = normalize(geometryNormal);
+      vec3 t = normalize(vHairT + n * vHairShift);
+      float th = dot(t, normalize(kL + geometryViewDir));
+      float across = sqrt(max(0.0, 1.0 - th * th));
+      float ndl = dot(n, kL), lit = smoothstep(0.0, 0.08, ndl) * smoothstep(0.4, 0.6, kSh);
+      float sw = max(fwidth(across), 1e-4);
+      // Cel: a hard-edged band. Otherwise a soft sheen along it.
+      float ring = uCel > 0.5 ? smoothstep(uRingEdge - sw, uRingEdge + sw, across) * lit
+        : pow(across, 40.0) * lit * 0.55;
+      outgoingLight = mix(outgoingLight, uRingColor, ring);
+    }
+    #include <opaque_fragment>`);
+}
+
+function syncFormHair(m, def, o) {
+  const has = m.userData.hair, want = def.face && o.hair !== 'none' ? o.hair : null;
+  if (has && has.userData.style === want) return;
+  if (has) { m.remove(has); m.userData.hair = null; }
+  if (!want) return;
+  const F = forms, key = 'hair:' + want;
+  const geo = F.geometries[key] || (F.geometries[key] = formAnimeHairGeometry(F.T, want));
+  const hair = new F.T.Mesh(geo, m.userData.hairMat || (m.userData.hairMat = formHairMaterial()));
+  hair.castShadow = hair.receiveShadow = true;
+  hair.userData.style = want;
+  m.add(hair);
+  m.userData.hair = hair;
+}
+
+// The cel shading uniforms of one material: its tones for `color`, the
+// highlight's size, the rim.
+function formCelUniforms(u, color, gloss, sc, rimDir) {
+  const t = celTones(color, sc.lightColor, sc.fillColor);
+  for (const [k, rgb] of [['uCelBase', t.base], ['uCelShade', t.shade], ['uCelHi', t.hi], ['uCelRim', t.rim]]) {
+    u[k].value.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, forms.T.SRGBColorSpace);
+  }
+  // Shine 0 is no highlight; at 1 it covers about a third of the lit side.
+  u.uCelHiSize.value = gloss * gloss * 0.12;
+  u.uRimDir.value.copy(rimDir);
+  u.uRim.value = sc.fillOn ? Math.min(1, sc.fillStrength * 2) : 0;
+  return t;
+}
+
 /* Proportions stretch each part in its own frame - Height makes limbs
    longer, Width and Depth thicker - rather than stretching the figure as a
    whole: a stretched parent shears whatever is turned inside it, so a
@@ -425,6 +514,7 @@ function formsRender(sc, w, h, clean = false) {
     const m = F.meshes.pop();
     F.scene.remove(m);
     m.material.dispose();
+    m.userData.hairMat?.dispose();
   }
 
   // Each form rests on the floor at its own x/z: a form floating above its
@@ -437,6 +527,8 @@ function formsRender(sc, w, h, clean = false) {
     m.geometry = formGeometry(o.shape);
     // A figure turned into a hand is a different rig, not a re-pose.
     if (m.userData.rig && m.userData.rig.kind !== def.rig) dropFormRig(m);
+    syncFormFace(m, def);
+    syncFormHair(m, def, o);
     if (def.rig && !m.userData.rig) buildFormRig(m, def.rig);
     applyFormFinish(m.material, o, def);
     const u = m.material.userData.u;
@@ -570,6 +662,14 @@ function formsRender(sc, w, h, clean = false) {
   bulb.shadow.bias = 0;
   bulb.shadow.normalBias = rad * 0.02;
 
+  // An anime eye's gleam is on the side the light comes from, in both eyes.
+  for (const m of F.meshes) {
+    const face = m.userData.face;
+    if (!face) continue;
+    const d = L.clone().applyQuaternion(m.getWorldQuaternion(new T.Quaternion()).invert());
+    face.userData.gleam.material = formAnimeFace().gleam[d.x > 0 ? '1' : '-1'];
+  }
+
   const Lf = dirFrom(sc.fillAz, sc.fillEl);
   F.fill.visible = sc.fillOn;
   F.fill.color.set(sc.fillColor);
@@ -583,18 +683,24 @@ function formsRender(sc, w, h, clean = false) {
   cam.updateMatrixWorld();
   const rimDir = Lf.clone().transformDirection(cam.matrixWorldInverse);
   sc.objects.forEach((o, i) => {
-    const u = F.meshes[i].material.userData.u;
+    const m = F.meshes[i], u = m.material.userData.u;
     const cel = !!(FORM_FINISHES[o.finish] || {}).cel;
     u.uCel.value = cel ? 1 : 0;
-    if (!cel) return;
-    const t = celTones(o.color, sc.lightColor, sc.fillColor);
-    for (const [k, rgb] of [['uCelBase', t.base], ['uCelShade', t.shade], ['uCelHi', t.hi], ['uCelRim', t.rim]]) {
-      u[k].value.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, T.SRGBColorSpace);
-    }
-    // Shine 0 is no highlight; at 1 it covers about a third of the lit side.
-    u.uCelHiSize.value = o.gloss * o.gloss * 0.12;
-    u.uRimDir.value.copy(rimDir);
-    u.uRim.value = sc.fillOn ? Math.min(1, sc.fillStrength * 2) : 0;
+    if (cel) formCelUniforms(u, o.color, o.gloss, sc, rimDir);
+    // The hair: cel on an Anime head, else a sheen of its own - hair is not
+    // glass or metal whatever the head is. No highlight spot: its highlight
+    // is the ring, in its own colour made paler toward the light's.
+    const hair = m.userData.hair;
+    if (!hair) return;
+    const hu = hair.material.userData.u;
+    applyFormFinish(hair.material, { finish: cel ? 'anime' : 'satin', color: o.hairColor, gloss: 0.35 }, {});
+    hu.uCel.value = cel ? 1 : 0;
+    hu.uZones.value = u.uZones.value;
+    const t = formCelUniforms(hu, o.hairColor, 0, sc, rimDir);
+    // The ring's colour: the hair's own, lighter and a touch less strong -
+    // never white, or the hair reads as wet.
+    const [L, C, h] = rgbToOklch(t.base), ring = lchRgb(L + (1 - L) * 0.4, C * 0.85, h);
+    hu.uRingColor.value.setRGB(ring[0] / 255, ring[1] / 255, ring[2] / 255, T.SRGBColorSpace);
   });
 
   // Hemisphere: fill from above in neutral light, bounce from below in the
@@ -1569,6 +1675,114 @@ function requestFormsRender() {
     formsRender(formScene, Math.round(stage.clientWidth * dpr), Math.round(stage.clientHeight * dpr), !!forms.clean);
     syncOrbitLimits();
     drawFormsOverlay();
+    syncAnimeNote();
+  });
+}
+
+/* ---- what to watch on the anime head at the angle it is seen from. Worked
+   out from the render: which way the face points in the camera's frame,
+   and how wide each eye comes out on screen - on the head's flat mask, and
+   the same eyes on Loomis's round ball, to show the difference. */
+function animeHeadReading(sc = formScene) {
+  const F = forms, T = F.T;
+  const i = formShapeDef(sc.objects[sc.active]?.shape).face ? sc.active
+    : sc.objects.findIndex(o => formShapeDef(o.shape).face);
+  const m = F.meshes[i];
+  if (i < 0 || !m || !m.userData.face) return null;
+  const cam = F.camera;
+  const fwd = new T.Vector3(0, 0, 1).transformDirection(m.matrixWorld).transformDirection(cam.matrixWorldInverse);
+  const turn = Math.atan2(fwd.x, fwd.z) / THREE_DEG, tilt = Math.asin(Math.max(-1, Math.min(1, fwd.y))) / THREE_DEG;
+  // Screen widths: the aspect matters, NDC is squashed to a square.
+  const px = p => { const v = new T.Vector3(...p).applyMatrix4(m.matrixWorld).project(cam); return [v.x * cam.aspect, v.y]; };
+  const width = ([a, b]) => { const [p, q] = [px(a), px(b)]; return Math.hypot(p[0] - q[0], p[1] - q[1]); };
+  const marks = formAnimeFace().marks;
+  const ratio = (a, b) => { const [x, y] = [width(marks[a]), width(marks[b])]; return Math.min(x, y) / Math.max(x, y); };
+  const o = sc.objects[i];
+  return { turn, tilt, mask: ratio('right', 'left'), ball: ratio('rightBall', 'leftBall'),
+    hair: o.hair !== 'none' ? { style: o.hair, colour: hairColourName(o.hairColor) } : null };
+}
+
+// The angle as a drawing book names it - and as Generate's From row does.
+function animeHeadView(r) {
+  const a = Math.abs(r.turn);
+  if (a > 115) return 'back';
+  if (Math.abs(r.tilt) > 22 && a < 60) return r.tilt > 0 ? 'below' : 'above';
+  return a < 12 ? 'front' : a < 65 ? 'three' : 'profile';
+}
+
+// What the hair does at each angle - added to the note while it has some.
+const ANIME_HAIR_NOTE = {
+  front: '<b>Hair:</b> the fringe casts a shadow of its own shape on the forehead - paint that shape, not a gradient.',
+  three: '<b>Hair:</b> the ring follows the round of the skull, not the locks - one band, broken where each lock turns.',
+  profile: "<b>Hair:</b> it sits well off the skull - the outline is the hair's, higher and further back than the head's.",
+  below: "<b>Hair:</b> the undersides of the fringe and the tips lead; the fringe's shadow line is what separates it from the face.",
+  above: '<b>Hair:</b> the locks fan out from the crown - start there, and let each one fall from it.',
+  back: '<b>Hair:</b> from behind the ring is the whole form: a band round the back of the head, the locks fanning from the crown.',
+};
+
+function animeHeadNote(r) {
+  const view = animeHeadView(r), pct = v => Math.round(v * 100) + '%';
+  const text = {
+    front: '<b>Front</b> - both eyes the same, one eye apart. The nose is a mark, the mouth a short line: nothing breaks the outline of the face.',
+    three: `<b>Three-quarter, ${Math.round(Math.abs(r.turn))}°</b> - the far eye is <b>${pct(r.mask)}</b> of the near one: ` +
+      `it narrows, but on a real, round head it would be ${pct(r.ball)}. Anime keeps the face a flat mask. ` +
+      'The far cheek bulges past the far eye; the nose points toward the far cheek, and the mouth is shorter on that side.',
+    profile: '<b>Profile</b> - one eye, seen side-on: the iris a narrow upright ellipse, the lash line a wedge sweeping back. The nose is a point on the outline, the chin the lowest one.',
+    below: '<b>From below</b> - the eye line curves up (⌒), the eyes move up the face and the chin and jaw grow; the nose tip may hide the nostrils\' mark.',
+    above: '<b>From above</b> - the eye line curves down (◡), the forehead and the hair take most of the head, and the features crowd toward the chin.',
+    back: '<b>From behind</b> - no face: the round back of the skull, the ears, the jaw\'s corner past the cheek.',
+  }[view];
+  return { view, text: text + (r.hair ? ' ' + ANIME_HAIR_NOTE[view] : '') };
+}
+
+function syncAnimeNote() {
+  const note = el('formAnimeNote'), r = forms.frame ? animeHeadReading() : null;
+  note.classList.toggle('hidden', !r);
+  if (!r) return;
+  const { view, text } = animeHeadNote(r);
+  const gen = !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
+  const hair = r.hair ? `${r.hair.colour} ${r.hair.style}` : '';
+  const key = text + gen + hair;
+  if (note.dataset.key === key) return;
+  note.dataset.key = key;
+  note.innerHTML = `<span>${text}</span>` + (gen ? `<button class="chip" type="button" id="formAnimeGen" data-view="${view}" ` +
+    `data-hair="${r.hair ? r.hair.style : ''}" data-colour="${r.hair ? r.hair.colour : ''}" ` +
+    `title="With your ComfyUI: anime heads drawn from this angle${hair ? ', ' + hair + ' hair' : ''}, to hold against the 3D one">Draw it at this angle</button>` : '');
+}
+
+/* To Generate: anime heads from the angle the 3D one is seen at - the
+   drawing a studio would make of it, beside the construction. */
+function animeHeadToGenerate(view, hair = '', colour = '') {
+  // Its hair too, by the names Generate's rows use - the same for both.
+  Object.assign(genChoices, { subject: 'character', framing: 'head', view, hair: hair || 'any', colour: hair ? colour : 'any' });
+  saveGenChoices();
+  renderGenerate();
+  setView({ kind: 'generate' });
+  const seen = { front: 'from the front', three: 'at three-quarters', profile: 'in profile', below: 'from below',
+    above: 'from above', back: 'from behind' }[view];
+  el('genStatus').textContent = `The anime head's angle: a head ${seen}${hair ? `, ${colour} hair, ${HAIR_STYLES[hair].label.toLowerCase()}` : ''}. ` +
+    'Change anything, then Generate.';
+}
+
+// The anime head on the selected form, turned three-quarters - for What's
+// new and Ctrl+K. Before the view has loaded it goes into the saved scene,
+// which the view opens with.
+function showAnimeHead() {
+  formScene = formScene || loadFormScene();
+  // Coloured the anime way, with hair, unless it has some already.
+  const o = activeFormObject(), was = o.shape === 'anime';
+  Object.assign(o, { shape: 'anime', pose: FORM_OBJECT_DEFAULTS.pose, rx: 0, ry: 35, rz: 0, sx: 1, sy: 1, sz: 1 });
+  if (!was) Object.assign(o, { finish: 'anime', gloss: FORM_FINISHES.anime.gloss, color: '#f6dccb', hair: o.hair === 'none' ? 'bob' : o.hair });
+  if (forms) formsChanged(); else saveFormScene();
+}
+
+function bindAnimeNote() {
+  const note = el('formAnimeNote');
+  // Its own clicks: the stage under it would take them as a pick or a drag.
+  for (const ev of ['pointerdown', 'pointerup', 'click']) note.addEventListener(ev, e => e.stopPropagation());
+  note.addEventListener('click', e => {
+    const b = e.target.closest('#formAnimeGen');
+    if (b) animeHeadToGenerate(b.dataset.view, b.dataset.hair, b.dataset.colour);
   });
 }
 
@@ -1844,6 +2058,8 @@ const FORM_PANEL = [
   ['Forms', 'objects', []],
   // Shown only while the selected form is a figure - see syncFormsPanel().
   ['Pose', 'pose', []],
+  // Shown only while the selected form is the anime head.
+  ['Hair', 'hair', []],
   ['Placement', null, [['x', 'Left-right', -FORM_PLACE_LIMIT, FORM_PLACE_LIMIT, 0.05], ['z', 'Back-front', -FORM_PLACE_LIMIT, FORM_PLACE_LIMIT, 0.05],
     ['y', 'Lift', 0, FORM_PLACE_LIMIT, 0.05]]],
   ['Proportions', null, [['sx', 'Width', FORM_SCALE_MIN, FORM_SCALE_MAX, 0.05], ['sy', 'Height', FORM_SCALE_MIN, FORM_SCALE_MAX, 0.05], ['sz', 'Depth', FORM_SCALE_MIN, FORM_SCALE_MAX, 0.05]]],
@@ -1877,7 +2093,7 @@ const FORMS_PANEL_KEY = 'refboard.formsPanel.v1';
 /* The panel's tabs: what is being posed, how it is lit, how it is seen, and
    what to do with it. Each group lives on one. */
 const FORM_TABS = [
-  ['object', 'Object', ['Forms', 'Pose', 'Placement', 'Proportions', 'Rotation', 'Surface']],
+  ['object', 'Object', ['Forms', 'Pose', 'Hair', 'Placement', 'Proportions', 'Rotation', 'Surface']],
   ['light', 'Light', ['Light', 'Second light', 'Ambient']],
   ['view', 'View', ['Camera', 'Guides', 'Scene', 'Air']],
   ['use', 'Use', ['Use it', 'Saved scenes']],
@@ -1928,6 +2144,14 @@ function formsPanelHtml() {
         <button class="ghost" type="button" id="formPoseMirror" title="Left and right swapped, as in a mirror - the other half of a contrapposto">Mirror</button>
         <button class="ghost" type="button" id="formPoseReset" title="Back to the rest pose">Reset pose</button>
       </div>`,
+    hair: chips('formHair', Object.entries(HAIR_STYLES), 'hair') +
+      `<div class="chips hair-colours" id="formHairColours">${Object.entries(HAIR_COLOURS).map(([k, hex]) =>
+        `<button class="chip swatch" type="button" data-hair-colour="${hex}" title="${k[0].toUpperCase() + k.slice(1)}" ` +
+        `aria-label="${k} hair" style="--swatch:${hex}"></button>`).join('')}` +
+      `<label class="swatch-own" title="Any other colour"><input type="color" data-k="hairColor" aria-label="Hair colour"></label></div>
+      <div class="chips" id="formHairChars"></div>
+      <div class="count">Locks, not strands: each a pointed ribbon over a mass that hides the scalp. Its light is a
+        ring round the head, broken at each lock - where the hairs lie square to the light; turn the head or move the light to see it slide.</div>`,
     finish: chips('formFinishes', Object.entries(FORM_FINISHES), 'finish', f => f.hint) +
       `<div class="count hidden" id="formCelNote">Flat tones, as anime is coloured: the colour, its shadow, a highlight.
         For the bright edge, turn on the Second light (Light tab) and pick Rim.</div>`,
@@ -1976,6 +2200,29 @@ function formsPanelHtml() {
     `<button type="button" role="tab" data-ftab="${k}">${label}</button>`).join('')}</div>` + groups;
 }
 
+/* Hair colours from your character sheets (js/character.js): each sheet
+   with its hair picked, as a chip - so the 3D head can wear her colour.
+   Read from the store once per visit to the view; a sheet made meanwhile
+   in the Colour studio shows up the next time the view opens. */
+let formHairCharList = null;
+function syncHairChars(o) {
+  const box = el('formHairChars');
+  if (!formHairCharList) {
+    formHairCharList = [];
+    storeItems('characters').then(list => {
+      const hex = rgb => '#' + rgb.map(c => Math.round(c).toString(16).padStart(2, '0')).join('');
+      formHairCharList = Object.values(list || {}).filter(d => d && d.parts && d.parts.hair && d.parts.hair.base)
+        .sort((a, b) => (b.t || 0) - (a.t || 0)).slice(0, 4).map(d => ({ name: d.name, hex: hex(d.parts.hair.base) }));
+      if (formScene && formShapeDef(activeFormObject().shape).face) syncHairChars(activeFormObject());
+    }).catch(() => {});
+  }
+  const html = formHairCharList.map(c => `<button class="chip" type="button" data-hair-char="${c.hex}" ` +
+    `aria-pressed="${c.hex === o.hairColor}" title="The hair colour from ${esc(c.name)}'s character sheet">` +
+    `<i class="dot" style="--swatch:${c.hex}"></i>${esc(c.name)}</button>`).join('');
+  if (box.innerHTML !== html) box.innerHTML = html;
+  box.classList.toggle('hidden', !html || o.hair === 'none');
+}
+
 function syncFormsPanel() {
   const panel = el('formsPanel'), o = activeFormObject();
   for (const inp of panel.querySelectorAll('[data-k]')) {
@@ -1991,9 +2238,18 @@ function syncFormsPanel() {
   // and which scenes are saved all change their count, not just their state.
   el('formObjects').innerHTML = formScene.objects.map((ob, i) =>
     `<button class="chip" type="button" data-obj="${i}" aria-pressed="${i === formScene.active}">${i + 1} · ${esc(formShapeDef(ob.shape).label)}</button>`).join('');
-  const shapes = [...Object.entries(FORM_SHAPES), ...Object.entries(forms.models).map(([k, m]) => [k, { label: m.name }])];
-  el('formShapes').innerHTML = shapes.map(([k, s]) =>
-    `<button class="chip" type="button" data-shape="${k}" aria-pressed="${k === o.shape}">${esc(s.label)}</button>`).join('');
+  // In kinds, not one long row: the forms to shade, the subjects (a figure,
+  // a hand, the heads), cloth, and your own models.
+  const kinds = [
+    ['Forms', Object.entries(FORM_SHAPES).filter(([, s]) => !s.rig && !s.subject && !s.cloth)],
+    ['Figure and head', Object.entries(FORM_SHAPES).filter(([, s]) => s.rig || s.subject)],
+    ['Cloth', Object.entries(FORM_SHAPES).filter(([, s]) => s.cloth)],
+    ['Your models', Object.entries(forms.models).map(([k, m]) => [k, { label: m.name }])],
+  ];
+  const shapesHtml = kinds.filter(([, list]) => list.length).map(([title, list]) =>
+    `<div class="shape-kind"><span>${title}</span>${list.map(([k, s]) =>
+      `<button class="chip" type="button" data-shape="${k}" aria-pressed="${k === o.shape}">${esc(s.label)}</button>`).join('')}</div>`).join('');
+  if (el('formShapes').innerHTML !== shapesHtml) el('formShapes').innerHTML = shapesHtml;
   el('formScenes').innerHTML = loadSavedFormScenes().map((e, i) =>
     `<span class="scene-chip"><button class="chip" type="button" data-scene="${i}">${esc(e.name)}</button><button class="icon-btn" type="button" data-scene-del="${i}" title="Delete this saved scene">&times;</button></span>`).join('');
   el('formRemove').disabled = formScene.objects.length < 2;
@@ -2026,6 +2282,17 @@ function syncFormsPanel() {
       b.setAttribute('aria-pressed', String(JSON.stringify(cleanFormPose(rig.poses[b.dataset.posePreset].pose, rig)) === JSON.stringify(o.pose)));
     }
   }
+
+  const face = !!formShapeDef(o.shape).face;
+  panel.querySelector('[data-group="Hair"]').closest('.fgroup').classList.toggle('hidden', !face);
+  if (face) {
+    for (const b of panel.querySelectorAll('[data-hair]')) b.setAttribute('aria-pressed', String(b.dataset.hair === o.hair));
+    for (const b of panel.querySelectorAll('[data-hair-colour]')) b.setAttribute('aria-pressed', String(b.dataset.hairColour === o.hairColor));
+    el('formHairColours').classList.toggle('hidden', o.hair === 'none');
+    syncHairChars(o);
+  }
+  // On the anime head the form's own colour is its skin.
+  panel.querySelector('[data-k="color"]').previousElementSibling.textContent = face ? 'Skin' : 'Colour';
 
   for (const b of panel.querySelectorAll('[data-finish]')) b.setAttribute('aria-pressed', String(b.dataset.finish === o.finish));
   // Under cel shading Shine no longer blurs a highlight - it sizes one.
@@ -2119,6 +2386,13 @@ function bindFormsPanel() {
       // A figure's joints mean nothing to a hand: a new rig starts at rest.
       if (formShapeDef(o.shape).rig !== formShapeDef(b.dataset.shape).rig) o.pose = {};
       o.shape = b.dataset.shape; formsChanged(); return;
+    }
+    if ((b = hit('[data-hair]'))) { activeFormObject().hair = b.dataset.hair; formsChanged(); return; }
+    if ((b = hit('[data-hair-colour]'))) { activeFormObject().hairColor = b.dataset.hairColour; formsChanged(); return; }
+    if ((b = hit('[data-hair-char]'))) {
+      Object.assign(activeFormObject(), { hairColor: b.dataset.hairChar, hair: activeFormObject().hair === 'none' ? 'bob' : activeFormObject().hair });
+      formsChanged();
+      return;
     }
     if ((b = hit('[data-finish]'))) {
       const o = activeFormObject();
@@ -2557,7 +2831,9 @@ function placeLightAt(clientX, clientY) {
 }
 
 function showForms() {
-  if (forms) { requestFormsRender(); return; }
+  // Character sheets may have changed in the Colour studio meanwhile.
+  formHairCharList = null;
+  if (forms) { syncFormsPanel(); requestFormsRender(); return; }
   if (formsLoading) return;
   const note = el('formsNoGl'), panel = el('formsPanel');
   note.textContent = 'Loading the 3D engine...';
@@ -2571,6 +2847,7 @@ function showForms() {
     panel.innerHTML = formsPanelHtml();
     bindFormsPanel();
     bindFormsOrbit();
+    bindAnimeNote();
     bindFormsKeys();
     bindViewDrill();
     syncFormsPanel();

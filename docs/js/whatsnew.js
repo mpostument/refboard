@@ -15,6 +15,21 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-hair', title: 'Anime hair, in locks',
+    text: "The anime head in 3D has hair: Short, Bob or Long, in locks as anime draws it, with the ring of light round the head - a band broken at each lock, which slides as you turn the head or move the light - and the fringe's shadow on the forehead. In the colours Generate knows, or a character sheet's; Draw it at this angle takes the hair along.",
+    act: 'Show me', run: () => { setView({ kind: 'forms' }); showAnimeHead(); } },
+  { id: 'anime-head-3d', title: 'An anime head in 3D',
+    text: 'In 3D forms, Anime head: a head built the anime way, eyes drawn on, to turn and light. Its face is a flat mask - so the far eye narrows far less than on a real head, and the note under the view gives both numbers at the angle you see it from, with what to watch there. With a ComfyUI, Draw it at this angle makes anime heads from the same side.',
+    act: 'Show me', run: () => { setView({ kind: 'forms' }); showAnimeHead(); } },
+  { id: 'edges', title: 'Edge map',
+    text: 'Over any picture in a session (x, or Workspace > Value): its edges in red where they are hard and blue where they are soft - on dry paper, or wet-in-wet - with how the two are shared out. Hard is how quickly the change happens, not how big it is. Also a step of How to draw it in watercolour, and Generate asks for soft or hard edges.',
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'character', title: 'Character sheet',
+    text: 'Her colours in one place, so the next picture of her matches: in the Colour studio, Character sheet - click the hair, the skin, the eyes, the clothes on a picture; the shadow and the light are worked out the anime way, each with how to mix it from your paints. Colours on a generated picture opens it there, and with a ComfyUI, Generate her draws her again as a turnaround.',
+    act: 'Open it', run: () => openColour('character') },
+  { id: 'whites', title: 'Save the whites',
+    text: 'How to draw it in watercolour has a step before the first wash: the whites the paper must keep. Yellow for the small ones - a catchlight, a streak of shine on the hair - to cover with masking fluid; a blue outline round the big ones, to paint round. In watercolour a white painted over does not come back.',
+    act: 'Show me', run: () => setView({ kind: 'drop' }) },
   { id: 'steps', title: 'How to draw it, step by step',
     text: 'Any picture in the workspace, taken back to the steps it is drawn in, for your medium: big shapes blocked in, the lines, then the first wash and the shadows for watercolour, hatching for ink, tone for pencil - each with what to do. Workspace > Learn, the Steps button on a generated picture, or Ctrl+K "how to draw".',
     act: 'Show me', run: () => setView({ kind: 'drop' }) },

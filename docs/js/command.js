@@ -12,6 +12,7 @@
 const COMMAND_WORDS = {
   btnHead: 'face construction ball thirds loomis anime eyes',
   btnPose: 'skeleton gesture figure body weight',
+  btnEdges: 'hard soft lost edges wet in wet dry watercolour sharp blur',
   btnEyedropper: 'colour color picker sample pipette mix recipe paint watercolour',
   btnCompare: 'overlay my drawing check photo',
   btnAngle: 'measure proportion line',
@@ -26,7 +27,7 @@ const COMMAND_WORDS = {
   'view-dashboard': 'home start',
   'view-all': 'browse grid images search',
   'view-drop': 'open file upload photo check own image video',
-  'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading',
+  'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading hair',
   'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
   'view-train': 'drill practice exercise test',
   btnLibrary: 'folders packs',
@@ -110,6 +111,10 @@ function collectCommands() {
   for (const [id, t] of Object.entries(allThemes())) {
     if (id !== themeId()) out.push({ id: 'theme-' + id, label: 'Theme: ' + t.label, hint: 'Appearance', words: 'colours dark light', run: () => setTheme(id) });
   }
+  if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
+    run: () => openColour('character') });
+  if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes turn angle three-quarter manga model hair ring locks fringe bangs',
+    run: () => { setView({ kind: 'forms' }); showAnimeHead(); } });
   out.push({ id: 'theme-editor', label: 'Theme editor', hint: 'Appearance', words: 'colours customise custom own import export', run: openThemeEditor });
   out.push({ id: 'help', label: 'Help - how everything works', hint: '?', words: 'manual guide', run: toggleHelp });
   out.push({ id: 'tour', label: 'Tour - where things are', hint: 'Help', words: 'intro start new guide walkthrough', run: startTour });

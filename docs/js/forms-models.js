@@ -61,6 +61,8 @@ const LIGHT_SUN = 12;
 const FORM_OBJECT_DEFAULTS = {
   shape: 'cube', sx: 1, sy: 1, sz: 1, rx: 0, ry: 0, rz: 0, x: 0, y: 0, z: 0,
   color: '#d4cec4', finish: 'matte', gloss: 0.05,
+  // The anime head's hair (HAIR_STYLES) and its colour - brown, from HAIR_COLOURS.
+  hair: 'bob', hairColor: '#6e4a37',
   // The figure's joints, { joint: [bend, twist, lean] } in degrees - see
   // FORM_RIG. Frozen, and only ever replaced, never edited in place: objects
   // are copied with a plain spread, which would share it.
@@ -254,6 +256,8 @@ const FORM_SHAPES = {
   // out as one more random shape.
   head:     { label: 'Head',     lines: [12, 8], subject: true, build: T => formHeadGeometry(T, 128, 96) },
   planes:   { label: 'Head planes', lines: [12, 8], subject: true, flat: true, build: T => formHeadGeometry(T, 30, 22) },
+  // Sculpted the anime way, with its face drawn on (formAnimeFace()) - `face`.
+  anime:    { label: 'Anime head', lines: [12, 8], subject: true, face: true, build: T => formAnimeHeadGeometry(T, 128, 96) },
   // Drapery - a cloth simulated once, when first picked (formClothGeometry()),
   // for each of the fold types a drawing book names. `cloth`: seen from both
   // sides, and never dealt out as a random shape.
@@ -503,6 +507,439 @@ function formHeadUv(g) {
     uv[i * 2 + 1] = (pos.getY(i) - b.min.y) / h;
   }
   g.setAttribute('uv', new forms.T.BufferAttribute(uv, 2));
+}
+
+/* ---- the anime head. The same construction as the anime face drawn on a
+   photo (ANIME_HEAD in js/vision.js, in the same units: the ball's radius,
+   y up from the brow, z out of the face), made solid: a big round cranium,
+   the jaw running almost straight to a pointed chin, a nose that is barely
+   there - and the face a flat mask, not the front of a ball. That flatness
+   is the whole lesson: features on a ball wrap round it as it turns, and the
+   far eye all but disappears; on the mask both eyes narrow together, the far
+   one only a little more - which is how anime draws a turned head. */
+function formAnimeHeadGeometry(T, wSeg, hSeg) {
+  const g = new T.SphereGeometry(1, wSeg, hSeg, -Math.PI / 2);
+  const pos = g.attributes.position, A = ANIME_HEAD;
+  const ss = (a, b, t) => { t = Math.min(Math.max((t - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+  const bump = (dx, dy, sx, sy) => Math.exp(-(dx * dx) / (2 * sx * sx) - (dy * dy) / (2 * sy * sy));
+  const chinY = A.jaw[A.jaw.length - 1][1], cheekY = A.eyeY - 0.12;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const r0 = Math.sqrt(Math.max(1e-6, 1 - y * y));
+    const front = ss(-0.25, 0.55, z), low = ss(0.05, -0.95, y);
+    // The cranium: big and round, only a touch narrower than it is deep.
+    x *= 0.9;
+    // The lower face drawn down and forward to the chin...
+    y -= low * front * 0.5;
+    z += low * front * 0.32;
+    // ...and in, to a jaw that is nearly a straight line from the cheek to
+    // the chin: its half-width falls evenly with the height.
+    if (y < cheekY) {
+      const w = 0.12 + 0.73 * (y - chinY) / (cheekY - chinY);
+      const k = Math.min(1, Math.max(w, 0.12) / (0.9 * r0));
+      x *= 1 - front * (1 - k);
+    }
+    // The back tucked in over where the neck would go.
+    z *= 1 - 0.18 * low * (1 - front);
+    // The mask: the front of the face flattened to nearly a plane - eased in
+    // (tanh has slope 1 at the knee), so no crease shows where it starts.
+    if (z > 0.55) z = 0.55 + 0.2 * Math.tanh((z - 0.55) / 0.2);
+    // The nose: a small ridge to a point, no more.
+    z += front * (0.025 * ss(A.eyeY, A.nose, y) * (1 - ss(A.nose, A.nose - 0.06, y)) * bump(x, 0, 0.05, 1)
+      + 0.05 * bump(x, y - A.nose, 0.035, 0.05));
+    // Ears, level with the eyes and the nose.
+    const fx = Math.abs(x);
+    x += Math.sign(x) * 0.06 * bump(z + 0.1, y - (A.eyeY + A.nose) / 2, 0.1, 0.17) * ss(0.55, 0.65, fx);
+    pos.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/* The face, drawn: the part of the head that looks forward, given UVs that
+   are a straight view from the front, and a picture of the features laid on
+   it (animeFaceTexture()). Two layers - the features, lit like the head, and
+   the gleams, which are the light itself and stay bright in any shadow. */
+const ANIME_FACE_BOX = { x0: -0.75, x1: 0.75, y0: -1.3, y1: 0.12 };
+function formAnimeFaceGeometry(T, head) {
+  const B = ANIME_FACE_BOX, pos = head.getAttribute('position'), nor = head.getAttribute('normal');
+  const idx = head.index ? head.index.array : null, n = idx ? idx.length : pos.count;
+  const inBox = v => nor.getZ(v) > 0.2 && pos.getX(v) > B.x0 && pos.getX(v) < B.x1 && pos.getY(v) > B.y0 && pos.getY(v) < B.y1;
+  const P = [], N = [], U = [];
+  for (let t = 0; t < n; t += 3) {
+    const vs = [0, 1, 2].map(k => idx ? idx[t + k] : t + k);
+    if (!vs.every(inBox)) continue;
+    for (const v of vs) {
+      // Just off the surface, so the two never fight over which is in front.
+      const nx = nor.getX(v), ny = nor.getY(v), nz = nor.getZ(v), x = pos.getX(v), y = pos.getY(v);
+      P.push(x + nx * 0.004, y + ny * 0.004, pos.getZ(v) + nz * 0.004);
+      N.push(nx, ny, nz);
+      U.push((x - B.x0) / (B.x1 - B.x0), (y - B.y0) / (B.y1 - B.y0));
+    }
+  }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(P, 3));
+  g.setAttribute('normal', new T.Float32BufferAttribute(N, 3));
+  g.setAttribute('uv', new T.Float32BufferAttribute(U, 2));
+  return g;
+}
+
+// Where a point of the face drawing (x, y) is on the head: the surface
+// straight behind it, from the nearest point of the head that faces forward.
+function formFacePoint(head, x, y) {
+  const pos = head.getAttribute('position'), nor = head.getAttribute('normal');
+  let best = Infinity, z = 0;
+  for (let v = 0; v < pos.count; v++) {
+    if (nor.getZ(v) < 0.2) continue;
+    const d = (pos.getX(v) - x) ** 2 + (pos.getY(v) - y) ** 2;
+    if (d < best) { best = d; z = pos.getZ(v); }
+  }
+  return [x, y, z];
+}
+
+/* The features, drawn onto a canvas that covers ANIME_FACE_BOX. `gleams`:
+   draw only the gleams, on the side the light comes from (side -1 is the
+   face's right, the viewer's left), and leave everything else clear. */
+function animeFaceTexture(gleams, side = -1) {
+  const B = ANIME_FACE_BOX, A = ANIME_HEAD, k = 700;
+  const c = document.createElement('canvas');
+  c.width = Math.round((B.x1 - B.x0) * k); c.height = Math.round((B.y1 - B.y0) * k);
+  const g = c.getContext('2d');
+  const X = x => (x - B.x0) * k, Y = y => (B.y1 - y) * k;
+  const ink = '#2b1d24', iris = '#3f6fb5';
+  g.lineCap = g.lineJoin = 'round';
+  for (const sx of [-1, 1]) {
+    const ex = sx * A.eyeX, ey = A.eyeY;
+    if (gleams) {
+      // One light, so the gleam is on the same side in both eyes: a big one
+      // high toward the light, a small one low on the other side.
+      g.fillStyle = '#fff';
+      g.beginPath(); g.ellipse(X(ex + side * 0.035), Y(ey + 0.05), 0.03 * k, 0.036 * k, 0, 0, 7); g.fill();
+      g.beginPath(); g.arc(X(ex - side * 0.03), Y(ey - 0.07), 0.013 * k, 0, 7); g.fill();
+      continue;
+    }
+    // t = 0 at the outer corner, π at the inner one - as animeFace() draws it.
+    const lid = (a, b, t) => [X(ex + sx * a * Math.cos(t)), Y(ey + b * Math.sin(t))];
+    const eye = () => {
+      g.beginPath();
+      for (let i = 0; i <= 24; i++) g.lineTo(...lid(A.eyeA, A.eyeB * 0.75, Math.PI * i / 24));
+      for (let i = 0; i <= 24; i++) g.lineTo(...lid(A.eyeA * 0.95, A.eyeB * 0.9, -Math.PI + Math.PI * i / 24));
+      g.closePath();
+    };
+    // The white, and inside it the iris - tall, its top under the lash
+    // line, darker there where the lashes shade it - and the pupil.
+    g.save();
+    eye(); g.fillStyle = '#fbf8f6'; g.fill(); g.clip();
+    const top = Y(ey + A.irisB), grad = g.createLinearGradient(0, top, 0, Y(ey - A.irisB));
+    grad.addColorStop(0, '#1d2f5a'); grad.addColorStop(0.55, iris); grad.addColorStop(1, '#8fc0ee');
+    g.fillStyle = grad;
+    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.01), A.irisA * k, A.irisB * k, 0, 0, 7); g.fill();
+    g.fillStyle = '#16152a';
+    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.005), A.irisA * 0.45 * k, A.irisB * 0.5 * k, 0, 0, 7); g.fill();
+    g.strokeStyle = '#1d2f5a'; g.lineWidth = 0.008 * k;
+    g.beginPath(); g.ellipse(X(ex), Y(ey - 0.01), A.irisA * k, A.irisB * k, 0, 0, 7); g.stroke();
+    g.restore();
+    // The upper lash line - the heaviest line of the face: thick at the
+    // outer corner, thinning to the inner, flicked out and down past the end.
+    g.fillStyle = ink;
+    g.beginPath();
+    const up = [], th = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = Math.PI * i / 24;
+      up.push(lid(A.eyeA, A.eyeB * 0.75, t));
+      th.push((0.05 - 0.035 * i / 24) * k);
+    }
+    up.forEach(p => g.lineTo(p[0], p[1]));
+    for (let i = 24; i >= 0; i--) {
+      const t = Math.PI * i / 24, [px, py] = up[i];
+      // Outward from the eye's middle.
+      const nx = sx * Math.cos(t) * A.eyeB * 0.75, ny = -Math.sin(t) * A.eyeA, l = Math.hypot(nx, ny) || 1;
+      g.lineTo(px + nx / l * th[i], py + ny / l * th[i]);
+    }
+    g.closePath(); g.fill();
+    g.beginPath();
+    const o = lid(A.eyeA, 0, 0);
+    g.moveTo(o[0], o[1] - 0.04 * k); g.lineTo(X(ex + sx * (A.eyeA + 0.06)), Y(ey - 0.05)); g.lineTo(o[0], o[1] + 0.005 * k);
+    g.closePath(); g.fill();
+    // The lower lid: a short, light stroke on the outer half.
+    g.strokeStyle = ink; g.lineWidth = 0.009 * k; g.globalAlpha = 0.7;
+    g.beginPath();
+    for (let i = 0; i <= 10; i++) g.lineTo(...lid(A.eyeA * 0.95, A.eyeB * 0.9, -0.12 * Math.PI - 0.43 * Math.PI * i / 10));
+    g.stroke(); g.globalAlpha = 1;
+    // The brow: a thin arc well above the eye.
+    g.lineWidth = 0.014 * k;
+    g.beginPath();
+    for (let i = 0; i <= 12; i++) {
+      const u = i / 12;
+      g.lineTo(X(sx * (0.17 + 0.36 * u)), Y(ey + 0.29 + 0.035 * Math.sin(Math.PI * (0.35 + 0.65 * u))));
+    }
+    g.stroke();
+  }
+  if (!gleams) {
+    // The nose: a small mark under its tip. The mouth: a short line.
+    g.strokeStyle = ink; g.lineWidth = 0.011 * k;
+    g.beginPath(); g.moveTo(X(-0.02), Y(A.nose - 0.02)); g.lineTo(X(0.015), Y(A.nose - 0.035)); g.stroke();
+    g.lineWidth = 0.013 * k;
+    g.beginPath();
+    for (let i = 0; i <= 10; i++) { const t = -0.1 + 0.2 * i / 10; g.lineTo(X(t), Y(A.mouth + 0.25 * t * t)); }
+    g.stroke();
+  }
+  return c;
+}
+
+// Shared by every anime head in the scene: the face's geometry, its two
+// textures (the gleam's in two, one for each side a light can come from),
+// and the points the angle note measures.
+function formAnimeFace() {
+  const F = forms, T = F.T;
+  if (F.animeFace) return F.animeFace;
+  const head = formGeometry('anime');
+  const tex = c => { const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t; };
+  const mat = (map, lit) => new (lit ? T.MeshStandardMaterial : T.MeshBasicMaterial)({
+    map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    ...(lit ? { roughness: 0.85, metalness: 0 } : {}) });
+  const A = ANIME_HEAD, corner = sx => [sx * (A.eyeX + A.eyeA), sx * (A.eyeX - A.eyeA)];
+  const marks = {};
+  for (const [name, sx] of [['right', -1], ['left', 1]]) {
+    const [outer, inner] = corner(sx);
+    marks[name] = [formFacePoint(head, outer, A.eyeY), formFacePoint(head, inner, A.eyeY)];
+    // The same eye on Loomis's ball, for the comparison.
+    const ball = x => [x, A.eyeY, Math.sqrt(1 - x * x - A.eyeY * A.eyeY)];
+    marks[name + 'Ball'] = [ball(outer), ball(inner)];
+  }
+  return (F.animeFace = {
+    geo: formAnimeFaceGeometry(T, head),
+    features: mat(tex(animeFaceTexture(false)), true),
+    gleam: { '-1': mat(tex(animeFaceTexture(true, -1)), false), '1': mat(tex(animeFaceTexture(true, 1)), false) },
+    marks,
+  });
+}
+
+/* ---- the anime head's hair, in clumps. Anime draws hair as a few big
+   locks, each a pointed ribbon with some thickness, over a mass that hides
+   the scalp - not as strands. Each lock is swept down a path: from its root
+   near the crown it lies on the skull, and past the widest point it has
+   met (the back of the head, an ear, a cheek) it hangs straight, the way
+   hair drapes. Its highlight is the ring anime paints - see the ring in
+   formHairMaterial() (js/forms.js), which reads `hairT` and `hairShift`. */
+const HAIR_STYLES = {
+  none:  { label: 'None' },
+  short: { label: 'Short', side: -0.5, back: -0.55, flare: 0.04, under: 0, ahoge: true },
+  bob:   { label: 'Bob', side: -1.1, back: -1.05, flare: 0.1, under: 0.14 },
+  long:  { label: 'Long', side: -1.95, back: -2.15, flare: 0.16, under: 0.05 },
+};
+// Named as Generate's Hair colour row names them, so the head's hair can be
+// asked for there by name.
+const HAIR_COLOURS = {
+  black: '#2d2a36', brown: '#6e4a37', blonde: '#ecc87e', red: '#b9453b', orange: '#e38a45', pink: '#f2a7c0',
+  purple: '#8b6cc2', silver: '#c8ccd8', white: '#f2efe8', blue: '#5073c6', green: '#62a172',
+};
+// The named colour nearest to any other - from a character sheet, say - in
+// OKLab, where near means looks near.
+function hairColourName(hex) {
+  const lab = rgb => { const [L, C, h] = rgbToOklch(rgb); return [L, C * Math.cos(h * THREE_DEG), C * Math.sin(h * THREE_DEG)]; };
+  const a = lab(hexToRgb(hex));
+  let best = 'brown', d = Infinity;
+  for (const [name, h] of Object.entries(HAIR_COLOURS)) {
+    const b = lab(hexToRgb(h)), e = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+    if (e < d) { d = e; best = name; }
+  }
+  return best;
+}
+
+/* How far the head reaches from its upright axis, at any angle round it
+   and height: the most of any of its points in each of a grid of cells,
+   looked up between cells. Gaps in the grid (where the jaw stretched the
+   sphere's rows apart) are filled from the cells above and below. */
+function formHeadReach(head) {
+  const NA = 72, NY = 64, Y0 = -1.5, Y1 = 1.02, pos = head.getAttribute('position');
+  const R = new Float32Array(NA * NY).fill(-1);
+  for (let v = 0; v < pos.count; v++) {
+    const x = pos.getX(v), y = pos.getY(v), z = pos.getZ(v);
+    const i = Math.round((Math.atan2(x, z) + Math.PI) / (2 * Math.PI) * NA) % NA;
+    const j = Math.round((y - Y0) / (Y1 - Y0) * (NY - 1));
+    if (j >= 0 && j < NY) R[j * NA + i] = Math.max(R[j * NA + i], Math.hypot(x, z));
+  }
+  for (let i = 0; i < NA; i++) {
+    for (let j = 0; j < NY; j++) {
+      if (R[j * NA + i] >= 0) continue;
+      let a = j - 1, b = j + 1;
+      while (a >= 0 && R[a * NA + i] < 0) a--;
+      while (b < NY && R[b * NA + i] < 0) b++;
+      const ra = a >= 0 ? R[a * NA + i] : 0, rb = b < NY ? R[b * NA + i] : 0;
+      R[j * NA + i] = a < 0 ? rb : b >= NY ? ra : ra + (rb - ra) * (j - a) / (b - a);
+    }
+  }
+  return (az, y) => {
+    const fi = ((az + Math.PI) / (2 * Math.PI) * NA % NA + NA) % NA;
+    const fj = Math.min(Math.max((y - Y0) / (Y1 - Y0) * (NY - 1), 0), NY - 1);
+    const i0 = Math.floor(fi), i1 = (i0 + 1) % NA, j0 = Math.floor(fj), j1 = Math.min(j0 + 1, NY - 1);
+    const u = fi - i0, t = fj - j0, at = (i, j) => R[j * NA + i];
+    return (at(i0, j0) * (1 - u) + at(i1, j0) * u) * (1 - t) + (at(i0, j1) * (1 - u) + at(i1, j1) * u) * t;
+  };
+}
+
+// Out from the head at a point on or over it: from its middle above the
+// ears, straight out sideways below - where the hair hangs.
+const hairOut = (T, p) => new T.Vector3(p.x, Math.max(p.y, 0), p.z).normalize();
+
+/* The locks of one style, as { az (degrees round from the face, + to the
+   head's left), root, tip (heights), w (half-width), curl (how far the tip
+   swings round, degrees), layer (how far over the others it lies) } - or,
+   for the one that stands up, `path`: the points it runs through. */
+function hairLocks(style) {
+  const S = HAIR_STYLES[style], locks = [];
+  // Seeded, so a style is always the same hair.
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  // The fringe, from the crown over the forehead. The tips stop above the
+  // eyes where the eyes are, reach between them in the middle, and the two
+  // outermost frame the face down to the cheek.
+  const fringe = [[-62, -0.62], [-46, -0.14], [-32, -0.1], [-19, -0.16], [-7, -0.3], [6, -0.24], [18, -0.12],
+    [31, -0.16], [45, -0.08], [62, -0.62]];
+  for (const [az, tip] of fringe) {
+    locks.push({ az, root: 0.97, tip: style === 'short' && Math.abs(az) > 55 ? -0.3 : tip, w: 0.16 + rnd() * 0.04,
+      curl: -Math.sign(az) * (4 + rnd() * 6), layer: 0.085 + rnd() * 0.012, under: 0.05 });
+  }
+  // The sides, over the ears.
+  for (const sx of [-1, 1]) {
+    for (const [az, dy] of [[72, 0], [86, -0.1], [100, 0.02]]) {
+      locks.push({ az: sx * az, root: 0.9, tip: S.side + dy + rnd() * 0.1, w: 0.23, curl: sx * (6 + rnd() * 6),
+        layer: 0.065 + rnd() * 0.012, flare: S.flare, under: S.under });
+    }
+  }
+  // The back, fanned from the crown.
+  for (let k = 0; k < 13; k++) {
+    const az = 112 + k * 136 / 12;
+    locks.push({ az, root: 0.92, tip: S.back + (rnd() - 0.5) * 0.18 - (k % 2) * 0.08, w: 0.25, curl: (rnd() - 0.5) * 16,
+      layer: 0.06 + (k % 2) * 0.014, flare: S.flare, under: S.under });
+  }
+  // The crown: short locks all round the top, over the roots of the rest -
+  // what gives the top of the head its layered, pointed outline.
+  for (let k = 0; k < 10; k++) {
+    const az = -162 + k * 36;
+    locks.push({ az, root: 1, tip: 0.3 + rnd() * 0.25, w: 0.25, curl: (rnd() - 0.5) * 20, layer: 0.1 });
+  }
+  // The ahoge: the one lock that stands up off the crown.
+  if (S.ahoge) locks.push({ path: [[0, 0.98, -0.05], [0.02, 1.18, 0.02], [0.08, 1.3, 0.2], [0.16, 1.24, 0.38]], w: 0.06 });
+  return locks;
+}
+
+function formAnimeHairGeometry(T, style) {
+  const head = formGeometry('anime'), reach = formHeadReach(head);
+  const P = [], N = [], TA = [], SH = [], U = [], I = [];
+  const K = 9, M = 30; // round each lock, and along it
+  let seed = 3;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+  /* One lock swept along `pts` (root to tip): a lens-shaped cross-section,
+     flatter against the head, narrowing to a point at each end. hairShift
+     is the ring's offset: a little per lock, more toward its edges - which
+     breaks the ring into the sawtooth anime draws. */
+  const sweep = (pts, w0, shift0) => {
+    const base = P.length / 3, n = pts.length;
+    for (let s = 0; s < n; s++) {
+      const t = s / (n - 1), p = pts[s];
+      const tan = pts[Math.min(s + 1, n - 1)].clone().sub(pts[Math.max(s - 1, 0)]).normalize();
+      const side = new T.Vector3().crossVectors(tan, hairOut(T, p)).normalize();
+      const out = new T.Vector3().crossVectors(side, tan).normalize();
+      const w = Math.max(w0 * Math.min(1, t / 0.12) * (1 - t ** 1.8), 0.002), h = w * 0.42;
+      for (let k = 0; k < K; k++) {
+        const a = 2 * Math.PI * k / K, c = Math.cos(a), sn = Math.sin(a);
+        // The side against the head is flatter than the side away from it.
+        const q = p.clone().addScaledVector(side, w * c).addScaledVector(out, h * sn * (sn < 0 ? 0.5 : 1));
+        P.push(q.x, q.y, q.z);
+        TA.push(tan.x, tan.y, tan.z);
+        SH.push(shift0 + 0.22 * Math.abs(c));
+        U.push(k / K, t);
+      }
+    }
+    for (let s = 0; s < n - 1; s++) for (let k = 0; k < K; k++) {
+      const a = base + s * K + k, b = base + s * K + (k + 1) % K, c = a + K, d = b + K;
+      I.push(a, c, b, b, c, d);
+    }
+  };
+
+  /* A lock's path: down from its root, lying on the head until it passes
+     the widest point so far, then hanging - flaring out a little and, for
+     a bob, turning under at the ends. Worked out finely, then spaced evenly
+     along its length so the crown's steep start gets as many rings as the
+     long fall. */
+  const path = L => {
+    const raw = [];
+    let most = 0;
+    for (let k = 0; k <= 200; k++) {
+      const t = k / 200, y = L.root + (L.tip - L.root) * t;
+      const az = (L.az + (L.curl || 0) * t * t) * THREE_DEG;
+      const r = reach(az, y);
+      most = Math.max(most, r);
+      // Below the cheek the hair is off the head: it flares, then turns under.
+      const hang = Math.max(0, -0.35 - y);
+      const off = L.layer + (L.flare || 0) * Math.min(hang, 0.8) - (L.under || 0) * t ** 6;
+      const p0 = new T.Vector3(most * Math.sin(az), y, most * Math.cos(az));
+      raw.push(p0.addScaledVector(hairOut(T, p0), Math.max(off, 0.012)));
+    }
+    return spaced(raw);
+  };
+  const spaced = raw => {
+    const len = [0];
+    for (let k = 1; k < raw.length; k++) len.push(len[k - 1] + raw[k].distanceTo(raw[k - 1]));
+    const out = [];
+    for (let s = 0, k = 0; s < M; s++) {
+      const want = len[len.length - 1] * s / (M - 1);
+      while (k < raw.length - 2 && len[k + 1] < want) k++;
+      const f = (want - len[k]) / Math.max(len[k + 1] - len[k], 1e-9);
+      out.push(raw[k].clone().lerp(raw[k + 1], Math.min(Math.max(f, 0), 1)));
+    }
+    return out;
+  };
+
+  for (const L of hairLocks(style)) {
+    const pts = L.path
+      ? spaced(new T.CatmullRomCurve3(L.path.map(q => new T.Vector3(...q))).getPoints(200))
+      : path(L);
+    sweep(pts, L.w, (rnd() - 0.5) * 0.16);
+  }
+
+  /* The mass under the locks: the scalp, a little out from the head, down
+     to the hairline - high on the forehead, over the ears at the sides,
+     the nape at the back. Its "strands" run down it, like the locks'. */
+  const A = 96, J = 30, base = P.length / 3, S = HAIR_STYLES[style];
+  const line = az => {
+    const c = Math.cos(az);
+    return c > 0 ? -0.32 + 0.82 * c ** 1.5 : -0.32 + (S.back < -1 ? -0.5 : -0.3) * -c;
+  };
+  for (let i = 0; i < A; i++) {
+    const az = 2 * Math.PI * i / A - Math.PI, bottom = Math.acos(Math.max(-1, line(az)));
+    let most = 0;
+    const col = [];
+    for (let j = 0; j < J; j++) {
+      const y = Math.cos(bottom * j / (J - 1));
+      most = Math.max(most, reach(az, y));
+      const p0 = new T.Vector3(most * Math.sin(az), y, most * Math.cos(az));
+      col.push(p0.addScaledVector(hairOut(T, p0), 0.05));
+    }
+    col.forEach((q, j) => {
+      const d = col[Math.min(j + 1, J - 1)].clone().sub(col[Math.max(j - 1, 0)]).normalize();
+      P.push(q.x, q.y, q.z);
+      TA.push(d.x, d.y, d.z);
+      SH.push(0);
+      U.push(i / A, j / (J - 1));
+    });
+  }
+  for (let i = 0; i < A; i++) for (let j = 0; j < J - 1; j++) {
+    const a = base + i * J + j, b = base + ((i + 1) % A) * J + j;
+    I.push(a, a + 1, b, b, a + 1, b + 1);
+  }
+
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(P, 3));
+  g.setAttribute('uv', new T.Float32BufferAttribute(U, 2));
+  g.setAttribute('hairT', new T.Float32BufferAttribute(TA, 3));
+  g.setAttribute('hairShift', new T.Float32BufferAttribute(SH, 1));
+  g.setIndex(I);
+  g.computeVertexNormals();
+  return g;
 }
 
 /* ---- the figure. A wooden mannequin, about eight heads tall (4 units -

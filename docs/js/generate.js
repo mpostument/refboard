@@ -18,8 +18,8 @@ const GEN_KEY = 'refboard.generate.v1';
 
 // Each choice: its label, the words it files the picture under, its tags for
 // the model, and what it keeps out (avoid - the negative prompt); 'any'
-// leaves it to the model. A row with `for` is shown,
-// and used, only for those subjects.
+// leaves it to the model. A row with `for` is shown, and used, only for
+// those subjects; one with `when`, only when the other choices say so.
 const ANY = { id: 'any', label: 'Any', tags: '' };
 const PERSON = ['character'], OUTDOORS = ['landscape', 'building'];
 const GEN_CHOICES = [
@@ -52,14 +52,21 @@ const GEN_CHOICES = [
   ] },
   { id: 'colour', label: 'Hair colour', for: PERSON, options: [
     ANY,
-    ...['black', 'brown', 'blonde', 'red', 'pink', 'silver', 'blue', 'green']
+    ...['black', 'brown', 'blonde', 'red', 'orange', 'pink', 'purple', 'silver', 'white', 'blue', 'green']
       .map(c => ({ id: c, label: c[0].toUpperCase() + c.slice(1), tags: c + ' hair', words: c + ' hair' })),
+  ] },
+  { id: 'eyes', label: 'Eyes', for: PERSON, options: [
+    ANY,
+    ...['blue', 'green', 'brown', 'red', 'purple', 'yellow', 'pink', 'aqua', 'grey', 'black']
+      .map(c => ({ id: c, label: c[0].toUpperCase() + c.slice(1), tags: c + ' eyes', words: c + ' eyes' })),
   ] },
   { id: 'framing', label: 'How much', for: PERSON, options: [
     { id: 'head', label: 'Head', tags: 'portrait, close-up', words: 'head' },
     { id: 'bust', label: 'Bust', tags: 'upper body', words: 'bust' },
     { id: 'half', label: 'Half figure', tags: 'cowboy shot', words: 'half figure' },
     { id: 'full', label: 'Whole figure', tags: 'full body', words: 'whole figure' },
+    // The model sheet an animator draws from: one character, turned round.
+    { id: 'sheet', label: 'Turnaround', tags: 'reference sheet, multiple views, turnaround, full body, standing', words: 'turnaround' },
   ] },
   { id: 'view', label: 'From', for: PERSON, options: [
     { id: 'front', label: 'Front', tags: 'straight-on, looking at viewer', words: 'front' },
@@ -162,6 +169,14 @@ const GEN_CHOICES = [
       tags: 'monochrome, greyscale, sketch, graphite (medium), hatching (texture), traditional media',
       avoid: 'color, digital' },
   ] },
+  // Watercolour's own question - are the colours run together wet, or laid
+  // crisp on dry paper: a reference to practise the one or the other from.
+  { id: 'edges', label: 'Edges', when: ch => ch.medium === 'watercolour', options: [
+    ANY,
+    { id: 'soft', label: 'Soft - wet-in-wet', tags: 'wet-on-wet, color bleeding, soft edges, blurry edges', words: 'soft edges' },
+    { id: 'hard', label: 'Hard - on dry paper', tags: 'hard edges, sharp edges, layered glazing, flat wash', words: 'hard edges',
+      avoid: 'blurry, color bleeding' },
+  ] },
   // Simple, the default: a few big shapes to copy, not a finished
   // illustration to be daunted by.
   { id: 'detail', label: 'Detail', options: [
@@ -176,13 +191,13 @@ const GEN_CHOICES = [
   ] },
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', framing: 'bust',
   view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', detail: 'simple',
+  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', detail: 'simple',
   ground: 'plain' };
 
-// Whether a row is asked, and used, for this subject.
-const genApplies = (c, subject) => !c.for || c.for.includes(subject);
+// Whether a row is asked, and used, with these choices.
+const genApplies = (c, ch) => (!c.for || c.for.includes(ch.subject)) && (!c.when || c.when(ch));
 
 /* The choices as the model's prompt, what to keep out of it, the plain words
    the picture is filed under, and its shape: tall for a figure, wide for a landscape or a
@@ -193,7 +208,7 @@ function genPrompt(choices, extra = '') {
   const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
   const tags = [], words = [], avoid = [];
   for (const c of GEN_CHOICES) {
-    if (!genApplies(c, subject)) continue;
+    if (!genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })) continue;
     const o = c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id]);
     if (o.tags) tags.push(o.tags);
     if (o.avoid) avoid.push(o.avoid);
@@ -201,7 +216,7 @@ function genPrompt(choices, extra = '') {
     if (w) words.push(w);
   }
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
-  const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : 'portrait')
+  const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
   return { prompt: [...tags, ...more].join(', '), avoid: avoid.join(', '), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
@@ -227,10 +242,11 @@ function renderGenerate() {
     'the Generated group of the Uploads pack in the library, tagged with these choices.';
 }
 
-// Only the rows the subject asks: a landscape has no hair colour.
+// Only the rows the choices ask: a landscape has no hair colour, ink no
+// wet-in-wet.
 function syncGenRows() {
   for (const c of GEN_CHOICES)
-    el('genChoices').querySelector(`[data-row="${c.id}"]`).classList.toggle('hidden', !genApplies(c, genChoices.subject));
+    el('genChoices').querySelector(`[data-row="${c.id}"]`).classList.toggle('hidden', !genApplies(c, genChoices));
 }
 
 async function showGenerate() {
@@ -246,7 +262,8 @@ function renderGenResults(list) {
     const li = document.createElement('li');
     li.innerHTML = `<button type="button" class="gen-open" title="${esc((u.tags || []).join(', '))}" ` +
       `aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
-      `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>`;
+      `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>` +
+      `<button type="button" class="gen-colours" aria-label="Character sheet from ${esc(u.name)}" title="Her colours, with how to mix them - the Colour studio's Character sheet">Colours</button>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
     li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-steps').addEventListener('click', async () => {
@@ -254,6 +271,10 @@ function renderGenResults(list) {
       if (!url) return;
       stepsKnown.set(url, u.tags || []);
       openSteps(url);
+    });
+    li.querySelector('.gen-colours').addEventListener('click', async () => {
+      const url = await storeFileUrl(u.file);
+      if (url) openColour('character', url);
     });
     host.appendChild(li);
   }
@@ -305,7 +326,7 @@ async function initGenerate() {
     saveGenChoices();
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
-    if (b.dataset.gen === 'subject') syncGenRows();
+    if (b.dataset.gen === 'subject' || b.dataset.gen === 'medium') syncGenRows();
   });
   el('genGo').addEventListener('click', runGenerate);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });
