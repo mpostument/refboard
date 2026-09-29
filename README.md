@@ -124,6 +124,17 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 
 ## Features
 
+- **Palettes** - a palette generator (Prepare > Palettes): a row of five
+  colours, Space for a new one, a lock on each to keep it while the rest
+  change, drag or the arrow keys to reorder, tints and shades to pick a
+  lighter or darker one, Undo, copy as hex, and palettes saved. The colours
+  follow a harmony - analogous, complementary, split, triadic, one hue - in
+  OKLCH, and are spread over the values, a light, a dark and steps between,
+  mostly muted with one allowed to sing. Under each, how to mix it from
+  your paints in your medium (the same Kubelka-Munk and Beer-Lambert
+  recipes as the eyedropper's); *Only what my paints mix* pulls every new
+  colour in along its hue to what those paints can reach. A picture's own
+  palette comes from the Colour studio's To the palette generator.
 - **How to draw it** - any picture in the workspace (Learn tab, Ctrl+K, or
   Steps on a generated one) taken back to the steps it is drawn in, for the
   medium: the big shapes blocked in with a few straight lines, the lines,
@@ -460,7 +471,7 @@ src/Refboard/
                               a file may use at load time only what earlier files
                               define). Opens straight from disk too - classic
                               scripts, unlike modules, load over file://. The
-                              3D view, the Colour studio and the backup load
+                              3D view, the Colour studio, Palettes and the backup load
                               when first opened: see loadSection() in core.js.
 docs/
   index.html               - GitHub Pages source (Settings > Pages > main /docs).

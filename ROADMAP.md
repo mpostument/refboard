@@ -504,15 +504,13 @@ Any medium:
   half-tone, shadow and reflected light.
 - **Temperature map.** Over the reference: which areas are warm, which are
   cool, and where the temperature turns between light and shadow.
-- **Palette generator.** Our own take on coolors.co (the user's ask,
-  2026-09-29): a row of five swatches full-width, Space for a new palette,
-  a lock on each swatch to keep it while the rest change, drag to reorder,
-  a swatch's tints and shades, the harmony it follows (analogous,
-  complementary, triadic, split) and hex/name to copy. Ours goes further
-  where refboard can: each colour's recipe for your own paints, pencils
-  and markers, a switch to generate only within their gamut, a palette
-  taken from a reference, and a palette kept to a board or a Generate
-  prompt. Our own code and look - no Coolors name or design copied.
+- **Palette generator, the rest.** In place (`js/palette.js`, Prepare >
+  Palettes): the row, Space, locks, reordering, tints and shades, the
+  harmonies, a value structure, recipes for your paints, Only what my
+  paints mix, saved palettes and a picture's palette from the Colour
+  studio. Still to come: a palette kept to a board or a project, sent to a
+  Generate prompt as its colours, and recipes for pencils and markers by
+  their own names once My materials lists them.
 
 - **The best limited palette for a reference.** Choose "3 paints" or
   "5 markers": from your own materials, the ones that cover the most of

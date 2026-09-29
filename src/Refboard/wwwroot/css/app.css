@@ -1229,6 +1229,76 @@ section { margin-bottom: 20px; }
 .col-mix summary .mix-row { display: inline-flex; }
 .col-mix[open] summary em::after { content: ''; }
 #colValueNote { margin-top: 8px; }
+#colToPalette { margin-top: 10px; }
+
+/* Palettes - see js/palette.js. The row of colours the whole width, each
+   one's tools at its top (dim until pointed at - on a touch screen always
+   there), its name at the bottom, and its recipe under it. */
+.pg-bar { gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; max-width: 1300px; }
+.pg-bar .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
+.pg-space kbd { font: inherit; padding: 0 5px; border: 1px solid var(--line-hi); border-radius: 4px; }
+.pg-row { display: flex; gap: 6px; max-width: 1300px; }
+.pg-sw { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pg-sw.dragging { opacity: .4; }
+.pg-colour {
+  position: relative; height: clamp(240px, 48vh, 480px); border-radius: 10px; background: var(--c);
+  border: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; justify-content: space-between;
+  padding: 10px 8px; box-sizing: border-box; overflow: hidden; cursor: grab;
+}
+.pg-sw.light .pg-colour { color: #fff; --ink-soft: rgba(255,255,255,.72); --tool: rgba(255,255,255,.14); }
+.pg-sw.dark .pg-colour { color: #111; --ink-soft: rgba(0,0,0,.62); --tool: rgba(0,0,0,.1); }
+.pg-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.pg-tool {
+  width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 7px;
+  background: transparent; color: inherit; cursor: pointer; opacity: .5; transition: opacity .12s, background .12s;
+}
+.pg-tool .icon { width: 18px; height: 18px; }
+.pg-colour:hover .pg-tool, .pg-tool:focus-visible, .pg-tool[aria-pressed="true"] { opacity: 1; }
+.pg-tool:hover, .pg-tool[aria-pressed="true"] { background: var(--tool); }
+.pg-move { cursor: grab; }
+@media (hover: none) { .pg-tool { opacity: .85; } }
+.pg-label { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; font-size: 12px; color: var(--ink-soft); }
+.pg-hex {
+  font: 600 clamp(14px, 1.6vw, 20px)/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; text-transform: uppercase;
+  color: inherit; background: none; border: 0; border-radius: 6px; padding: 2px 6px; cursor: copy;
+}
+.pg-hex:hover { background: var(--tool); }
+.pg-shades { position: absolute; inset: 52px 0 0; display: flex; flex-direction: column; z-index: 1; }
+.pg-shade { flex: 1; border: 0; font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; text-transform: uppercase; cursor: pointer; opacity: 1; }
+.pg-shade:hover, .pg-shade:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
+.pg-shade.on { font-weight: 700; }
+.pg-shade.on::before { content: 'B8  '; }
+/* The tools stay above the shades, so the list can be closed from them. */
+.pg-shades ~ .pg-label { visibility: hidden; }
+.pg-tools { position: relative; z-index: 2; }
+.pg-mix { font-size: 12px; min-height: 2.6em; padding: 0 2px; }
+.pg-mix .mix-row { align-items: flex-start; }
+.pg-mix .mix-row i { margin-top: 1px; }
+.pg-mix .mix-row em { white-space: nowrap; }
+.pg-mix summary { cursor: pointer; list-style: none; }
+.pg-mix summary::-webkit-details-marker { display: none; }
+.pg-mix summary .mix-row { display: inline-flex; }
+.pg-mix details .mix-row { margin-top: 3px; }
+.pg-under { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px 28px; max-width: 1300px; margin-top: 8px; }
+.pg-under h4 { margin: 14px 0 6px; font-size: 11px; color: var(--dim); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+.pg-under .chips + .chips { margin-top: 6px; }
+.pg-under .count { margin-top: 6px; }
+#pgFromPicture { margin-top: 8px; }
+.pg-saved-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.pg-strip { flex: 1; display: flex; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: pointer; background: none; }
+.pg-strip i { flex: 1; }
+.pg-strip:hover { border-color: var(--line-hi); }
+.pg-saved-row .ghost { width: 30px; height: 28px; padding: 0; display: grid; place-items: center; }
+.pg-saved-row .ghost .icon { width: 15px; height: 15px; }
+/* A phone: the colours one under another, each a band. */
+@media (max-width: 700px) {
+  .pg-row { flex-direction: column; }
+  .pg-colour { height: 128px; flex-direction: row; align-items: center; }
+  .pg-tools { order: 2; flex-wrap: nowrap; }
+  .pg-shades { inset: 0 150px 0 0; }
+  .pg-label { align-items: flex-start; text-align: left; }
+  .pg-under { grid-template-columns: 1fr; }
+}
 .train-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; max-width: 1100px; }
 .train-card {
   display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto 1fr auto; gap: 3px 12px;

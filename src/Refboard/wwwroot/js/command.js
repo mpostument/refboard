@@ -29,6 +29,7 @@ const COMMAND_WORDS = {
   'view-drop': 'open file upload photo check own image video',
   'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading hair',
   'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
+  'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex',
   'view-train': 'drill practice exercise test',
   btnLibrary: 'folders packs',
   btnPaint: 'session timed timer draw go begin',
