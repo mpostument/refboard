@@ -36,9 +36,10 @@ test('Loomis by default; Anime from the note, redrawn at once and kept', async (
 
   await page.click('#poseNote [data-head-style="anime"]');
   await expect(svg.locator('.third')).toHaveCount(0);
-  // Both eyes' lash lines, the iris of each, the gleams; the frame kept.
+  // Both eyes' lash lines, the iris of each, the gleams (a big and a small
+  // in each, in the TV anime eye); the frame kept.
   await expect(svg.locator('path.lash').first()).toBeAttached();
-  await expect(svg.locator('circle.gleam')).toHaveCount(2);
+  await expect(svg.locator('circle.gleam')).toHaveCount(4);
   await expect(svg.locator('.side').first()).toBeAttached();
   await expect(page.locator('#poseNote')).toContainText('Pink');
   await expect(page.locator('#poseNote [data-head-style="anime"]')).toHaveAttribute('aria-pressed', 'true');

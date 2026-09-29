@@ -44,7 +44,7 @@ test('its face is drawn on, and the gleam follows the light', async ({ page }) =
       formScene.objects = [{ ...FORM_OBJECT_DEFAULTS, shape: 'anime' }];
       formScene.active = 0;
       formsRender(formScene, 320, 240);
-      const f = forms.meshes[0].userData.face, g = formAnimeFace().gleam;
+      const f = forms.meshes[0].userData.face, g = f.userData.mats.gleam;
       return f.userData.gleam.material === g['-1'] ? -1 : f.userData.gleam.material === g['1'] ? 1 : 0;
     };
     const out = [gleamFor(-60), gleamFor(60)];
@@ -130,7 +130,7 @@ test('the hair panel: styles, named colours, a character sheet\'s colour, and Sk
   await openApp(page);
   await page.evaluate(() => storePutItem('characters', 'c1', { name: 'Mika', t: 1, parts: { hair: { base: [96, 150, 200] } } }));
   await page.click('.nav-item[data-view="forms"]');
-  const hair = page.locator('.fgroup:has([data-group="Hair"])');
+  const hair = page.locator('.fgroup:has([data-group="Hair and eyes"])');
   await expect(page.locator('#formFinishes [data-finish="anime"]')).toBeVisible();
   await page.click('#formShapes [data-shape="sphere"]');
   await expect(hair).toBeHidden();

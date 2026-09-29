@@ -151,7 +151,7 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   hair and eye colours. Colours on a generated picture opens it here.
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
   on a machine with a GPU (`COMFY_URL`): anime references made to order - a
-  character (who, the hair, how much of them, from where, the pose), a
+  character (who, the hair, the eyes and their shape, how much of them, from where, the pose), a
   landscape (where, the time of day, the weather, the season), buildings,
   nature or an animal, in the light and medium you pick (watercolour, ink
   and hatching, flat colour, pencil and hatching) - simple by default, a few
@@ -378,6 +378,15 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   fringe's hard shadow on the forehead. Colours named as Generate names them,
   or a character sheet's hair colour; *Draw it at this angle* sends the hair
   style and colour too.
+- **The anime eye** - in four styles, on the photo's anime head and the 3D
+  one alike: *TV anime*, *Shōjo* (tall, the iris nearly filling it, three
+  gleams, separate lashes), *Sharp* (narrow, the outer corner up - tsurime)
+  and *Soft* (round, the outer corner down - tareme). Each is the weight of
+  the upper lash line, the iris ellipse cut off by it, where the gleams go;
+  in 3D with an eye colour too, named as Generate names them. The note under
+  the 3D view says what the eyes do at that angle; a character sheet's chip
+  gives the head her hair and eyes at once; *Draw it at this angle* sends
+  the eyes' colour and shape (Generate's new Eye shape row) to the ComfyUI.
 - **The keyboard, and screen readers** - a visible focus ring, Tab kept inside
   dialogs, arrow keys along the rail, a *Skip to the content* link, and a
   live region that says which section opened and which pose is up.

@@ -185,8 +185,8 @@ kept: Loomis's, and Anime (`ANIME_HEAD`, `animeFace()`), which keeps the
 ball, side planes and centre line fitted to the head's angle and draws the
 anime face on them - eyes lower and bigger, one eye apart, with the lash
 line, iris and gleam; a small nose and mouth; a pointed chin. Still to come
-on it: a choice of anime styles (the proportions differ from studio to
-studio), and the eye's angle-by-angle detail - see The anime eye.
+on it: a choice of anime styles for the rest of the face (the proportions
+differ from studio to studio) - the eye has its styles (see The anime eye).
 In place too: the anime head in 3D - Anime head among the 3D forms
 (`formAnimeHeadGeometry()`, `formAnimeFace()` in `js/forms-models.js`), the
 same proportions made solid with its face a flat mask and the features drawn
@@ -194,11 +194,18 @@ on as a decal, the gleam on the light's side; the note under the view
 (`animeHeadReading()` in `js/forms.js`) gives the far eye's width against the
 near one's, on the mask and on a ball, with what to watch at that angle, and
 sends the angle to Generate. Its hair is in place too - see Hair in clumps.
-Still to come on it: expressions, and eye colour from a character sheet.
+Still to come on it: expressions.
 
-- **The anime eye.** The weight of the upper lash line, the iris ellipse,
-  where the highlights go, how the eye changes with angle and expression -
-  in a few common styles.
+In place: the anime eye - `ANIME_EYES` and `animeEyeShape()` in `js/vision.js`,
+one description drawn both on a photo's head (the eye switch beside Loomis /
+Anime, and Ctrl+K) and on the 3D head (`drawAnimeFace()`, each head with its
+own face materials, `formFaceMaterials()`): TV anime, Shōjo, Sharp (tsurime),
+Soft (tareme) - the lash line's weight and flick, the iris ellipse cut by the
+lids, the gleams on the light's side, the brow. In 3D an eye colour too, a
+character sheet's chip setting hair and eyes at once, a line on what the
+eyes do at each angle in the note, and the colour and shape sent to Generate
+(its Eye shape row). Still to come on it: the eye with expression (see the
+Expression sheet), the irises turned to look somewhere, and more styles.
 - **Expression sheet.** Anime expressions - brows, eyes and mouth for joy,
   anger, surprise, sadness - shown at several head angles.
 
