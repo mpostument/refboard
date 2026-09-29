@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=7840bef7">
+<link rel="stylesheet" href="css/app.css?v=163b1940">
 </head>
 <body>
 <div id="setup">
@@ -410,10 +410,13 @@
           <button type="button" id="pgGenerate" class="primary" title="A new palette - or press Space">New palette</button>
           <span class="count pg-space">or press <kbd>Space</kbd></span>
           <span class="grow"></span>
+          <!-- Changing the palette, then taking it somewhere. -->
           <button class="ghost" type="button" id="pgUndo" title="Back to the palette before (Ctrl+Z)">Undo</button>
           <button class="ghost" type="button" id="pgAdd" title="One more colour">Add a colour</button>
+          <span class="pg-sep" aria-hidden="true"></span>
           <button class="ghost" type="button" id="pgCopy" title="Copy every colour as hex">Copy</button>
           <button class="ghost" type="button" id="pgSave" title="Keep this palette - under Saved, below">Save</button>
+          <button class="ghost hidden" type="button" id="pgToGenerate" title="Generate a reference in these colours">Use in Generate</button>
         </div>
         <div id="pgRow" class="pg-row" role="group" aria-label="The palette"></div>
         <div class="pg-under">
@@ -433,8 +436,10 @@
             <h4>Saved</h4>
             <div id="pgSaved"></div>
             <h4>From a picture</h4>
-            <div class="count">A reference's own colours: open it in the Colour studio, then To the palette generator under its palette.</div>
-            <button class="ghost" type="button" id="pgFromPicture">Open the Colour studio</button>
+            <div class="row pg-from">
+              <button class="ghost" type="button" id="pgFromPicture" title="Open a reference there, then To the palette generator under its palette">Colour studio</button>
+              <span class="count">A reference's own colours come from there.</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1599,7 +1604,7 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=a14969c2"></script>
+<script src="js/core.js?v=47bf51c2"></script>
 <script src="js/setup.js?v=9dfd876b"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
@@ -1616,14 +1621,14 @@
 <script src="js/stages.js?v=c7fb5944"></script>
 <script src="js/pins.js?v=67470c8d"></script>
 <script src="js/workspace.js?v=21389bc9"></script>
-<script src="js/train.js?v=9fd9bbc0"></script>
+<script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=7a952c82"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=89d06002"></script>
+<script src="js/whatsnew.js?v=2c3cfdbf"></script>
 <script src="js/edges.js?v=5393fa8f"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
-<script src="js/generate.js?v=9a1d5100"></script>
+<script src="js/generate.js?v=4bfa575c"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
@@ -1635,7 +1640,7 @@
 <script src="js/backup.js?v=e7ec2fe2"></script>
 </template>
 <template id="lazy-palette">
-<script src="js/palette.js?v=4814a01f"></script>
+<script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
 <script src="js/colour.js?v=51d42b15"></script>

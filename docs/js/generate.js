@@ -22,6 +22,8 @@ const GEN_KEY = 'refboard.generate.v1';
 // those subjects; one with `when`, only when the other choices say so.
 const ANY = { id: 'any', label: 'Any', tags: '' };
 const PERSON = ['character'], OUTDOORS = ['landscape', 'building'];
+// The media drawn in grey, which a palette has nothing to say to.
+const GEN_GREY = ['ink', 'sketch'];
 // Detail's Beginner, whatever the subject.
 const BEGIN = '(minimalist:1.4), (simple drawing:1.3), flat color, simple coloring, thick outlines';
 // A figure takes less: at 1.4, with flat colour and thick outlines, the
@@ -386,6 +388,14 @@ const GEN_CHOICES = [
     { id: 'hard', label: 'Hard - on dry paper', tags: 'hard edges, sharp edges, layered glazing, flat wash', words: 'hard edges',
       avoid: 'blurry, color bleeding' },
   ] },
+  // A palette from Palettes (js/palette.js), sent with its Use in Generate.
+  // The model knows no hex, only the words it learnt from - so the palette
+  // goes as those (genPaletteTags). Not for ink or pencil: they are grey.
+  { id: 'colours', label: 'Colours', when: ch => !GEN_GREY.includes(ch.medium), options: [
+    ANY,
+    { id: 'palette', label: 'Your palette', words: 'palette', hint: 'The colours sent from Palettes, as words the model knows',
+      tags: ch => genPaletteTags(ch.palette || []).join(', ') },
+  ] },
   // Simple, the default: a few big shapes to copy, not a finished
   // illustration to be daunted by. Beginner goes further, with weights
   // ("(tag:1.3)"): Simple still gave hair of a hundred strands, and a
@@ -424,16 +434,62 @@ const GEN_GROUPS = [
   ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
-  ['picture', 'The picture', ['medium', 'edges', 'detail', 'ground']],
+  ['picture', 'The picture', ['medium', 'edges', 'colours', 'detail', 'ground']],
 ];
 
 const GEN_DEFAULTS = { style: 'anime', subject: 'character', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', detail: 'simple',
+  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', detail: 'simple',
   ground: 'plain' };
 
 // Whether a row is asked, and used, with these choices.
 const genApplies = (c, ch) => (!c.for || c.for.includes(ch.subject)) && (!c.when || c.when(ch));
+
+/* A palette ([[r, g, b], ...]) as Danbooru tags - the only colour words
+   the model learnt. Not one tag per colour: five colour names and the model
+   spreads all five over hair, eyes and dress at random. What the palette
+   is as a whole says more - its leading hue, how intense, how light.
+   Tags the anime models know: "limited palette", "<hue> theme" (red, orange,
+   yellow, green, aqua, blue, purple, pink, brown), "muted color",
+   "pastel colors", "high contrast", "dark". rgbOklch() (train.js) gives
+   [L 0..1, C 0..~0.37, h degrees]; hueName(h) a painter's hue word - but
+   a painter's, not Danbooru's: its cyan, violet, magenta are aqua, purple,
+   pink there. */
+function genPaletteTags(rgbs) {
+  if (!rgbs.length) return [];
+  const cs = rgbs.map(rgbOklch), n = cs.length;
+  const meanL = cs.reduce((s, c) => s + c[0], 0) / n, meanC = cs.reduce((s, c) => s + c[1], 0) / n;
+  const spread = Math.max(...cs.map(c => c[0])) - Math.min(...cs.map(c => c[0]));
+  const tags = ['limited palette'];
+  // The leading hue: the one holding most of the palette's intensity - a
+  // grey adds nothing, the accent adds most. It leads with clearly more
+  // than half (60%: two opposites alike are never exactly even in sRGB);
+  // none does in two opposites as strong, or a palette near grey.
+  // Weighed by hue family, not by name: a peach, an orange and a dark
+  // orange are one warm palette, though the dark one is "brown" by name.
+  const fam = {};
+  for (const [L, C, h] of cs) if (C >= 0.03) {
+    const k = genHueTag(0.6, h), f = fam[k] ||= { w: 0, wl: 0 };
+    f.w += C; f.wl += C * L;
+  }
+  const total = Object.values(fam).reduce((s, f) => s + f.w, 0);
+  const [lead, f] = Object.entries(fam).sort((a, b) => b[1].w - a[1].w)[0] || [];
+  // Named as the family is on the whole - dark orange or yellow, brown.
+  if (lead && f.w >= 0.6 * total) tags.push((['orange', 'yellow'].includes(lead) && f.wl / f.w < 0.55 ? 'brown' : lead) + ' theme');
+  // How intense, as a whole: light and soft is pastel, otherwise soft is muted.
+  if (meanL > 0.75 && meanC < 0.12) tags.push('pastel colors');
+  else if (meanC < 0.07) tags.push('muted color');
+  // The values: mostly dark, or light against dark.
+  if (meanL < 0.42) tags.push('dark');
+  else if (spread > 0.55) tags.push('high contrast');
+  return tags.slice(0, 4);
+}
+// An OKLCH hue as Danbooru names it: a dark orange or yellow is brown there.
+function genHueTag(L, h) {
+  if (h >= 40 && h < 110 && L < 0.55) return 'brown';
+  return h < 40 || h >= 350 ? 'red' : h < 70 ? 'orange' : h < 110 ? 'yellow' : h < 170 ? 'green'
+    : h < 220 ? 'aqua' : h < 275 ? 'blue' : h < 320 ? 'purple' : 'pink';
+}
 
 /* The choices as the model's prompt, what to keep out of it, the plain words
    the picture is filed under, and its shape: tall for a figure, wide for a landscape or a
@@ -489,6 +545,20 @@ let genBusy = false;
 
 function loadGenChoices() {
   try { Object.assign(genChoices, JSON.parse(localStorage.getItem(GEN_KEY)) || {}); } catch { /* defaults */ }
+  const p = genChoices.palette;
+  if (!(Array.isArray(p) && p.length && p.every(c => Array.isArray(c) && c.length === 3 && c.every(n => Number.isInteger(n) && n >= 0 && n <= 255)))) {
+    delete genChoices.palette;
+    if (genChoices.colours === 'palette') genChoices.colours = 'any';
+  }
+}
+
+// A palette sent from Palettes: Colours is Your palette from here on.
+function genUsePalette(rgbs) {
+  genChoices.palette = rgbs.map(c => c.slice());
+  genChoices.colours = 'palette';
+  saveGenChoices();
+  if (el('genChoices').children.length) { renderGenerate(); renderGenPrompt(); }
+  setView({ kind: 'generate' });
 }
 function saveGenChoices() {
   try { localStorage.setItem(GEN_KEY, JSON.stringify(genChoices)); } catch { /* private mode */ }
@@ -521,10 +591,18 @@ function renderGenPrompt() {
 }
 
 function renderGenerate() {
+  // Your palette shows its colours - or, none sent yet, waits for some.
+  const pal = genChoices.palette;
+  const label = o => o.id === 'palette' && pal
+    ? `<span class="gen-strip" aria-hidden="true">${pal.map(c => `<i style="background:${colHexOf(c)}"></i>`).join('')}</span>${esc(o.label)}`
+    : esc(o.label);
+  const off = o => o.id === 'palette' && !pal ? ' disabled title="None yet - send one from Palettes with Use in Generate"' : '';
   const row = c => `<div class="gen-row" data-row="${c.id}"><h4 id="genL-${c.id}">${esc(c.label)}</h4>` +
     `<div class="chips" role="group" aria-labelledby="genL-${c.id}">` +
     c.options.map(o => (o.group ? `<span class="chips-break"></span><span class="chips-group">${esc(o.group)}</span>` : '') + `<button type="button" class="chip" data-gen="${c.id}" data-opt="${o.id}" ` +
-      `aria-pressed="${genChoices[c.id] === o.id}"${o.hint ? ` title="${esc(o.hint)}"` : ''}>${esc(o.label)}</button>`).join('') + '</div></div>';
+      `aria-pressed="${genChoices[c.id] === o.id}"${off(o) || (o.hint ? ` title="${esc(o.hint)}"` : '')}>${label(o)}</button>`).join('') +
+    (c.id === 'colours' ? `<button type="button" class="ghost" id="genToPalettes" title="Make or change a palette">Palettes</button>` : '') +
+    '</div></div>';
   el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
     `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` +
     ids.map(id => row(GEN_CHOICES.find(c => c.id === id))).join('') + '</section>').join('');
@@ -659,6 +737,7 @@ async function runGenerate() {
 async function initGenerate() {
   loadGenChoices();
   el('genChoices').addEventListener('click', e => {
+    if (e.target.closest('#genToPalettes')) { setView({ kind: 'palette' }); return; }
     const b = e.target.closest('[data-gen]');
     if (!b) return;
     genChoices[b.dataset.gen] = b.dataset.opt;
