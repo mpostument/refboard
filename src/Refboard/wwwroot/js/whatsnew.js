@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'whites', title: 'Save the whites',
+    text: 'How to draw it in watercolour has a step before the first wash: the whites the paper must keep. Yellow for the small ones - a catchlight, a streak of shine on the hair - to cover with masking fluid; a blue outline round the big ones, to paint round. In watercolour a white painted over does not come back.',
+    act: 'Show me', run: () => setView({ kind: 'drop' }) },
   { id: 'steps', title: 'How to draw it, step by step',
     text: 'Any picture in the workspace, taken back to the steps it is drawn in, for your medium: big shapes blocked in, the lines, then the first wash and the shadows for watercolour, hatching for ink, tone for pencil - each with what to do. Workspace > Learn, the Steps button on a generated picture, or Ctrl+K "how to draw".',
     act: 'Show me', run: () => setView({ kind: 'drop' }) },

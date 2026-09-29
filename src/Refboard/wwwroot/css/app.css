@@ -1460,6 +1460,10 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #stepsFrame { width: 100%; height: auto; max-height: 62vh; object-fit: contain; border-radius: 8px; background: #fbfaf6; display: block; }
 .steps-text h3 { margin: 4px 0 8px; font-size: 18px; font-weight: 600; }
 .steps-text p { margin: 0 0 14px; line-height: 1.5; }
+.steps-key { list-style: none; margin: -4px 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+.steps-key[hidden] { display: none; }
+.steps-key li { display: flex; align-items: center; gap: 6px; }
+.steps-key .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; }
 .steps-nav { gap: 8px; }
 .steps-nav button:disabled { opacity: .45; cursor: default; }
 .steps-note { margin-top: 18px; }

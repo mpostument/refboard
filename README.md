@@ -127,7 +127,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 - **How to draw it** - any picture in the workspace (Learn tab, Ctrl+K, or
   Steps on a generated one) taken back to the steps it is drawn in, for the
   medium: the big shapes blocked in with a few straight lines, the lines,
-  then the first wash and the shadows for watercolour, hatching one way and
+  the whites to save for watercolour (the small ones - catchlights, a
+  streak of shine - under masking fluid, the big ones painted round), then
+  the first wash and the shadows, hatching one way and
   across for ink, three values for pencil - each step with what to do.
   Worked out from the picture itself in the browser (Otsu thresholds, XDoG
   lines, a traced and simplified silhouette), so it needs no server and no

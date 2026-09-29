@@ -159,6 +159,10 @@ steps, per medium, worked out from the picture (an image model asked for an
 earlier stage draws a different picture; Paints-Undo, the model trained to
 rewind a painting, was weighed and left: 24 GB, and digital painting's
 order, not watercolour's or ink's).
+In place too: the masking plan, as How to draw it's "Save the whites" step
+for watercolour - the near-white areas with colour round them (not the
+paper round the subject, not a pale face cut up by its lines), the small
+or thin ones for masking fluid, the big ones to paint round.
 Next: the pose and the light from the 3D figure - its depth or OpenPose
 render through a ControlNet - so the reference is the pose you set; a photo
 simplified into a study (img2img); variations of one you like (its seed).
@@ -227,10 +231,6 @@ Anime in watercolour:
   sketch on copy paper shown at full brightness, cleaned of the paper,
   mirrored if wanted - to trace it onto watercolour paper. The usual
   anime-in-watercolour workflow: sketch apart, final on good paper.
-- **Masking plan for highlights.** For an anime illustration in
-  watercolour: which highlights - hair, eyes, skin, fabric - to cover
-  with masking fluid before the first wash, since in watercolour a white
-  cannot be brought back.
 - **Character sheet.** A character's palette in one place - hair, skin,
   eyes, clothes, each with base, shadow and highlight and a recipe for
   your materials. Kept in the project, so the character matches from one
