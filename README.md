@@ -393,6 +393,12 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   the ball, side planes and centre line fitted to the head's angle, with the
   face drawn as anime does - eyes lower and bigger, a small nose and mouth, a
   pointed chin. Switched in the note under the picture, or from Ctrl+K.
+- **A photo's pose in anime proportions** - the pose skeleton (`p`) redrawn
+  in the 3D figure's builds: *Anime* (7 heads), *Long-legged* (9) or *Chibi*
+  (2.5). Every bone keeps the photo's angle and only its length changes, hung
+  from the joint above it and planted on the lowest foot - a real pose, seen
+  as anime would draw it, over the photo's own skeleton kept faint, with a
+  ruler of its heads down the side. Switched in the note, or from Ctrl+K.
 - **Anime head in 3D** - in 3D forms, a head built to the same proportions
   with its face drawn on (the heavy lash line, the tall iris, the gleam on the
   light's side), to turn and light like any form. Its face is a flat mask, so

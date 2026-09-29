@@ -273,9 +273,14 @@ figure, from the floor as it would stand. Still to come on it: body types
 (slim, heavy, muscular), a child's proportions by age, and the build sent
 to Generate.
 
-- **A photo's pose in anime proportions.** The pose model finds the
-  skeleton, and it is redrawn in anime proportions - shorter torso,
-  longer legs, larger head: a real pose, seen as it would be in anime.
+In place too: a photo's pose in anime proportions - the pose skeleton's
+switch (`rebuildPose()` in `js/vision.js`, which now holds FIGURE_BUILDS for
+both): every bone the model found keeps its angle and takes the build's
+length, hung from the joint above it and planted on the lowest foot, in pink
+over the photo's own, the head a circle against the photo's dashed one, a
+tick for each head. Still to come on it: the rebuilt pose sent to the 3D
+figure (with Pose from a photo onto the mannequin), and a bent figure's
+length measured along its bones rather than top to bottom.
 
 Shading and colour:
 

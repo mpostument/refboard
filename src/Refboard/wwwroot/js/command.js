@@ -8,6 +8,8 @@
    the trainers, the themes, and the extra words a tool is known by. */
 "use strict";
 
+// The words each build (FIGURE_BUILDS) is looked for by - the pose's and the 3D figure's.
+const BUILD_WORDS = { real: 'eight realistic', anime: 'seven', tall: 'long legs fashion nine', chibi: 'sd super deformed cute small' };
 // Other words a tool is looked for by, keyed by its element's id.
 const COMMAND_WORDS = {
   btnHead: 'face construction ball thirds loomis anime eyes',
@@ -100,6 +102,15 @@ function collectCommands() {
         run: () => { setHeadEyes(k); setHeadStyle('anime'); if (!state.headOn) toggleHead(); },
       });
     }
+    // The pose skeleton in each build (FIGURE_BUILDS) - turned on too.
+    for (const [k, b] of Object.entries(FIGURE_BUILDS)) {
+      if (state.poseOn && k === poseBuild) continue;
+      out.push({
+        id: 'pose-build-' + k, label: k === 'real' ? 'Pose skeleton: as photographed' : `Pose skeleton: ${b.label} proportions`, hint: 'P',
+        words: 'figure body heads anime redraw ' + BUILD_WORDS[k],
+        run: () => { setPoseBuild(k); if (!state.poseOn) togglePose(); },
+      });
+    }
   } else {
     for (const b of el('rail').querySelectorAll('button')) {
       // A section you hid (js/stages.js) is off the rail, not out of reach.
@@ -133,12 +144,10 @@ function collectCommands() {
       id: 'anime-expr-' + k, label: `Anime head in 3D: ${x.label}`, hint: '3D forms',
       words: 'expression emotion face feeling ' + { joy: 'happy smile laugh blush', anger: 'angry mad rage vein', surprise: 'shock surprised wide', sadness: 'sad cry tears crying' }[k],
       run: () => openForms(() => showAnimeHead(undefined, k)) });
-    // The figure in each of its proportions, with the heads grid. Named here,
-    // not read from FIGURE_BUILDS: that loads with the 3D view, after this list.
-    for (const [k, label, words] of [['real', 'Realistic', 'eight'], ['anime', 'Anime', 'seven'],
-      ['tall', 'Long-legged', 'long legs fashion nine'], ['chibi', 'Chibi', 'sd super deformed cute small']]) out.push({
-      id: 'figure-build-' + k, label: `Figure in 3D: ${label}`, hint: '3D forms',
-      words: 'proportions heads tall body mannequin grid anime ' + words,
+    // The figure in each of its proportions, with the heads grid.
+    for (const [k, b] of Object.entries(FIGURE_BUILDS)) out.push({
+      id: 'figure-build-' + k, label: `Figure in 3D: ${b.label}`, hint: '3D forms',
+      words: 'proportions heads tall body mannequin grid anime ' + BUILD_WORDS[k],
       run: () => openForms(() => showFigureBuild(k)) });
     out.push({ id: 'anime-expr-sheet', label: 'Expression sheet', hint: '3D forms', words: 'expressions emotions faces anime head model sheet joy anger surprise sadness',
       run: () => openForms(async () => { showAnimeHead(); await formsReady(); openExpressionSheet(); }) });

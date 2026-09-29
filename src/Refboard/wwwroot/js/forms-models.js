@@ -1081,22 +1081,8 @@ const FORM_RIG = [
     ];
   }),
 ];
-/* The figure's proportions. Each part of the body is [girth, length] times
-   the real one's - girth across and through it, length along it - and a
-   joint hangs where its parent's length puts it: a longer thigh carries the
-   knee down with it. The rig itself stays one table, so a pose fits every
-   build. Worked out to the heads count each is known by (figureHeights()):
-   anime shortens the torso and lengthens the legs round a bigger head;
-   chibi is a head as big as the rest of the body. */
-const FIGURE_BUILDS = {
-  real: { label: 'Realistic', hint: 'A real body, about eight heads tall: the crotch halfway down, the elbow at the waist.' },
-  anime: { label: 'Anime', torso: [0.9, 0.9], arm: [0.85, 0.98], hand: [0.85, 0.9], leg: [0.88, 1.1], foot: [0.8, 0.9], head: [1.15, 1.15],
-    hint: 'Standard anime, about seven heads: a bigger head, a shorter torso and longer, slimmer legs - a little more than half the height.' },
-  tall: { label: 'Long-legged', torso: [0.85, 0.92], neck: [0.9, 1.15], arm: [0.85, 1.08], hand: [0.85, 0.95], leg: [0.85, 1.25], head: [0.95, 0.95],
-    hint: 'Stylised, about nine heads, as fashion drawing and some anime do it: a small head and legs more than half the height.' },
-  chibi: { label: 'Chibi', torso: [0.85, 0.45], neck: [0.8, 0.3], arm: [1.05, 0.5], hand: [1.1, 0.7], leg: [1.05, 0.5], foot: [1.1, 0.8], head: [2.2, 2.2],
-    hint: 'Chibi, about two and a half heads: the head is as big as the body under it, the limbs short stubs with no elbows or knees to speak of.' },
-};
+// The builds themselves (FIGURE_BUILDS) are in js/vision.js, which loads
+// first: a photo's pose is redrawn in them too (rebuildPose()).
 // Which part of the body a joint is: its row in a build. The pelvis (null) is the torso's.
 const FIGURE_PART = { spine: 'torso', chest: 'torso', neck: 'neck', head: 'head', upperArm: 'arm', forearm: 'arm', hand: 'hand', thigh: 'leg', shin: 'leg', foot: 'foot' };
 // A joint's scale, [x, y, z], in a build and under the Proportions sliders.

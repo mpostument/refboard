@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'pose-builds', title: "A photo's pose in anime proportions",
+    text: "The pose skeleton (P) redraws the pose in the 3D figure's builds - Anime, Long-legged, Chibi - switched at the top of its note, or Ctrl+K \"pose anime\". Each bone keeps the photo's angle and only its length changes, standing on the same foot: a real pose, seen as anime would draw it, over the photo's skeleton kept faint, with a tick for every head down its side.",
+    act: 'Open a photo', run: () => setView({ kind: 'drop' }) },
   { id: 'figure-builds', title: 'Anime proportions for the 3D figure',
     text: 'The 3D figure has a Body row above its pose: Realistic (about eight heads), Anime (seven - a bigger head, a shorter torso, longer legs), Long-legged (nine) and Chibi (two and a half). A pose carries over from one to another, so the same contrapposto can be seen in each. Heads grid draws a line every head down the figure, numbered, to check your own drawing against.',
     act: 'Show me', run: () => openForms(() => showFigureBuild('anime')) },

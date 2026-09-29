@@ -24,9 +24,26 @@
 const POSE_LIB = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1';
 const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 // BlazePose's 33 points: the ones used here.
-const PL = { nose: 0, lSh: 11, rSh: 12, lEl: 13, rEl: 14, lWr: 15, rWr: 16, lHip: 23, rHip: 24, lKn: 25, rKn: 26, lAn: 27, rAn: 28, lToe: 31, rToe: 32 };
+const PL = { nose: 0, lEar: 7, rEar: 8, lSh: 11, rSh: 12, lEl: 13, rEl: 14, lWr: 15, rWr: 16, lHip: 23, rHip: 24, lKn: 25, rKn: 26, lAn: 27, rAn: 28, lToe: 31, rToe: 32 };
 const POSE_BONES = [['lSh', 'rSh'], ['lSh', 'lEl'], ['lEl', 'lWr'], ['rSh', 'rEl'], ['rEl', 'rWr'], ['lSh', 'lHip'], ['rSh', 'rHip'],
   ['lHip', 'rHip'], ['lHip', 'lKn'], ['lKn', 'lAn'], ['rHip', 'rKn'], ['rKn', 'rAn'], ['lAn', 'lToe'], ['rAn', 'rToe']];
+/* The figure's proportions - the 3D figure's Body row (js/forms-models.js,
+   figureScale()) and a photo's pose redrawn in them (rebuildPose()). Each part of the body is [girth, length] times
+   the real one's - girth across and through it, length along it - and a
+   joint hangs where its parent's length puts it: a longer thigh carries the
+   knee down with it. The rig itself stays one table, so a pose fits every
+   build. Worked out to the heads count each is known by (figureHeights()):
+   anime shortens the torso and lengthens the legs round a bigger head;
+   chibi is a head as big as the rest of the body. */
+const FIGURE_BUILDS = {
+  real: { label: 'Realistic', hint: 'A real body, about eight heads tall: the crotch halfway down, the elbow at the waist.' },
+  anime: { label: 'Anime', torso: [0.9, 0.9], arm: [0.85, 0.98], hand: [0.85, 0.9], leg: [0.88, 1.1], foot: [0.8, 0.9], head: [1.15, 1.15],
+    hint: 'Standard anime, about seven heads: a bigger head, a shorter torso and longer, slimmer legs - a little more than half the height.' },
+  tall: { label: 'Long-legged', torso: [0.85, 0.92], neck: [0.9, 1.15], arm: [0.85, 1.08], hand: [0.85, 0.95], leg: [0.85, 1.25], head: [0.95, 0.95],
+    hint: 'Stylised, about nine heads, as fashion drawing and some anime do it: a small head and legs more than half the height.' },
+  chibi: { label: 'Chibi', torso: [0.85, 0.45], neck: [0.8, 0.3], arm: [1.05, 0.5], hand: [1.1, 0.7], leg: [1.05, 0.5], foot: [1.1, 0.8], head: [2.2, 2.2],
+    hint: 'Chibi, about two and a half heads: the head is as big as the body under it, the limbs short stubs with no elbows or knees to speak of.' },
+};
 const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 // The MediaPipe tasks this page uses - one runtime, fetched once, shared by
 // both; each model is fetched the first time its button is pressed.
@@ -127,10 +144,101 @@ function smoothPath(pts) {
   return d;
 }
 
+/* A photo's pose in other proportions (FIGURE_BUILDS): each bone the model
+   found keeps its direction on the page and only grows or shrinks by its
+   part's length - the shoulders' and hips' width by the torso's girth - hung
+   from the joint above it, the rule the 3D figure's joints follow
+   (poseFormRig()). So the angles stay the photo's and only the body changes.
+   Then the whole is moved so the foot lowest in the picture stays where it
+   was: the figure still stands where it stood.
+   The head is a circle, a real head's height taken as the neck-to-hip
+   length over 2.5 (the classic figure's measure) - or from the ears, when
+   the torso is turned toward you and foreshortened. */
+function rebuildPose(P, build, torso) {
+  const B = FIGURE_BUILDS[build] || {}, part = k => B[k] || [1, 1];
+  const mid = (a, b) => a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : null;
+  const neck = mid(P.lSh, P.rSh), pelvis = mid(P.lHip, P.rHip);
+  if (!neck || !pelvis) return null;
+  const Q = { neck: [pelvis[0] + (neck[0] - pelvis[0]) * part('torso')[1], pelvis[1] + (neck[1] - pelvis[1]) * part('torso')[1]] };
+  // The joint `to`, hung from `from`'s new place by the bone's own vector times k.
+  const hang = (to, from, base, k) => { if (P[to] && base) Q[to] = [base[0] + (P[to][0] - from[0]) * k, base[1] + (P[to][1] - from[1]) * k]; };
+  for (const s of ['l', 'r']) {
+    hang(s + 'Sh', neck, Q.neck, part('torso')[0]);
+    hang(s + 'El', P[s + 'Sh'], Q[s + 'Sh'], part('arm')[1]);
+    hang(s + 'Wr', P[s + 'El'], Q[s + 'El'], part('arm')[1]);
+    hang(s + 'Hip', pelvis, pelvis, part('torso')[0]);
+    hang(s + 'Kn', P[s + 'Hip'], Q[s + 'Hip'], part('leg')[1]);
+    hang(s + 'An', P[s + 'Kn'], Q[s + 'Kn'], part('leg')[1]);
+    hang(s + 'Toe', P[s + 'An'], Q[s + 'An'], part('foot')[1]);
+  }
+  // The head: its centre between the ears (the nose is on its front), on the
+  // line from the neck, the neck's own part of that stretched by the neck's
+  // length and the rest by the head's size.
+  const ears = mid(P.lEar, P.rEar), centre = ears || P.nose;
+  const earSpan = P.lEar && P.rEar ? Math.hypot(P.lEar[0] - P.rEar[0], P.lEar[1] - P.rEar[1]) : 0;
+  const r0 = Math.max(torso / 2.5, earSpan * 1.3) / 2, kh = part('head')[1];
+  if (centre) {
+    const d = Math.hypot(centre[0] - neck[0], centre[1] - neck[1]) || 1, u = [(centre[0] - neck[0]) / d, (centre[1] - neck[1]) / d];
+    const reach = Math.max(0, d - r0) * part('neck')[1] + r0 * kh;
+    Q.head = [Q.neck[0] + u[0] * reach, Q.neck[1] + u[1] * reach];
+  }
+  // Planted on the foot lowest in the picture.
+  const foot = ['lToe', 'rToe', 'lAn', 'rAn'].filter(k => P[k] && Q[k]).sort((a, b) => P[b][1] - P[a][1])[0];
+  if (foot) {
+    const dx = P[foot][0] - Q[foot][0], dy = P[foot][1] - Q[foot][1];
+    for (const k in Q) Q[k] = [Q[k][0] + dx, Q[k][1] + dy];
+  }
+  // As tall as it stands here, in its own heads: top of the head to the
+  // lowest point - fewer than the build's count on a figure that bends.
+  const r = r0 * kh, ys = Object.values(Q).map(p => p[1]);
+  const top = Q.head ? Q.head[1] - r : Math.min(...ys), bottom = Math.max(...ys);
+  return { Q, r, r0, head0: centre, top, bottom, heads: Q.head && foot ? (bottom - top) / (2 * r) : null };
+}
+
+// The rebuilt figure: its bones and head in pink over the photo's faint
+// ones, the photo's head as a dashed circle to show what changed, and a
+// ruler of head heights down its side from the top of the head.
+function drawRebuiltPose(R, line, fr) {
+  const { Q, r } = R;
+  let m = '';
+  for (const [a, b] of POSE_BONES) if (Q[a] && Q[b]) m += line(Q[a], Q[b], 'bone-o') + line(Q[a], Q[b], 'rebuilt');
+  const neck = Q.neck;
+  if (R.head0) m += `<circle class="head0" cx="${fr(R.head0[0])}" cy="${fr(R.head0[1])}" r="${fr(R.r0)}"/>`;
+  if (Q.head) {
+    // The neck up to the head's edge, not into it.
+    const d = Math.hypot(Q.head[0] - neck[0], Q.head[1] - neck[1]), k = Math.max(0, d - r) / (d || 1);
+    const chin = [neck[0] + (Q.head[0] - neck[0]) * k, neck[1] + (Q.head[1] - neck[1]) * k];
+    m += line(neck, chin, 'bone-o') + line(neck, chin, 'rebuilt');
+    m += `<circle class="rebuilt-head" cx="${fr(Q.head[0])}" cy="${fr(Q.head[1])}" r="${fr(r)}"/>`;
+  }
+  if (R.heads) {
+    const xs = Object.values(Q).map(p => p[0]).concat(Q.head[0] - r), x = Math.min(...xs) - r * 0.8, tick = r * 0.35;
+    m += line([x, R.top], [x, R.bottom], 'heads');
+    for (let y = R.top; y <= R.bottom + 0.5; y += 2 * r) m += line([x - tick, y], [x + tick, y], 'heads');
+  }
+  return m;
+}
+
+// The pose's proportions, kept like the head's style: the photo's own
+// ('real') or one of FIGURE_BUILDS.
+const POSE_BUILD_KEY = 'refboard.poseBuild.v1';
+let poseBuild = (() => { try { const k = localStorage.getItem(POSE_BUILD_KEY); return FIGURE_BUILDS[k] ? k : 'real'; } catch { return 'real'; } })();
+let poseLast = null;
+function setPoseBuild(build) {
+  if (!FIGURE_BUILDS[build] || build === poseBuild) return;
+  poseBuild = build;
+  try { localStorage.setItem(POSE_BUILD_KEY, build); } catch {}
+  if (state.poseOn && poseLast) drawPose(poseLast);
+}
+// The switch at the head of the pose's note - the head style's, reused.
+const poseBuildSwitch = () => `<span class="head-style" role="group" aria-label="Proportions">${Object.entries(FIGURE_BUILDS).map(([k, b]) =>
+  `<button type="button" data-pose-build="${k}" aria-pressed="${k === poseBuild}" title="${esc(k === 'real' ? 'The photo as it is' : b.hint)}">${k === 'real' ? 'Photo' : b.label}</button>`).join('')}</span>`;
+
 function drawPose(poses) {
   const img = el('img'), svg = el('poseOverlay');
   const W = img.naturalWidth, H = img.naturalHeight, flip = img.classList.contains('flip');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  poseLast = poses;
   if (!poses.length) { svg.innerHTML = ''; poseNote('No figure found in this image.'); return; }
   let m = '', note = '';
   const fr = n => n.toFixed(1);
@@ -144,22 +252,27 @@ function drawPose(poses) {
     }
     const mid = (a, b) => a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : null;
     const line = (a, b, cls) => `<line class="${cls}" x1="${fr(a[0])}" y1="${fr(a[1])}" x2="${fr(b[0])}" y2="${fr(b[1])}"/>`;
-    for (const [a, b] of POSE_BONES) if (P[a] && P[b]) m += line(P[a], P[b], 'bone-o') + line(P[a], P[b], 'bone');
     const neck = mid(P.lSh, P.rSh), pelvis = mid(P.lHip, P.rHip);
     const torso = neck && pelvis ? Math.hypot(neck[0] - pelvis[0], neck[1] - pelvis[1]) : H / 4;
+    // In another build the photo's skeleton stays as a faint ghost under the
+    // redrawn one, and the teacher's lines (g) are left out: they are about
+    // the photo's body, and would cross the new one.
+    const R = poseBuild !== 'real' ? rebuildPose(P, poseBuild, torso) : null;
+    let g = '';
+    for (const [a, b] of POSE_BONES) if (P[a] && P[b]) m += R ? line(P[a], P[b], 'bone ghost') : line(P[a], P[b], 'bone-o') + line(P[a], P[b], 'bone');
 
     // Tilt, as it reads on screen: positive rises to the right.
     const tilt = (a, b) => { const [l, r] = a[0] <= b[0] ? [a, b] : [b, a]; return Math.atan2(l[1] - r[1], r[0] - l[0]) * 180 / Math.PI; };
     const ext = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], k = 0.25; return [[a[0] - dx * k, a[1] - dy * k], [b[0] + dx * k, b[1] + dy * k]]; };
     let ts = null, th = null;
-    if (P.lSh && P.rSh) { ts = tilt(P.lSh, P.rSh); m += line(...ext(P.lSh, P.rSh), 'tilt'); }
-    if (P.lHip && P.rHip) { th = tilt(P.lHip, P.rHip); m += line(...ext(P.lHip, P.rHip), 'tilt'); }
+    if (P.lSh && P.rSh) { ts = tilt(P.lSh, P.rSh); g += line(...ext(P.lSh, P.rSh), 'tilt'); }
+    if (P.lHip && P.rHip) { th = tilt(P.lHip, P.rHip); g += line(...ext(P.lHip, P.rHip), 'tilt'); }
 
     // Which foot carries the weight: the one under the pit of the neck.
     let support = null, balance = '';
     if (neck && (P.lAn || P.rAn)) {
       const ys = [P.lAn, P.rAn].filter(Boolean).map(p => p[1]);
-      m += line(neck, [neck[0], Math.max(...ys) + torso * 0.1], 'plumb');
+      g += line(neck, [neck[0], Math.max(...ys) + torso * 0.1], 'plumb');
       if (P.lAn && P.rAn) {
         const lo = Math.min(P.lAn[0], P.rAn[0]), hi = Math.max(P.lAn[0], P.rAn[0]), span = hi - lo, slack = torso * 0.12;
         const dl = Math.abs(neck[0] - P.lAn[0]), dr = Math.abs(neck[0] - P.rAn[0]);
@@ -179,8 +292,10 @@ function drawPose(poses) {
 
     // The line of action: head, pit of the neck, pelvis, supporting foot.
     const spine = [P.nose, neck, pelvis, support].filter(Boolean);
-    if (spine.length >= 3) m += `<path class="action" d="${smoothPath(spine.map(p => p.map(v => +v.toFixed(1))))}"/>`;
-    for (const k of Object.keys(PL)) if (P[k] && k !== 'nose') m += `<circle cx="${fr(P[k][0])}" cy="${fr(P[k][1])}" r="${fr(W / 220)}"/>`;
+    if (spine.length >= 3) g += `<path class="action" d="${smoothPath(spine.map(p => p.map(v => +v.toFixed(1))))}"/>`;
+    const dots = Q => Object.keys(PL).filter(k => Q[k] && !/nose|Ear/.test(k)).map(k => `<circle cx="${fr(Q[k][0])}" cy="${fr(Q[k][1])}" r="${fr(W / 220)}"/>`).join('');
+    if (R) m += drawRebuiltPose(R, line, fr) + dots(R.Q);
+    else m += g + dots(P);
 
     if (pi === 0) {
       const deg = a => `${Math.abs(a).toFixed(0)}°`;
@@ -193,8 +308,14 @@ function drawPose(poses) {
           ? ' - tilted against each other: <b>contrapposto</b>, the weight shifted onto one leg.'
           : ' - tilted the same way: the whole body leans.';
       } else if (ts !== null && th !== null) rel = '.';
-      note = `${parts.join(', ')}${rel}` + (balance ? `<br>${balance}` : '') +
-        `<br><i>Red</i>: the line of action - draw it first. <u>Blue</u>: the balance line.` +
+      const B = FIGURE_BUILDS[poseBuild];
+      note = poseBuildSwitch() + `${parts.join(', ')}${rel}` + (balance ? `<br>${balance}` : '') +
+        (poseBuild === 'real' ? `<br><i>Red</i>: the line of action - draw it first. <u>Blue</u>: the balance line.`
+          : !R ? `<br>To redraw it as <b class="pink">${B.label}</b> the model needs to see both shoulders and both hips.`
+          // The build's own description is its button's title - here only what it came to.
+          : `<br><b class="pink">${B.label}</b>: the same pose` +
+            (R.heads ? `, <b>${R.heads.toFixed(1)} heads</b> as it stands here (the ticks)` : '') +
+            `. <u>Faint</u>: the photo's own.`) +
         (poses.length > 1 ? ` (${poses.length} figures; this is about the first.)` : '');
     }
   });
@@ -632,7 +753,8 @@ el('btnHead').addEventListener('click', toggleHead);
 // a press on the switch is the switch's alone.
 el('poseNote').addEventListener('pointerdown', e => { if (e.target.closest('button')) e.stopPropagation(); });
 el('poseNote').addEventListener('click', e => {
-  const b = e.target.closest('[data-head-style]'), eyes = e.target.closest('[data-head-eyes]');
+  const b = e.target.closest('[data-head-style]'), eyes = e.target.closest('[data-head-eyes]'), build = e.target.closest('[data-pose-build]');
   if (b) setHeadStyle(b.dataset.headStyle);
+  if (build) setPoseBuild(build.dataset.poseBuild);
   if (eyes) setHeadEyes(eyes.dataset.headEyes);
 });
