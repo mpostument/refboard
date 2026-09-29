@@ -1280,6 +1280,14 @@ function openLazyView(kind, show) {
   });
 }
 
+// The 3D forms, then `then` with its code in - showAnimeHead() and the rest
+// of js/forms.js exist only once the section has loaded.
+async function openForms(then) {
+  setView({ kind: 'forms' });
+  await loadSection('forms');
+  if (then) await then();
+}
+
 // The Colour studio on one of its tabs - and on a picture, if one is given.
 async function openColour(tab, src) {
   setView({ kind: 'colour' });

@@ -387,6 +387,17 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   the 3D view says what the eyes do at that angle; a character sheet's chip
   gives the head her hair and eyes at once; *Draw it at this angle* sends
   the eyes' colour and shape (Generate's new Eye shape row) to the ComfyUI.
+- **The expression sheet** - the 3D anime head in *Joy*, *Anger*, *Surprise*
+  or *Sadness*, on top of any eye style: the brows raised, tilted and arched,
+  the lids pushed up into a smile's crescent or dropped over one corner, the
+  iris shrunk in shock, the mouth as anime draws it (an open smile, a
+  squared shout, a small O, a frown) and anime's signs - the blush, the
+  cross-shaped vein, tears. The head has its own *Face* tab now (hair, eyes,
+  expression, one note on what each means); *Expression sheet* renders it
+  in every expression from the front, at three-quarters and near profile as
+  one picture, opened in the viewer. With a ComfyUI, *Draw it at this angle*
+  sends the expression (Generate's new Expression row), and *Draw a sheet*
+  asks for a sheet of one character's expressions.
 - **The keyboard, and screen readers** - a visible focus ring, Tab kept inside
   dialogs, arrow keys along the rail, a *Skip to the content* link, and a
   live region that says which section opened and which pose is up.

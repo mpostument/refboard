@@ -130,14 +130,16 @@ test('the hair panel: styles, named colours, a character sheet\'s colour, and Sk
   await openApp(page);
   await page.evaluate(() => storePutItem('characters', 'c1', { name: 'Mika', t: 1, parts: { hair: { base: [96, 150, 200] } } }));
   await page.click('.nav-item[data-view="forms"]');
-  const hair = page.locator('.fgroup:has([data-group="Hair and eyes"])');
+  const hair = page.locator('.fgroup:has([data-group="Face"])'), faceTab = page.locator('[data-ftab="face"]');
   await expect(page.locator('#formFinishes [data-finish="anime"]')).toBeVisible();
   await page.click('#formShapes [data-shape="sphere"]');
-  await expect(hair).toBeHidden();
+  // No face, no Face tab.
+  await expect(faceTab).toBeHidden();
   await expect(page.locator('.frow:has([data-k="color"]) > span')).toHaveText('Colour');
   await page.click('#formShapes [data-shape="anime"]');
-  await expect(hair).toBeVisible();
   await expect(page.locator('.frow:has([data-k="color"]) > span')).toHaveText('Skin');
+  await faceTab.click();
+  await expect(hair).toBeVisible();
   await expect(hair.locator('[data-hair="bob"]')).toHaveAttribute('aria-pressed', 'true');
   await hair.locator('[data-hair="long"]').click();
   await expect(hair.locator('[data-hair="long"]')).toHaveAttribute('aria-pressed', 'true');

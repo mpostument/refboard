@@ -272,16 +272,52 @@ const ANIME_EYES = {
 };
 const animeEyeStyle = k => ANIME_EYES[k] || ANIME_EYES.tv;
 
+/* Anime expressions: what the brows, the eyes and the mouth do, on top of
+   any eye style - anime changes the shapes, not the face. open, how far the
+   upper lash line arches (x the style's); lower, the lower lid's run - under
+   0 the cheek pushes it up into the eye, the crescent of a smile; droop,
+   how far the upper lid comes down over the inner corner (anger, > 0) or
+   the outer one (sadness, < 0); iris, its size - the pupil shrinks in
+   shock. brow: [raise, inner end up or down, arch x, weight x]. mouth, one
+   of drawAnimeFace()'s mouths; mark, anime's sign for the feeling. gen:
+   Generate's Expression for it. */
+const ANIME_EXPRESSIONS = {
+  calm: { label: 'Calm', gen: 'any', open: 1, lower: 1, droop: 0, iris: 1, brow: [0, 0, 1, 1], mouth: 'line', mark: '',
+    hint: 'the face at rest: brows level, the mouth a short line.' },
+  joy: { label: 'Joy', gen: 'joy', open: 0.9, lower: -0.35, droop: 0, iris: 1, brow: [0.03, 0.02, 1.4, 1], mouth: 'smile', mark: 'blush',
+    hint: 'the cheeks push the lower lids up into a crescent; brows lifted and round; the mouth open wide, its corners up; a blush under the eyes.',
+    profile: 'in profile the open mouth is a wedge whose upper edge curves up into the cheek.' },
+  anger: { label: 'Anger', gen: 'anger', open: 0.85, lower: 0.8, droop: 0.07, iris: 0.85, brow: [-0.05, -0.1, 0.4, 1.5], mouth: 'shout', mark: 'vein',
+    hint: 'the brows pulled down and in, a sharp V; the upper lids cut across the irises at the inner corners; the mouth squared open over the teeth; the cross-shaped vein.',
+    profile: 'in profile the brow juts out over the eye, and the open mouth is a squared notch.' },
+  surprise: { label: 'Surprise', gen: 'surprise', open: 1.25, lower: 1.2, droop: 0, iris: 0.72, brow: [0.08, 0.02, 1.8, 0.85], mouth: 'o', mark: '',
+    hint: 'white all round a shrunken iris; brows high and arched, well clear of the eyes; the mouth a small O.',
+    profile: 'in profile the brows ride up the forehead, and the O becomes a small hollow under the nose.' },
+  sadness: { label: 'Sadness', gen: 'sadness', open: 0.85, lower: 1, droop: -0.06, iris: 1, brow: [0.02, 0.08, 0.3, 1], mouth: 'frown', mark: 'tears',
+    hint: 'the brows\' inner ends lifted, slanting down and out; the upper lids heavy at the outer corners; a small mouth, corners down; tears welling on the lower lids.',
+    profile: 'in profile the brow tilts up toward the nose, and the tear runs down the curve of the cheek.' },
+};
+const animeExpression = k => ANIME_EXPRESSIONS[k] || ANIME_EXPRESSIONS.calm;
+
 /* One eye of a style, on the flat of the face: sx -1 for the face's right,
-   1 for its left. Every curve runs from the outer corner (t = 0) to the
-   inner (t = π). Shared by the drawing on a photo and the 3D head's face. */
-function animeEyeShape(style, sx) {
-  const E = animeEyeStyle(style), A = ANIME_HEAD, ex = sx * A.eyeX, ey = A.eyeY;
+   1 for its left, with an expression (ANIME_EXPRESSIONS) on it. Every curve
+   runs from the outer corner (t = 0) to the inner (t = π). Shared by the
+   drawing on a photo and the 3D head's face. */
+function animeEyeShape(style, sx, expression) {
+  const S = animeEyeStyle(style), X = animeExpression(expression), A = ANIME_HEAD, ex = sx * A.eyeX, ey = A.eyeY;
+  // The style's numbers with the expression's changes in: everything after
+  // reads E, so the iris, its clipping and the gleams follow.
+  const E = X === ANIME_EXPRESSIONS.calm ? S : { ...S, up: S.up * X.open, down: S.down * X.lower,
+    irisA: S.irisA * X.iris, irisB: S.irisB * X.iris, gleams: S.gleams.map(g => g.map(v => v * X.iris)) };
   const lift = c => E.tilt * (1 + c) / 2;   // c = cos t: 1 at the outer corner
-  const upper = t => [ex + sx * E.a * Math.cos(t), ey + E.up * Math.sin(t) + lift(Math.cos(t))];
+  // The lid coming down over one end of the eye. Weighted by sin t, so the
+  // corners stay put - only the arch between them sags.
+  const droop = c => X.droop > 0 ? X.droop * (1 - c) / 2 : -X.droop * (1 + c) / 2;
+  const top = (s, c) => ey + (E.up - droop(c)) * s + lift(c);
+  const upper = t => [ex + sx * E.a * Math.cos(t), top(Math.sin(t), Math.cos(t))];
   const lower = t => [ex + sx * E.a * 0.95 * Math.cos(t), ey - E.down * Math.sin(t) + lift(Math.cos(t))];
   // The lash line's height over any x - the iris is tucked under it.
-  const lashAt = x => { const c = Math.max(-1, Math.min(1, (x - ex) / (sx * E.a))); return ey + E.up * Math.sqrt(1 - c * c) + lift(c); };
+  const lashAt = x => { const c = Math.max(-1, Math.min(1, (x - ex) / (sx * E.a))); return top(Math.sqrt(1 - c * c), c); };
   const lidAt = x => { const c = Math.max(-1, Math.min(1, (x - ex) / (sx * E.a * 0.95))); return ey - E.down * Math.sqrt(1 - c * c) + lift(c); };
   const iris = t => {
     const x = ex + E.irisA * Math.cos(t), y = ey - 0.01 + E.irisB * Math.sin(t);
@@ -293,7 +329,13 @@ function animeEyeShape(style, sx) {
   const flick = [ex + sx * (E.a + E.flick[0]), ey + lift(1) + E.flick[1]];
   // A gleam's centre, `side` the way the light comes from (-1 the face's right).
   const gleam = (g, side) => [ex + side * g[0], ey + g[1]];
-  return { E, ex, ey, upper, lower, iris, weight, flick, gleam, corner: upper(0) };
+  // The brow, from its inner end (u = 0) to its outer: a thin arc at the
+  // style's height, rising outward as far as the eye's corner does - raised,
+  // tilted and arched by the expression.
+  const [raise, inner, arch] = X.brow;
+  const brow = u => [sx * (0.17 + 0.36 * u),
+    ey + E.brow + raise + inner * (1 - u) + 0.035 * arch * Math.sin(Math.PI * (0.35 + 0.65 * u)) + E.tilt * 0.6 * u];
+  return { E, X, ex, ey, upper, lower, iris, weight, flick, gleam, brow, corner: upper(0) };
 }
 const HEAD_STYLES = { loomis: 'Loomis', anime: 'Anime' };
 const HEAD_STYLE_KEY = 'refboard.headStyle.v1';

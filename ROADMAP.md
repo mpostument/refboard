@@ -193,8 +193,8 @@ same proportions made solid with its face a flat mask and the features drawn
 on as a decal, the gleam on the light's side; the note under the view
 (`animeHeadReading()` in `js/forms.js`) gives the far eye's width against the
 near one's, on the mask and on a ball, with what to watch at that angle, and
-sends the angle to Generate. Its hair is in place too - see Hair in clumps.
-Still to come on it: expressions.
+sends the angle to Generate. Its hair is in place too - see Hair in clumps,
+and its expressions - see the expression sheet.
 
 In place: the anime eye - `ANIME_EYES` and `animeEyeShape()` in `js/vision.js`,
 one description drawn both on a photo's head (the eye switch beside Loomis /
@@ -204,10 +204,25 @@ Soft (tareme) - the lash line's weight and flick, the iris ellipse cut by the
 lids, the gleams on the light's side, the brow. In 3D an eye colour too, a
 character sheet's chip setting hair and eyes at once, a line on what the
 eyes do at each angle in the note, and the colour and shape sent to Generate
-(its Eye shape row). Still to come on it: the eye with expression (see the
-Expression sheet), the irises turned to look somewhere, and more styles.
-- **Expression sheet.** Anime expressions - brows, eyes and mouth for joy,
-  anger, surprise, sadness - shown at several head angles.
+(its Eye shape row). Still to come on it: the irises turned to look
+somewhere, and more styles.
+
+In place: the expression sheet - `ANIME_EXPRESSIONS` in `js/vision.js`, on top
+of any eye style (`animeEyeShape()` takes the expression): Calm, Joy, Anger,
+Surprise, Sadness - the brows raised, tilted and arched, the lids pushed up
+into a crescent or dropped over one corner, the iris shrunk, and the mouth
+(`drawAnimeMouth()` in `js/forms-models.js`) with anime's signs: the blush,
+the vein, tears. The 3D head's hair, eyes and expression are on a Face tab of
+their own, shown only for a head with a face. Expression sheet
+(`animeExpressionSheet()` in `js/forms.js`) renders the head in each
+expression from the front, at three-quarters and near profile, as one
+picture in the viewer; the note under the view says what the expression
+does at that angle. Generate has an Expression row and an Expression sheet
+under How much - checked on Animagine XL 4.0: "expressions" alone drew one
+calm face ten times over captions in made-up script, so the sheet names each
+feeling and keeps text out. Still to come on it: brows drawn over the fringe,
+as anime does, more expressions (embarrassed, smug, crying), and a photo's
+head read for its expression.
 
 Body:
 

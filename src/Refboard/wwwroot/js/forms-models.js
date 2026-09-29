@@ -65,6 +65,8 @@ const FORM_OBJECT_DEFAULTS = {
   hair: 'bob', hairColor: '#6e4a37',
   // Its eyes: a style from ANIME_EYES (js/vision.js), and a colour from EYE_COLOURS.
   eyes: 'tv', eyeColor: '#3f6fb5',
+  // And its expression, from ANIME_EXPRESSIONS - at rest.
+  expression: 'calm',
   // The figure's joints, { joint: [bend, twist, lean] } in degrees - see
   // FORM_RIG. Frozen, and only ever replaced, never edited in place: objects
   // are copied with a plain spread, which would share it.
@@ -600,11 +602,12 @@ function formFacePoint(head, x, y) {
 }
 
 /* The features, drawn onto a canvas that covers ANIME_FACE_BOX, in an eye
-   style (ANIME_EYES, animeEyeShape() in js/vision.js) and an eye colour.
-   `gleams`: draw only the gleams, on the side the light comes from (side -1
-   is the face's right, the viewer's left), and leave everything else clear. */
+   style (ANIME_EYES, animeEyeShape() in js/vision.js), an eye colour and an
+   expression (ANIME_EXPRESSIONS). `gleams`: draw only the gleams, on the
+   side the light comes from (side -1 is the face's right, the viewer's
+   left), and leave everything else clear. */
 const ANIME_FACE_PX = 700;
-function drawAnimeFace(c, style, eyeColor, gleams, side = -1) {
+function drawAnimeFace(c, style, eyeColor, expression, gleams, side = -1) {
   const B = ANIME_FACE_BOX, A = ANIME_HEAD, k = ANIME_FACE_PX;
   c.width = Math.round((B.x1 - B.x0) * k); c.height = Math.round((B.y1 - B.y0) * k);
   const g = c.getContext('2d');
@@ -616,24 +619,28 @@ function drawAnimeFace(c, style, eyeColor, gleams, side = -1) {
   const dark = mix([12, 10, 24], 0.6), pale = mix([255, 255, 255], 0.45);
   g.lineCap = g.lineJoin = 'round';
   for (const sx of [-1, 1]) {
-    const e = animeEyeShape(style, sx), E = e.E;
+    const e = animeEyeShape(style, sx, expression), E = e.E;
+    const path = (f, t0, t1, n, move = true) => {
+      for (let i = 0; i <= n; i++) g[i || !move ? 'lineTo' : 'moveTo'](...P(f(t0 + (t1 - t0) * i / n)));
+    };
+    const opening = () => { g.beginPath(); path(e.upper, 0, Math.PI, 24); path(e.lower, Math.PI, 0, 24, false); g.closePath(); };
     if (gleams) {
       // One light, so the gleams are on the same side in both eyes: the big
-      // one high toward the light, the small ones low on the other side.
+      // one high toward the light, the small ones low on the other side -
+      // inside the eye, which a smile or a frown may have narrowed.
+      g.save(); opening(); g.clip();
       g.fillStyle = '#fff';
       E.gleams.forEach((gl, i) => {
         const [x, y] = P(e.gleam(gl, side)), r = gl[2];
         g.beginPath(); g.ellipse(x, y, r * (i ? 1 : 0.9) * k, r * (i ? 1 : 1.1) * k, 0, 0, 7); g.fill();
       });
+      g.restore();
       continue;
     }
-    const path = (f, t0, t1, n, move = true) => {
-      for (let i = 0; i <= n; i++) g[i || !move ? 'lineTo' : 'moveTo'](...P(f(t0 + (t1 - t0) * i / n)));
-    };
     // The white, and inside it the iris - tall, its top under the lash line -
     // and the pupil.
     g.save();
-    g.beginPath(); path(e.upper, 0, Math.PI, 24); path(e.lower, Math.PI, 0, 24, false); g.closePath();
+    opening();
     g.fillStyle = '#fbf8f6'; g.fill(); g.clip();
     const grad = g.createLinearGradient(0, Y(e.ey + E.irisB), 0, Y(e.ey - E.irisB));
     grad.addColorStop(0, dark); grad.addColorStop(0.55, eyeColor); grad.addColorStop(1, pale);
@@ -670,23 +677,92 @@ function drawAnimeFace(c, style, eyeColor, gleams, side = -1) {
     // The lower lid: a short, light stroke on the outer part.
     g.strokeStyle = ink; g.lineWidth = 0.009 * k * Math.max(0.7, E.lash); g.globalAlpha = 0.7;
     g.beginPath(); path(e.lower, E.lower[0] * Math.PI, E.lower[1] * Math.PI, 10); g.stroke(); g.globalAlpha = 1;
-    // The brow: a thin arc over the eye, at the style's height, rising
-    // toward the outer end as far as the eye's corner does.
-    g.lineWidth = 0.014 * k;
-    g.beginPath();
-    path(u => [sx * (0.17 + 0.36 * u), e.ey + E.brow + 0.035 * Math.sin(Math.PI * (0.35 + 0.65 * u)) + E.tilt * 0.6 * u], 0, 1, 12);
-    g.stroke();
+    // The brow (animeEyeShape()'s): the style's height, the expression's tilt.
+    g.lineWidth = 0.014 * k * e.X.brow[3];
+    g.beginPath(); path(e.brow, 0, 1, 12); g.stroke();
+    // Tears well along the lower lid and one runs from its outer end.
+    if (e.X.mark === 'tears') {
+      const [tx, ty] = e.lower(0.3 * Math.PI);
+      g.strokeStyle = 'rgba(150, 205, 240, 0.9)'; g.lineWidth = 0.02 * k;
+      g.beginPath(); path(e.lower, 0.12 * Math.PI, 0.7 * Math.PI, 10); g.stroke();
+      g.fillStyle = 'rgba(150, 205, 240, 0.95)';
+      g.beginPath(); g.moveTo(...P([tx, ty - 0.02]));
+      g.quadraticCurveTo(...P([tx + sx * 0.035, ty - 0.1]), ...P([tx, ty - 0.12]));
+      g.quadraticCurveTo(...P([tx - sx * 0.035, ty - 0.1]), ...P([tx, ty - 0.02]));
+      g.fill();
+      g.fillStyle = '#fff';
+      g.beginPath(); g.ellipse(X(tx - sx * 0.008), Y(ty - 0.09), 0.007 * k, 0.012 * k, 0, 0, 7); g.fill();
+    }
+    // The blush: a soft pink patch under the eye, hatched across.
+    if (e.X.mark === 'blush') {
+      const bx = e.ex + sx * 0.03, by = e.ey - 0.21;
+      g.fillStyle = 'rgba(236, 120, 140, 0.35)';
+      g.beginPath(); g.ellipse(X(bx), Y(by), 0.12 * k, 0.045 * k, 0, 0, 7); g.fill();
+      g.strokeStyle = 'rgba(214, 84, 110, 0.8)'; g.lineWidth = 0.008 * k;
+      for (let i = -1; i <= 1; i++) {
+        g.beginPath(); g.moveTo(X(bx + i * 0.05 - 0.015), Y(by - 0.02)); g.lineTo(X(bx + i * 0.05 + 0.015), Y(by + 0.02)); g.stroke();
+      }
+    }
+    g.strokeStyle = ink;
   }
   if (!gleams) {
-    // The nose: a small mark under its tip. The mouth: a short line.
+    // The nose: a small mark under its tip.
     g.strokeStyle = ink; g.lineWidth = 0.011 * k;
     g.beginPath(); g.moveTo(X(-0.02), Y(A.nose - 0.02)); g.lineTo(X(0.015), Y(A.nose - 0.035)); g.stroke();
-    g.lineWidth = 0.013 * k;
-    g.beginPath();
-    for (let i = 0; i <= 10; i++) { const t = -0.1 + 0.2 * i / 10; g.lineTo(X(t), Y(A.mouth + 0.25 * t * t)); }
-    g.stroke();
+    drawAnimeMouth(g, X, Y, k, animeExpression(expression), ink);
+    // Anger's vein: four curved brackets round a cross, at the temple.
+    if (animeExpression(expression).mark === 'vein') {
+      const vx = X(0.47), vy = Y(-0.1), r = 0.05 * k;
+      g.strokeStyle = '#c63a45'; g.lineWidth = 0.014 * k;
+      for (let q = 0; q < 4; q++) {
+        const a = q * Math.PI / 2 + Math.PI / 4, cx = vx + Math.cos(a) * r, cy = vy + Math.sin(a) * r;
+        g.beginPath(); g.arc(cx, cy, r * 0.7, a + Math.PI * 0.75, a + Math.PI * 1.25); g.stroke();
+      }
+    }
   }
   return c;
+}
+
+/* The mouth an expression (ANIME_EXPRESSIONS) makes, under the nose: anime
+   draws it as one shape - a line, or an opening filled dark - not as lips. */
+function drawAnimeMouth(g, X, Y, k, x, ink) {
+  const m = ANIME_HEAD.mouth, P = ([a, b]) => [X(a), Y(b)];
+  const inside = '#6e2a35', tongue = '#d9747f';
+  const open = (edge, fill = true) => {
+    g.beginPath(); edge.forEach((p, i) => g[i ? 'lineTo' : 'moveTo'](...P(p))); g.closePath();
+    if (fill) { g.fillStyle = inside; g.fill(); }
+    g.strokeStyle = ink; g.lineWidth = 0.01 * k; g.stroke();
+  };
+  const arc = (n, f) => Array.from({ length: n + 1 }, (_, i) => f(i / n));
+  g.lineWidth = 0.013 * k; g.strokeStyle = ink;
+  if (x.mouth === 'line' || x.mouth === 'frown') {
+    // The line at rest curves up a touch; the frown down, shorter.
+    const [w, bend] = x.mouth === 'frown' ? [0.075, -0.35] : [0.1, 0.25];
+    g.beginPath();
+    arc(10, u => { const t = w * (2 * u - 1); return [t, m + bend * t * t]; }).forEach((p, i) => g[i ? 'lineTo' : 'moveTo'](...P(p)));
+    g.stroke();
+  } else if (x.mouth === 'smile') {
+    // Wide open, the upper edge curving up at the corners, the lower a deep
+    // round - and the tongue in the bottom of it.
+    const edge = [...arc(10, u => { const t = -0.12 + 0.24 * u; return [t, m + 0.02 + 1.4 * t * t]; }),
+      ...arc(12, u => [0.12 * Math.cos(Math.PI * u), m + 0.04 - 0.11 * Math.sin(Math.PI * u) - 0.02 * (1 - Math.abs(Math.cos(Math.PI * u)))])];
+    open(edge);
+    g.save(); g.clip();
+    g.fillStyle = tongue; g.beginPath(); g.ellipse(X(0), Y(m - 0.075), 0.07 * k, 0.04 * k, 0, 0, 7); g.fill();
+    g.restore();
+    g.strokeStyle = ink; g.lineWidth = 0.01 * k; g.stroke();
+  } else if (x.mouth === 'shout') {
+    // Squared open, corners pulled down, the upper teeth a white band.
+    const edge = [[-0.1, m - 0.005], [-0.05, m + 0.015], [0.05, m + 0.015], [0.1, m - 0.005], [0.07, m - 0.1], [-0.07, m - 0.1]];
+    open(edge);
+    g.save(); g.clip();
+    g.fillStyle = '#fbf8f6'; g.fillRect(X(-0.12), Y(m + 0.02), 0.24 * k, 0.035 * k);
+    g.restore();
+    open(edge, false);
+  } else if (x.mouth === 'o') {
+    g.beginPath(); g.ellipse(X(0), Y(m - 0.03), 0.035 * k, 0.048 * k, 0, 0, 7);
+    g.fillStyle = inside; g.fill(); g.lineWidth = 0.01 * k; g.stroke();
+  }
 }
 
 /* Shared by every anime head in the scene: the face's geometry, and the
@@ -721,11 +797,12 @@ function formFaceMaterials(T) {
     ...(lit ? { roughness: 0.85, metalness: 0 } : {}) });
   const fm = { key: '', features: mat(true), gleam: { '-1': mat(false), '1': mat(false) } };
   const all = () => [fm.features, fm.gleam['-1'], fm.gleam['1']];
-  fm.draw = (style, eyeColor) => {
-    if (fm.key === style + eyeColor) return;
-    fm.key = style + eyeColor;
-    drawAnimeFace(fm.features.map.image, style, eyeColor, false);
-    for (const side of [-1, 1]) drawAnimeFace(fm.gleam[side].map.image, style, eyeColor, true, side);
+  fm.draw = (style, eyeColor, expression) => {
+    const key = [style, eyeColor, expression].join();
+    if (fm.key === key) return;
+    fm.key = key;
+    drawAnimeFace(fm.features.map.image, style, eyeColor, expression, false);
+    for (const side of [-1, 1]) drawAnimeFace(fm.gleam[side].map.image, style, eyeColor, expression, true, side);
     for (const m of all()) m.map.needsUpdate = true;
   };
   fm.dispose = () => { for (const m of all()) { m.map.dispose(); m.dispose(); } };

@@ -91,9 +91,9 @@ test('in 3D: each head its own eyes - a style and a colour, drawn again when the
     return { before, after: mats(0).key, green, reading: animeHeadReading().eyes, n: [n.eyes, n.eyeColor] };
   });
   expect(r.before.same).toBe(false);
-  expect(r.before.a).toBe('tv#3f6fb5');
-  expect(r.before.b).toBe('sharp#4f9a5c');
-  expect(r.after).toBe('shojo#3f6fb5');
+  expect(r.before.a).toBe('tv,#3f6fb5,calm');
+  expect(r.before.b).toBe('sharp,#4f9a5c,calm');
+  expect(r.after).toBe('shojo,#3f6fb5,calm');
   // Green shows in the iris: more green than red or blue.
   expect(r.green[1]).toBeGreaterThan(r.green[0]);
   expect(r.green[1]).toBeGreaterThan(r.green[2]);
@@ -101,19 +101,20 @@ test('in 3D: each head its own eyes - a style and a colour, drawn again when the
   expect(r.n).toEqual(['tv', '#3f6fb5']);
 });
 
-test('the Hair and eyes panel: eye styles and colours, and a character gives both', async ({ page }) => {
+test('the Face tab: eye styles and colours, and a character gives both', async ({ page }) => {
   await openApp(page);
   await page.evaluate(() => storePutItem('characters', 'c1',
     { name: 'Aoi', t: 1, parts: { hair: { base: [236, 200, 126] }, eyes: { base: [200, 50, 60] } } }));
   await openForms(page);
   await page.click('#formShapes [data-shape="anime"]');
-  const group = page.locator('.fgroup:has([data-group="Hair and eyes"])');
+  await page.click('[data-ftab="face"]');
+  const group = page.locator('.fgroup:has([data-group="Face"])');
   await expect(group).toBeVisible();
-  await expect(group.locator('h4')).toHaveText(['Hair', 'Eyes']);
+  await expect(group.locator('h4')).toHaveText(['Hair', 'Eyes', 'Expression']);
   await expect(group.locator('[data-eyes="tv"]')).toHaveAttribute('aria-pressed', 'true');
   await group.locator('[data-eyes="sharp"]').click();
   await expect(group.locator('[data-eyes="sharp"]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#formEyeNote')).toContainText('tsurime');
+  await expect(page.locator('#formFaceNote')).toContainText('tsurime');
   await group.locator('[aria-label="green eyes"]').click();
   await expect(group.locator('[aria-label="green eyes"]')).toHaveAttribute('aria-pressed', 'true');
   // The note under the view says what the eyes do at this angle.

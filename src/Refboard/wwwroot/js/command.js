@@ -125,7 +125,16 @@ function collectCommands() {
   if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
     run: () => openColour('character') });
   if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes iris lashes turn angle three-quarter manga model hair ring locks fringe bangs',
-    run: () => { setView({ kind: 'forms' }); showAnimeHead(); } });
+    run: () => openForms(() => showAnimeHead()) });
+  // Its expressions, each by name - and all of them at once, as a sheet.
+  if (!inSession) {
+    for (const [k, x] of Object.entries(ANIME_EXPRESSIONS)) if (k !== 'calm') out.push({
+      id: 'anime-expr-' + k, label: `Anime head in 3D: ${x.label}`, hint: '3D forms',
+      words: 'expression emotion face feeling ' + { joy: 'happy smile laugh blush', anger: 'angry mad rage vein', surprise: 'shock surprised wide', sadness: 'sad cry tears crying' }[k],
+      run: () => openForms(() => showAnimeHead(undefined, k)) });
+    out.push({ id: 'anime-expr-sheet', label: 'Expression sheet', hint: '3D forms', words: 'expressions emotions faces anime head model sheet joy anger surprise sadness',
+      run: () => openForms(async () => { showAnimeHead(); await formsReady(); openExpressionSheet(); }) });
+  }
   out.push({ id: 'theme-editor', label: 'Theme editor', hint: 'Appearance', words: 'colours customise custom own import export', run: openThemeEditor });
   out.push({ id: 'help', label: 'Help - how everything works', hint: '?', words: 'manual guide', run: toggleHelp });
   out.push({ id: 'tour', label: 'Tour - where things are', hint: 'Help', words: 'intro start new guide walkthrough', run: startTour });
