@@ -420,9 +420,13 @@ packs (below), and moving a picture to another folder by hand.
 - **Camera eyedropper.** Point a phone at the real scene - plein air - and
   read the colour under the crosshair with its watercolour recipe, live.
   The mixing is already there (paint.js); this adds the camera's video.
-- **What the paper can do.** The photo squeezed into the value range
-  watercolour has - the darkest mix to the white of the paper - showing
-  where detail in the lights and darks is lost and has to be simplified.
+- **What the paper can do, the rest.** In place (`js/range.js`, `b`, Workspace >
+  Value, a layer): the picture against the range of your main medium - its
+  darkest (`floor` in `MATERIALS`, round figures) to the paper's L* 95 -
+  violet below, amber above, strong where there is detail to lose and faint
+  where the area is flat. Still to come: the range measured from a swatch
+  photo (see Calibration), the paper's own tone, and the picture shown
+  squeezed into the range, as a preview.
 - **Shadow colour from the light's colour.** Set the light (warm sun, cool
   sky) and get the shadow's colour and its recipe - warm light, cool
   shadow, and the other way round.

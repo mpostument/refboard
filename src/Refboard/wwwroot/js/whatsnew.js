@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'range', title: "What the paper can do",
+    text: "Over any picture in a session (b, or Workspace > Value): where your medium cannot follow the photo. Violet is darker than the darkest mix you can make - watercolour goes to about L* 18, a liner to solid black - and amber is lighter than the paper, which is never quite white. Strong where there is detail that will be lost, faint where it is a flat mass that loses nothing; the note says how much of each, and what to do with it in your medium's terms. Change the main medium in My materials and the range follows.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'anime-shots', title: 'Anime camera angles in 3D',
     text: "The 3D view's Camera group has Anime shots: Worm's eye (down on the floor, looking up - the figure towers), Bird's eye, Wide and close (the fist thrust at you comes out huge), Dutch angle (a new Roll slider tilts the picture), Telephoto (depth flattened) and a real Fisheye, where straight lines bow round the middle. Each moves only the camera - which side you see stays yours - and Draw this shot sends it to Generate's new Lens row.",
     act: 'Show me', run: () => openForms(() => showAnimeShot('worm')) },

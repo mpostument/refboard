@@ -11,31 +11,33 @@
 
 /* tones: lightest to darkest, six steps; fewer are picked evenly from them,
    always keeping both ends (two steps - notan - is the paper and the
-   darkest). paint: which of paint.js's mixing models its colours follow,
+   darkest). floor: the darkest it goes, in L* (0-100) on white paper - a
+   round figure for a typical set, read by the paper's range (js/range.js).
+   paint: which of paint.js's mixing models its colours follow,
    or null for a medium that has one colour - value is all it has to say. */
 const MATERIALS = {
-  watercolour: { label: 'Watercolour', group: 'Paint', paint: 'water',
+  watercolour: { label: 'Watercolour', group: 'Paint', paint: 'water', floor: 18,
     tones: ['the paper - leave it white', 'a pale tint, mostly water', 'a light wash', 'a middle wash',
       'a strong wash', 'the darkest - thick paint, little water'] },
-  opaque: { label: 'Oil, acrylic or gouache', group: 'Paint', paint: 'opaque',
+  opaque: { label: 'Oil, acrylic or gouache', group: 'Paint', paint: 'opaque', floor: 8,
     tones: ['white with a touch of colour', 'light - a lot of white', 'light middle', 'middle',
       'dark - little or no white', 'the darkest - no white'] },
-  inkWash: { label: 'Bottle ink, in washes', group: 'Ink', paint: null,
+  inkWash: { label: 'Bottle ink, in washes', group: 'Ink', paint: null, floor: 14,
     tones: ['the paper', 'jar 1 - a drop of ink in a lot of water', 'jar 2', 'jar 3',
       'jar 4 - about half ink', 'ink straight from the bottle'] },
-  liner: { label: 'Liners', group: 'Ink', paint: null,
+  liner: { label: 'Liners', group: 'Ink', paint: null, floor: 10,
     tones: ['the paper - no lines', 'a few lines, far apart', 'one layer of hatching', 'cross-hatching',
       'three layers, close', 'solid black'] },
-  ballpoint: { label: 'Ballpoint pen', group: 'Ink', paint: null,
+  ballpoint: { label: 'Ballpoint pen', group: 'Ink', paint: null, floor: 24,
     tones: ['the paper - ballpoint cannot be erased', 'the lightest touch', 'light pressure, one layer',
       'medium pressure, layered', 'firm pressure, many layers', 'firm and dense - the darkest'] },
-  wcPencil: { label: 'Watercolour pencils', group: 'Pencils and markers', paint: 'water',
+  wcPencil: { label: 'Watercolour pencils', group: 'Pencils and markers', paint: 'water', floor: 28,
     tones: ['the paper', 'one light layer', 'two light layers', 'firm pressure, layered',
       'layered, then wetted', 'layered, wetted, dry, layered again'] },
-  wcMarker: { label: 'Watercolour markers', group: 'Pencils and markers', paint: 'water',
+  wcMarker: { label: 'Watercolour markers', group: 'Pencils and markers', paint: 'water', floor: 24,
     tones: ['the paper', 'picked up from the tip with water - pale', 'a stroke thinned with water',
       'one stroke of the marker', 'two strokes, blended', 'the darkest marker, layered'] },
-  graphite: { label: 'Graphite pencil', group: 'Pencils and markers', paint: null,
+  graphite: { label: 'Graphite pencil', group: 'Pencils and markers', paint: null, floor: 26,
     tones: ['the paper', '2H', 'HB', '2B', '4B', '8B'] },
 };
 const MATERIALS_KEY = 'refboard.materials.v1';

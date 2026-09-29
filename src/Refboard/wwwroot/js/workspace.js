@@ -18,6 +18,7 @@ const WS_TABS = [
     { hud: 'gray', about: 'colour out of the way, value left' },
     { hud: 'squint', about: 'details blurred - the big shapes of light and dark' },
     { hud: 'edges', about: 'which edges are hard and which soft - on dry paper, or wet-in-wet' },
+    { hud: 'range', about: 'what the paper can do: the darks and lights your medium cannot tell apart' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [

@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=5355cf06">
+<link rel="stylesheet" href="css/app.css?v=a703a393">
 </head>
 <body>
 <div id="setup">
@@ -655,7 +655,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -783,6 +783,7 @@
     <button id="btnPose" data-icon="person" title="Pose skeleton (p): the gesture, the tilt of shoulders and hips, and where the weight is - found by a pose model that runs in this browser" aria-label="Pose skeleton"></button>
     <button id="btnHead" data-icon="head" title="Head construction (l): the ball, side plane and face - Loomis's thirds, or where anime puts the features - turned to match each head in the picture, found by a face model that runs in this browser" aria-label="Head construction"></button>
     <button id="btnEdges" data-icon="edges" title="Edge map (x): which edges are hard and which soft - where to paint on dry paper, and where wet-in-wet" aria-label="Edge map" aria-pressed="false"></button>
+    <button id="btnRange" data-icon="range" title="Paper's range (b): what your medium cannot do - shadows darker than its darkest mix, lights lighter than the paper - and where detail is lost there" aria-label="Paper's range" aria-pressed="false"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <button id="btnWorkspace" data-icon="sliders" title="Workspace (w): the tools sorted by the question you ask of the picture - value, colour, construction, figure, your own work" aria-label="Workspace" aria-pressed="false"></button>
     <button id="btnLayers" data-icon="layers" title="Layers: every overlay in one list, each on or off and with its own opacity" aria-label="Layers" aria-pressed="false"></button>
@@ -807,7 +808,7 @@
     <button id="btnHelpHud" data-icon="help" title="What every feature does and how to use it (?)" aria-label="Help"></button>
     <button id="btnStop" data-icon="stop" title="Stop (Esc)" aria-label="Stop"></button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · p pose · l head · x edges · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · p pose · l head · x edges · b range · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
   </div>
 </div>
 
@@ -1624,29 +1625,30 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=47bf51c2"></script>
+<script src="js/core.js?v=d3efccfa"></script>
 <script src="js/setup.js?v=9dfd876b"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
-<script src="js/session.js?v=42e088a2"></script>
+<script src="js/session.js?v=d7cf2200"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0fa2b20b"></script>
-<script src="js/tools.js?v=fcba4643"></script>
-<script src="js/materials.js?v=a9b7eb53"></script>
-<script src="js/vision.js?v=070fdcdb"></script>
+<script src="js/tools.js?v=abc5e4ae"></script>
+<script src="js/materials.js?v=26ce83c4"></script>
+<script src="js/vision.js?v=6ade6761"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
-<script src="js/study.js?v=65c224d1"></script>
-<script src="js/layers.js?v=8269cbf6"></script>
+<script src="js/study.js?v=71692331"></script>
+<script src="js/layers.js?v=bab92e7b"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=67470c8d"></script>
-<script src="js/workspace.js?v=21389bc9"></script>
+<script src="js/pins.js?v=5f18e101"></script>
+<script src="js/workspace.js?v=c1bb926a"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=f51057c8"></script>
+<script src="js/command.js?v=db06dd2f"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=8ef761ea"></script>
+<script src="js/whatsnew.js?v=0c64ee8e"></script>
 <script src="js/edges.js?v=5393fa8f"></script>
+<script src="js/range.js?v=2b00e551"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
 <script src="js/generate.js?v=a202c557"></script>
 <!-- Sections whose code loads the first time they are opened - see

@@ -156,6 +156,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   taken out first (a morphological closing), so the map is of the edges
   between the washes. For watercolour it is a step of How to draw it too,
   and Generate asks for soft or hard edges.
+- **Paper's range** - in a session (`b`, Workspace > Value, Layers): what the
+  paper can do that the photo does. A photo runs from black to white; a
+  painting only from your medium's darkest mix (`floor` in My materials -
+  about L* 18 for watercolour, 10 for a liner) to the paper, which is never
+  quite white (L* 95). Violet marks what is darker than that, amber what is
+  lighter; strong where the area has detail that will be lost (the spread of
+  L* in a small window), faint where it is a flat mass, which loses nothing.
+  The note gives each share and what to do, in the medium's own ladder.
 - **Character sheet** - the Colour studio's second tab: a character's hair,
   skin, eyes, clothes and an accent, each clicked on a picture, with its
   shadow and light worked out as anime cel shading paints them (a value
