@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'head-fit', title: 'Head construction, on the head',
+    text: "The head construction (L) and the pose (P) now sit where they belong: on a picture shown smaller than its own size - nearly every one - they were drawn shrunk toward its top left, the chin on the nose. The anime face over a photo is bolder and its note shorter; what each eye style is, is on its button.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'expressions', title: 'Anime expressions, and a sheet of them',
     text: "The 3D anime head in Joy, Anger, Surprise or Sadness - brows, lids, iris and mouth as anime draws them, with the blush, the vein and the tears - on its own Face tab, beside its hair and eyes. Expression sheet shows every expression at three angles in one picture. With a ComfyUI, Draw it at this angle takes the expression along, and Draw a sheet asks for one character's expressions.",
     act: 'Show me', run: () => openForms(() => showAnimeHead(undefined, 'joy')) },

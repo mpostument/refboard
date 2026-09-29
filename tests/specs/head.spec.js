@@ -79,3 +79,21 @@ test('anime eyes sit lower than the brow, and the far one narrows as the head tu
   // ...and the note says so.
   await expect(page.locator('#poseNote')).toContainText('far eye is narrower');
 });
+
+test('the models are given the picture at its own size, not as it is shown', async ({ page }) => {
+  await openApp(page);
+  await page.setInputFiles('#dropInput', { name: 'q.png', mimeType: 'image/png', buffer: quadrantsPng() });
+  await expect(page.locator('#session')).toBeVisible();
+  // Shown at another size than its own: MediaPipe, handed the <img>, read it
+  // at the shown size - every point came back scaled by shown / natural.
+  const r = await page.evaluate(() => {
+    const img = el('img'), seen = [];
+    img.style.width = img.naturalWidth * 3 + 'px';
+    const model = { detect: src => { seen.push([src.tagName, src.width, src.height]); return { faceLandmarks: [] }; } };
+    detectFaces(model, img);
+    return { seen, W: img.naturalWidth, H: img.naturalHeight };
+  });
+  expect(r.seen[0]).toEqual(['CANVAS', r.W, r.H]);
+  // The retries with a grey margin: 0.3 and 0.6 of it each side.
+  expect(r.seen[1]).toEqual(['CANVAS', Math.round(r.W * 1.6), Math.round(r.H * 1.6)]);
+});

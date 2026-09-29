@@ -909,8 +909,9 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* The anime face - see animeFace(). Pink, so it never reads as Loomis's
    yellow thirds; the lash line heaviest, as it is in the drawing itself. */
 #headOverlay .eyeline { stroke: #ff8fc8; stroke-width: 1.5; stroke-dasharray: 8 5; }
-#headOverlay .lash { stroke: #ff8fc8; stroke-width: 3.5; }
-#headOverlay :is(.lid, .iris, .feat) { stroke: #ff8fc8; stroke-width: 1.8; }
+#headOverlay .lash { stroke: #ff8fc8; stroke-width: 5; }
+#headOverlay :is(.lid, .iris, .feat) { stroke: #ff8fc8; stroke-width: 2.6; }
+#headOverlay .o:has(+ .lash) { stroke-width: 7; }
 #headOverlay circle.gleam { fill: #fff; stroke: #000; stroke-width: 1; }
 #headOverlay circle.dot.pink { fill: #ff8fc8; }
 #poseNote b.pink { color: #ff8fc8; }
