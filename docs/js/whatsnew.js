@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-prompt', title: 'Generate: see the prompt, switch off what it keeps out',
+    text: "Prompt, above More tags, shows what goes to the model: the tags, and what your choices keep out - each of those a switch, so a tag like sepia or holding pen can be let back in; they stay off until you turn them back on. What the server always keeps out is shown too.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-beginner', title: 'Generate: Beginner, temples everywhere, two more media',
     text: "Detail has Beginner: the fewest shapes - straight hair, flat colour, thick outlines, one building on white instead of a street of a thousand windows. A Temple is the Setting's own - Slavic idols in an oak grove, a cathedral, a stave church, a mosque, a Hindu temple - not always a Japanese shrine. Ink is black lines and hatching, with no pen drawn into the picture. New media: Watercolour markers and Watercolour pencils. Each generated picture can be deleted with its cross, or all of them with Delete all.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

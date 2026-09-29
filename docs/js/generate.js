@@ -363,6 +363,12 @@ function genPrompt(choices, extra = '') {
 const comfyTags = s => s.replace(/(\S) \(([^():]+)\)/g, '$1 \\($2\\)');
 
 let genChoices = { ...GEN_DEFAULTS };
+// The Prompt box: whether it is open, and the tags to keep out that were
+// switched off - kept as ComfyUI gets them, so "sepia" stays off from one
+// medium to the next. The server's own (genServer) have no switch.
+const GEN_VIEW_KEY = 'refboard.generate.prompt.v1';
+let genView = { open: false, off: [] }, genServer = { quality: '', negative: '' };
+const genSplit = s => [...new Set(s.split(/,\s*/).map(t => t.trim()).filter(Boolean))];
 // Whether this server has a ComfyUI to ask - its rail button shows once it
 // has (initGenerate()), so the other views offer a button for it or not.
 const genAvailable = () => !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
@@ -373,6 +379,32 @@ function loadGenChoices() {
 }
 function saveGenChoices() {
   try { localStorage.setItem(GEN_KEY, JSON.stringify(genChoices)); } catch { /* private mode */ }
+}
+function saveGenView() {
+  try { localStorage.setItem(GEN_VIEW_KEY, JSON.stringify(genView)); } catch { /* private mode */ }
+}
+
+// The request as it is sent: the choices, and what to keep out less the
+// switched-off tags.
+function genRequest() {
+  const req = genPrompt(genChoices, el('genExtra').value);
+  const off = new Set(genView.off);
+  return { ...req, avoid: genSplit(req.avoid).filter(t => !off.has(t)).join(', ') };
+}
+
+function renderGenPrompt() {
+  if (!el('genPrompt').open) return; // drawn when opened
+  const req = genPrompt(genChoices, el('genExtra').value), off = new Set(genView.off);
+  const avoid = genSplit(req.avoid);
+  const offHere = avoid.filter(t => off.has(t)).length;
+  el('genPromptBody').innerHTML =
+    `<div><h5>Tags</h5><div class="gen-tags">${esc(req.prompt)}${genServer.quality ? `<span class="fixed">, ${esc(genServer.quality)}</span>` : ''}</div></div>` +
+    `<div><h5>Kept out by your choices - click one to let it in ` +
+    (offHere ? `<button type="button" id="genAvoidReset">Turn all back on</button>` : '') + `</h5>` +
+    (avoid.length ? `<div class="gen-avoid" role="group" aria-label="Kept out by your choices">` +
+      avoid.map(t => `<button type="button" data-avoid="${esc(t)}" aria-pressed="${!off.has(t)}">${esc(t)}</button>`).join('') + '</div>'
+      : '<div class="gen-tags fixed">Nothing - Normal detail and this medium keep nothing out.</div>') + '</div>' +
+    (genServer.negative ? `<div><h5>Always kept out, by the server</h5><div class="gen-tags fixed">${esc(genServer.negative)}</div></div>` : '');
 }
 
 function renderGenerate() {
@@ -493,7 +525,7 @@ async function runGenerate() {
   genBusy = true;
   el('genGo').disabled = true;
   const n = Number(el('genCount').value) || 1;
-  const req = genPrompt(genChoices, el('genExtra').value);
+  const req = genRequest();
   const status = el('genStatus');
   try {
     for (let i = 1; i <= n; i++) {
@@ -521,7 +553,27 @@ async function initGenerate() {
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
     if (['subject', 'medium', 'framing'].includes(b.dataset.gen)) syncGenRows();
+    renderGenPrompt();
   });
+  try { Object.assign(genView, JSON.parse(localStorage.getItem(GEN_VIEW_KEY)) || {}); } catch { /* defaults */ }
+  el('genPrompt').open = !!genView.open;
+  el('genPrompt').addEventListener('toggle', () => {
+    genView.open = el('genPrompt').open;
+    saveGenView();
+    renderGenPrompt();
+  });
+  el('genPromptBody').addEventListener('click', e => {
+    const t = e.target.closest('[data-avoid]');
+    if (e.target.closest('#genAvoidReset')) genView.off = [];
+    else if (t) {
+      const tag = t.dataset.avoid;
+      genView.off = genView.off.includes(tag) ? genView.off.filter(x => x !== tag) : [...genView.off, tag];
+    } else return;
+    saveGenView();
+    renderGenPrompt();
+    el('genPromptBody').querySelector(t ? `[data-avoid="${CSS.escape(t.dataset.avoid)}"]` : '.gen-avoid button')?.focus();
+  });
+  el('genExtra').addEventListener('input', renderGenPrompt);
   el('genGo').addEventListener('click', runGenerate);
   el('genClear').addEventListener('click', clearGenerated);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });
@@ -532,6 +584,8 @@ async function initGenerate() {
   let info = null;
   try { info = await (await fetch('api/generate')).json(); } catch { /* an older server: no such route */ }
   if (!info || !info.available) return;
+  genServer = { quality: info.quality || '', negative: info.negative || '' };
+  renderGenPrompt();
   document.querySelector('.nav-item[data-view="generate"]').classList.remove('hidden');
   renderStages();
 }
