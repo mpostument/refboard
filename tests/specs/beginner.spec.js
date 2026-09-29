@@ -7,12 +7,20 @@ test('Beginner: the fewest shapes, told per subject', async ({ page }) => {
   await openApp(page);
   const r = await page.evaluate(() => ['character', 'building', 'landscape'].map(subject =>
     genPrompt({ ...GEN_DEFAULTS, subject, detail: 'beginner' })));
-  // Weighted - Simple alone still drew a hundred strands of hair.
-  expect(r[0].prompt).toContain('(minimalist:1.4), (simple drawing:1.3), flat color');
-  expect(r[0].prompt).toContain('straight hair');
+  // A figure lightly weighted - at 1.4 the medium went and the legs went
+  // to sticks - and in plain clothes, not a gown with a train.
+  expect(r[0].prompt).toContain('(minimalist:1.2), simple drawing');
+  expect(r[0].prompt).not.toContain('flat color');
+  expect(r[0].prompt).toContain('straight hair, casual, t-shirt, pants');
+  expect(r[0].avoid).toContain('train \\(clothing\\)');
   expect(r[0].avoid).toContain('flyaway hair');
   expect(r[0].tags).toContain('beginner');
-  // One building on white, not a street of a thousand windows.
+  // A Setting dresses her instead.
+  const slavic = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, detail: 'beginner', setting: 'slavic' }));
+  expect(slavic.prompt).not.toContain('t-shirt');
+  expect(slavic.prompt).toContain('flower wreath');
+  // One building on white, not a street of a thousand windows - weighted hard.
+  expect(r[1].prompt).toContain('(minimalist:1.4)');
   expect(r[1].prompt).toContain('(few buildings:1.3), simple background, white background');
   expect(r[1].avoid).toContain('(many windows:1.2)');
   expect(r[1].avoid).not.toContain('flyaway hair');

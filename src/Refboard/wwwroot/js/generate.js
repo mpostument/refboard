@@ -24,6 +24,12 @@ const ANY = { id: 'any', label: 'Any', tags: '' };
 const PERSON = ['character'], OUTDOORS = ['landscape', 'building'];
 // Detail's Beginner, whatever the subject.
 const BEGIN = '(minimalist:1.4), (simple drawing:1.3), flat color, simple coloring, thick outlines';
+// A figure takes less: at 1.4, with flat colour and thick outlines, the
+// medium went (a vector drawing, whatever was picked) and the legs went to
+// sticks. What makes a figure hard is the clothes as much as the hair - left
+// alone the model dressed her in a gown with a train - so, with no Setting
+// to dress her, a t-shirt and trousers.
+const BEGIN_FIGURE = '(minimalist:1.2), simple drawing, simple coloring, clean lineart, straight hair';
 const BEGIN_AVOID = '(detailed:1.3), intricate details, complex background, gradient, shiny skin, shiny hair';
 const GEN_CHOICES = [
   // One style for now - the models behind this are anime models. A second
@@ -283,15 +289,15 @@ const GEN_CHOICES = [
   // ("(tag:1.3)"): Simple still gave hair of a hundred strands, and a
   // street of a thousand windows. Tags per subject, as Setting's are.
   { id: 'detail', label: 'Detail', options: [
-    { id: 'beginner', label: 'Beginner', words: 'beginner', hint: 'The fewest shapes - straight hair, flat colour, thick outlines, one building on white',
+    { id: 'beginner', label: 'Beginner', words: 'beginner', hint: 'The fewest shapes - straight hair, plain clothes, clean lines; one building on white',
       tags: {
-        character: BEGIN + ', straight hair',
+        character: ch => BEGIN_FIGURE + (ch.setting === 'any' ? ', casual, t-shirt, pants' : ''),
         landscape: BEGIN + ', simple shapes, (few details:1.2)',
         building: BEGIN + ', simple shapes, (few buildings:1.3), simple background, white background',
         nature: BEGIN + ', simple shapes',
         animal: BEGIN + ', simple shapes' },
       avoid: {
-        character: BEGIN_AVOID + ', hair strand, flyaway hair, messy hair, ahoge, hair ornament, ribbon, frills, lace, jewelry, pattern',
+        character: BEGIN_AVOID + ', hair strand, flyaway hair, messy hair, ahoge, hair ornament, ribbon, frills, lace, jewelry, pattern, train (clothing), skinny',
         landscape: BEGIN_AVOID + ', clutter, (detailed foliage:1.2)',
         building: BEGIN_AVOID + ', (many windows:1.2), crowd, ornament, sign, text, power lines, clutter, cityscape, skyscraper, car',
         nature: BEGIN_AVOID + ', clutter',
@@ -336,8 +342,13 @@ function genPrompt(choices, extra = '') {
   const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
   const setting = choices.setting || GEN_DEFAULTS.setting;
   // Tags, and what to keep out, may differ by subject (Setting's and
-  // Beginner's do) or by setting (a temple's); _ is every other one.
-  const pick = v => v && typeof v === 'object' ? v[subject] ?? v[setting] ?? v._ ?? '' : v;
+  // Beginner's do) or by setting (a temple's); _ is every other one. Any of
+  // them may be a function of all the choices.
+  const ch = { ...GEN_DEFAULTS, ...choices, subject, setting };
+  const pick = v => {
+    const x = v && typeof v === 'object' ? v[subject] ?? v[setting] ?? v._ ?? '' : v;
+    return typeof x === 'function' ? x(ch) : x;
+  };
   const rows = GEN_CHOICES.filter(c => genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })).map(c =>
     [c, c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id])]);
   // A row whose tags another choice has taken over (a temple, Setting's).

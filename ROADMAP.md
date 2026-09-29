@@ -167,7 +167,10 @@ view. Still to come on it: a setting for the 3D forms' scene, and eras
 (ancient, medieval, modern) apart from places.
 In place too: Detail's Beginner - weighted tags ("(minimalist:1.4)") per
 subject, since Simple still drew hair of a hundred strands and a street of
-a thousand windows; a building on white. A Temple per Setting (`owns`: its
+a thousand windows; a building on white. A figure is weighted lighter
+(`BEGIN_FIGURE`: at 1.4 the medium was lost and the legs went to sticks)
+and, with Setting Any, dressed in a t-shirt and trousers - left alone the
+model drew gowns with trains. A Temple per Setting (`owns`: its
 tags stand in for the Setting's, whose log houses drew a Slavic hut, not
 idols). Tags escaped for ComfyUI (`comfyTags()`): bare brackets are its
 emphasis, so "pen (medium)" drew a pen into ink pictures; ink avoids sepia,
