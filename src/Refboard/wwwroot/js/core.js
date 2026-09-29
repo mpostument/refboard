@@ -8,7 +8,7 @@
 // updateFooterVersion() below overwrites it with the real running version
 // from /healthz, so this constant drifting a little on Pages costs nothing
 // where it actually matters.
-const APP_VERSION = '0.17.1';
+const APP_VERSION = '0.18.0';
 
 /* ---- icons. Line icons on a 24-unit grid, drawn in currentColor so they
    take the button's colour and its hover and pressed states. Any element
