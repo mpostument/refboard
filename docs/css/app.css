@@ -1511,6 +1511,10 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 /* The groups two to a row where there is room; What, the first, across. */
 #genChoices { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px 28px; align-items: start; }
 .gen-group[data-group="what"] { grid-column: 1 / -1; }
+/* A long row's chips in kinds - the world, genres; figure study - each
+   kind on a line of its own, its caption first. */
+.chips-break { flex-basis: 100%; height: 0; }
+.chips-group { align-self: center; min-width: 6.5em; font-size: 11px; color: var(--dim); }
 .gen-group h3 { margin: 0 0 2px; padding-bottom: 5px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--ink); }
 /* More tags, how many and Generate, always in reach at the bottom. */
 .gen-bar { position: sticky; bottom: calc(-1 * var(--main-pad-b, 0px)); z-index: 2; margin-top: 18px; padding: 10px 0 12px; background: var(--bg); border-top: 1px solid var(--line);

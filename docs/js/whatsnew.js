@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-clothes', title: 'Generate: clothes, and three more settings',
+    text: "A Clothes row dresses the character as her Setting would - Everyday, Festive, Uniform, Armour or Winter: festive is embroidery and a wreath in a Slavic setting, a furisode in an East Asian one, a prince's cape for a Western boy. For figure study: Sportswear, Close-fitting, a one-piece Swimsuit or a Leotard. New settings: Modern, Steampunk and Post-apocalyptic, each with its own streets, land and temple. The long rows are sorted into kinds - the world, genres, figure study.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-beginner-2', title: 'Generate: a better Beginner figure',
     text: "Beginner no longer strips a figure down to a flat vector drawing with legs like sticks: she keeps the medium you picked - watercolour, ink, pencil, markers - with ordinary proportions, and with no Setting she wears a t-shirt and trousers instead of a gown with a train.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
