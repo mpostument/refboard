@@ -1188,6 +1188,10 @@ function updateViewMeta() {
     m.textContent = 'Palette, colour wheel and gamut mask for any image - and a character sheet: her colours, with how to mix them.';
     return;
   }
+  if (view.kind === 'palette') {
+    m.textContent = 'Colours to plan a picture with, in harmony and spread over the values - each with how to mix it from your paints.';
+    return;
+  }
   if (view.kind === 'generate') {
     m.textContent = 'Anime references made to order by your own ComfyUI - a character, a landscape, buildings, nature or an animal, in the light and medium you pick.';
     return;
@@ -1212,6 +1216,7 @@ function viewTitle() {
     case 'train': return 'Train';
     case 'colour': return 'Colour studio';
     case 'generate': return 'Generate references';
+    case 'palette': return 'Palettes';
     default:      return 'Dashboard';
   }
 }
@@ -1226,19 +1231,21 @@ function setView(next) {
   const browsing = view.kind === 'all' || view.kind === 'pack' || view.kind === 'group';
 
   const forms = view.kind === 'forms', train = view.kind === 'train', colour = view.kind === 'colour';
-  const generate = view.kind === 'generate';
+  const generate = view.kind === 'generate', palette = view.kind === 'palette';
   el('viewBrowse').classList.toggle('hidden', !browsing);
   el('viewForms').classList.toggle('hidden', !forms);
   el('viewTrain').classList.toggle('hidden', !train);
   el('viewColour').classList.toggle('hidden', !colour);
   el('viewGenerate').classList.toggle('hidden', !generate);
+  el('viewPalette').classList.toggle('hidden', !palette);
   el('mainBody').classList.toggle('forms-mode', forms);
   // The Session inspector is for drawing from the library. Here it only took
   // width from the stage; its one use in this view - the interval for Draw
   // random forms - has its own control in the 3D panel. The trainers have
   // no use for it at all.
-  el('setup').classList.toggle('forms-mode', forms || train || colour || generate);
-  el('viewDashboard').classList.toggle('hidden', browsing || forms || train || colour || generate);
+  const tool = forms || train || colour || generate || palette;
+  el('setup').classList.toggle('forms-mode', tool);
+  el('viewDashboard').classList.toggle('hidden', browsing || tool);
   el('searchbar').classList.toggle('hidden', !browsing);
   el('viewTitle').textContent = viewTitle();
   if (changed) announce(viewTitle());
@@ -1254,6 +1261,7 @@ function setView(next) {
   if (forms) openLazyView('forms', () => showForms());
   if (train) showTrain();
   if (colour) openLazyView('colour', () => showColour());
+  if (palette) openLazyView('palette', () => showPalette());
   if (generate) showGenerate();
   el('sidebar').classList.remove('peek');
   shellSync();
@@ -1295,6 +1303,13 @@ async function openColour(tab, src) {
   if (!col) initColour();
   colourTab(tab);
   if (src) colourLoad(src);
+}
+
+// The palette generator, with these colours as its palette.
+async function openPalette(rgbs) {
+  setView({ kind: 'palette' });
+  await loadSection('palette');
+  palgenTake(rgbs);
 }
 
 /* Highlights whichever tree row the middle column is showing, and opens the

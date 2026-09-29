@@ -265,3 +265,90 @@ function convexHull(pts) {
   for (const q of p.reverse()) { while (hi.length >= 2 && cross(hi[hi.length - 2], hi[hi.length - 1], q) <= 0) hi.pop(); hi.push(q); }
   return lo.slice(0, -1).concat(hi.slice(0, -1));
 }
+
+/* ---- shapes on the colour wheel, in OKLab a/b (or any scaling of it - the
+   grey centre is the origin either way): is a colour inside, and where does
+   it go when it is not. */
+function pointInPolygon([x, y], poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function nearestOnPolygon([x, y], poly) {
+  let best = null, bd = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, ay] = poly[j], [bx, by] = poly[i], dx = bx - ax, dy = by - ay;
+    const t = clamp01(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1));
+    const px = ax + t * dx, py = ay + t * dy, d = (px - x) ** 2 + (py - y) ** 2;
+    if (d < bd) { bd = d; best = [px, py]; }
+  }
+  return best;
+}
+
+/* Where a colour outside a shape on the wheel goes - the Colour studio's
+   gamut mask, when the picture is repainted inside it, or what your paints
+   can mix, when the palette generator keeps to them. Called only for points already known to be outside `poly`; must return
+   a point inside it or on its edge. Lightness is not this function's
+   business - it stays exactly as it was, which is what keeps the drawing.
+
+   The nearest point on the mask's edge is the smallest possible change, but
+   it will happily trade hue for chroma: a red just outside a mask that
+   stops short of red comes back orange. The alternative is to walk the
+   colour in toward grey along its own hue until it meets the mask - it
+   keeps its hue and loses intensity, which is closer to how a painter
+   "knocks a colour back" - but a hue the mask does not reach at all has no
+   such point, so it still needs a fallback.
+
+   So: along its own hue first. The segment from grey (the origin) out to the
+   colour crosses the mask's edge wherever the mask covers that hue; of those
+   crossings the one furthest out (largest t) is the most intense version of
+   this exact hue the mask allows. Only a hue the mask misses entirely falls
+   back to the nearest point - there, changing hue is the only way in. */
+function mapIntoGamut(pt, poly) {
+  const [px, py] = pt;
+  let best = -1;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, ay] = poly[j], ex = poly[i][0] - ax, ey = poly[i][1] - ay;
+    // origin + t*pt = a + s*e, solved by cross products.
+    const den = px * ey - py * ex;
+    if (Math.abs(den) < 1e-12) continue;          // parallel to this edge
+    const t = (ax * ey - ay * ex) / den, s = (ax * py - ay * px) / den;
+    if (t >= 0 && t <= 1 && s >= 0 && s <= 1 && t > best) best = t;
+  }
+  return best >= 0 ? [px * best, py * best] : nearestOnPolygon(pt, poly);
+}
+
+/* The two choices every mixing tool asks - which medium, which tubes - as
+   rows of chips, the same in the Colour studio and the palette generator.
+   One pair of settings for the whole app: chosen here, they are the
+   eyedropper's too. */
+function paintChips(mediumHost, paintsHost, onChange) {
+  mediumHost.innerHTML = Object.entries(PAINT_MEDIA)
+    .map(([k, label]) => `<button class="chip" type="button" data-paint-medium="${k}">${label}</button>`).join('');
+  paintsHost.innerHTML = Object.entries(PAINT_PALETTES)
+    .map(([k, p]) => `<button class="chip" type="button" data-paint-palette="${k}" title="${esc(p.hint)}">${p.label}</button>`).join('');
+  mediumHost.addEventListener('click', e => {
+    const b = e.target.closest('[data-paint-medium]');
+    if (!b) return;
+    setPaintMedium(b.dataset.paintMedium);
+    paintChipsSync(); onChange();
+  });
+  paintsHost.addEventListener('click', e => {
+    const b = e.target.closest('[data-paint-palette]');
+    if (!b) return;
+    setPaintPaletteKey(b.dataset.paintPalette);
+    el('paintSelect').value = b.dataset.paintPalette;
+    paintChipsSync(); onChange();
+  });
+  paintChipsSync();
+}
+// Every such row on the page, lit for the current choice - set in one view,
+// the other shows it when it opens.
+function paintChipsSync() {
+  const m = paintMedium(), k = paintPaletteKey();
+  for (const b of document.querySelectorAll('[data-paint-medium]')) b.setAttribute('aria-pressed', String(b.dataset.paintMedium === m));
+  for (const b of document.querySelectorAll('[data-paint-palette]')) b.setAttribute('aria-pressed', String(b.dataset.paintPalette === k));
+}

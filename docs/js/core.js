@@ -8,7 +8,7 @@
 // updateFooterVersion() below overwrites it with the real running version
 // from /healthz, so this constant drifting a little on Pages costs nothing
 // where it actually matters.
-const APP_VERSION = '0.18.0';
+const APP_VERSION = '0.19.0';
 
 /* ---- icons. Line icons on a 24-unit grid, drawn in currentColor so they
    take the button's colour and its hover and pressed states. Any element
@@ -55,6 +55,9 @@ const ICONS = {
   figure: '<circle cx="12" cy="4.5" r="2.2"/><path d="M12 7v7M7 9.5l5 1.5 5-1.5M12 14l-3.5 7M12 14l3.5 7"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
   pen: '<path d="M4 20c4-1 6-6 9.5-9.5L17 7l-2-2-3.5 3.5C8 12 5 14 4 20z"/><path d="m15 5 2-2 4 4-2 2"/>',
+  swatches: '<rect x="3" y="5" width="5" height="14" rx="1.5"/><rect x="9.5" y="5" width="5" height="14" rx="1.5"/><rect x="16" y="5" width="5" height="14" rx="1.5"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
+  unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.7-1.5"/>',
   sparkle: '<path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15.5c.3 1.6 1 2.3 2.5 2.5-1.5.2-2.2.9-2.5 2.5-.3-1.6-1-2.3-2.5-2.5 1.5-.2 2.2-.9 2.5-2.5z"/>',
   clean: '<path d="m3 3 18 18"/><path d="M10.6 5.1Q11.3 5 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.1 3.8M6.6 6.6C3.6 8.5 2 12 2 12s3.5 7 10 7c1.8 0 3.3-.5 4.6-1.2"/>',
 };

@@ -69,56 +69,6 @@ function colourTab(name) {
 /* ---- the mask's geometry, in wheel units: [a, b] / COL_CMAX, so the rim
    is radius 1 and a point's angle is its OKLCH hue. */
 function colPolarToPt([h, r]) { const a = h * Math.PI / 180; return [r * Math.cos(a), r * Math.sin(a)]; }
-function pointInPolygon([x, y], poly) {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i], [xj, yj] = poly[j];
-    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-function nearestOnPolygon([x, y], poly) {
-  let best = null, bd = Infinity;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [ax, ay] = poly[j], [bx, by] = poly[i], dx = bx - ax, dy = by - ay;
-    const t = clamp01(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1));
-    const px = ax + t * dx, py = ay + t * dy, d = (px - x) ** 2 + (py - y) ** 2;
-    if (d < bd) { bd = d; best = [px, py]; }
-  }
-  return best;
-}
-
-/* Where a colour outside the mask goes when the picture is repainted inside
-   it. Called only for points already known to be outside `poly`; must return
-   a point inside it or on its edge. Lightness is not this function's
-   business - it stays exactly as it was, which is what keeps the drawing.
-
-   The nearest point on the mask's edge is the smallest possible change, but
-   it will happily trade hue for chroma: a red just outside a mask that
-   stops short of red comes back orange. The alternative is to walk the
-   colour in toward grey along its own hue until it meets the mask - it
-   keeps its hue and loses intensity, which is closer to how a painter
-   "knocks a colour back" - but a hue the mask does not reach at all has no
-   such point, so it still needs a fallback.
-
-   So: along its own hue first. The segment from grey (the origin) out to the
-   colour crosses the mask's edge wherever the mask covers that hue; of those
-   crossings the one furthest out (largest t) is the most intense version of
-   this exact hue the mask allows. Only a hue the mask misses entirely falls
-   back to the nearest point - there, changing hue is the only way in. */
-function mapIntoGamut(pt, poly) {
-  const [px, py] = pt;
-  let best = -1;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [ax, ay] = poly[j], ex = poly[i][0] - ax, ey = poly[i][1] - ay;
-    // origin + t*pt = a + s*e, solved by cross products.
-    const den = px * ey - py * ex;
-    if (Math.abs(den) < 1e-12) continue;          // parallel to this edge
-    const t = (ax * ey - ay * ex) / den, s = (ax * py - ay * px) / den;
-    if (t >= 0 && t <= 1 && s >= 0 && s <= 1 && t > best) best = t;
-  }
-  return best >= 0 ? [px * best, py * best] : nearestOnPolygon(pt, poly);
-}
 
 /* ---- the palette: k-means over the image's pixels in OKLab, with chroma
    weighted up - lightness alone spans most of OKLab's distances, and left
@@ -366,6 +316,7 @@ function colourRenderPalette() {
     const dh = Math.abs(((ha - hb + 540) % 360) - 180);
     if (Math.abs(la - lb) < 5 && (Math.max(ca, cb) > 0.04) && (dh > 40 || Math.abs(ca - cb) > 0.06)) same.push(`${i + 1} and ${j + 1}`);
   }
+  el('colToPalette').classList.remove('hidden');
   el('colValueNote').innerHTML = same.length
     ? `<b>Same value, different colour:</b> ${same.join(', ')}. In a value study each pair is one shape - the picture separates them by colour alone.`
     : 'Every palette colour has a value of its own - the picture reads in black and white too.';
@@ -390,8 +341,7 @@ function colMixHtml(p) {
   return `<details class="col-mix"><summary>${paintRecipeHtml(best)} <span>· ${more.length} more</span></summary>${more.map(paintRecipeHtml).join('')}</details>`;
 }
 function colourRenderPaints() {
-  for (const b of document.querySelectorAll('[data-col-paints]')) b.setAttribute('aria-pressed', String(b.dataset.colPaints === col.paints));
-  for (const b of document.querySelectorAll('[data-col-medium]')) b.setAttribute('aria-pressed', String(b.dataset.colMedium === col.medium));
+  paintChipsSync();
   let note = PAINT_PALETTES[col.paints].hint;
   // How much of the picture these paints can reach - by pixel, on the wheel.
   const reach = colReach();
@@ -438,24 +388,9 @@ function initColour() {
   el('colMasks').innerHTML = `<button class="chip" type="button" data-col-mask="">Off</button>` +
     Object.entries(COL_MASKS).map(([k, m]) => `<button class="chip" type="button" data-col-mask="${k}" title="${esc(m.hint)}">${m.label}</button>`).join('');
 
-  el('colPaints').innerHTML = Object.entries(PAINT_PALETTES)
-    .map(([k, p]) => `<button class="chip" type="button" data-col-paints="${k}" title="${esc(p.hint)}">${p.label}</button>`).join('');
-  el('colMedium').innerHTML = Object.entries(PAINT_MEDIA)
-    .map(([k, label]) => `<button class="chip" type="button" data-col-medium="${k}">${label}</button>`).join('');
-  el('colMedium').addEventListener('click', e => {
-    const b = e.target.closest('[data-col-medium]');
-    if (!b) return;
-    col.medium = b.dataset.colMedium;
-    setPaintMedium(col.medium);
-    colourRender();
-  });
-  el('colPaints').addEventListener('click', e => {
-    const b = e.target.closest('[data-col-paints]');
-    if (!b) return;
-    col.paints = b.dataset.colPaints;
-    // One choice of paints for the whole app - the eyedropper's too.
-    setPaintPaletteKey(col.paints);
-    el('paintSelect').value = col.paints;
+  // The same two rows of chips as the palette generator's (paint.js).
+  paintChips(el('colMedium'), el('colPaints'), () => {
+    col.paints = paintPaletteKey(); col.medium = paintMedium();
     colourRender();
   });
 
@@ -502,6 +437,8 @@ function initColour() {
   el('colInput').addEventListener('change', e => { take(e.target.files[0]); e.target.value = ''; });
   // The same picture with every other tool: value, construction, the pose.
   el('colWorkspace').addEventListener('click', () => { if (col.src) openInWorkspace(col.src, { label: 'Colour studio', tab: 'colour' }); });
+  // Its biggest five, most used first, as a palette to build on.
+  el('colToPalette').addEventListener('click', () => { if (col.palette) openPalette(col.palette.slice(0, 5).map(p => p.rgb)); });
   el('colRandom').addEventListener('click', () => { const u = trainLibraryImage(); if (u) colourLoad(u); });
   const stage = el('colStage');
   stage.addEventListener('dragover', e => { e.preventDefault(); stage.classList.add('over'); });

@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'palettes', title: 'Palettes: a palette generator',
+    text: "Prepare > Palettes: five colours in a harmony - analogous, complementary, split, triadic or one hue - spread over the values, a light and a dark among them. Space for a new palette; lock a colour to keep it, drag to reorder, open its tints and shades for a lighter or darker one, Undo, Copy, Save. Under each colour, how to mix it from your paints; Only what my paints mix makes only colours they can reach. In the Colour studio, To the palette generator takes a picture's own colours there.",
+    act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
   { id: 'gen-clothes', title: 'Generate: clothes, and three more settings',
     text: "A Clothes row dresses the character as her Setting would - Everyday, Festive, Uniform, Armour or Winter: festive is embroidery and a wreath in a Slavic setting, a furisode in an East Asian one, a prince's cape for a Western boy. For figure study: Sportswear, Close-fitting, a one-piece Swimsuit or a Leotard. New settings: Modern, Steampunk and Post-apocalyptic, each with its own streets, land and temple. The long rows are sorted into kinds - the world, genres, figure study.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

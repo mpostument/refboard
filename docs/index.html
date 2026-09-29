@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=5184130f">
+<link rel="stylesheet" href="css/app.css?v=7840bef7">
 </head>
 <body>
 <div id="setup">
@@ -64,6 +64,7 @@
       <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
       <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images - browse and search" aria-label="All images"></button>
       <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
+      <button class="nav-item" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
       <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
     </div>
@@ -378,6 +379,7 @@
               <div class="count">Point at a colour to see where it is in the picture; click to keep it.</div>
               <div id="colPalette" class="count">No image yet.</div>
               <div class="count" id="colValueNote"></div>
+              <button class="ghost hidden" type="button" id="colToPalette" title="These colours in the palette generator - to lock, reorder, and build a palette from">To the palette generator</button>
             </div>
             <div class="col-tab" data-tab="character" role="tabpanel">
               <div class="row char-bar">
@@ -399,6 +401,42 @@
           </div>
         </div>
         <input type="file" id="colInput" accept="image/*" class="hidden">
+      </div>
+
+      <!-- Palette generator - see showPalette() in js/palette.js, which
+           loads the first time this opens. Nothing here needs a library. -->
+      <div id="viewPalette" class="hidden">
+        <div class="row pg-bar">
+          <button type="button" id="pgGenerate" class="primary" title="A new palette - or press Space">New palette</button>
+          <span class="count pg-space">or press <kbd>Space</kbd></span>
+          <span class="grow"></span>
+          <button class="ghost" type="button" id="pgUndo" title="Back to the palette before (Ctrl+Z)">Undo</button>
+          <button class="ghost" type="button" id="pgAdd" title="One more colour">Add a colour</button>
+          <button class="ghost" type="button" id="pgCopy" title="Copy every colour as hex">Copy</button>
+          <button class="ghost" type="button" id="pgSave" title="Keep this palette - under Saved, below">Save</button>
+        </div>
+        <div id="pgRow" class="pg-row" role="group" aria-label="The palette"></div>
+        <div class="pg-under">
+          <div>
+            <h4>Harmony</h4>
+            <div class="chips" id="pgHarmony" role="group" aria-label="Harmony"></div>
+            <div class="count" id="pgHarmonyHint"></div>
+            <h4>Your paints</h4>
+            <div class="chips" id="pgMedium" role="group" aria-label="Medium"></div>
+            <div class="chips" id="pgPaints" role="group" aria-label="Paints"></div>
+            <div class="chips">
+              <button class="chip" type="button" id="pgFit" aria-pressed="false" title="Make only colours these paints can mix">Only what my paints mix</button>
+            </div>
+            <div class="count" id="pgPaintHint"></div>
+          </div>
+          <div>
+            <h4>Saved</h4>
+            <div id="pgSaved"></div>
+            <h4>From a picture</h4>
+            <div class="count">A reference's own colours: open it in the Colour studio, then To the palette generator under its palette.</div>
+            <button class="ghost" type="button" id="pgFromPicture">Open the Colour studio</button>
+          </div>
+        </div>
       </div>
 
       <div id="viewBrowse" class="hidden">
@@ -1561,14 +1599,14 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=f48cc15f"></script>
-<script src="js/setup.js?v=db80fa7c"></script>
+<script src="js/core.js?v=a14969c2"></script>
+<script src="js/setup.js?v=9dfd876b"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
 <script src="js/session.js?v=42e088a2"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
-<script src="js/paint.js?v=0bc3b11f"></script>
+<script src="js/paint.js?v=0fa2b20b"></script>
 <script src="js/tools.js?v=fcba4643"></script>
 <script src="js/materials.js?v=a9b7eb53"></script>
 <script src="js/vision.js?v=7152a7bc"></script>
@@ -1580,9 +1618,9 @@
 <script src="js/workspace.js?v=21389bc9"></script>
 <script src="js/train.js?v=9fd9bbc0"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=94249973"></script>
+<script src="js/command.js?v=7a952c82"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=56e50c4d"></script>
+<script src="js/whatsnew.js?v=89d06002"></script>
 <script src="js/edges.js?v=5393fa8f"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
 <script src="js/generate.js?v=9a1d5100"></script>
@@ -1596,8 +1634,11 @@
 <template id="lazy-backup">
 <script src="js/backup.js?v=e7ec2fe2"></script>
 </template>
+<template id="lazy-palette">
+<script src="js/palette.js?v=4814a01f"></script>
+</template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=b6a9ad6d"></script>
+<script src="js/colour.js?v=51d42b15"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 </template>
 <script src="js/main.js?v=108cddb7"></script>
