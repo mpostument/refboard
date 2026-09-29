@@ -193,8 +193,8 @@ same proportions made solid with its face a flat mask and the features drawn
 on as a decal, the gleam on the light's side; the note under the view
 (`animeHeadReading()` in `js/forms.js`) gives the far eye's width against the
 near one's, on the mask and on a ball, with what to watch at that angle, and
-sends the angle to Generate. Still to come on it: hair (see Hair in clumps),
-expressions, and eye colour from a character sheet.
+sends the angle to Generate. Its hair is in place too - see Hair in clumps.
+Still to come on it: expressions, and eye colour from a character sheet.
 
 - **The anime eye.** The weight of the upper lash line, the iris ellipse,
   where the highlights go, how the eye changes with angle and expression -
@@ -224,8 +224,15 @@ ink outline (the inverted hull), a second, darker shadow tone for occlusion.
 - **A photo as anime colouring.** Each area of the photo reduced to a base
   colour, a shadow and a highlight, as anime is coloured - with the shadow
   colour shifted toward purple or blue the way anime usually does.
-- **Hair in clumps.** Hair as volumes and strands on the head: the flow,
-  where the cel shadow lies, where the highlight goes (the anime ring).
+In place: hair in clumps - the anime head's Hair (`formAnimeHairGeometry()`,
+`HAIR_STYLES` in `js/forms-models.js`; the ring in `injectHairRing()` in
+`js/forms.js`): Short, Bob or Long, as pointed locks over a scalp mass, each
+lying on the skull and hanging from the widest point it passed; the ring worked
+out as hair shines (Kajiya-Kay), broken into a sawtooth at each lock, cel shaded
+on an Anime head with the fringe's hard shadow on the forehead. Colours named
+as Generate names them, or a character sheet's; Draw it at this angle sends the
+style and colour. Still to come on it: ponytail and twin tails, a parting to
+choose, and locks you can move.
 
 Line and background:
 

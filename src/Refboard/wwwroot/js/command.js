@@ -27,7 +27,7 @@ const COMMAND_WORDS = {
   'view-dashboard': 'home start',
   'view-all': 'browse grid images search',
   'view-drop': 'open file upload photo check own image video',
-  'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading',
+  'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading hair',
   'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
   'view-train': 'drill practice exercise test',
   btnLibrary: 'folders packs',
@@ -113,7 +113,7 @@ function collectCommands() {
   }
   if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
     run: () => openColour('character') });
-  if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes turn angle three-quarter manga model',
+  if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes turn angle three-quarter manga model hair ring locks fringe bangs',
     run: () => { setView({ kind: 'forms' }); showAnimeHead(); } });
   out.push({ id: 'theme-editor', label: 'Theme editor', hint: 'Appearance', words: 'colours customise custom own import export', run: openThemeEditor });
   out.push({ id: 'help', label: 'Help - how everything works', hint: '?', words: 'manual guide', run: toggleHelp });

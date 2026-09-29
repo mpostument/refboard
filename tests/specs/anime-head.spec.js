@@ -94,3 +94,76 @@ test('with a ComfyUI: anime heads drawn from the angle it is seen at', async ({ 
   await expect(page.locator('[data-gen="view"][data-opt="three"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-gen="framing"][data-opt="head"]')).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('hair in locks: on the anime head only, in styles, round the head and down past it', async ({ page }) => {
+  await openForms(page);
+  const r = await page.evaluate(() => {
+    const T = forms.T, look = (hair, shape = 'anime') => {
+      formScene.objects = [{ ...FORM_OBJECT_DEFAULTS, shape, hair }];
+      formScene.active = 0;
+      formsRender(formScene, 320, 240);
+      const m = forms.meshes[0], h = m.userData.hair;
+      if (!h) return null;
+      const box = new T.Box3().setFromBufferAttribute(h.geometry.attributes.position);
+      return { style: h.userData.style, top: box.max.y, low: box.min.y, verts: h.geometry.attributes.position.count,
+        ring: !!h.geometry.attributes.hairT && !!h.geometry.attributes.hairShift };
+    };
+    const head = new T.Box3().setFromBufferAttribute(formGeometry('anime').attributes.position);
+    return { head: { top: head.max.y, chin: head.min.y }, short: look('short'), bob: look('bob'), long: look('long'),
+      none: look('none'), sphere: look('bob', 'sphere') };
+  });
+  // Over the top of the head, with room: hair has volume.
+  for (const s of ['short', 'bob', 'long']) {
+    expect(r[s].style).toBe(s);
+    expect(r[s].ring).toBe(true);
+    expect(r[s].top).toBeGreaterThan(r.head.top + 0.05);
+  }
+  // Short stops above the jaw, a bob at it, long well past the chin.
+  expect(r.short.low).toBeGreaterThan(r.bob.low);
+  expect(r.bob.low).toBeGreaterThan(r.long.low);
+  expect(r.long.low).toBeLessThan(r.head.chin - 0.4);
+  expect(r.none).toBeNull();
+  expect(r.sphere).toBeNull();
+});
+
+test('the hair panel: styles, named colours, a character sheet\'s colour, and Skin', async ({ page }) => {
+  await openApp(page);
+  await page.evaluate(() => storePutItem('characters', 'c1', { name: 'Mika', t: 1, parts: { hair: { base: [96, 150, 200] } } }));
+  await page.click('.nav-item[data-view="forms"]');
+  const hair = page.locator('.fgroup:has([data-group="Hair"])');
+  await expect(page.locator('#formFinishes [data-finish="anime"]')).toBeVisible();
+  await page.click('#formShapes [data-shape="sphere"]');
+  await expect(hair).toBeHidden();
+  await expect(page.locator('.frow:has([data-k="color"]) > span')).toHaveText('Colour');
+  await page.click('#formShapes [data-shape="anime"]');
+  await expect(hair).toBeVisible();
+  await expect(page.locator('.frow:has([data-k="color"]) > span')).toHaveText('Skin');
+  await expect(hair.locator('[data-hair="bob"]')).toHaveAttribute('aria-pressed', 'true');
+  await hair.locator('[data-hair="long"]').click();
+  await expect(hair.locator('[data-hair="long"]')).toHaveAttribute('aria-pressed', 'true');
+  await hair.locator('[aria-label="pink hair"]').click();
+  await expect(hair.locator('[aria-label="pink hair"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => [activeFormObject().hairColor, hairColourName(activeFormObject().hairColor)])).toEqual(['#f2a7c0', 'pink']);
+  // Her hair, from her sheet - and named by the nearest colour Generate knows.
+  const mika = hair.locator('[data-hair-char]', { hasText: 'Mika' });
+  await mika.click();
+  await expect(mika).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => hairColourName(activeFormObject().hairColor))).toBe('blue');
+  // No hair: no colours to pick.
+  await hair.locator('[data-hair="none"]').click();
+  await expect(page.locator('#formHairColours')).toBeHidden();
+  expect(await page.evaluate(() => { formsRender(formScene, 64, 64); return !forms.meshes[formScene.active].userData.hair; })).toBe(true);
+});
+
+test('with a ComfyUI: the head drawn with its hair', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate**', r => r.fulfill({ json: { available: true } }));
+  await openForms(page);
+  await page.evaluate(() => showAnimeHead());
+  await page.evaluate(() => { Object.assign(activeFormObject(), { hair: 'long', hairColor: HAIR_COLOURS.silver }); formScene.yaw = 0; formScene.pitch = 0; formsChanged(); });
+  await expect(page.locator('#formAnimeNote')).toContainText('Hair:');
+  await page.locator('#formAnimeGen').click();
+  await expect(page.locator('#genStatus')).toContainText('silver hair, long');
+  await expect(page.locator('[data-gen="hair"][data-opt="long"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-gen="colour"][data-opt="silver"]')).toHaveAttribute('aria-pressed', 'true');
+});

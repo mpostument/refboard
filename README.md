@@ -370,6 +370,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   and - with a ComfyUI - *Draw it at this angle* asks Generate for anime heads
   from the same side. The shapes are listed in kinds: forms, figure and head,
   cloth, your models.
+- **Anime hair in locks** - the anime head's hair (Short, Bob, Long): pointed
+  locks over a mass that hides the scalp, lying on the skull and then hanging
+  from the widest point they pass. Its highlight is the anime ring - worked out
+  as hair shines (Kajiya-Kay: a band where the hairs lie square to the light),
+  broken into a sawtooth at each lock; cel shaded on an Anime head, with the
+  fringe's hard shadow on the forehead. Colours named as Generate names them,
+  or a character sheet's hair colour; *Draw it at this angle* sends the hair
+  style and colour too.
 - **The keyboard, and screen readers** - a visible focus ring, Tab kept inside
   dialogs, arrow keys along the rail, a *Skip to the content* link, and a
   live region that says which section opened and which pose is up.
