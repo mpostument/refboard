@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=823caa4b">
+<link rel="stylesheet" href="css/app.css?v=da6b85e2">
 </head>
 <body>
 <div id="setup">
@@ -318,7 +318,10 @@
             <p class="count" id="genWhere"></p>
           </div>
           <div class="col-right gen-right">
-            <h4>Made here</h4>
+            <div class="gen-made-head">
+              <h4>Made here <span class="count" id="genMadeCount"></span></h4>
+              <button type="button" id="genClear" class="hidden">Delete all</button>
+            </div>
             <ul id="genResults" aria-label="Generated pictures"></ul>
             <div class="count" id="genEmpty">What you generate shows here - click one to open it with every tool.</div>
           </div>
@@ -1553,7 +1556,7 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=784877b1"></script>
+<script src="js/core.js?v=d5fd1972"></script>
 <script src="js/setup.js?v=db80fa7c"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
@@ -1574,10 +1577,10 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=94249973"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=843f5664"></script>
+<script src="js/whatsnew.js?v=959bcd38"></script>
 <script src="js/edges.js?v=5393fa8f"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
-<script src="js/generate.js?v=28bf9504"></script>
+<script src="js/generate.js?v=b353a765"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
