@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'pigments', title: 'Pigment guide',
+    text: "Colour studio > Pigments: each of your paints as a test swatch - a wash from rich to pale, with a band lifted while wet - and what it does on the paper: whether it glazes cleanly, lifts off or stains, lies smooth or granulates, lasts or fades, and the pigment code to look for on the tube. Ask it a question - which of mine lift? which granulate? - and the answers stay lit. Recipes everywhere now carry a tag where it matters: granulates (with the smooth recipe beside it, for skin), stains, fades.",
+    act: 'Show me', run: () => openColour('pigments') },
   { id: 'light', title: 'Light and shadow',
     text: "Colour studio > Light: choose the light - midday sun, golden hour, overcast, a north window, a lamp, moonlight - and every colour is shown three ways: its own, in that light, and in its shadow. Warm light and a cool shadow is the sun and the blue sky; by a window it turns round; under a lamp the shadow is only darker. Click a colour for a ball lit that way and a recipe for each side from your paints - in watercolour, also which one paint to glaze over the light colour for its shadow. Your character's colours too, from the Character tab.",
     act: 'Show me', run: () => openColour('light') },

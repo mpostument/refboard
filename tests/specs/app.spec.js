@@ -84,6 +84,9 @@ test('a dropped image opens a session, and the eyedropper gives recipes', async 
 test('the colour studio finds a palette and shows where each colour is', async ({ page }) => {
   await openApp(page);
   await page.click('.nav-item[data-view="colour"]');
+  // The studio's scripts load on first open: a file chosen before its
+  // input has a listener is dropped.
+  await page.waitForFunction(() => typeof col !== 'undefined' && col);
   await page.setInputFiles('#colInput', { name: 'quads.png', mimeType: 'image/png', buffer: quadrantsPng() });
   const swatches = page.locator('#colPalette .col-sw');
   await expect(swatches.first()).toBeVisible();

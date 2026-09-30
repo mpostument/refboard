@@ -91,7 +91,7 @@ test('the Light tab: a light, each colour in it, one explained, your own colour,
   await page.keyboard.press('Home');
   await expect(page.locator('#colTabs [data-tab="picture"]')).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('End');
-  await expect(page.locator('#colTabs [data-tab="light"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#colTabs [data-tab="pigments"]')).toHaveAttribute('aria-selected', 'true');
   await page.click('#colTabs [data-tab="picture"]');
   await page.keyboard.press('Control+k');
   await page.keyboard.type('shadow colours');

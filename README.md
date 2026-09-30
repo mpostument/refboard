@@ -246,6 +246,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   A colour clicked shows a lit ball and a recipe for each side, and in
   watercolour the one paint to glaze over the light colour for its shadow.
   Your own colour, or your character sheet's.
+- **Pigment guide** - the Colour studio's Pigments tab: each of your paints
+  as a test swatch (a wash from rich to pale, a band lifted while wet, the
+  grain of a granulating paint) with what it does on the paper - whether
+  it glazes cleanly or veils, lifts off or stains, lies smooth or
+  granulates, lasts or fades - and the pigment code to look for on the
+  tube. Ask it which of your paints lift, granulate or fade. Recipes
+  everywhere tag the strong cases (granulates, stains, fades), a
+  granulating one with the smooth recipe beside it, for skin.
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
   on a machine with a GPU (`COMFY_URL`): anime references made to order - a
   character (who, the hair, the eyes and their shape, how much of them, from where, the pose), a

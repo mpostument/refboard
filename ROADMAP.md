@@ -424,9 +424,19 @@ packs (below), and moving a picture to another folder by hand.
   with white. Still to come: granulation and staining (with the Pigment
   guide), three layers and more, and a glaze asked for - "what over this
   wash gives that colour" - from a picture's palette.
-- **Pigment guide.** For each pigment: transparency, staining, granulation,
-  lightfastness. Recipes carry the notes that matter ("granulates - for
-  skin, ochre + alizarin is smoother").
+- **Pigment guide, the rest.** In place (`js/pigments.js`, Colour studio >
+  Pigments, Ctrl+K "pigment"): transparency, staining, granulation and
+  lightfastness for each paint in PIGMENTS (paint.js), with its Colour Index
+  code; a test swatch painted from the wash model, grain as noise on the
+  strength and a lifted band keeping what a staining paint leaves; questions
+  (glaze cleanly, lift off, granulate, fade) that light the paints that
+  answer. Glazing reads its opacity from the same table and says whether
+  the first wash survives the glaze. Recipes tag granulates, stains and
+  fades, and a granulating one names the smooth recipe beside it. Still to
+  come: more pigments than the thirteen (quinacridones, pyrroles, a
+  permanent alizarin, the painter's own tubes by code), granulation in the
+  Glazing chart and the Preview as watercolour, and a recipe asked to keep
+  to smooth or lasting paints.
 - **Camera eyedropper.** Point a phone at the real scene - plein air - and
   read the colour under the crosshair with its watercolour recipe, live.
   The mixing is already there (paint.js); this adds the camera's video.
