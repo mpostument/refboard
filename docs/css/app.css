@@ -789,8 +789,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
    it only once its slider has been moved; until then the stylesheet's own
    value (the var() fallback) holds. */
-#poseOverlay, #headOverlay, #edgeOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
-#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #angleOverlay,
+#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #angleOverlay,
   #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
 #peekBadge {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
@@ -879,6 +879,13 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #poseOverlay .action { stroke: #ff6f59; stroke-width: 4; fill: none; opacity: .9; stroke-linecap: round; }
 #poseOverlay .plumb { stroke: #6fc3ff; stroke-width: 1.5; stroke-dasharray: 6 5; }
 #poseOverlay circle { fill: #fff; stroke: #000; stroke-width: 1; }
+/* The pose in another build - see rebuildPose(). The anime face's pink, over
+   the photo's own skeleton kept faint; the photo's head a dashed circle. */
+#poseOverlay .ghost { opacity: .35; }
+#poseOverlay .rebuilt { stroke: #ff8fc8; stroke-width: 2.6; }
+#poseOverlay circle.rebuilt-head { fill: rgba(255,143,200,.12); stroke: #ff8fc8; stroke-width: 2.6; }
+#poseOverlay circle.head0 { fill: none; stroke: #fff; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .55; }
+#poseOverlay .heads { stroke: #ff8fc8; stroke-width: 1.5; opacity: .85; }
 #poseNote {
   position: absolute; left: 12px; bottom: 12px; z-index: 4; max-width: min(520px, calc(100% - 24px));
   padding: 7px 11px; border-radius: 7px; background: rgba(0,0,0,.72); color: #fff; font-size: 13px; line-height: 1.45;
@@ -888,8 +895,61 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
    round, whichever way the picture is flipped. */
 #edgeOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #edgeOverlay { transform: scaleX(-1); }
+/* Paper's range - see js/range.js. The same box and flip as the edge map. */
+#rangeOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #rangeOverlay { transform: scaleX(-1); }
+/* Temperature map - see js/temperature.js. The same box and flip again. */
+#tempOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #tempOverlay { transform: scaleX(-1); }
+#poseNote .temp-w { color: #ffa94d; }
+#poseNote .temp-c { color: #6fb6ff; }
+#poseNote .temp-t { color: #fff; }
+/* Tangents - see js/tangents.js. The same box and flip; the ring colours. */
+#tanOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #tanOverlay { transform: scaleX(-1); }
+#poseNote .tan-s { color: #ff50d2; }
+#poseNote .tan-f { color: #ffc428; }
+/* Line weight - see js/linework.js. The same box and flip. */
+#lineOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #lineOverlay { transform: scaleX(-1); }
+/* One part per layer, each with the x that turns it off. */
+#poseNote .note-part + .note-part { border-top: 1px solid rgba(255,255,255,.25); margin-top: 6px; padding-top: 6px; }
+#poseNote .note-off {
+  float: right; margin: -2px -5px 2px 8px; width: 20px; height: 20px; padding: 0; line-height: 18px;
+  border: 0; border-radius: 4px; background: transparent; color: rgba(255,255,255,.6); font: inherit; font-size: 15px; cursor: pointer;
+}
+#poseNote .note-off:hover, #poseNote .note-off:focus-visible { background: rgba(255,255,255,.18); color: #fff; }
+#poseNote .range-d { color: #a58fff; }
+#poseNote .range-l { color: #ffc447; }
 #poseNote .edge-h { color: #ff5470; }
 #poseNote .edge-s { color: #50beff; }
+/* Amounts - see js/amounts.js. Per question: its name, one bar split in
+   its shares, a Where? that opens the map it counts; under them the numbers
+   and the verdict. The bar colours are those of the maps it points to. */
+#poseNote .amt-row { display: grid; grid-template-columns: 6.5em 1fr auto; align-items: center; column-gap: 8px; min-width: min(420px, 70vw); }
+/* Room for the part's x in every row, not only the first it floats beside -
+   or the first bar is shorter and its Where? out of line. */
+#poseNote .amt-row > .amt-where { margin-right: 22px; }
+#poseNote .amt-row:first-of-type > .amt-where { margin-right: 0; }
+#poseNote .amt-row + .amt-row { margin-top: 6px; }
+#poseNote .amt-row > b { color: #fff; }
+#poseNote .amt-row small { grid-column: 2 / 4; opacity: .75; font-size: 11.5px; }
+#poseNote .amt-say { grid-column: 1 / 4; }
+#poseNote .amt-bar { display: flex; height: 10px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,.12); }
+#poseNote .amt-bar i { display: block; height: 100%; }
+#poseNote .amt-d { background: #2a2a2e; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+#poseNote .amt-m { background: #8a8a8e; }
+#poseNote .amt-l { background: #eeeeee; }
+#poseNote .amt-w { background: #ffa94d; }
+#poseNote .amt-n { background: #8a8a8e; }
+#poseNote .amt-c { background: #6fb6ff; }
+#poseNote .amt-h { background: #ff5470; }
+#poseNote .amt-s { background: #50beff; }
+#poseNote .amt-where {
+  padding: 1px 7px; border: 1px solid rgba(255,255,255,.35); border-radius: 4px;
+  background: transparent; color: #fff; font: inherit; font-size: 12px; cursor: pointer;
+}
+#poseNote .amt-where:hover, #poseNote .amt-where:focus-visible { background: rgba(255,255,255,.18); }
 #poseNote hr { border: 0; border-top: 1px solid rgba(255,255,255,.25); margin: 6px 0; }
 /* Loomis head - see runHead(). Same box and scaling as #poseOverlay; each
    line is drawn twice, a dark wide one under a coloured one, so it reads
@@ -1188,11 +1248,14 @@ section { margin-bottom: 20px; }
 .col-sw { cursor: pointer; border-radius: 6px; padding-left: 4px; margin-left: -4px; }
 .col-sw:hover { background: var(--hover); }
 .col-sw.pinned { background: color-mix(in srgb, var(--accent) 16%, transparent); }
-/* A palette colour's mixes, under its row. */
-/* The right column: the paints over two tabs - the picture's colours, a
-   character's sheet (js/character.js). */
+/* The right column: the paints over five tabs - the picture's colours, a
+   character's sheet (js/character.js), the greys (js/greys.js), glazes
+   (js/glazing.js), light and shadow (js/light.js). Tighter padding fits most
+   of them in its narrowest width; past that the row scrolls rather than
+   wraps under itself. */
 .col-right h4.col-first { margin-top: 0; }
-.col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; }
+.col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; overflow-x: auto; scrollbar-width: none; }
+.col-tabs button { padding-left: 7px; padding-right: 7px; white-space: nowrap; }
 .col-tab { display: none; }
 .col-tab.on { display: block; }
 .col-tab > h4:first-of-type { margin-top: 12px; }
@@ -1222,7 +1285,64 @@ section { margin-bottom: 20px; }
 .char-note { margin-top: 12px; }
 .char-go { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .picking #colImg { cursor: copy; }
+/* The grey ladder: a value column, then warm, neutral and cool - each
+   cell the swatch itself, saying how much water or white. */
+.gl-grid { display: grid; grid-template-columns: 30px repeat(3, minmax(0, 1fr)); gap: 4px; align-items: center; }
+.gl-grid > b { font-size: 11px; font-weight: 600; color: var(--ink); text-align: center; }
+.gl-l { font-size: 10.5px; color: var(--dim); font-variant-numeric: tabular-nums; text-align: right; padding-right: 2px; }
+.gl-cell { position: relative; height: 30px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); padding: 0;
+  font: inherit; font-size: 10.5px; font-variant-numeric: tabular-nums; color: #f4f4f0; cursor: default;
+  display: grid; place-items: center; }
+.gl-cell.light { color: #26262a; }
+.gl-cell.short { border-style: dashed; border-color: var(--line); color: var(--dim); }
+.gl-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gl-cell b { position: absolute; top: -6px; right: -4px; min-width: 15px; height: 15px; border-radius: 999px; font-size: 9.5px; line-height: 15px;
+  background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.gl-cell b + b { right: 13px; }
+#glReadout { margin: 8px 0 10px; min-height: 2.6em; }
+.gl-mix { display: grid; grid-template-columns: 58px 1fr; gap: 6px; font-size: 12px; padding: 2px 0; }
+.gl-mix b { font-weight: 600; color: var(--ink); }
+.gl-mix span { color: var(--ink); }
+.gl-mix em { font-style: normal; color: var(--dim); }
+#glNote { margin-top: 10px; }
+/* The glazing chart: first washes as the header row, glazes as the header
+   column, each crossing the two layered - square, as many as the paints. */
+.gz-chart { display: grid; grid-template-columns: repeat(calc(var(--gz-n, 6) + 1), minmax(0, 1fr)); gap: 2px; margin-top: 8px; }
+.gz-chart > * { aspect-ratio: 1; min-width: 0; }
+.gz-head { border-radius: 3px; border: 1px solid rgba(255,255,255,.12); }
+.gz-cell { padding: 0; border: 1px solid rgba(255,255,255,.08); border-radius: 3px; cursor: pointer; }
+.gz-cell:hover { outline: 1px solid var(--dim); outline-offset: 1px; }
+.gz-cell.on, .gz-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#gzReadout { margin: 8px 0 10px; min-height: 2.6em; }
+.gz-title { font-size: 12px; color: var(--ink); margin-bottom: 6px; }
+.gz-title b { font-weight: 600; }
+.gz-swatches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.gz-swatches figure { margin: 0; }
+.gz-swatches i { display: block; height: 34px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
+/* Light and shadow: the light's two sliders, then one row per colour - its
+   own, in the light, in shadow - and the chosen one as a lit ball. */
+.lt-sliders { display: grid; grid-template-columns: auto minmax(0, 1fr) 48px; gap: 4px 8px; align-items: center; margin: 8px 0 2px; font-size: 12px; color: var(--dim); }
+.lt-sliders input { width: 100%; min-width: 0; }
+.lt-sliders output { font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+.lt-bar { gap: 8px; align-items: center; margin-top: 10px; }
+.lt-own { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--dim); cursor: pointer; }
+.lt-own input { width: 28px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; cursor: pointer; }
+.lt-rows { margin-top: 8px; }
+.lt-head, .lt-row { display: grid; grid-template-columns: minmax(0, 1.1fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.lt-head span { font-size: 10.5px; color: var(--dim); text-align: center; }
+.lt-row { width: 100%; padding: 3px; margin: 2px 0; border: 2px solid transparent; border-radius: 7px; background: none; color: var(--ink); font-size: 12px; text-align: left; cursor: pointer; }
+.lt-row:hover { background: var(--hover); }
+.lt-row.on { border-color: var(--accent); }
+.lt-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lt-row i { display: block; height: 26px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
+.lt-one { display: grid; gap: 8px; margin-top: 10px; }
+.lt-ball { width: 100%; max-width: 240px; height: auto; border-radius: 6px; display: block; }
+.lt-mix { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px; font-size: 12px; padding: 2px 0; }
+.lt-mix b { font-weight: 600; color: var(--ink); }
+.gz-swatches figcaption { font-size: 10.5px; color: var(--dim); text-align: center; margin-top: 3px; }
+#gzNote { margin-top: 10px; }
 
+/* A palette colour's mixes, under its row. */
 .col-mix { margin: 0 0 6px 50px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
 .col-mix summary { cursor: pointer; color: var(--dim); list-style: none; }
 .col-mix summary::-webkit-details-marker { display: none; }
@@ -1649,6 +1769,56 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .steps-key[hidden] { display: none; }
 .steps-key li { display: flex; align-items: center; gap: 6px; }
 .steps-key .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+
+/* The lightbox - see js/lightbox.js. Over everything, even the tour: the
+   screen is a light to trace by. White while the sketch is on it - the
+   margin round the sheet lights the paper too. */
+#lightbox { position: fixed; inset: 0; z-index: 95; background: var(--bg); color: var(--ink); overflow: hidden; }
+#lightbox[data-stage="view"] { background: #fff; }
+#lightbox [hidden] { display: none !important; }
+#lbStage { position: absolute; inset: 0; }
+#lbCanvas { position: absolute; left: 50%; top: 50%; transform-origin: 50% 50%; touch-action: none; cursor: grab; image-rendering: auto; }
+#lbPhoto { position: absolute; inset: 0; }
+#lbHandles { position: absolute; inset: 0; pointer-events: none; }
+#lbHandles button {
+  position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; padding: 0; border-radius: 50%;
+  background: rgb(245 194 231 / .25); border: 2px solid #f5c2e7; pointer-events: auto; touch-action: none; cursor: move;
+}
+#lbHandles button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+#lbCard {
+  position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%);
+  border: 2px solid var(--accent); border-radius: 3.5%/5.5%; box-shadow: 0 0 0 1px var(--bg);
+}
+.lb-panel {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100% - 32px)); box-sizing: border-box;
+  background: var(--panel); border: 1px solid var(--line-hi); border-radius: 12px; padding: 18px 20px;
+}
+.lb-panel h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+.lb-panel p { line-height: 1.5; }
+.lb-bar {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); box-sizing: border-box;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 10px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-hi); border-radius: 12px;
+  padding: 10px 12px; box-shadow: 0 12px 40px rgb(0 0 0 / .35);
+}
+.lb-say { flex-basis: 100%; text-align: center; font-size: 13px; }
+.lb-say b { margin-right: 6px; }
+#lightbox .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 6px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+#lbLines { width: 110px; accent-color: var(--accent); }
+#lbWidthCm { width: 64px; }
+/* Locked: nothing to press but the lock, small and faint in a corner -
+   held for a second, it fills, and unlocks. */
+#lightbox.locked #lbCanvas { pointer-events: none; cursor: none; }
+#lightbox.locked .lb-bar { display: none; }
+#lbUnlock {
+  position: absolute; right: 10px; top: 10px; width: 44px; height: 44px; padding: 10px; border-radius: 50%;
+  background: rgb(0 0 0 / .06); color: rgb(0 0 0 / .35); border: 1px solid rgb(0 0 0 / .12);
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
+  background-image: linear-gradient(rgb(0 0 0 / .18), rgb(0 0 0 / .18)); background-repeat: no-repeat;
+  background-size: 100% 0; background-position: bottom; transition: background-size .15s;
+}
+#lbUnlock.holding { background-size: 100% 100%; transition: background-size 1s linear; }
+@media (max-width: 700px) { .lb-bar { bottom: 8px; padding: 8px; gap: 6px 8px; } .lb-say { font-size: 12px; } }
 .steps-nav { gap: 8px; }
 .steps-nav button:disabled { opacity: .45; cursor: default; }
 .steps-note { margin-top: 18px; }

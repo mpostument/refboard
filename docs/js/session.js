@@ -503,6 +503,11 @@ function show(src) {
     if (state.poseOn) runPose();
     if (state.headOn) runHead();
     if (state.edgesOn) runEdges();
+    if (state.rangeOn) runRange();
+    if (state.tempOn) runTemp();
+    if (state.amountsOn) runAmounts();
+    if (state.tangentsOn) runTangents();
+    if (state.lineWeightOn) runLineWeight();
     refreshValueTools();
   };
   img.onerror = () => {
@@ -558,6 +563,11 @@ function show(src) {
   clearPose();
   clearHead();
   clearEdges();
+  clearRange();
+  clearTemp();
+  clearAmounts();
+  clearTangents();
+  clearLineWeight();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);

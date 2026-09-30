@@ -39,10 +39,12 @@ function normalizeFormScene(raw) {
     if (!ANIME_EYES[n.eyes]) n.eyes = FORM_OBJECT_DEFAULTS.eyes;
     if (!/^#[0-9a-f]{6}$/i.test(n.eyeColor)) n.eyeColor = FORM_OBJECT_DEFAULTS.eyeColor;
     if (!ANIME_EXPRESSIONS[n.expression]) n.expression = FORM_OBJECT_DEFAULTS.expression;
+    if (!FIGURE_BUILDS[n.build]) n.build = FORM_OBJECT_DEFAULTS.build;
     n.pose = cleanFormPose(n.pose, FORM_RIGS[(FORM_SHAPES[n.shape] || {}).rig] || FORM_RIGS.figure);
     return n;
   });
   if (objs.length) s.objects = objs;
+  s.roll = Math.min(Math.max(Math.round(s.roll) || 0, -45), 45);
   s.active = Math.min(Math.max(s.active | 0, 0), s.objects.length - 1);
   s.lightOn = Math.min(Math.max(s.lightOn | 0, 0), s.objects.length - 1);
   return s;
@@ -101,6 +103,18 @@ async function formsInitThree() {
     import('three/addons/controls/OrbitControls.js'),
     import('three/addons/environments/RoomEnvironment.js'),
   ]);
+  // Fog (the Air) by the distance from the eye, not the depth along the line
+  // of sight: the fisheye renders six views with six lines of sight, and fog
+  // by depth would step where two of them meet. Distance is what air does
+  // anyway. Worked out per pixel from the interpolated position: distance
+  // does not interpolate straight across a triangle the way depth does, and
+  // the floor is one huge square whose corners are all far away - fog from
+  // them alone made the whole floor vanish into the background.
+  const C = T.ShaderChunk, pos = 'varying vec3 vFogPos;';
+  C.fog_pars_vertex = C.fog_pars_vertex.replace('varying float vFogDepth;', pos);
+  C.fog_vertex = C.fog_vertex.replace('vFogDepth = - mvPosition.z;', 'vFogPos = mvPosition.xyz;');
+  C.fog_pars_fragment = C.fog_pars_fragment.replace('varying float vFogDepth;', pos);
+  C.fog_fragment = C.fog_fragment.replaceAll('vFogDepth', 'length( vFogPos )');
   const canvas = el('formsCanvas');
   // preserveDrawingBuffer so toBlob() always reads the frame just drawn, not a
   // buffer the compositor may already have cleared.
@@ -442,15 +456,19 @@ function formCelUniforms(u, color, gloss, sc, rimDir) {
 /* Proportions stretch each part in its own frame - Height makes limbs
    longer, Width and Depth thicker - rather than stretching the figure as a
    whole: a stretched parent shears whatever is turned inside it, so a
-   raised arm would come out wide instead of long. */
+   raised arm would come out wide instead of long. A figure's build
+   (FIGURE_BUILDS) scales each part the same way: a joint sits where its
+   parent's scale puts it, its own parts take its own. */
 function poseFormRig(m, o) {
-  const rig = m.userData.rig, sc = [o.sx, o.sy, o.sz];
-  for (const [name, , at] of rig.def.joints) {
-    const node = rig.nodes[name], r = o.pose[name] || [0, 0, 0];
+  const rig = m.userData.rig, base = [o.sx, o.sy, o.sz];
+  const scaleOf = rig.kind === 'figure' ? j => figureScale(o.build, j, base) : () => base;
+  for (const [name, parent, at] of rig.def.joints) {
+    const node = rig.nodes[name], r = o.pose[name] || [0, 0, 0], sc = scaleOf(parent);
     rig.pivots[name].position.set(at[0] * sc[0], at[1] * sc[1], at[2] * sc[2]);
     node.rotation.set(r[0] * THREE_DEG, r[1] * THREE_DEG, r[2] * THREE_DEG);
   }
   for (const [pm, { at, size }] of rig.parts) {
+    const sc = scaleOf(pm.userData.joint);
     pm.position.set(at[0] * sc[0], at[1] * sc[1], at[2] * sc[2]);
     pm.scale.set(size[0] * sc[0], size[1] * sc[1], size[2] * sc[2]);
   }
@@ -592,20 +610,39 @@ function formsRender(sc, w, h, clean = false) {
   // Camera distance follows the lens, so the forms stay the same size on
   // screen and only the perspective changes - a dolly zoom.
   const cam = F.camera;
-  const fov = 2 * Math.atan(12 / sc.focal);
+  // The fisheye is stereographic: a direction θ off the axis lands at
+  // k·tan(θ/2) from the centre, in units of half the frame's height, with k
+  // putting 90° at the corners - 180° across the diagonal. The camera's own
+  // fov is then only what the rest of the code measures by (pixels per unit
+  // at the centre - formPixelSize()), set to the fisheye's scale there.
+  const fishK = sc.fisheye ? Math.hypot(1, w / h) : 0;
+  F.fishK = fishK;
+  const fov = fishK ? 2 * Math.atan(2 / fishK) : 2 * Math.atan(12 / sc.focal);
   // Framed on whichever of the two angles of view is narrower, so a tall,
   // narrow window fits the forms side to side instead of cutting them off.
-  const half = Math.min(fov / 2, Math.atan(Math.tan(fov / 2) * w / h));
+  const half = fishK ? 2 * Math.atan(Math.min(1, w / h) / fishK)
+    : Math.min(fov / 2, Math.atan(Math.tan(fov / 2) * w / h));
   const framed = rad / Math.sin(half) * 1.1;
   const dist = framed * sc.zoom;
-  const yaw = THREE_DEG * sc.yaw, pitch = THREE_DEG * sc.pitch;
+  // As low as the floor allows: below the forms' middle the camera looks up
+  // at them (a worm's eye), but never from under the floor, where the ground
+  // would be the underside of a plane. How low that is depends on how far
+  // off the camera is - close in, it can look up more steeply.
+  const minPitch = sc.ground ? -Math.asin(Math.min(1, Math.max(0, target.y - rad * 0.03) / dist)) / THREE_DEG : -89;
+  const yaw = THREE_DEG * sc.yaw, pitch = THREE_DEG * Math.max(sc.pitch, minPitch);
   cam.fov = fov / THREE_DEG;
   cam.aspect = w / h;
   cam.near = dist * 0.05; cam.far = dist * 4 + rad * 80;
   cam.position.set(target.x + dist * Math.cos(pitch) * Math.sin(yaw), target.y + dist * Math.sin(pitch),
     target.z + dist * Math.cos(pitch) * Math.cos(yaw));
   cam.lookAt(target);
+  // The Dutch angle: rolled about its own line of sight, after aiming, so
+  // it tilts the picture and not what the camera looks at. OrbitControls
+  // aims with lookAt too and drops the roll, but it only moves the camera -
+  // the next render puts the roll back before anything is drawn.
+  if (sc.roll) cam.rotateZ(sc.roll * THREE_DEG);
   cam.updateProjectionMatrix();
+  cam.updateMatrixWorld();
 
   // Both lights are aimed relative to the camera's heading.
   const dirFrom = (az, el) => {
@@ -739,11 +776,74 @@ function formsRender(sc, w, h, clean = false) {
   F.grid.scale.setScalar(rad * 16);
   F.grid.position.set(0, rad * 0.002, 0);
 
-  F.frame = { target, framed, rad, height: h3, anchor, anchorTop, L, Lf, sun, markerDist: sun ? rad * 1.35 : bulbDist };
+  F.frame = { target, framed, rad, height: h3, anchor, anchorTop, L, Lf, sun, minPitch, markerDist: sun ? rad * 1.35 : bulbDist };
 
   F.renderer.setPixelRatio(1);
   F.renderer.setSize(w, h, false);
-  F.renderer.render(F.scene, cam);
+  if (fishK) renderFisheye(cam, fishK);
+  else F.renderer.render(F.scene, cam);
+}
+
+/* The fisheye. No flat picture reaches 180°, so the scene is rendered all
+   round the camera - six faces of a cube (CubeCamera) - and the frame is
+   then drawn by looking each pixel's direction up in that cube. Tone and
+   colour are applied here, on the way to the screen: the cube keeps the
+   scene's light unconverted (half floats), as a flat render target would.
+   Four looks a pixel, a quarter-pixel apart - a cube has no antialiasing. */
+function renderFisheye(cam, k) {
+  const F = forms, T = F.T, r = F.renderer;
+  if (!F.fish) {
+    const size = Math.min(1024, r.capabilities.maxCubemapSize);
+    const rt = new T.WebGLCubeRenderTarget(size, { type: T.HalfFloatType, generateMipmaps: false });
+    const mat = new T.ShaderMaterial({
+      uniforms: { env: { value: rt.texture }, rot: { value: new T.Matrix3() }, k: { value: 1 }, aspect: { value: 1 }, px: { value: new T.Vector2() } },
+      vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader: `
+        uniform samplerCube env; uniform mat3 rot; uniform float k, aspect; uniform vec2 px;
+        varying vec2 vUv;
+        vec3 look(vec2 ndc) {
+          vec2 p = vec2(ndc.x * aspect, ndc.y);
+          float r = length(p), th = 2.0 * atan(r / k);
+          vec2 s = r > 0.0 ? p / r * sin(th) : vec2(0.0);
+          return textureCube(env, rot * vec3(s, -cos(th))).rgb;
+        }
+        void main() {
+          vec2 ndc = vUv * 2.0 - 1.0;
+          gl_FragColor = vec4((look(ndc + px * vec2(-0.25, -0.25)) + look(ndc + px * vec2(0.25, -0.25)) +
+            look(ndc + px * vec2(-0.25, 0.25)) + look(ndc + px * vec2(0.25, 0.25))) * 0.25, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+      depthTest: false, depthWrite: false,
+    });
+    const quad = new T.Mesh(new T.PlaneGeometry(2, 2), mat);
+    quad.frustumCulled = false;
+    const scene = new T.Scene();
+    scene.add(quad);
+    F.fish = { cube: new T.CubeCamera(0.1, 100, rt), mat, scene, view: new T.OrthographicCamera(-1, 1, 1, -1, 0, 1) };
+  }
+  const { cube, mat, scene, view } = F.fish;
+  cube.position.copy(cam.position);
+  for (const c of cube.children) { c.near = cam.near; c.far = cam.far; c.updateProjectionMatrix(); }
+  cube.update(r, F.scene);
+  const size = r.getSize(new T.Vector2());
+  mat.uniforms.k.value = k;
+  mat.uniforms.aspect.value = cam.aspect;
+  mat.uniforms.rot.value.setFromMatrix4(cam.matrixWorld);
+  mat.uniforms.px.value.set(2 / size.x, 2 / size.y);
+  r.render(scene, view);
+}
+
+/* A world point on screen, as NDC (x, y in -1..1 across the frame), the way
+   the view draws it - through the fisheye when that is on. z is only "in
+   front" (< 1) or "behind" (2): every caller asks just that. */
+function formProject(v, cam = forms.camera) {
+  const k = forms.fishK;
+  if (!k) return v.clone().project(cam);
+  const d = v.clone().applyMatrix4(cam.matrixWorldInverse), len = d.length() || 1;
+  const th = Math.acos(Math.min(1, Math.max(-1, -d.z / len)));
+  const r = k * Math.tan(Math.min(th, 3) / 2), q = Math.hypot(d.x, d.y) || 1;
+  return new forms.T.Vector3(r * d.x / q / cam.aspect, r * d.y / q, th < THREE_DEG * 100 ? 0.5 : 2);
 }
 
 /* ---- overlay: everything drawn over the view rather than into it - light
@@ -764,12 +864,17 @@ function drawFormsOverlay() {
   // Clean: nothing over the scene at all - and with nothing drawn there is
   // nothing to grab either, since every handle is found by what was drawn.
   if (!F.frame || F.clean) return;
-  const toScreen = v => { const p = v.clone().project(F.camera); return [(p.x + 1) / 2 * w, (1 - p.y) / 2 * h, p.z]; };
+  const toScreen = v => { const p = formProject(v); return [(p.x + 1) / 2 * w, (1 - p.y) / 2 * h, p.z]; };
   const fr = F.frame;
   ctx.font = `${11 * dpr}px system-ui, sans-serif`;
 
   if (formScene.ellipses) drawFormEllipses(ctx, dpr, toScreen);
-  if (formScene.vp) drawVanishingLines(ctx, w, h, dpr);
+  // Vanishing points belong to straight lines, and a fisheye has none.
+  if (formScene.vp && !F.fishK) drawVanishingLines(ctx, w, h, dpr);
+  else if (formScene.vp) {
+    ctx.fillStyle = '#eee';
+    ctx.fillText('No vanishing points through a fisheye: straight edges bend round the middle.', 10 * dpr, 40 * dpr);
+  }
 
   // Which number is which form, once there is more than one to tell apart.
   // Clicking one selects it (see bindFormsOrbit).
@@ -790,6 +895,7 @@ function drawFormsOverlay() {
     });
   }
 
+  if (formScene.heads) drawFormHeads(ctx, dpr, toScreen);
   drawFormRig(ctx, dpr, toScreen);
   drawFormGizmo(ctx, dpr, toScreen);
 
@@ -853,23 +959,35 @@ function drawFormsOverlay() {
   drawFormNav(ctx, dpr);
 
   if (formScene.horizon) {
-    // Eye level. With no camera roll every horizontal direction vanishes on
-    // one screen line - the horizon - so projecting a point far along the
-    // flattened view direction lands exactly on it.
-    const dir = F.camera.getWorldDirection(new F.T.Vector3()).setY(0).normalize();
-    const ndc = F.camera.position.clone().addScaledVector(dir, 1e5).project(F.camera).y;
+    // Eye level: where every horizontal direction vanishes. Traced round the
+    // whole circle of them rather than drawn as one line across, because it
+    // is one only through a level, ordinary lens - a Dutch angle tilts it and
+    // the fisheye bends it into an arc.
+    const T = F.T, cam = F.camera, pts = [];
+    for (let a = 0; a <= 360; a += 2) {
+      const far = new T.Vector3(Math.sin(a * THREE_DEG), 0, Math.cos(a * THREE_DEG)).multiplyScalar(1e4).add(cam.position);
+      // In front of the camera, and not so near its side that an ordinary
+      // lens throws the point off to infinity.
+      const d = far.clone().applyMatrix4(cam.matrixWorldInverse);
+      const p = formProject(far);
+      pts.push(-d.z > (F.fishK ? -0.17 : 0.02) * d.length() ? [(p.x + 1) / 2 * w, (1 - p.y) / 2 * h] : null);
+    }
+    const inside = pts.filter(p => p && p[0] >= 0 && p[0] <= w && p[1] >= 0 && p[1] <= h);
     ctx.save();
     ctx.font = `${12 * dpr}px system-ui, sans-serif`;
     ctx.fillStyle = ctx.strokeStyle = '#4fc3f7';
-    if (ndc > 1 || ndc < -1) {
-      ctx.fillText(ndc > 1 ? '↑ eye level is above the frame' : '↓ eye level is below the frame',
-        10 * dpr, ndc > 1 ? 20 * dpr : h - 10 * dpr);
+    if (!inside.length) {
+      const dir = cam.getWorldDirection(new T.Vector3()).setY(0).normalize();
+      const up = formProject(cam.position.clone().addScaledVector(dir, 1e4)).y > 0;
+      ctx.fillText(up ? '↑ eye level is above the frame' : '↓ eye level is below the frame', 10 * dpr, up ? 20 * dpr : h - 10 * dpr);
     } else {
-      const y = (1 - ndc) / 2 * h;
       ctx.lineWidth = 1.5 * dpr;
       ctx.setLineDash([8 * dpr, 6 * dpr]);
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-      ctx.fillText('eye level', 10 * dpr, y - 6 * dpr);
+      ctx.beginPath();
+      pts.forEach((p, i) => { if (p) (pts[i - 1] ? ctx.lineTo : ctx.moveTo).call(ctx, p[0], p[1]); });
+      ctx.stroke();
+      const left = inside.reduce((a, b) => (b[0] < a[0] ? b : a));
+      ctx.fillText('eye level', Math.max(left[0], 10 * dpr), left[1] - 6 * dpr);
     }
     ctx.restore();
   }
@@ -879,6 +997,43 @@ function drawFormsOverlay() {
    joint - the dots are what you click to pick a joint to bend (the pelvis
    dot is the whole figure). The line of the spine and limbs is also the
    gesture, which is what a figure drawing starts from. */
+/* The heads grid: across each figure, a line every head's height from the
+   crown down, numbered, as a proportion chart draws it - the chin on the
+   first, the crotch near the middle one on a real body. It measures the
+   figure standing straight, from the floor it stands on, and turns with it
+   but never tilts: a posed figure is held against its standing height. */
+function drawFormHeads(ctx, dpr, toScreen) {
+  const T = forms.T;
+  ctx.save();
+  ctx.font = `${11 * dpr}px system-ui, sans-serif`;
+  ctx.lineWidth = 1 * dpr;
+  formScene.objects.forEach((o, i) => {
+    const m = forms.meshes[i];
+    if (!m || formShapeDef(o.shape).rig !== 'figure') return;
+    const h = figureHeights(o.build, o.sy), tall = h.top - h.bottom, half = 0.6 * o.sx;
+    const ry = o.ry * THREE_DEG, across = new T.Vector3(Math.cos(ry), 0, -Math.sin(ry));
+    const at = (y, side) => toScreen(new T.Vector3(m.position.x, o.y + y, m.position.z).addScaledVector(across, side * half));
+    const levels = [];
+    for (let k = 0; k * h.unit < tall - 1e-6; k++) levels.push(tall - k * h.unit);
+    levels.push(0);
+    levels.forEach((y, k) => {
+      const a = at(y, -1), b = at(y, 1);
+      if (a[2] >= 1 || b[2] >= 1) return;
+      ctx.strokeStyle = k === 0 || y === 0 ? 'rgba(216, 162, 74, .9)' : 'rgba(216, 162, 74, .6)';
+      ctx.setLineDash(k === 0 || y === 0 ? [] : [4 * dpr, 3 * dpr]);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      if (k === levels.length - 1) return;
+      // The number between this line and the next, past the right-hand end.
+      const [x, yy] = at((y + levels[k + 1]) / 2, 1.15);
+      ctx.lineWidth = 3 * dpr; ctx.strokeStyle = 'rgba(0, 0, 0, .7)'; ctx.fillStyle = '#f0d9a8';
+      ctx.setLineDash([]);
+      ctx.strokeText(String(k + 1), x, yy + 4 * dpr); ctx.fillText(String(k + 1), x, yy + 4 * dpr);
+      ctx.lineWidth = 1 * dpr;
+    });
+  });
+  ctx.restore();
+}
+
 function drawFormRig(ctx, dpr, toScreen) {
   const F = forms, T = F.T, m = F.meshes[formScene.active], rig = m && m.userData.rig;
   if (!rig) return;
@@ -1066,7 +1221,7 @@ function formWorldPerPx(P) {
   return 2 * depth * Math.tan(cam.fov * THREE_DEG / 2) / el('formsStage').clientHeight;
 }
 function formClientPos(P) {
-  const rect = forms.renderer.domElement.getBoundingClientRect(), p = P.clone().project(forms.camera);
+  const rect = forms.renderer.domElement.getBoundingClientRect(), p = formProject(P);
   return [rect.left + (p.x + 1) / 2 * rect.width, rect.top + (1 - p.y) / 2 * rect.height];
 }
 // Where along the line P + t*d (d unit length) passes closest to the ray.
@@ -1331,8 +1486,8 @@ function formNavClick(id) {
     [yaw, pitch] = FORM_NAV_VIEWS[id[0] + (id[1] === '+' ? '-' : '+')];
   }
   // From under the floor you would see the underside of a plane, not the
-  // forms - with the ground showing, "from below" stops at eye level.
-  if (formScene.ground) pitch = Math.max(pitch, 0);
+  // forms - with the ground showing, "from below" stops at the floor.
+  pitch = Math.max(pitch, formFloorPitch());
   animateFormView(yaw, pitch);
 }
 
@@ -1630,7 +1785,7 @@ function bindFormsKeys() {
       e.preventDefault();
       if (views[k]) { animateFormView(...views[k]); return; }
       let yaw = formScene.yaw, pitch = formScene.pitch;
-      { yaw = wrap180(yaw + steps[k][0]); pitch = Math.min(Math.max(pitch + steps[k][1], formScene.ground ? 0 : -60), 88); }
+      { yaw = wrap180(yaw + steps[k][0]); pitch = Math.min(Math.max(pitch + steps[k][1], formFloorPitch()), 88); }
       setFormYaw(yaw);
       formScene.pitch = pitch;
       formsChanged();
@@ -1683,6 +1838,10 @@ function requestFormsRender() {
     if (!stage.clientWidth) return; // view hidden: nothing to size against
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     formsRender(formScene, Math.round(stage.clientWidth * dpr), Math.round(stage.clientHeight * dpr), !!forms.clean);
+    // Asked for lower than the floor allows (or a lens or zoom change moved
+    // the floor's limit up): the render already stopped at the floor, and
+    // the Eye height slider says where.
+    if (formScene.pitch < formFloorPitch() - 0.5) { formScene.pitch = formFloorPitch(); syncFormsPanel(); saveFormScene(); }
     syncOrbitLimits();
     drawFormsOverlay();
     syncAnimeNote();
@@ -1703,7 +1862,7 @@ function animeHeadReading(sc = formScene) {
   const fwd = new T.Vector3(0, 0, 1).transformDirection(m.matrixWorld).transformDirection(cam.matrixWorldInverse);
   const turn = Math.atan2(fwd.x, fwd.z) / THREE_DEG, tilt = Math.asin(Math.max(-1, Math.min(1, fwd.y))) / THREE_DEG;
   // Screen widths: the aspect matters, NDC is squashed to a square.
-  const px = p => { const v = new T.Vector3(...p).applyMatrix4(m.matrixWorld).project(cam); return [v.x * cam.aspect, v.y]; };
+  const px = p => { const v = formProject(new T.Vector3(...p).applyMatrix4(m.matrixWorld), cam); return [v.x * cam.aspect, v.y]; };
   const width = ([a, b]) => { const [p, q] = [px(a), px(b)]; return Math.hypot(p[0] - q[0], p[1] - q[1]); };
   const o = sc.objects[i], marks = formAnimeFace().marks(o.eyes);
   const ratio = (a, b) => { const [x, y] = [width(marks[a]), width(marks[b])]; return Math.min(x, y) / Math.max(x, y); };
@@ -1869,6 +2028,82 @@ function showAnimeHead(eyes, expression) {
   if (forms) { formsChanged(); pickFormTab('face'); } else { saveFormScene(); try { localStorage.setItem(FORM_TAB_KEY, 'face'); } catch {} }
 }
 
+// The figure on the selected form in `build`'s proportions, standing, with
+// the heads grid on - for What's new and Ctrl+K. Its pose, if it is already
+// a figure, is kept: the point is the same pose in other proportions.
+function showFigureBuild(build = 'anime') {
+  formScene = formScene || loadFormScene();
+  const o = activeFormObject();
+  if (o.shape !== 'figure') Object.assign(o, { shape: 'figure', pose: FORM_OBJECT_DEFAULTS.pose, rx: 0, ry: 20, rz: 0, sx: 1, sy: 1, sz: 1 });
+  o.build = FIGURE_BUILDS[build] ? build : 'anime';
+  formScene.heads = true;
+  if (forms) { formsChanged(); pickFormTab('object'); } else { saveFormScene(); try { localStorage.setItem(FORM_TAB_KEY, 'object'); } catch {} }
+}
+
+/* ---- anime shots (ANIME_SHOTS): the camera's height, lens, distance and
+   roll set as a storyboard would pick a shot. The turn is left alone. */
+function applyAnimeShot(k) {
+  const p = ANIME_SHOTS[k];
+  if (!p) return;
+  Object.assign(formScene, { pitch: p.pitch, zoom: p.zoom, roll: p.roll, fisheye: p.fisheye });
+  // The fisheye has a lens of its own; the slider keeps what it was for after.
+  if (!p.fisheye) formScene.focal = p.focal;
+  if (forms) formsChanged(); else saveFormScene();
+}
+
+// The shot on a figure, for What's new and Ctrl+K: the selected form becomes
+// one if the scene has no figure or head to look at, and the View tab opens.
+function showAnimeShot(k) {
+  formScene = formScene || loadFormScene();
+  if (!formShotSubject()) {
+    Object.assign(activeFormObject(), { shape: 'figure', pose: FORM_OBJECT_DEFAULTS.pose, rx: 0, ry: 20, rz: 0, sx: 1, sy: 1, sz: 1 });
+  }
+  applyAnimeShot(k);
+  if (forms) pickFormTab('view'); else try { localStorage.setItem(FORM_TAB_KEY, 'view'); } catch {}
+}
+
+// Who the shot is of: the selected form if it is a figure or a head, else
+// the first one in the scene that is.
+function formShotSubject(sc = formScene) {
+  const who = o => o && (formRigOf(o.shape) === FORM_RIGS.figure || !!formShapeDef(o.shape).subject);
+  return who(sc.objects[sc.active]) ? sc.objects[sc.active] : sc.objects.find(who) || null;
+}
+
+function syncShotNote(panel) {
+  const k = animeShotOf(formScene), note = el('formShotNote');
+  for (const b of panel.querySelectorAll('[data-shot]')) b.setAttribute('aria-pressed', String(b.dataset.shot === k));
+  panel.querySelector('[data-k="focal"]').disabled = formScene.fisheye;
+  const text = (k ? ANIME_SHOTS[k].hint + '.' : '') +
+    (formScene.fisheye ? ' The Lens slider rests while the fisheye is on: it sees 180° across the corners.' : '');
+  const gen = !!formShotSubject() && genAvailable();
+  const html = (text ? `<span>${esc(text.trim())}</span>` : '') + (gen ? ' <button class="chip" type="button" id="formShotGen" ' +
+    'title="With your ComfyUI: this figure or head drawn from this height, through this lens">Draw this shot</button>' : '');
+  if (note.innerHTML !== html) note.innerHTML = html;
+  note.classList.toggle('hidden', !html);
+}
+
+/* To Generate: the shot, by the names its rows use - From for the angle
+   (below and above by the camera's height, else by how far round the
+   subject it stands), Lens for the fisheye, the roll and the wide lens
+   close in, How much for a figure or a head. */
+function formShotToGenerate() {
+  const o = formShotSubject();
+  if (!o) return;
+  const sc = formScene, head = !!formShapeDef(o.shape).subject;
+  const turn = Math.abs(wrap180(sc.yaw - (o.ry || 0)));
+  const view = sc.pitch <= -8 ? 'below' : sc.pitch >= 40 ? 'above'
+    : turn < 22 ? 'front' : turn < 67 ? 'three' : turn < 125 ? 'profile' : 'back';
+  const lens = sc.fisheye ? 'fisheye' : Math.abs(sc.roll) >= 8 ? 'dutch' : sc.focal <= 24 && sc.zoom <= 0.8 ? 'wide' : 'any';
+  Object.assign(genChoices, { subject: 'character', framing: head ? 'head' : 'full', view, lens });
+  saveGenChoices();
+  renderGenerate();
+  setView({ kind: 'generate' });
+  const seen = { front: 'from the front', three: 'at three-quarters', profile: 'in profile', below: 'from below',
+    above: 'from above', back: 'from behind' }[view];
+  const through = { fisheye: ', through a fisheye', dutch: ', at a Dutch angle', wide: ', wide and close', any: '' }[lens];
+  el('genStatus').textContent = `The 3D camera's shot: ${head ? 'a head' : 'a whole figure'} ${seen}${through}. Change anything, then Generate.`;
+}
+
 function bindAnimeNote() {
   const note = el('formAnimeNote');
   // Its own clicks: the stage under it would take them as a pick or a drag.
@@ -1881,6 +2116,12 @@ function bindAnimeNote() {
 
 // OrbitControls works in distances; the scene stores zoom relative to the
 // framed distance, so its limits follow whatever the current forms need.
+// The lowest the camera may go, in degrees of Eye height: just over the
+// floor while it shows (see formsRender()), well under the forms without it.
+function formFloorPitch() {
+  return formScene.ground ? Math.ceil(forms?.frame?.minPitch ?? 0) : -60;
+}
+
 function syncOrbitLimits() {
   const ctl = forms.controls, fr = forms.frame;
   ctl.target.copy(fr.target);
@@ -1889,7 +2130,7 @@ function syncOrbitLimits() {
   // Stops just above the floor while it is showing - from under it you see
   // the underside of a plane that is meant to be the ground under a real
   // object. Without a floor the forms can be seen from below.
-  ctl.maxPolarAngle = THREE_DEG * (formScene.ground ? 89 : 150);
+  ctl.maxPolarAngle = THREE_DEG * (90 - formFloorPitch());
   ctl.minPolarAngle = THREE_DEG * 2;
 }
 
@@ -2165,7 +2406,8 @@ const FORM_PANEL = [
     ['intensity', 'Strength', 0, 2, 0.05], ['softness', 'Softness', 0, 1, 0.02], ['lightColor', 'Colour', 'color']]],
   ['Second light', 'fill', [['fillOn', 'On', 'check'], ['fillAz', 'Direction', -180, 180, 1, '°'],
     ['fillEl', 'Height', 3, 89, 1, '°'], ['fillStrength', 'Strength', 0, 1, 0.02], ['fillColor', 'Colour', 'color']]],
-  ['Camera', 'camera', [['focal', 'Lens', 18, 200, 1, 'mm'], ['pitch', 'Eye height', -60, 88, 1, '°']]],
+  ['Camera', 'camera', [['focal', 'Lens', 18, 200, 1, 'mm'], ['pitch', 'Eye height', -60, 88, 1, '°'], ['roll', 'Roll', -45, 45, 1, '°'],
+    ['fisheye', 'Fisheye lens', 'check']]],
   ['Guides', null, [['zones', 'Light and shadow zones', 'check'], ['lines', 'Cross-contour lines', 'check'],
     ['ellipses', 'Ellipses and axis', 'check'], ['vp', 'Vanishing points', 'check'],
     ['horizon', 'Eye-level line', 'check'], ['floorGrid', 'Floor grid', 'check'],
@@ -2229,7 +2471,11 @@ function formsPanelHtml() {
       <div class="count" id="formModelStatus"></div>
       <h4>Shape of the selected form</h4>
       <div class="chips" id="formShapes"></div>`,
-    pose: `<select id="formJoint" title="Which joint to bend - or click its dot in the view"></select>
+    // A figure's proportions first - what kind of body, then how it stands.
+    pose: `<div id="formBuildWrap"><h4>Body</h4>` + chips('formBuilds', Object.entries(FIGURE_BUILDS), 'build', b => b.hint) +
+      `<label class="opt"><input type="checkbox" data-k="heads"> Heads grid</label>
+      <div class="count" id="formBuildNote"></div><h4>Pose</h4></div>
+      <select id="formJoint" title="Which joint to bend - or click its dot in the view"></select>
       <div class="count" id="formJointHint"></div>
       <div id="formJointRows">${[['Bend', 'Forward and back'], ['Twist', 'About its own length'], ['Lean', 'Out to the side']]
         .map(([l, t], i) => `<label class="frow" title="${t}"><span>${l}</span><input type="range" data-jaxis="${i}" min="-180" max="180" step="1"><output data-unit="°"></output></label>`).join('')}</div>
@@ -2269,7 +2515,12 @@ function formsPanelHtml() {
     fill: `<div class="chips">
         <button class="chip" type="button" data-fill="fill" title="Soft light from the other side of the camera - lifts the shadow side">Fill</button>
         <button class="chip" type="button" data-fill="rim" title="Light from behind - a bright edge that separates the form from the background">Rim</button></div>`,
-    camera: chips('formPerspective', Object.entries(PERSPECTIVE_PRESETS), 'persp', p => p.hint) + `
+    // Two kinds of preset: the perspective ones square the forms up to show
+    // how many vanishing points there are; the anime shots only move the
+    // camera, the way a storyboard picks a shot for what it should feel like.
+    camera: '<h4>Perspective</h4>' + chips('formPerspective', Object.entries(PERSPECTIVE_PRESETS), 'persp', p => p.hint) +
+      '<h4>Anime shots</h4>' + chips('formShots', Object.entries(ANIME_SHOTS), 'shot', p => p.hint) +
+      '<div class="count" id="formShotNote"></div>' + `
       <div class="factions">
         <button class="ghost" type="button" id="formResetView" title="Camera back to the default angle and distance - the forms and lights are kept">Reset view</button></div>`,
     actions: `
@@ -2380,6 +2631,13 @@ function syncFormsPanel() {
     const poses = Object.entries(rig.poses).map(([k, p]) =>
       `<button class="chip" type="button" data-pose-preset="${k}">${esc(p.label)}</button>`).join('');
     if (el('formPoses').dataset.rig !== rig.whole) { el('formPoses').innerHTML = poses; el('formPoses').dataset.rig = rig.whole; }
+    const figure = rig === FORM_RIGS.figure;
+    el('formBuildWrap').classList.toggle('hidden', !figure);
+    if (figure) {
+      for (const b of panel.querySelectorAll('[data-build]')) b.setAttribute('aria-pressed', String(b.dataset.build === o.build));
+      const B = FIGURE_BUILDS[o.build];
+      el('formBuildNote').innerHTML = `<b>${figureHeights(o.build).heads.toFixed(1)} heads.</b> ${esc(B.hint)}`;
+    }
     el('formPoseMirror').classList.toggle('hidden', !rig.mirror);
     el('formPoseReset').title = rig.reset;
     el('formJointRows').classList.toggle('hidden', !joint);
@@ -2438,6 +2696,7 @@ function syncFormsPanel() {
     b.setAttribute('aria-pressed', String(formScene.objects.every(ob => !ob.rx && !ob.ry && !ob.rz) &&
       Math.round(formScene.yaw) === p.yaw && Math.round(formScene.pitch) === p.pitch));
   }
+  syncShotNote(panel);
   el('formCount').value = formScene.count;
   // Mirrors the session interval rather than keeping one of its own: the two
   // are the same setting, and changing it here changes it there.
@@ -2508,6 +2767,12 @@ function bindFormsPanel() {
       if (formShapeDef(o.shape).rig !== formShapeDef(b.dataset.shape).rig) o.pose = {};
       o.shape = b.dataset.shape; formsChanged(); return;
     }
+    if ((b = hit('[data-build]'))) {
+      pushFormUndo(formObjectsSnapshot());
+      activeFormObject().build = b.dataset.build;
+      formsChanged();
+      return;
+    }
     if ((b = hit('[data-hair]'))) { activeFormObject().hair = b.dataset.hair; formsChanged(); return; }
     if ((b = hit('[data-hair-colour]'))) { activeFormObject().hairColor = b.dataset.hairColour; formsChanged(); return; }
     if ((b = hit('[data-eyes]'))) { activeFormObject().eyes = b.dataset.eyes; formsChanged(); return; }
@@ -2535,6 +2800,8 @@ function bindFormsPanel() {
       formsChanged();
       return;
     }
+    if ((b = hit('[data-shot]'))) { applyAnimeShot(b.dataset.shot); return; }
+    if ((b = hit('#formShotGen'))) { formShotToGenerate(); return; }
     if ((b = hit('[data-preset]'))) {
       const p = LIGHT_PRESETS[b.dataset.preset];
       formScene.lightAz = p.az; formScene.lightEl = p.el;
@@ -2869,6 +3136,13 @@ function formsRay(clientX, clientY) {
   const ndc = new T.Vector2((clientX - rect.left) / rect.width * 2 - 1, 1 - (clientY - rect.top) / rect.height * 2);
   const ray = new T.Raycaster();
   ray.setFromCamera(ndc, F.camera);
+  // Through the fisheye, formProject() backwards: how far out the point is
+  // gives the angle off the axis.
+  if (F.fishK) {
+    const x = ndc.x * F.camera.aspect, y = ndc.y, r = Math.hypot(x, y), th = 2 * Math.atan(r / F.fishK);
+    const s = r ? Math.sin(th) / r : 0;
+    ray.ray.direction.set(x * s, y * s, -Math.cos(th)).transformDirection(F.camera.matrixWorld);
+  }
   return ray;
 }
 

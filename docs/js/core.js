@@ -8,7 +8,7 @@
 // updateFooterVersion() below overwrites it with the real running version
 // from /healthz, so this constant drifting a little on Pages costs nothing
 // where it actually matters.
-const APP_VERSION = '0.20.0';
+const APP_VERSION = '0.21.0';
 
 /* ---- icons. Line icons on a 24-unit grid, drawn in currentColor so they
    take the button's colour and its hover and pressed states. Any element
@@ -28,6 +28,11 @@ const ICONS = {
   more: '<circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/>',
   brush: '<path d="M18.5 3.5a2 2 0 0 1 2.8 2.8L12 15.6 8.4 12z"/><path d="M8 13.2c-2.4 0-4 1.6-4 4 0 1.4-.6 2.3-1.5 2.8 4.5.8 8.3-.7 8.3-4z"/>',
   edges: '<path d="M12 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7"/><path d="M12 4h7a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-7" stroke-dasharray="1.2 2.6"/><path d="M12 4v16"/>',
+  range: '<path d="M4 6h16v12H4z"/><path d="M4 12h16" stroke-dasharray="2 2.5"/><path d="M8 6v12M16 6v12" opacity=".45"/>',
+  tangents: '<circle cx="8" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4"/><path d="M3 4h18" opacity=".45"/>',
+  lineweight: '<path d="M4 6.5h16" stroke-width="1"/><path d="M4 12h16" stroke-width="2.2"/><path d="M4 17.5h16" stroke-width="3.6"/>',
+  amounts: '<path d="M4 5h16v4H4z"/><path d="M4 11h9v3.5H4z"/><path d="M4 16.5h4V19H4z"/>',
+  temp: '<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a3.5 3.5 0 1 1-4 0z"/><path d="M12 9v7"/><path d="M17 6h3M17 10h2"/>',
   layers: '<path d="M12 3 21 8l-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.7v.3"/><circle cx="12" cy="17" r=".7" fill="currentColor"/>',
   sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -59,6 +64,7 @@ const ICONS = {
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
   unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.7-1.5"/>',
   sparkle: '<path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15.5c.3 1.6 1 2.3 2.5 2.5-1.5.2-2.2.9-2.5 2.5-.3-1.6-1-2.3-2.5-2.5 1.5-.2 2.2-.9 2.5-2.5z"/>',
+  lightbox: '<rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="M8 16c1.5-4 4.5-7 8-8.5"/><path d="M8 19h8" stroke-dasharray="1.5 2"/>',
   clean: '<path d="m3 3 18 18"/><path d="M10.6 5.1Q11.3 5 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.1 3.8M6.6 6.6C3.6 8.5 2 12 2 12s3.5 7 10 7c1.8 0 3.3-.5 4.6-1.2"/>',
 };
 function iconSvg(name) {
@@ -522,6 +528,11 @@ const state = {
   poseOn: false,              // pose skeleton shown - see togglePose()
   headOn: false,              // Loomis head shown - see toggleHead()
   edgesOn: false,             // edge map shown - see toggleEdges()
+  rangeOn: false,             // the paper's range shown - see toggleRange()
+  tempOn: false,              // temperature map shown - see toggleTemp()
+  amountsOn: false,           // unequal amounts counted - see toggleAmounts()
+  tangentsOn: false,          // tangents marked - see toggleTangents()
+  lineWeightOn: false,        // contours weighed - see toggleLineWeight()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,
   // Browse mode - the stage opened on a grid cell rather than on a session.

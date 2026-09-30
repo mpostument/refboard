@@ -67,6 +67,8 @@ const FORM_OBJECT_DEFAULTS = {
   eyes: 'tv', eyeColor: '#3f6fb5',
   // And its expression, from ANIME_EXPRESSIONS - at rest.
   expression: 'calm',
+  // The figure's proportions, from FIGURE_BUILDS - a real body's by default.
+  build: 'real',
   // The figure's joints, { joint: [bend, twist, lean] } in degrees - see
   // FORM_RIG. Frozen, and only ever replaced, never edited in place: objects
   // are copied with a plain spread, which would share it.
@@ -90,8 +92,13 @@ const FORM_DEFAULTS = {
   ambient: 0.18, bounce: 0.3,
   bg: '#2a2a30', groundColor: '#7a746a', ground: true,
   focal: 50, yaw: 35, pitch: 22, zoom: 1,
+  // The camera's roll (a Dutch angle) in degrees, and the fisheye lens -
+  // see ANIME_SHOTS and renderFisheye().
+  roll: 0, fisheye: false,
   lines: false, horizon: false, lightMarker: true, vp: false, ellipses: false, floorGrid: false, zones: false,
   count: 10, anyShape: true, memorySecs: 15,
+  // A figure's height in heads, drawn across it - see drawFormHeads().
+  heads: false,
   // Atmospheric perspective - see formsRender(). 0 is the clean studio.
   haze: 0, hazeColor: '#b9c6d6',
 };
@@ -151,6 +158,38 @@ const PERSPECTIVE_PRESETS = {
   two:   { label: '2-point', yaw: 35, pitch: 0,  hint: 'Corner-on at eye level - verticals stay vertical' },
   three: { label: '3-point', yaw: 35, pitch: 38, hint: 'Corner-on from above - the verticals converge too' },
 };
+
+/* The shots anime keeps coming back to, each a height, a lens, a distance
+   and a roll - never a turn: which side of the figure you see stays yours.
+   A pitch of -40 means "as low as the floor allows": formsRender() keeps the
+   camera above the floor, so the worm's eye ends up at the figure's feet.
+   `zoom` is the distance against the framed one, so Wide is close as well
+   as wide - a wide lens from far off only makes everything smaller. `gen`
+   is Generate's Lens row for the same shot (see formShotToGenerate()). */
+const ANIME_SHOTS = {
+  worm:  { label: "Worm's eye", pitch: -40, focal: 24, zoom: 0.85, roll: 0, fisheye: false, gen: 'any',
+    hint: 'From the floor, looking up - the figure towers, the legs run long, the chin and the underside of the chest show. For power, or a threat' },
+  bird:  { label: "Bird's eye", pitch: 65, focal: 28, zoom: 1, roll: 0, fisheye: false, gen: 'any',
+    hint: 'From high above - the figure small and exposed, the head big and the feet tiny. For loneliness, or to map out a scene' },
+  wide:  { label: 'Wide, close', pitch: 4, focal: 18, zoom: 0.72, roll: 0, fisheye: false, gen: 'wide',
+    hint: "A wide lens pushed in close - whatever is nearest comes out huge: the fist or the foot thrust at you, anime's action shot" },
+  dutch: { label: 'Dutch angle', pitch: 10, focal: 35, zoom: 1, roll: 18, fisheye: false, gen: 'dutch',
+    hint: 'The camera rolled - the horizon runs downhill. For unease, a fight, a world off balance' },
+  tele:  { label: 'Telephoto', pitch: 6, focal: 135, zoom: 1, roll: 0, fisheye: false, gen: 'any',
+    hint: "A long lens from far off - depth flattened, near and far nearly one size: the key visual's figure against a huge moon" },
+  fish:  { label: 'Fisheye', pitch: 15, focal: 50, zoom: 0.5, roll: 0, fisheye: true, gen: 'fisheye',
+    hint: 'Straight lines bow out round the middle - the face pushed into the lens, for comedy and for action' },
+};
+// Which shot the camera is at now, or '' - the worm's eye by being below the
+// forms' middle rather than at one pitch, since the floor decides where it
+// stops. A fisheye ignores the Lens slider, so its focal does not count.
+function animeShotOf(sc) {
+  return Object.keys(ANIME_SHOTS).find(k => {
+    const p = ANIME_SHOTS[k];
+    return (p.fisheye || sc.focal === p.focal) && sc.roll === p.roll && sc.fisheye === p.fisheye &&
+      Math.abs(sc.zoom - p.zoom) < 0.01 && (p.pitch < 0 ? sc.pitch < 0 : Math.round(sc.pitch) === p.pitch);
+  }) || '';
+}
 
 /* Surface finishes - each one a different way light behaves, not a different
    number on the same slider. `gloss` is where each preset puts the Shine
@@ -1077,6 +1116,27 @@ const FORM_RIG = [
     ];
   }),
 ];
+// The builds themselves (FIGURE_BUILDS) are in js/vision.js, which loads
+// first: a photo's pose is redrawn in them too (rebuildPose()).
+// Which part of the body a joint is: its row in a build. The pelvis (null) is the torso's.
+const FIGURE_PART = { spine: 'torso', chest: 'torso', neck: 'neck', head: 'head', upperArm: 'arm', forearm: 'arm', hand: 'hand', thigh: 'leg', shin: 'leg', foot: 'foot' };
+// A joint's scale, [x, y, z], in a build and under the Proportions sliders.
+function figureScale(build, joint, sc) {
+  const [g, l] = (FIGURE_BUILDS[build] || FIGURE_BUILDS.real)[joint ? FIGURE_PART[joint.split('.')[0]] : 'torso'] || [1, 1];
+  return [g * sc[0], l * sc[1], g * sc[2]];
+}
+/* Standing straight, in the figure's own frame: the top of the head, the
+   soles, a head's height and how many heads the whole is. The Height slider
+   stretches the head with the rest, so it never changes the count. */
+function figureHeights(build, sy = 1) {
+  const row = j => FORM_RIG.find(r => r[0] === j), up = (j, parent) => row(j)[2][1] * figureScale(build, parent, [1, sy, 1])[1];
+  const head = row('head')[4][0], foot = row('foot.L')[4][1], hs = figureScale(build, 'head', [1, sy, 1])[1];
+  const top = up('spine', null) + up('chest', 'spine') + up('neck', 'chest') + up('head', 'neck') + (head.at[1] + head.size[1]) * hs;
+  const bottom = up('thigh.L', null) + up('shin.L', 'thigh.L') + up('foot.L', 'shin.L') +
+    (foot.at[1] - foot.size[1] / 2) * figureScale(build, 'foot', [1, sy, 1])[1];
+  const unit = 2 * head.size[1] * hs;
+  return { top, bottom, unit, heads: (top - bottom) / unit };
+}
 // Of the joint being named, on the rig being posed - see FORM_RIGS.
 const formJointLabel = (j, rig = activeFormRig() || FORM_RIGS.figure) => j ? rig.jointMap.get(j)[3] : rig.whole;
 

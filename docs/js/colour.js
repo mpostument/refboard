@@ -56,9 +56,12 @@ function saveColourPrefs() {
   try { localStorage.setItem(COLOUR_KEY, JSON.stringify({ mode: col.mode, mask: col.mask, tab: col.tab })); } catch {}
 }
 
-// The right column's two tabs: the picture's colours, or a character's sheet.
+// The right column's tabs: the picture's colours, a character's sheet, the
+// greys the paints make (js/greys.js), their glazes (js/glazing.js), or
+// what a light does to a colour (js/light.js).
+const COL_TABS = ['picture', 'character', 'greys', 'glazing', 'light'];
 function colourTab(name) {
-  col.tab = name === 'character' ? 'character' : 'picture';
+  col.tab = COL_TABS.includes(name) ? name : 'picture';
   for (const b of el('colTabs').children) b.setAttribute('aria-selected', String(b.dataset.tab === col.tab));
   for (const t of document.querySelectorAll('.col-tab')) t.classList.toggle('on', t.dataset.tab === col.tab);
   el('viewColour').classList.toggle('picking', col.tab === 'character');
@@ -343,8 +346,9 @@ function colMixHtml(p) {
 function colourRenderPaints() {
   paintChipsSync();
   let note = PAINT_PALETTES[col.paints].hint;
-  // How much of the picture these paints can reach - by pixel, on the wheel.
-  const reach = colReach();
+  // How much of the picture these paints can reach - by pixel, on the wheel,
+  // so only said where the wheel is.
+  const reach = col.tab === 'picture' && colReach();
   if (reach && col.samples) {
     const poly = reach.map(q => [q[0] / COL_CMAX, q[1] / COL_CMAX]);
     const inside = col.samples.filter(s => pointInPolygon([s[1] / COL_CMAX, s[2] / COL_CMAX], poly)).length;
@@ -368,6 +372,9 @@ function colourRender() {
   colourRenderWheel();
   colourRenderPalette();
   if (col.tab === 'character') charRender();
+  if (col.tab === 'greys') greysRender();
+  if (col.tab === 'glazing') glazingRender();
+  if (col.tab === 'light') lightRender();
 }
 
 // Coalesced to a frame: dragging the mask repaints the whole image.
@@ -382,7 +389,7 @@ function initColour() {
   document.addEventListener('refboard:theme', colourRenderWheel);
   const prefs = loadColourPrefs();
   col = { mode: ['colour', 'value', 'mapped'].includes(prefs.mode) ? prefs.mode : 'colour', mask: null, maskKey: null, paints: paintPaletteKey(), medium: paintMedium(),
-    tab: prefs.tab === 'character' ? 'character' : 'picture' };
+    tab: COL_TABS.includes(prefs.tab) ? prefs.tab : 'picture' };
   if (Array.isArray(prefs.mask) && prefs.mask.length >= 3 &&
       prefs.mask.every(p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) col.mask = prefs.mask;
   el('colMasks').innerHTML = `<button class="chip" type="button" data-col-mask="">Off</button>` +
@@ -474,11 +481,18 @@ function initColour() {
   });
   el('colTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) colourTab(b.dataset.tab); });
   el('colTabs').addEventListener('keydown', e => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    const next = col.tab === 'picture' ? 'character' : 'picture';
+    const i = COL_TABS.indexOf(col.tab), n = COL_TABS.length;
+    const to = { ArrowRight: (i + 1) % n, ArrowLeft: (i + n - 1) % n, Home: 0, End: n - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    const next = COL_TABS[to];
     colourTab(next);
     el('colTabs').querySelector(`[data-tab="${next}"]`).focus();
   });
+  initGreys();
+  initGlazing();
+  initLight();
+  el('charToLight').addEventListener('click', lightForCharacter);
   colourTab(col.tab);
   initCharacter().then(() => { if (col.tab === 'character') charRender(); });
 

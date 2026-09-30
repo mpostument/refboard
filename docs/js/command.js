@@ -8,11 +8,28 @@
    the trainers, the themes, and the extra words a tool is known by. */
 "use strict";
 
+// The words each build (FIGURE_BUILDS) is looked for by - the pose's and the 3D figure's.
+const BUILD_WORDS = { real: 'eight realistic', anime: 'seven', tall: 'long legs fashion nine', chibi: 'sd super deformed cute small' };
+// The 3D camera's anime shots (ANIME_SHOTS, in the 3D view's own code, which
+// loads only when the view opens - so named here too), with their words.
+const SHOT_COMMANDS = [
+  ['worm', "Worm's eye", 'low from below floor looking up heroic menacing'],
+  ['bird', "Bird's eye", 'high from above overhead top down'],
+  ['wide', 'Wide, close', 'wide angle lens foreshortening close up punch action'],
+  ['dutch', 'Dutch angle', 'tilted canted roll horizon'],
+  ['tele', 'Telephoto', 'long lens flat compressed far'],
+  ['fish', 'Fisheye', 'fish eye distortion curved bent lens'],
+];
 // Other words a tool is looked for by, keyed by its element's id.
 const COMMAND_WORDS = {
   btnHead: 'face construction ball thirds loomis anime eyes',
   btnPose: 'skeleton gesture figure body weight',
   btnEdges: 'hard soft lost edges wet in wet dry watercolour sharp blur',
+  btnLineWeight: 'line weight thick thin heavy light contour outline ink liner pen lineart line art taper anime',
+  btnTangents: 'tangents touch touching kiss edges shapes overlap gap depth flat frame border composition',
+  btnAmounts: 'unequal amounts dominant proportion light middle dark warm cool hard soft edges 60 30 10 composition balance',
+  btnTemp: 'temperature warm cool colour color shadow light turn hue cel shading',
+  btnRange: 'paper range darkest darks lights white clipped blown lost detail values limit medium contrast',
   btnEyedropper: 'colour color picker sample pipette mix recipe paint watercolour',
   btnCompare: 'overlay my drawing check photo',
   btnAngle: 'measure proportion line',
@@ -33,6 +50,7 @@ const COMMAND_WORDS = {
   'view-train': 'drill practice exercise test',
   btnLibrary: 'folders packs',
   btnPaint: 'session timed timer draw go begin',
+  btnLightbox: 'lightbox light box trace tracing transfer copy sketch final watercolour paper tablet screen real size mirror',
   btnMaterials: 'medium media watercolour ink liner ballpoint pen pencil marker graphite gouache oil acrylic',
   btnMoreTools: 'pin toolbar customise',
   btnWorkspace: 'panel tabs value colour construction figure my work question',
@@ -78,7 +96,9 @@ function collectCommands() {
     }
     out.push(...layerCommands());
     out.push({ id: 'btnMaterials', label: 'My materials', hint: 'Medium', words: COMMAND_WORDS.btnMaterials, run: openMaterials });
-    out.push({ id: 'steps', label: 'How to draw it', hint: 'Learn', words: 'steps stages guide tutorial learn order sketch hatching wash',
+    out.push({ id: 'lightbox', label: 'Lightbox - trace this picture', hint: 'Onto paper', words: COMMAND_WORDS.btnLightbox,
+      run: () => openLightbox(state.current) });
+    out.push({ id: 'steps', label: 'How to draw it', hint: 'Onto paper', words: 'steps stages guide tutorial learn order sketch hatching wash',
       run: () => openSteps(state.current) });
     // The head construction in either style - turned on too, if it is off.
     for (const [k, label] of Object.entries(HEAD_STYLES)) {
@@ -98,6 +118,15 @@ function collectCommands() {
         id: 'head-eyes-' + k, label: `Head construction: Anime, ${e.label} eyes`, hint: 'L',
         words: 'eye iris lashes gleam highlight manga ' + { shojo: 'shojo shoujo sparkle', sharp: 'tsurime narrow', soft: 'tareme round ghibli', tv: 'tv standard' }[k],
         run: () => { setHeadEyes(k); setHeadStyle('anime'); if (!state.headOn) toggleHead(); },
+      });
+    }
+    // The pose skeleton in each build (FIGURE_BUILDS) - turned on too.
+    for (const [k, b] of Object.entries(FIGURE_BUILDS)) {
+      if (state.poseOn && k === poseBuild) continue;
+      out.push({
+        id: 'pose-build-' + k, label: k === 'real' ? 'Pose skeleton: as photographed' : `Pose skeleton: ${b.label} proportions`, hint: 'P',
+        words: 'figure body heads anime redraw ' + BUILD_WORDS[k],
+        run: () => { setPoseBuild(k); if (!state.poseOn) togglePose(); },
       });
     }
   } else {
@@ -125,6 +154,12 @@ function collectCommands() {
   }
   if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
     run: () => openColour('character') });
+  if (!inSession) out.push({ id: 'greys', label: 'Grey ladder', hint: 'Colour studio', words: 'grey gray greys neutral warm cool mix recipe muddy value scale paint watercolour',
+    run: () => openColour('greys') });
+  if (!inSession) out.push({ id: 'glazing', label: 'Glazing chart', hint: 'Colour studio', words: 'glaze glazing layer layers wash over transparent opaque veil order mix watercolour underpainting',
+    run: () => openColour('glazing') });
+  if (!inSession) out.push({ id: 'light', label: 'Light and shadow colours', hint: 'Colour studio', words: 'light shadow shade sun sky warm cool temperature golden hour window lamp candle moon moonlight overcast cel shading kelvin',
+    run: () => openColour('light') });
   if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes iris lashes turn angle three-quarter manga model hair ring locks fringe bangs',
     run: () => openForms(() => showAnimeHead()) });
   // Its expressions, each by name - and all of them at once, as a sheet.
@@ -133,6 +168,14 @@ function collectCommands() {
       id: 'anime-expr-' + k, label: `Anime head in 3D: ${x.label}`, hint: '3D forms',
       words: 'expression emotion face feeling ' + { joy: 'happy smile laugh blush', anger: 'angry mad rage vein', surprise: 'shock surprised wide', sadness: 'sad cry tears crying' }[k],
       run: () => openForms(() => showAnimeHead(undefined, k)) });
+    // The figure in each of its proportions, with the heads grid.
+    for (const [k, b] of Object.entries(FIGURE_BUILDS)) out.push({
+      id: 'figure-build-' + k, label: `Figure in 3D: ${b.label}`, hint: '3D forms',
+      words: 'proportions heads tall body mannequin grid anime ' + BUILD_WORDS[k],
+      run: () => openForms(() => showFigureBuild(k)) });
+    for (const [k, label, words] of SHOT_COMMANDS) out.push({
+      id: 'anime-shot-' + k, label: `3D camera: ${label}`, hint: '3D forms', words: 'anime shot angle camera storyboard ' + words,
+      run: () => openForms(() => showAnimeShot(k)) });
     out.push({ id: 'anime-expr-sheet', label: 'Expression sheet', hint: '3D forms', words: 'expressions emotions faces anime head model sheet joy anger surprise sadness',
       run: () => openForms(async () => { showAnimeHead(); await formsReady(); openExpressionSheet(); }) });
   }

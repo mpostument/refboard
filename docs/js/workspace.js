@@ -18,18 +18,31 @@ const WS_TABS = [
     { hud: 'gray', about: 'colour out of the way, value left' },
     { hud: 'squint', about: 'details blurred - the big shapes of light and dark' },
     { hud: 'edges', about: 'which edges are hard and which soft - on dry paper, or wet-in-wet' },
+    { hud: 'range', about: 'what the paper can do: the darks and lights your medium cannot tell apart' },
+    { hud: 'amounts', about: 'how much light, middle and dark - one leads, or equal amounts that read as undecided' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [
     { hud: 'eyedropper', about: 'one spot: its colour, its value step, a recipe in your medium' },
+    { hud: 'temp', about: 'warm and cool areas, and where the temperature turns - is the shadow cooler than the light?' },
     { hud: 'info', about: 'the main colours of the picture' },
     { hud: 'gray', about: 'is it the colour that is off, or the value?' },
+  ] },
+  { id: 'composition', label: 'Composition', q: 'Does the arrangement work?', tools: [
+    { layer: 'focal', label: 'Focal point', key: '', about: 'where the eye goes first' },
+    { hud: 'tangents', about: 'shapes that just touch each other or the edge - where the depth goes flat' },
+    { hud: 'amounts', about: 'does one value, one temperature, one kind of edge lead?' },
+    { hud: 'guides', about: 'thirds and a viewfinder, to try a crop' },
   ] },
   { id: 'construction', label: 'Construction', q: 'Where are things, and at what angle?', tools: [
     { hud: 'guides', about: 'thirds, a plumb line, a viewfinder, a perspective check' },
     { hud: 'angle', about: 'the angle of any line, and lengths against each other' },
     { layer: 'grid', label: 'Grid', key: 'r', about: 'squares to place things by' },
-    { layer: 'focal', label: 'Focal point', key: '', about: 'where the eye goes first' },
+  ] },
+  { id: 'line', label: 'Line', q: 'How do I draw the lines?', tools: [
+    { hud: 'lineweight', about: 'which lines heavy, which light - the shadow side, the big contours, tapered ends' },
+    { hud: 'edges', about: 'where the line can be lost: a soft edge wants a broken line, or none' },
+    { hud: 'angle', about: 'the angle of a line, and lengths against each other, before it is drawn' },
   ] },
   { id: 'figure', label: 'Figure', q: 'How is the body built?', tools: [
     { hud: 'pose', about: 'the gesture, the tilt of shoulders and hips, the weight' },
@@ -41,10 +54,17 @@ const WS_TABS = [
     { hud: 'compare', about: 'a photo of your drawing over the reference' },
     { hud: 'flip', about: 'fresh eyes - mistakes jump out mirrored' },
     { hud: 'squint', about: 'do the big shapes match, before the details?' },
+    { hud: 'amounts', about: 'does your painting have a dominant - value, temperature, edges - or all in equal amounts?' },
+    { hud: 'tangents', about: 'did your drawing make shapes touch where the reference kept them apart?' },
+    { hud: 'lineweight', about: 'do your lines get heavier where the shadow is, or are they all one weight?' },
   ] },
-  { id: 'learn', label: 'Learn', q: 'How do I draw it, step by step?', tools: [
-    { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'this picture in the steps it is drawn in, for your medium',
+  // Its id is still 'learn': the tab you last had open is saved by it.
+  { id: 'learn', label: 'Onto paper', q: 'How do I get it onto the paper?', tools: [
+    { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'the order to draw it in, step by step, for your medium',
       run: () => openSteps(state.current) },
+    { action: 'lightbox', label: 'Lightbox', icon: 'lightbox', about: 'trace it: good paper over the screen, the picture lit through it - as big as you want it',
+      run: () => openLightbox(state.current) },
+    { layer: 'grid', label: 'Grid', key: 'r', about: 'or copy it freehand, a square at a time' },
   ] },
 ];
 const WS_TAB_KEY = 'refboard.workspaceTab.v1';

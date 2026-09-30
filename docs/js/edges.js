@@ -49,9 +49,11 @@ function edgeClose(L, w, h, r) {
   return from;
 }
 
-/* Every edge worth painting, and how hard it is. p: stepsRead(). kind:
-   per pixel, 0 no edge, 1 hard, 2 soft; hard and soft: how many of each. */
-function edgeMap(p) {
+/* The picture with its line art out, as three channels lightly blurred -
+   ch: value and two colour-opponents - and at each pixel the steepest step
+   G and the direction across the edge (NX, NY). Line weight (linework.js)
+   starts from the same. */
+function edgeGradient(p) {
   const { w, h, rgba } = p, n = w * h;
   const from = edgeClose(p.L, w, h, 2);
   // Value, and two colour-opponent channels at half weight: a red against
@@ -82,6 +84,14 @@ function edgeMap(p) {
       NX[i] = Math.cos(t); NY[i] = Math.sin(t);
     }
   }
+  return { ch, G, NX, NY };
+}
+
+/* Every edge worth painting, and how hard it is. p: stepsRead(). kind:
+   per pixel, 0 no edge, 1 hard, 2 soft; hard and soft: how many of each. */
+function edgeMap(p) {
+  const { w, h } = p, n = w * h;
+  const { ch, G, NX, NY } = edgeGradient(p);
 
   // On the crest of each edge only (a line one pixel wide), its width.
   const R = Math.max(8, Math.round(Math.max(w, h) / 50));

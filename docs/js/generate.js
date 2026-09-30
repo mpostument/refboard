@@ -198,6 +198,14 @@ const GEN_CHOICES = [
     { id: 'above', label: 'Above', tags: 'from above', words: 'from above' },
     { id: 'back', label: 'Behind', tags: 'from behind, looking back', words: 'from behind' },
   ] },
+  // The anime shots the 3D view's camera sets (ANIME_SHOTS) that have a tag
+  // of their own - the worm's and bird's eye are From's Below and Above.
+  { id: 'lens', label: 'Lens', for: PERSON, options: [
+    ANY,
+    { id: 'wide', label: 'Wide, close', tags: 'foreshortening, perspective', words: 'wide and close', hint: 'What is nearest comes out huge - a hand or a foot thrust at you' },
+    { id: 'dutch', label: 'Dutch angle', tags: 'dutch angle', words: 'dutch angle', hint: 'The picture tilted' },
+    { id: 'fisheye', label: 'Fisheye', tags: 'fisheye', words: 'fisheye', hint: 'Straight lines bent round the middle' },
+  ] },
   { id: 'pose', label: 'Pose', for: PERSON, options: [
     ANY,
     { id: 'standing', label: 'Standing', tags: 'standing' },
@@ -432,13 +440,13 @@ const GEN_CHOICES = [
 const GEN_GROUPS = [
   ['what', 'What', ['style', 'subject', 'setting']],
   ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
-  ['shot', 'The shot', ['framing', 'view', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
+  ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
   ['picture', 'The picture', ['medium', 'edges', 'colours', 'detail', 'ground']],
 ];
 
 const GEN_DEFAULTS = { style: 'anime', subject: 'character', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
-  view: 'front', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
+  view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', detail: 'simple',
   ground: 'plain' };
 

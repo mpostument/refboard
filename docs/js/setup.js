@@ -1185,7 +1185,7 @@ function updateViewMeta() {
     return;
   }
   if (view.kind === 'colour') {
-    m.textContent = 'Palette, colour wheel and gamut mask for any image - and a character sheet: her colours, with how to mix them.';
+    m.textContent = 'Palette, colour wheel and gamut mask for any image - a character sheet: her colours, with how to mix them - the greys your paints make, what they give glazed one over another, and a colour in the light and in shadow.';
     return;
   }
   if (view.kind === 'palette') {
