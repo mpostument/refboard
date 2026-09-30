@@ -57,8 +57,9 @@ function saveColourPrefs() {
 }
 
 // The right column's tabs: the picture's colours, a character's sheet, the
-// greys the paints make (js/greys.js), or their glazes (js/glazing.js).
-const COL_TABS = ['picture', 'character', 'greys', 'glazing'];
+// greys the paints make (js/greys.js), their glazes (js/glazing.js), or
+// what a light does to a colour (js/light.js).
+const COL_TABS = ['picture', 'character', 'greys', 'glazing', 'light'];
 function colourTab(name) {
   col.tab = COL_TABS.includes(name) ? name : 'picture';
   for (const b of el('colTabs').children) b.setAttribute('aria-selected', String(b.dataset.tab === col.tab));
@@ -373,6 +374,7 @@ function colourRender() {
   if (col.tab === 'character') charRender();
   if (col.tab === 'greys') greysRender();
   if (col.tab === 'glazing') glazingRender();
+  if (col.tab === 'light') lightRender();
 }
 
 // Coalesced to a frame: dragging the mask repaints the whole image.
@@ -479,14 +481,18 @@ function initColour() {
   });
   el('colTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) colourTab(b.dataset.tab); });
   el('colTabs').addEventListener('keydown', e => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     const i = COL_TABS.indexOf(col.tab), n = COL_TABS.length;
-    const next = COL_TABS[(i + (e.key === 'ArrowRight' ? 1 : n - 1)) % n];
+    const to = { ArrowRight: (i + 1) % n, ArrowLeft: (i + n - 1) % n, Home: 0, End: n - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    const next = COL_TABS[to];
     colourTab(next);
     el('colTabs').querySelector(`[data-tab="${next}"]`).focus();
   });
   initGreys();
   initGlazing();
+  initLight();
+  el('charToLight').addEventListener('click', lightForCharacter);
   colourTab(col.tab);
   initCharacter().then(() => { if (col.tab === 'character') charRender(); });
 

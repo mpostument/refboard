@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'light', title: 'Light and shadow',
+    text: "Colour studio > Light: choose the light - midday sun, golden hour, overcast, a north window, a lamp, moonlight - and every colour is shown three ways: its own, in that light, and in its shadow. Warm light and a cool shadow is the sun and the blue sky; by a window it turns round; under a lamp the shadow is only darker. Click a colour for a ball lit that way and a recipe for each side from your paints - in watercolour, also which one paint to glaze over the light colour for its shadow. Your character's colours too, from the Character tab.",
+    act: 'Show me', run: () => openColour('light') },
   { id: 'lightbox', title: 'Lightbox',
     text: "Paint > Lightbox, or Workspace > Onto paper: your tablet as a lightbox, to trace a sketch onto good watercolour paper. Photograph the sketch; drag four corners onto the sheet's and it is straightened; Clean makes the paper white however it was lit, Dark lines turns a blue or red pencil as dark as graphite. Measure the screen once against a bank card and Real size shows it exactly as big as the sheet was. Mirror, turn, and Lock while you trace - touches do nothing, the screen stays on; hold the lock to unlock. Workspace's Learn tab is now Onto paper: how to draw it, the lightbox and the grid.",
     act: 'Show me', run: () => openLightbox() },

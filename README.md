@@ -236,6 +236,16 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   so their order matters; transparent ones glaze to the same colour as a
   mix, and the tab names it; two strong layers go darker than any one wash.
   In oil, glazes over an underpainting.
+- **Light and shadow** - the Colour studio's Light tab: pick a light -
+  midday sun, golden hour, overcast, a north window, a lamp, moonlight - or
+  set its colour temperature and how much light reaches the shadow, and
+  every colour is shown as it is, in that light and in its shadow. The
+  light and the fill that lights the shadow (the blue sky, warm walls) are
+  spectra, multiplied into each colour's reflectance, so warm light and a
+  cool shadow - or the other way round - come out of the light itself.
+  A colour clicked shows a lit ball and a recipe for each side, and in
+  watercolour the one paint to glaze over the light colour for its shadow.
+  Your own colour, or your character sheet's.
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
   on a machine with a GPU (`COMFY_URL`): anime references made to order - a
   character (who, the hair, the eyes and their shape, how much of them, from where, the pose), a

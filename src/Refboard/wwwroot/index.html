@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=e53eddf7">
+<link rel="stylesheet" href="css/app.css?v=18691ba4">
 </head>
 <body>
 <div id="setup">
@@ -373,6 +373,7 @@
               <button type="button" role="tab" data-tab="character" aria-selected="false" title="A character's colours - hair, skin, eyes, clothes - with shadow, light and how to mix them">Character</button>
               <button type="button" role="tab" data-tab="greys" aria-selected="false" title="Warm, neutral and cool greys from these paints, light to dark">Greys</button>
               <button type="button" role="tab" data-tab="glazing" aria-selected="false" title="One paint glazed over another, against mixing them on the palette">Glazing</button>
+              <button type="button" role="tab" data-tab="light" aria-selected="false" title="A colour in the light and in its shadow, under the sun, a window, a lamp - and how to mix both">Light</button>
             </div>
             <div class="col-tab on" data-tab="picture" role="tabpanel">
               <canvas id="colWheel" title="Hue round the circle, chroma out from grey in the middle. Dots: every colour in the image. Numbers: its palette."></canvas>
@@ -395,7 +396,8 @@
               <select id="charSelect" class="char-select hidden" aria-label="Another character"></select>
               <div class="count" id="charHint"></div>
               <div id="charParts"></div>
-              <div class="count char-note">Shadows are worked out the anime way: a value step darker and turned toward violet - the cool sky lights them - but skin's toward red, where light comes back out of it. Lights are paler and warmer. In watercolour a light is the same paint with more water, and an eye's catchlight is the paper.</div>
+              <div class="count char-note">Shadows are worked out the anime way: a value step darker and turned toward violet - the cool sky lights them - but skin's toward red, where light comes back out of it. Lights are paler and warmer. In watercolour a light is the same paint with more water, and an eye's catchlight is the paper.
+                <button class="linkish" type="button" id="charToLight" title="These colours on the Light tab - at golden hour, by a window, under a lamp">Under another light →</button></div>
               <div class="row char-go">
                 <button class="ghost" type="button" id="charCopy">Copy as text</button>
                 <button class="ghost hidden" type="button" id="charGenerate" title="With your ComfyUI: her hair and eyes, drawn as a turnaround - front, side and back">Generate her</button>
@@ -418,6 +420,24 @@
               <div class="count" id="gzReadout">Columns: the first wash, dry. Rows: the glaze painted across it. Click a crossing.</div>
               <div id="gzPair"></div>
               <div class="count" id="gzNote"></div>
+            </div>
+            <!-- js/light.js: a light and the shadow it leaves, on each colour. -->
+            <div class="col-tab" data-tab="light" role="tabpanel">
+              <h4>Light and shadow - what a light does to a colour</h4>
+              <div class="chips" id="ltLights" role="group" aria-label="The light"></div>
+              <div class="lt-sliders">
+                <label for="ltT">Light's colour</label><input type="range" id="ltT" min="1800" max="10000" step="100"><output id="ltTOut" for="ltT"></output>
+                <label for="ltR">Shadow's light</label><input type="range" id="ltR" min="5" max="80" step="1"><output id="ltROut" for="ltR"></output>
+              </div>
+              <div class="count" id="ltHint"></div>
+              <div class="row lt-bar">
+                <div class="chips" id="ltSource" role="group" aria-label="Which colours"></div>
+                <label class="lt-own" title="A colour of your own, as it is in daylight">+ <input type="color" id="ltOwn" aria-label="Your colour" value="#c86a4a"></label>
+                <button class="char-clear hidden" type="button" id="ltOwnClear" aria-label="Remove your colour" title="Remove your colour">×</button>
+              </div>
+              <div id="ltRows" class="lt-rows" role="group" aria-label="Colours in this light"></div>
+              <div id="ltOne"></div>
+              <div class="count" id="ltNote"></div>
             </div>
           </div>
         </div>
@@ -1710,7 +1730,7 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=ecf56898"></script>
-<script src="js/setup.js?v=c879ed46"></script>
+<script src="js/setup.js?v=95d26494"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
@@ -1728,9 +1748,9 @@
 <script src="js/workspace.js?v=9ff4ccee"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=4d660f08"></script>
+<script src="js/command.js?v=b27ef337"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=7363eecb"></script>
+<script src="js/whatsnew.js?v=bbdc37ad"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
@@ -1754,10 +1774,11 @@
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=9a0a6048"></script>
+<script src="js/colour.js?v=dd37f301"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=009fc308"></script>
 <script src="js/glazing.js?v=eee6c804"></script>
+<script src="js/light.js?v=1ea119ad"></script>
 </template>
 <script src="js/main.js?v=108cddb7"></script>
 </body>

@@ -437,9 +437,18 @@ packs (below), and moving a picture to another folder by hand.
   where the area is flat. Still to come: the range measured from a swatch
   photo (see Calibration), the paper's own tone, and the picture shown
   squeezed into the range, as a preview.
-- **Shadow colour from the light's colour.** Set the light (warm sun, cool
-  sky) and get the shadow's colour and its recipe - warm light, cool
-  shadow, and the other way round.
+- **Light and shadow, the rest.** In place (`js/light.js`, Colour studio >
+  Light, Ctrl+K "shadow"): a light as two spectra - the key (a black body
+  at its colour temperature) and the fill that is all a shadow gets (the
+  sky, scattered sunlight; or warm walls; or the lamp again) - each colour's
+  reflectance times them, the eye's adaptation taken half way, skin's
+  shadow warmed by the light that comes back out of it. Six lights, a
+  temperature and a shadow slider, samples, your own colour or the
+  character sheet's; a lit ball, recipes for both sides, and the shadow as
+  a glaze over the light colour. Still to come: the light read from a
+  picture (its lit and shadow sides, as the Temperature map sees them), a
+  ground bounce (green grass, a red floor), and the Character tab's
+  automatic shadows following the light chosen here.
 
 - **Vignette.** A watercolour study often fades out before the edge of
   the paper: suggest the vignette's shape - where the picture should end
