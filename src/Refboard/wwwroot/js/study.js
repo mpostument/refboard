@@ -459,6 +459,7 @@ document.addEventListener('keydown', e => {
     case 'b': case 'B': if (!e.ctrlKey && !e.metaKey) toggleRange(); break;
     case 't': case 'T': if (!e.ctrlKey && !e.metaKey) toggleTemp(); break;
     case 'u': case 'U': if (!e.ctrlKey && !e.metaKey) toggleAmounts(); break;
+    case 'n': case 'N': if (!e.ctrlKey && !e.metaKey) toggleTangents(); break;
     case 'Backspace':
       if (state.constructMode === 'persp' && state.persp && state.persp.length) { e.preventDefault(); state.persp.pop(); renderConstructOverlay(); }
       break;

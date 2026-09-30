@@ -12,7 +12,7 @@ test('tabs by question; each row is the toolbar tool itself', async ({ page }) =
   // A dropped photo opens with the panel, at Value - it is split already.
   await openSession(page);
   await expect(page.locator('#wsPanel')).toBeVisible();
-  await expect(page.locator('#wsTabs [role=tab]')).toHaveText(['Value', 'Colour', 'Construction', 'Figure', 'My work', 'Learn']);
+  await expect(page.locator('#wsTabs [role=tab]')).toHaveText(['Value', 'Colour', 'Composition', 'Construction', 'Figure', 'My work', 'Learn']);
   await expect(page.locator('#wsQuestion')).toHaveText('How light or dark is each part?');
 
   // While the value split is on, Grayscale is off - here as in the toolbar.
@@ -29,6 +29,8 @@ test('tabs by question; each row is the toolbar tool itself', async ({ page }) =
   // Arrows move between tabs; a layer row turns the layer on; the tab is kept.
   await page.locator('#wsTabs [aria-selected="true"]').focus();
   await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#wsQuestion')).toHaveText('Does the arrangement work?');
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#wsQuestion')).toHaveText('Where are things, and at what angle?');
   await tool(page, 'Grid').click();

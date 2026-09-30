@@ -27,6 +27,7 @@ const HUD_TOOLS = [
   { id: 'range', label: "Paper's range", els: ['btnRange'], key: 'b', group: 'look' },
   { id: 'temp', label: 'Temperature map', els: ['btnTemp'], key: 't', group: 'look' },
   { id: 'amounts', label: 'Amounts - which leads', els: ['btnAmounts'], key: 'u', group: 'look' },
+  { id: 'tangents', label: 'Tangents', els: ['btnTangents'], key: 'n', group: 'look' },
   { id: 'compare', label: 'Compare your drawing', els: ['btnCompare'], key: 'd', group: 'look' },
   { id: 'workspace', label: 'Workspace - tools by question', els: ['btnWorkspace'], key: 'w', group: 'look' },
   { id: 'layers', label: 'Layers', els: ['btnLayers'], key: '', group: 'look' },

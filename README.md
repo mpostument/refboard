@@ -172,13 +172,27 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   a sentence in the note. The note tells warm light / cool shadow from the
   reverse, for cel shading and for mixing in your medium. Every overlay's
   part of the note has an x that turns just that layer off.
-- **Amounts** - in a session (`u`, Workspace > Value or My work): how much
+- **Amounts** - in a session (`u`, Workspace > Value, Composition or My work): how much
   of the picture is light, middle and dark, warm and cool, hard-edged and
   soft, as three bars. A picture with a dominant (60/30/10) reads as meant;
   equal amounts read as indecision, and the note says which it is and what
   to push. Each bar's Where? opens the map it counts - the value split at 3,
   the temperature map, the edge map. For a reference, or a photo of your
   own painting.
+- **Tangents** - in a session (`n`, Workspace > Composition or My work,
+  Layers): a pink ring where two shapes just touch or nearly do, an amber
+  one where a shape just touches the paper's edge or is cut by it by a
+  hair. There the eye cannot tell which shape is in front and the depth
+  goes flat; overlap them or open a clear gap, move the shape in or let it
+  go clearly off (in a comic panel, the panel border counts). Shapes are
+  the value masses - light, and dark, and a half-tone where the picture has
+  one - with line art taken out first. Shapes that share an edge are fine:
+  each is shrunk a little, so a shared edge stays close all along and a
+  tangent is close only at one spot. Two shapes of one value that touch
+  merge into one; a hard shrink breaks the join, and a kiss is told from a
+  real neck (a waist, a wrist) by the ground beside it - a sharp wedge, or
+  open. Composition is its own Workspace tab now (focal point, tangents,
+  amounts, a crop), apart from Construction.
 - **Character sheet** - the Colour studio's second tab: a character's hair,
   skin, eyes, clothes and an accent, each clicked on a picture, with its
   shadow and light worked out as anime cel shading paints them (a value

@@ -690,11 +690,14 @@ Any medium:
 - **Composition analysis.** For a photo: where the eye goes (a saliency
   map), the balance of visual weight, the leading lines - and a few
   suggested crops, best first.
-- **Tangents.** Find where the edges of shapes just touch each other or
-  the edge of the paper - tangents flatten depth, and are better either
-  separated or overlapped.
+- **Tangents, the rest.** In place (`js/tangents.js`, `n`, Workspace >
+  Composition and My work, a layer): value shapes that just touch or nearly
+  do, and shapes that just touch the paper's edge or are cut by it by a
+  hair, ringed, with the fix in the note. Still to come: tangents of
+  colour alone (a red against a green of one value), a line that runs
+  exactly into a corner, and edges that run parallel just inside the frame.
 - **Unequal amounts, the rest.** In place (`js/amounts.js`, `u`,
-  Workspace > Value and My work): light, middle and dark (the thirds `v` at
+  Workspace > Value, Composition and My work): light, middle and dark (the thirds `v` at
   3 shows), warm, neutral and cool, hard and soft edges, each as a bar with
   its verdict - a clear lead, a lean, or equal amounts that read as
   indecision - and a Where? that opens the map it counts. Still to come:

@@ -36,6 +36,8 @@ const LAYERS = [
     on: () => !!state.rangeOn, toggle: () => toggleRange() },
   { id: 'temp', label: 'Temperature map', els: ['tempOverlay'], base: 1,
     on: () => !!state.tempOn, toggle: () => toggleTemp() },
+  { id: 'tangents', label: 'Tangents', els: ['tanOverlay'], base: 1,
+    on: () => !!state.tangentsOn, toggle: () => toggleTangents() },
   { id: 'pose', label: 'Pose skeleton', els: ['poseOverlay'], base: 1,
     on: () => !!state.poseOn, toggle: () => togglePose() },
   { id: 'grid', label: 'Grid', els: ['grid', 'gridValue'], base: 0.3,

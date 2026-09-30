@@ -28,11 +28,16 @@ const WS_TABS = [
     { hud: 'info', about: 'the main colours of the picture' },
     { hud: 'gray', about: 'is it the colour that is off, or the value?' },
   ] },
+  { id: 'composition', label: 'Composition', q: 'Does the arrangement work?', tools: [
+    { layer: 'focal', label: 'Focal point', key: '', about: 'where the eye goes first' },
+    { hud: 'tangents', about: 'shapes that just touch each other or the edge - where the depth goes flat' },
+    { hud: 'amounts', about: 'does one value, one temperature, one kind of edge lead?' },
+    { hud: 'guides', about: 'thirds and a viewfinder, to try a crop' },
+  ] },
   { id: 'construction', label: 'Construction', q: 'Where are things, and at what angle?', tools: [
     { hud: 'guides', about: 'thirds, a plumb line, a viewfinder, a perspective check' },
     { hud: 'angle', about: 'the angle of any line, and lengths against each other' },
     { layer: 'grid', label: 'Grid', key: 'r', about: 'squares to place things by' },
-    { layer: 'focal', label: 'Focal point', key: '', about: 'where the eye goes first' },
   ] },
   { id: 'figure', label: 'Figure', q: 'How is the body built?', tools: [
     { hud: 'pose', about: 'the gesture, the tilt of shoulders and hips, the weight' },
@@ -45,6 +50,7 @@ const WS_TABS = [
     { hud: 'flip', about: 'fresh eyes - mistakes jump out mirrored' },
     { hud: 'squint', about: 'do the big shapes match, before the details?' },
     { hud: 'amounts', about: 'does your painting have a dominant - value, temperature, edges - or all in equal amounts?' },
+    { hud: 'tangents', about: 'did your drawing make shapes touch where the reference kept them apart?' },
   ] },
   { id: 'learn', label: 'Learn', q: 'How do I draw it, step by step?', tools: [
     { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'this picture in the steps it is drawn in, for your medium',
