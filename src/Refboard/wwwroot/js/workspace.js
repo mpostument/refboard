@@ -19,6 +19,7 @@ const WS_TABS = [
     { hud: 'squint', about: 'details blurred - the big shapes of light and dark' },
     { hud: 'edges', about: 'which edges are hard and which soft - on dry paper, or wet-in-wet' },
     { hud: 'range', about: 'what the paper can do: the darks and lights your medium cannot tell apart' },
+    { hud: 'amounts', about: 'how much light, middle and dark - one leads, or equal amounts that read as undecided' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [
@@ -43,6 +44,7 @@ const WS_TABS = [
     { hud: 'compare', about: 'a photo of your drawing over the reference' },
     { hud: 'flip', about: 'fresh eyes - mistakes jump out mirrored' },
     { hud: 'squint', about: 'do the big shapes match, before the details?' },
+    { hud: 'amounts', about: 'does your painting have a dominant - value, temperature, edges - or all in equal amounts?' },
   ] },
   { id: 'learn', label: 'Learn', q: 'How do I draw it, step by step?', tools: [
     { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'this picture in the steps it is drawn in, for your medium',

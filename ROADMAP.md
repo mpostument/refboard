@@ -693,10 +693,13 @@ Any medium:
 - **Tangents.** Find where the edges of shapes just touch each other or
   the edge of the paper - tangents flatten depth, and are better either
   separated or overlapped.
-- **Unequal amounts.** The proportions of light, middle and dark, warm and
-  cool, hard and soft edges. A good picture has a dominant one (60/30/10,
-  say); equal amounts read as indecision. For a reference and for a photo
-  of your own work.
+- **Unequal amounts, the rest.** In place (`js/amounts.js`, `u`,
+  Workspace > Value and My work): light, middle and dark (the thirds `v` at
+  3 shows), warm, neutral and cool, hard and soft edges, each as a bar with
+  its verdict - a clear lead, a lean, or equal amounts that read as
+  indecision - and a Where? that opens the map it counts. Still to come:
+  bright against greyed colour, big shapes against small, and the same
+  counts inside a crop, to find the one where something leads.
 - **Line weight.** Over a photo: where a contour wants to be heavier (the
   shadow side, overlaps, the underside of a form) and where lighter (the
   lit side).

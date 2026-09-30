@@ -172,6 +172,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   a sentence in the note. The note tells warm light / cool shadow from the
   reverse, for cel shading and for mixing in your medium. Every overlay's
   part of the note has an x that turns just that layer off.
+- **Amounts** - in a session (`u`, Workspace > Value or My work): how much
+  of the picture is light, middle and dark, warm and cool, hard-edged and
+  soft, as three bars. A picture with a dominant (60/30/10) reads as meant;
+  equal amounts read as indecision, and the note says which it is and what
+  to push. Each bar's Where? opens the map it counts - the value split at 3,
+  the temperature map, the edge map. For a reference, or a photo of your
+  own painting.
 - **Character sheet** - the Colour studio's second tab: a character's hair,
   skin, eyes, clothes and an accent, each clicked on a picture, with its
   shadow and light worked out as anime cel shading paints them (a value

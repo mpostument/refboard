@@ -82,13 +82,16 @@ function loadVision(kind) {
 // The one note box is shared, in this order: the head's note above the
 // pose's when both are on. Each part has its own x, which turns that layer
 // off - with three maps on, the note is how you find what to close. The
-// keys are LAYERS' ids (js/layers.js).
-const overlayNotes = { head: '', pose: '', edges: '', range: '', temp: '' };
+// keys are LAYERS' ids (js/layers.js), or for a tool that only speaks -
+// no overlay - its HUD_TOOLS id (js/pins.js), whose button the x presses.
+const overlayNotes = { head: '', pose: '', edges: '', range: '', temp: '', amounts: '' };
+const noteOwner = k => (typeof LAYERS !== 'undefined' && LAYERS.find(l => l.id === k))
+  || (typeof HUD_TOOLS !== 'undefined' && HUD_TOOLS.find(t => t.id === k));
 function overlayNote(key, html) {
   overlayNotes[key] = html || '';
   const parts = Object.entries(overlayNotes).filter(([, h]) => h).map(([k, h]) => {
-    const layer = typeof LAYERS !== 'undefined' && LAYERS.find(l => l.id === k);
-    const off = layer ? `<button type="button" class="note-off" data-note-off="${k}" title="Turn off ${esc(layer.label)}" aria-label="Turn off ${esc(layer.label)}">×</button>` : '';
+    const owner = noteOwner(k);
+    const off = owner ? `<button type="button" class="note-off" data-note-off="${k}" title="Turn off ${esc(owner.label)}" aria-label="Turn off ${esc(owner.label)}">×</button>` : '';
     return `<div class="note-part" data-note="${k}">${off}${h}</div>`;
   });
   el('poseNote').classList.toggle('hidden', !parts.length);
@@ -764,5 +767,5 @@ el('poseNote').addEventListener('click', e => {
   if (build) setPoseBuild(build.dataset.poseBuild);
   if (eyes) setHeadEyes(eyes.dataset.headEyes);
   const off = e.target.closest('[data-note-off]');
-  if (off) LAYERS.find(l => l.id === off.dataset.noteOff).toggle();
+  if (off) { const o = noteOwner(off.dataset.noteOff); if (o.toggle) o.toggle(); else o.nodes[0].click(); }
 });

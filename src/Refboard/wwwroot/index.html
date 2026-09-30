@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=4e464c50">
+<link rel="stylesheet" href="css/app.css?v=0dd0376f">
 </head>
 <body>
 <div id="setup">
@@ -785,6 +785,7 @@
     <button id="btnEdges" data-icon="edges" title="Edge map (x): which edges are hard and which soft - where to paint on dry paper, and where wet-in-wet" aria-label="Edge map" aria-pressed="false"></button>
     <button id="btnRange" data-icon="range" title="Paper's range (b): what your medium cannot do - shadows darker than its darkest mix, lights lighter than the paper - and where detail is lost there" aria-label="Paper's range" aria-pressed="false"></button>
     <button id="btnTemp" data-icon="temp" title="Temperature map (t): which areas are warm and which cool, and where the temperature turns between light and shadow" aria-label="Temperature map" aria-pressed="false"></button>
+    <button id="btnAmounts" data-icon="amounts" title="Amounts (u): how much is light, middle and dark, warm and cool, hard and soft - and whether one of each leads, or they are equal and the picture reads as undecided" aria-label="Amounts" aria-pressed="false"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <button id="btnWorkspace" data-icon="sliders" title="Workspace (w): the tools sorted by the question you ask of the picture - value, colour, construction, figure, your own work" aria-label="Workspace" aria-pressed="false"></button>
     <button id="btnLayers" data-icon="layers" title="Layers: every overlay in one list, each on or off and with its own opacity" aria-label="Layers" aria-pressed="false"></button>
@@ -809,7 +810,7 @@
     <button id="btnHelpHud" data-icon="help" title="What every feature does and how to use it (?)" aria-label="Help"></button>
     <button id="btnStop" data-icon="stop" title="Stop (Esc)" aria-label="Stop"></button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · p pose · l head · x edges · b range · t temperature · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · p pose · l head · x edges · b range · t temperature · u amounts · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
   </div>
 </div>
 
@@ -1626,32 +1627,33 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=8d5f47bb"></script>
+<script src="js/core.js?v=ac32ce4c"></script>
 <script src="js/setup.js?v=9dfd876b"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
-<script src="js/session.js?v=7454a1a9"></script>
+<script src="js/session.js?v=1401ebca"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=0fa2b20b"></script>
 <script src="js/tools.js?v=ef779a3a"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
-<script src="js/vision.js?v=093732a7"></script>
+<script src="js/vision.js?v=e1188bce"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
-<script src="js/study.js?v=5444a698"></script>
+<script src="js/study.js?v=d6d6f884"></script>
 <script src="js/layers.js?v=2663196a"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=60573375"></script>
-<script src="js/workspace.js?v=ea8c65c5"></script>
+<script src="js/pins.js?v=21f9eb2d"></script>
+<script src="js/workspace.js?v=6352bded"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=5536d12b"></script>
+<script src="js/command.js?v=001c1945"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=0d9bce49"></script>
+<script src="js/whatsnew.js?v=36b733c2"></script>
 <script src="js/edges.js?v=5393fa8f"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
 <script src="js/temperature.js?v=e7c001b3"></script>
+<script src="js/amounts.js?v=dddc01f3"></script>
 <script src="js/generate.js?v=a202c557"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps

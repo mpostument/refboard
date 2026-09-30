@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'amounts', title: 'Which one leads',
+    text: "Over any picture in a session (u, or Workspace > Value or My work): how much of it is light, middle and dark, warm and cool, hard-edged and soft, as three bars. A picture with a dominant - 60/30/10, say - reads as meant; equal amounts read as indecision, and the note says which it is and what to push. Each bar's Where? opens the map it counts. Works on a photo of your own painting too.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'temperature', title: 'Temperature map',
     text: "Over any picture in a session (t, or Workspace > Colour): orange where it is warmer than the picture as a whole, blue where it is cooler, and white lines where the temperature turns - most often at the edge of a shadow. The note says whether the light is warm and the shadows cool or the other way round, and what that means for cel shading and for mixing in your medium. Every overlay's note now has its own x, to turn just that one off.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
