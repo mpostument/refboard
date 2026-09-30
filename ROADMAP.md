@@ -409,11 +409,16 @@ packs (below), and moving a picture to another folder by hand.
   pairs, at a few dilutions. Paint it with real paint, photograph it, and
   the photo calibrates the pigments' colours in PIGMENTS - so the recipes
   become accurate for the painter's own tubes and paper.
-- **Glazing.** What a transparent wash of one colour over a dry wash of
-  another gives - not the same as mixing the two on the palette
-  (ultramarine glazed over burnt sienna is a different grey from the two
-  mixed). The Beer-Lambert wash model in paint.js already covers it: the
-  layers' absorbances add over the paper.
+- **Glazing, the rest.** In place (`js/glazing.js`, Colour studio >
+  Glazing, Ctrl+K "glazing"): the palette's glazing chart, each paint over
+  each at a light, medium or strong wash, and a crossing set beside the
+  other order and the palette mix. With transparent paints absorbances only
+  add, so the glaze equals a mix and the tab says which; an opaque paint
+  (`GZ_OPACITY`) veils on top, so there the order shows; two layers past
+  strength 1 are darker than any one wash. In oil, over an underpainting
+  with white. Still to come: granulation and staining (with the Pigment
+  guide), three layers and more, and a glaze asked for - "what over this
+  wash gives that colour" - from a picture's palette.
 - **Pigment guide.** For each pigment: transparency, staining, granulation,
   lightfastness. Recipes carry the notes that matter ("granulates - for
   skin, ochre + alizarin is smoother").

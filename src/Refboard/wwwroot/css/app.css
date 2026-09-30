@@ -1248,10 +1248,13 @@ section { margin-bottom: 20px; }
 .col-sw { cursor: pointer; border-radius: 6px; padding-left: 4px; margin-left: -4px; }
 .col-sw:hover { background: var(--hover); }
 .col-sw.pinned { background: color-mix(in srgb, var(--accent) 16%, transparent); }
-/* The right column: the paints over three tabs - the picture's colours, a
-   character's sheet (js/character.js), the greys (js/greys.js). */
+/* The right column: the paints over four tabs - the picture's colours, a
+   character's sheet (js/character.js), the greys (js/greys.js), glazes
+   (js/glazing.js). Four words fit its narrowest width with tighter padding;
+   past that the row scrolls rather than wraps under itself. */
 .col-right h4.col-first { margin-top: 0; }
-.col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; }
+.col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; overflow-x: auto; scrollbar-width: none; }
+.col-tabs button { padding-left: 7px; padding-right: 7px; white-space: nowrap; }
 .col-tab { display: none; }
 .col-tab.on { display: block; }
 .col-tab > h4:first-of-type { margin-top: 12px; }
@@ -1301,6 +1304,22 @@ section { margin-bottom: 20px; }
 .gl-mix span { color: var(--ink); }
 .gl-mix em { font-style: normal; color: var(--dim); }
 #glNote { margin-top: 10px; }
+/* The glazing chart: first washes as the header row, glazes as the header
+   column, each crossing the two layered - square, as many as the paints. */
+.gz-chart { display: grid; grid-template-columns: repeat(calc(var(--gz-n, 6) + 1), minmax(0, 1fr)); gap: 2px; margin-top: 8px; }
+.gz-chart > * { aspect-ratio: 1; min-width: 0; }
+.gz-head { border-radius: 3px; border: 1px solid rgba(255,255,255,.12); }
+.gz-cell { padding: 0; border: 1px solid rgba(255,255,255,.08); border-radius: 3px; cursor: pointer; }
+.gz-cell:hover { outline: 1px solid var(--dim); outline-offset: 1px; }
+.gz-cell.on, .gz-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#gzReadout { margin: 8px 0 10px; min-height: 2.6em; }
+.gz-title { font-size: 12px; color: var(--ink); margin-bottom: 6px; }
+.gz-title b { font-weight: 600; }
+.gz-swatches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.gz-swatches figure { margin: 0; }
+.gz-swatches i { display: block; height: 34px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
+.gz-swatches figcaption { font-size: 10.5px; color: var(--dim); text-align: center; margin-top: 3px; }
+#gzNote { margin-top: 10px; }
 
 /* A palette colour's mixes, under its row. */
 .col-mix { margin: 0 0 6px 50px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }

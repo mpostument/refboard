@@ -219,6 +219,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   related instead of going muddy. Where your paints make no warmer or
   cooler grey than the neutral, the column says so; with a picture open,
   its own greys are marked on the ladder.
+- **Glazing chart** - the Colour studio's Glazing tab: every paint of your
+  palette glazed over every other, first washes down and glazes across, at
+  a light, medium or strong wash. A crossing is set beside the other order
+  and the palette mix: opaque paints (cadmiums, ochre, black) veil on top,
+  so their order matters; transparent ones glaze to the same colour as a
+  mix, and the tab names it; two strong layers go darker than any one wash.
+  In oil, glazes over an underpainting.
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
   on a machine with a GPU (`COMFY_URL`): anime references made to order - a
   character (who, the hair, the eyes and their shape, how much of them, from where, the pose), a

@@ -57,13 +57,15 @@ test('the Greys tab: cells with water, a recipe per column, the picture\'s greys
   // A picture: its greys are marked on the ladder.
   await page.setInputFiles('#colInput', { name: 'quads.png', mimeType: 'image/png', buffer: quadrantsPng() });
   await expect(page.locator('#glNote')).toContainText("This picture's");
-  // The tab is remembered, and arrows move between the three.
+  // The tab is remembered, and arrows move round the tabs, the last to the first.
   await page.reload();
   await page.click('.nav-item[data-view="colour"]');
   await expect(page.locator('#colTabs [data-tab="greys"]')).toHaveAttribute('aria-selected', 'true');
   await page.focus('#colTabs [data-tab="greys"]');
   await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#colTabs [data-tab="glazing"]')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('ArrowRight');
   await expect(page.locator('#colTabs [data-tab="picture"]')).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#colTabs [data-tab="greys"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#colTabs [data-tab="glazing"]')).toHaveAttribute('aria-selected', 'true');
 });

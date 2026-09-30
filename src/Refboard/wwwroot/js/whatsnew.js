@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'glazing', title: 'Glazing chart',
+    text: "Colour studio > Glazing: every paint of your palette glazed over every other, as the chart painters paint - first washes down, glazes across. Click a crossing and it is set beside the other order and the palette mix: which paint veils when it goes on top (the opaque ones - cadmiums, ochre, black), which mix on the palette gives the same colour, and where two layers get darker than any single wash can.",
+    act: 'Show me', run: () => openColour('glazing') },
   { id: 'greys', title: 'Grey ladder',
     text: "Colour studio > Greys: a warm, a neutral and a cool grey from the paints you picked, each one mix taken light to dark - with water in watercolour, with white in oil - so every grey in a painting stays related instead of going muddy. Each column says its recipe and each step how strong the wash is, or how much white; where your paints cannot make a cooler or warmer grey, the column says so. With a picture open, its own greys are marked on the ladder.",
     act: 'Show me', run: () => openColour('greys') },

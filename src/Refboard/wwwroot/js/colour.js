@@ -56,9 +56,9 @@ function saveColourPrefs() {
   try { localStorage.setItem(COLOUR_KEY, JSON.stringify({ mode: col.mode, mask: col.mask, tab: col.tab })); } catch {}
 }
 
-// The right column's tabs: the picture's colours, a character's sheet, or
-// the greys the paints make (js/greys.js).
-const COL_TABS = ['picture', 'character', 'greys'];
+// The right column's tabs: the picture's colours, a character's sheet, the
+// greys the paints make (js/greys.js), or their glazes (js/glazing.js).
+const COL_TABS = ['picture', 'character', 'greys', 'glazing'];
 function colourTab(name) {
   col.tab = COL_TABS.includes(name) ? name : 'picture';
   for (const b of el('colTabs').children) b.setAttribute('aria-selected', String(b.dataset.tab === col.tab));
@@ -372,6 +372,7 @@ function colourRender() {
   colourRenderPalette();
   if (col.tab === 'character') charRender();
   if (col.tab === 'greys') greysRender();
+  if (col.tab === 'glazing') glazingRender();
 }
 
 // Coalesced to a frame: dragging the mask repaints the whole image.
@@ -485,6 +486,7 @@ function initColour() {
     el('colTabs').querySelector(`[data-tab="${next}"]`).focus();
   });
   initGreys();
+  initGlazing();
   colourTab(col.tab);
   initCharacter().then(() => { if (col.tab === 'character') charRender(); });
 
