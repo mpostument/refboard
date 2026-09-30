@@ -10,7 +10,8 @@
    mix it from your own paints (paint.js), and a switch to make only
    colours those paints can reach - the dashed outline of the Colour
    studio's wheel, used as a gamut mask. A picture's own palette comes here
-   from the Colour studio, and a palette you like is kept.
+   from the Colour studio, a palette you like is kept, and one goes to
+   Generate as the colours of a reference made to order.
 
    Loaded the first time the view opens (loadSection('palette')). */
 "use strict";
@@ -92,7 +93,17 @@ function palgenFit(rgb) {
   const [L, a, b] = linToOklab(...rgb.map(c => srgbToLin(c / 255)));
   if (pointInPolygon([a, b], reach)) return rgb;
   const [a2, b2] = mapIntoGamut([a, b], reach);
-  return oklabToLin(L, a2, b2).map(c => Math.round(clamp01(linToSrgb(clamp01(c))) * 255));
+  // Kept to the screen too: a very light yellow, at its value, can be more
+  // intense than sRGB shows, and clipping its red turns it green - out of
+  // the paints' reach again. Less intense, same hue, until it fits.
+  const fits = s => oklabToLin(L, a2 * s, b2 * s).every(c => c >= 0 && c <= 1);
+  let s = 1;
+  if (!fits(1)) {
+    let lo = 0, hi = 1;
+    for (let k = 0; k < 20; k++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; }
+    s = lo;
+  }
+  return oklabToLin(L, a2 * s, b2 * s).map(c => Math.round(clamp01(linToSrgb(clamp01(c))) * 255));
 }
 
 function palgenGenerate() {
@@ -162,7 +173,6 @@ function palgenShades(rgb) {
 const palgenMixCache = new Map();
 let palgenMixRun = 0;
 function palgenMixKey(rgb) { return colHexOf(rgb) + '|' + paintPaletteKey() + '|' + paintMedium(); }
-const colHexOf = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
 function palgenMixHtml(recipes) {
   const [best, ...more] = recipes;
   if (!best) return '<span class="count">Mixing needs js/vendor/spectral.js, which did not load.</span>';
@@ -220,6 +230,8 @@ function palgenRender() {
   el('pgFit').setAttribute('aria-pressed', String(pg.fit));
   el('pgUndo').disabled = !pg.undo.length;
   el('pgAdd').disabled = n >= PALGEN_MAX;
+  // Only where there is a ComfyUI to ask (initGenerate() shows its rail button).
+  el('pgToGenerate').classList.toggle('hidden', !genAvailable());
   const used = pg.lastHarmony && pg.harmony === 'any' ? ` This one: ${PALGEN_HARMONIES[pg.lastHarmony].label.toLowerCase()}.` : '';
   el('pgHarmonyHint').textContent = PALGEN_HARMONIES[pg.harmony].hint + used;
   paintChipsSync();
@@ -288,6 +300,7 @@ function initPalette() {
     const b = e.currentTarget, label = b.textContent;
     b.textContent = 'Saved'; setTimeout(() => { b.textContent = label; }, 1400);
   });
+  el('pgToGenerate').addEventListener('click', () => genUsePalette(pg.swatches.map(s => s.rgb)));
   el('pgFromPicture').addEventListener('click', () => openColour('picture'));
   el('pgSaved').addEventListener('click', e => {
     const open = e.target.closest('[data-pg-open]'), del = e.target.closest('[data-pg-del]');

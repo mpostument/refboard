@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'palette-generate', title: 'A palette to Generate',
+    text: "In Palettes, Use in Generate sends the palette to Generate, where The picture has a Colours row: Your palette, with its colours on it, or Any. The model knows no hex, so the palette goes as the words it does know for a palette as a whole - limited palette, the hue that leads it, muted or pastel, dark or high contrast: the picture comes out in that range and mood, not in five exact colours - those, and how to mix them, stay in Palettes. Not for ink or pencil, which are grey.",
+    act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
   { id: 'palettes', title: 'Palettes: a palette generator',
     text: "Prepare > Palettes: five colours in a harmony - analogous, complementary, split, triadic or one hue - spread over the values, a light and a dark among them. Space for a new palette; lock a colour to keep it, drag to reorder, open its tints and shades for a lighter or darker one, Undo, Copy, Save. Under each colour, how to mix it from your paints; Only what my paints mix makes only colours they can reach. In the Colour studio, To the palette generator takes a picture's own colours there.",
     act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
