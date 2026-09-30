@@ -151,6 +151,8 @@ function collectCommands() {
   }
   if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
     run: () => openColour('character') });
+  if (!inSession) out.push({ id: 'greys', label: 'Grey ladder', hint: 'Colour studio', words: 'grey gray greys neutral warm cool mix recipe muddy value scale paint watercolour',
+    run: () => openColour('greys') });
   if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes iris lashes turn angle three-quarter manga model hair ring locks fringe bangs',
     run: () => openForms(() => showAnimeHead()) });
   // Its expressions, each by name - and all of them at once, as a sheet.

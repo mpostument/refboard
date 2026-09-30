@@ -212,6 +212,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   and a recipe for each from your paints and medium. Kept like your uploads,
   copied as text, and - with a ComfyUI - drawn again as a turnaround in her
   hair and eye colours. Colours on a generated picture opens it here.
+- **Grey ladder** - the Colour studio's Greys tab: a warm, a neutral and a
+  cool grey from the paints you picked, each one mixture - two complements
+  in a ratio, three tubes when no pair cancels - taken over seven values
+  with water (watercolour) or white (oil), so a painting's greys stay
+  related instead of going muddy. Where your paints make no warmer or
+  cooler grey than the neutral, the column says so; with a picture open,
+  its own greys are marked on the ladder.
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
   on a machine with a GPU (`COMFY_URL`): anime references made to order - a
   character (who, the hair, the eyes and their shape, how much of them, from where, the pose), a

@@ -1248,9 +1248,8 @@ section { margin-bottom: 20px; }
 .col-sw { cursor: pointer; border-radius: 6px; padding-left: 4px; margin-left: -4px; }
 .col-sw:hover { background: var(--hover); }
 .col-sw.pinned { background: color-mix(in srgb, var(--accent) 16%, transparent); }
-/* A palette colour's mixes, under its row. */
-/* The right column: the paints over two tabs - the picture's colours, a
-   character's sheet (js/character.js). */
+/* The right column: the paints over three tabs - the picture's colours, a
+   character's sheet (js/character.js), the greys (js/greys.js). */
 .col-right h4.col-first { margin-top: 0; }
 .col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; }
 .col-tab { display: none; }
@@ -1282,7 +1281,28 @@ section { margin-bottom: 20px; }
 .char-note { margin-top: 12px; }
 .char-go { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .picking #colImg { cursor: copy; }
+/* The grey ladder: a value column, then warm, neutral and cool - each
+   cell the swatch itself, saying how much water or white. */
+.gl-grid { display: grid; grid-template-columns: 30px repeat(3, minmax(0, 1fr)); gap: 4px; align-items: center; }
+.gl-grid > b { font-size: 11px; font-weight: 600; color: var(--ink); text-align: center; }
+.gl-l { font-size: 10.5px; color: var(--dim); font-variant-numeric: tabular-nums; text-align: right; padding-right: 2px; }
+.gl-cell { position: relative; height: 30px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); padding: 0;
+  font: inherit; font-size: 10.5px; font-variant-numeric: tabular-nums; color: #f4f4f0; cursor: default;
+  display: grid; place-items: center; }
+.gl-cell.light { color: #26262a; }
+.gl-cell.short { border-style: dashed; border-color: var(--line); color: var(--dim); }
+.gl-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gl-cell b { position: absolute; top: -6px; right: -4px; min-width: 15px; height: 15px; border-radius: 999px; font-size: 9.5px; line-height: 15px;
+  background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.gl-cell b + b { right: 13px; }
+#glReadout { margin: 8px 0 10px; min-height: 2.6em; }
+.gl-mix { display: grid; grid-template-columns: 58px 1fr; gap: 6px; font-size: 12px; padding: 2px 0; }
+.gl-mix b { font-weight: 600; color: var(--ink); }
+.gl-mix span { color: var(--ink); }
+.gl-mix em { font-style: normal; color: var(--dim); }
+#glNote { margin-top: 10px; }
 
+/* A palette colour's mixes, under its row. */
 .col-mix { margin: 0 0 6px 50px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
 .col-mix summary { cursor: pointer; color: var(--dim); list-style: none; }
 .col-mix summary::-webkit-details-marker { display: none; }

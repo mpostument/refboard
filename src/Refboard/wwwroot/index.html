@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=9b6f56cc">
+<link rel="stylesheet" href="css/app.css?v=87cd9eeb">
 </head>
 <body>
 <div id="setup">
@@ -369,6 +369,7 @@
             <div class="tabs col-tabs" role="tablist" id="colTabs" aria-label="Colour studio">
               <button type="button" role="tab" data-tab="picture" aria-selected="true">Picture</button>
               <button type="button" role="tab" data-tab="character" aria-selected="false">Character sheet</button>
+              <button type="button" role="tab" data-tab="greys" aria-selected="false" title="Warm, neutral and cool greys from these paints, light to dark">Greys</button>
             </div>
             <div class="col-tab on" data-tab="picture" role="tabpanel">
               <canvas id="colWheel" title="Hue round the circle, chroma out from grey in the middle. Dots: every colour in the image. Numbers: its palette."></canvas>
@@ -397,6 +398,14 @@
                 <button class="ghost hidden" type="button" id="charGenerate" title="With your ComfyUI: her hair and eyes, drawn as a turnaround - front, side and back">Generate her</button>
               </div>
               <div class="count" id="charWhere"></div>
+            </div>
+            <!-- js/greys.js: one mix per temperature, every value from it. -->
+            <div class="col-tab" data-tab="greys" role="tabpanel">
+              <h4>Grey ladder - one mix, every value</h4>
+              <div id="glGrid" class="gl-grid" role="group" aria-label="Grey ladder"></div>
+              <div class="count" id="glReadout"></div>
+              <div id="glMixes"></div>
+              <div class="count" id="glNote"></div>
             </div>
           </div>
         </div>
@@ -1630,7 +1639,7 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=687a48f3"></script>
-<script src="js/setup.js?v=9dfd876b"></script>
+<script src="js/setup.js?v=93906cb1"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
@@ -1648,9 +1657,9 @@
 <script src="js/workspace.js?v=666aa28d"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=05e6157c"></script>
+<script src="js/command.js?v=b37e0ac7"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=bcedc2df"></script>
+<script src="js/whatsnew.js?v=e3d9cafc"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
@@ -1673,8 +1682,9 @@
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=51d42b15"></script>
+<script src="js/colour.js?v=7b0154b4"></script>
 <script src="js/character.js?v=bcdb859d"></script>
+<script src="js/greys.js?v=009fc308"></script>
 </template>
 <script src="js/main.js?v=108cddb7"></script>
 </body>

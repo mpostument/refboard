@@ -445,9 +445,12 @@ packs (below), and moving a picture to another folder by hand.
 - **Preview as watercolour.** The photo rendered as a watercolour: flat
   washes, soft edges, granulation, white paper - how the reference could
   look painted, before the first stroke. The ink one is under Materials.
-- **Grey ladder from your palette.** Warm and cool greys mixed from your
-  own paints, light to dark, with recipes - greys are the most-mixed
-  colours, and muddy ones come from mixing them at random.
+- **Grey ladder, the rest.** In place (`js/greys.js`, Colour studio >
+  Greys, Ctrl+K "grey"): a warm, a neutral and a cool grey from the chosen
+  paints, each one mixture taken over seven values with water or white, and
+  the picture's own greys marked on it. Still to come: a ladder printed to
+  paint and photograph, calibrating the mixes (with the Mixing chart), and
+  greys chosen for a picture - its shadows' temperature deciding the column.
 
 ## Materials
 

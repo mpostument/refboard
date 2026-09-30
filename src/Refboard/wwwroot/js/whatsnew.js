@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'greys', title: 'Grey ladder',
+    text: "Colour studio > Greys: a warm, a neutral and a cool grey from the paints you picked, each one mix taken light to dark - with water in watercolour, with white in oil - so every grey in a painting stays related instead of going muddy. Each column says its recipe and each step how strong the wash is, or how much white; where your paints cannot make a cooler or warmer grey, the column says so. With a picture open, its own greys are marked on the ladder.",
+    act: 'Show me', run: () => openColour('greys') },
   { id: 'lineweight', title: 'Line weight',
     text: "Over any picture in a session (k, or Workspace > Line): its contours drawn as ink, each as heavy as a line drawing wants - heavy on the shadow side, at the undersides and along the big outer contours, light on the lit side and for small inner lines, the ends tapered. An anime frame's own lines are redrawn, weighted. The note says which liner size, or how hard to press, for the line medium you have. Line is a new Workspace tab: line weight, lost edges and the angle tool.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
