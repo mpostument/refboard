@@ -50,6 +50,7 @@ const COMMAND_WORDS = {
   'view-train': 'drill practice exercise test',
   btnLibrary: 'folders packs',
   btnPaint: 'session timed timer draw go begin',
+  btnLightbox: 'lightbox light box trace tracing transfer copy sketch final watercolour paper tablet screen real size mirror',
   btnMaterials: 'medium media watercolour ink liner ballpoint pen pencil marker graphite gouache oil acrylic',
   btnMoreTools: 'pin toolbar customise',
   btnWorkspace: 'panel tabs value colour construction figure my work question',
@@ -95,7 +96,9 @@ function collectCommands() {
     }
     out.push(...layerCommands());
     out.push({ id: 'btnMaterials', label: 'My materials', hint: 'Medium', words: COMMAND_WORDS.btnMaterials, run: openMaterials });
-    out.push({ id: 'steps', label: 'How to draw it', hint: 'Learn', words: 'steps stages guide tutorial learn order sketch hatching wash',
+    out.push({ id: 'lightbox', label: 'Lightbox - trace this picture', hint: 'Onto paper', words: COMMAND_WORDS.btnLightbox,
+      run: () => openLightbox(state.current) });
+    out.push({ id: 'steps', label: 'How to draw it', hint: 'Onto paper', words: 'steps stages guide tutorial learn order sketch hatching wash',
       run: () => openSteps(state.current) });
     // The head construction in either style - turned on too, if it is off.
     for (const [k, label] of Object.entries(HEAD_STYLES)) {

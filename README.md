@@ -138,7 +138,17 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   ComfyUI, *Use in Generate* makes it Generate's Colours - as the few tags
   the model knows for a palette as a whole (limited palette, its leading
   hue's theme, muted or pastel, dark or high contrast), not one per colour.
-- **How to draw it** - any picture in the workspace (Learn tab, Ctrl+K, or
+- **Lightbox** - your tablet as a lightbox, to trace a sketch onto good
+  paper (Paint > Lightbox, or Workspace > Onto paper for the picture open).
+  A photo of the sketch is straightened from its four corners (found by
+  themselves where the sheet stands out from the table), the paper made
+  white however it was lit - each pixel over the paper's own colour round it
+  - and the lines kept in their colour, or all dark for a blue or red
+  pencil. Measured once against a bank card, the screen shows the sheet at
+  its real size (A5, B5, A4, A3 or a width you give). Mirror, turn, and Lock
+  while you trace: touches do nothing and the screen stays on; the lock is
+  held a second to unlock.
+- **How to draw it** - any picture in the workspace (Onto paper tab, Ctrl+K, or
   Steps on a generated one) taken back to the steps it is drawn in, for the
   medium: the big shapes blocked in with a few straight lines, the lines,
   the whites to save for watercolour (the small ones - catchlights, a

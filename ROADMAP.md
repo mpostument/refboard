@@ -320,10 +320,15 @@ Line and background:
 
 Anime in watercolour:
 
-- **Lightbox for transfer.** A tablet as a lightbox: a photo of your
-  sketch on copy paper shown at full brightness, cleaned of the paper,
-  mirrored if wanted - to trace it onto watercolour paper. The usual
-  anime-in-watercolour workflow: sketch apart, final on good paper.
+- **Lightbox, the rest.** In place (`js/lightbox.js`, Paint > Lightbox,
+  Workspace > Onto paper, Ctrl+K "trace"): a photo of the sketch unbent
+  from its four corners (a homography; found as the biggest light shape),
+  the paper made white by dividing by its own colour in blocks, the lines
+  in colour or all dark; real size from a bank card held to the screen;
+  mirror, a quarter turn, the screen kept awake, locked against touches and
+  held to unlock. Still to come: the photo taken inside it with the camera,
+  the lines only (the shading left out, for a clean trace), and a sheet
+  bigger than the screen split into numbered tiles to trace one by one.
 
 Clothes, movement, settings:
 

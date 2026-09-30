@@ -58,9 +58,13 @@ const WS_TABS = [
     { hud: 'tangents', about: 'did your drawing make shapes touch where the reference kept them apart?' },
     { hud: 'lineweight', about: 'do your lines get heavier where the shadow is, or are they all one weight?' },
   ] },
-  { id: 'learn', label: 'Learn', q: 'How do I draw it, step by step?', tools: [
-    { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'this picture in the steps it is drawn in, for your medium',
+  // Its id is still 'learn': the tab you last had open is saved by it.
+  { id: 'learn', label: 'Onto paper', q: 'How do I get it onto the paper?', tools: [
+    { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'the order to draw it in, step by step, for your medium',
       run: () => openSteps(state.current) },
+    { action: 'lightbox', label: 'Lightbox', icon: 'lightbox', about: 'trace it: good paper over the screen, the picture lit through it - as big as you want it',
+      run: () => openLightbox(state.current) },
+    { layer: 'grid', label: 'Grid', key: 'r', about: 'or copy it freehand, a square at a time' },
   ] },
 ];
 const WS_TAB_KEY = 'refboard.workspaceTab.v1';

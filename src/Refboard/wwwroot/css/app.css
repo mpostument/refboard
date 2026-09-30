@@ -1748,6 +1748,56 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .steps-key[hidden] { display: none; }
 .steps-key li { display: flex; align-items: center; gap: 6px; }
 .steps-key .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+
+/* The lightbox - see js/lightbox.js. Over everything, even the tour: the
+   screen is a light to trace by. White while the sketch is on it - the
+   margin round the sheet lights the paper too. */
+#lightbox { position: fixed; inset: 0; z-index: 95; background: var(--bg); color: var(--ink); overflow: hidden; }
+#lightbox[data-stage="view"] { background: #fff; }
+#lightbox [hidden] { display: none !important; }
+#lbStage { position: absolute; inset: 0; }
+#lbCanvas { position: absolute; left: 50%; top: 50%; transform-origin: 50% 50%; touch-action: none; cursor: grab; image-rendering: auto; }
+#lbPhoto { position: absolute; inset: 0; }
+#lbHandles { position: absolute; inset: 0; pointer-events: none; }
+#lbHandles button {
+  position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; padding: 0; border-radius: 50%;
+  background: rgb(245 194 231 / .25); border: 2px solid #f5c2e7; pointer-events: auto; touch-action: none; cursor: move;
+}
+#lbHandles button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+#lbCard {
+  position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%);
+  border: 2px solid var(--accent); border-radius: 3.5%/5.5%; box-shadow: 0 0 0 1px var(--bg);
+}
+.lb-panel {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100% - 32px)); box-sizing: border-box;
+  background: var(--panel); border: 1px solid var(--line-hi); border-radius: 12px; padding: 18px 20px;
+}
+.lb-panel h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+.lb-panel p { line-height: 1.5; }
+.lb-bar {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); box-sizing: border-box;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 10px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-hi); border-radius: 12px;
+  padding: 10px 12px; box-shadow: 0 12px 40px rgb(0 0 0 / .35);
+}
+.lb-say { flex-basis: 100%; text-align: center; font-size: 13px; }
+.lb-say b { margin-right: 6px; }
+#lightbox .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 6px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+#lbLines { width: 110px; accent-color: var(--accent); }
+#lbWidthCm { width: 64px; }
+/* Locked: nothing to press but the lock, small and faint in a corner -
+   held for a second, it fills, and unlocks. */
+#lightbox.locked #lbCanvas { pointer-events: none; cursor: none; }
+#lightbox.locked .lb-bar { display: none; }
+#lbUnlock {
+  position: absolute; right: 10px; top: 10px; width: 44px; height: 44px; padding: 10px; border-radius: 50%;
+  background: rgb(0 0 0 / .06); color: rgb(0 0 0 / .35); border: 1px solid rgb(0 0 0 / .12);
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
+  background-image: linear-gradient(rgb(0 0 0 / .18), rgb(0 0 0 / .18)); background-repeat: no-repeat;
+  background-size: 100% 0; background-position: bottom; transition: background-size .15s;
+}
+#lbUnlock.holding { background-size: 100% 100%; transition: background-size 1s linear; }
+@media (max-width: 700px) { .lb-bar { bottom: 8px; padding: 8px; gap: 6px 8px; } .lb-say { font-size: 12px; } }
 .steps-nav { gap: 8px; }
 .steps-nav button:disabled { opacity: .45; cursor: default; }
 .steps-note { margin-top: 18px; }

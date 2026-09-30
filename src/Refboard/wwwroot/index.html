@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=bc694748">
+<link rel="stylesheet" href="css/app.css?v=e53eddf7">
 </head>
 <body>
 <div id="setup">
@@ -79,6 +79,8 @@
       <span class="rail-stage-name" aria-hidden="true">Paint</span>
       <button type="button" id="btnPaint" data-icon="play" data-tip="Start drawing - a timed session from the packs you ticked"
               data-about="a timed session from the packs you ticked" aria-label="Start drawing"></button>
+      <button type="button" id="btnLightbox" data-icon="lightbox" data-tip="Lightbox - trace your sketch onto good paper, the screen lit behind it"
+              data-about="trace your sketch onto good paper, the screen lit behind it" aria-label="Lightbox"></button>
       <button type="button" id="btnMaterials" data-icon="brush" data-tip="My materials - what you draw and paint with" aria-label="My materials"></button>
     </div>
     <div class="rail-stage" role="group" aria-label="Check" data-stage="Check"
@@ -945,6 +947,65 @@
   </div>
 </div>
 
+<!-- Lightbox - js/lightbox.js: a photo of your sketch unbent, the paper made
+     white, shown full screen - as big as it was, if you like - to trace
+     onto watercolour paper laid over the screen. -->
+<div id="lightbox" class="hidden" role="dialog" aria-modal="true" aria-labelledby="lbTitle" data-stage="empty">
+  <div id="lbStage">
+    <canvas id="lbCanvas" role="img" aria-label="Your sketch, to trace" hidden></canvas>
+    <canvas id="lbPhoto" aria-hidden="true" hidden></canvas>
+    <div id="lbHandles" hidden></div>
+    <div id="lbCard" hidden></div>
+  </div>
+  <div id="lbEmpty" class="lb-panel">
+    <h2 id="lbTitle">Lightbox</h2>
+    <p>Photograph your sketch - the whole sheet, from above - and trace it onto good paper laid over the screen.
+      Turn the screen's brightness all the way up, and tape the paper down.</p>
+    <div class="row">
+      <button type="button" class="primary" id="lbPick">Choose a photo of your sketch</button>
+      <button type="button" class="ghost" id="lbEmptyClose">Close</button>
+    </div>
+    <p class="count">Or drop a photo here. On a phone or tablet, Choose can take the photo too.</p>
+  </div>
+  <div id="lbCornersBar" class="lb-bar" hidden>
+    <span class="lb-say"><b>Corners</b> Drag the four onto the corners of your sheet. <span id="lbCornersNote"></span></span>
+    <label class="opt">Paper <select id="lbPaper"></select></label>
+    <label class="opt" id="lbWidthWrap" hidden>Width, cm <input type="number" id="lbWidthCm" min="1" max="200" step="0.5"></label>
+    <button type="button" class="ghost" id="lbWhole">Whole picture</button>
+    <button type="button" class="primary" id="lbCornersDone">Done</button>
+    <button type="button" class="ghost" id="lbCornersClose" title="Close (Esc)">Close</button>
+  </div>
+  <div id="lbViewBar" class="lb-bar" hidden>
+    <div class="chips" id="lbMode" role="group" aria-label="Show">
+      <button type="button" class="chip" data-mode="photo" title="The photo as it is">Photo</button>
+      <button type="button" class="chip" data-mode="clean" title="The paper white, the lines in their colour">Clean</button>
+      <button type="button" class="chip" data-mode="dark" title="The paper white, every line dark - for a blue or red pencil sketch">Dark lines</button>
+    </div>
+    <label class="opt" id="lbLinesWrap" title="Darker lines show better through thick paper">Lines <input type="range" id="lbLines" min="0" max="100" step="5"></label>
+    <button type="button" class="chip" id="lbMirror" aria-pressed="false" title="Mirrored - to trace from the back, or for a transfer">Mirror</button>
+    <button type="button" class="ghost" id="lbRotate" title="Turn a quarter">Turn</button>
+    <div class="chips" id="lbSize" role="group" aria-label="Size">
+      <button type="button" class="chip" data-size="fit">Fit</button>
+      <button type="button" class="chip" data-size="real" title="As big as the sheet was - measure the screen first">Real size</button>
+    </div>
+    <button type="button" class="ghost" id="lbCalibrate" title="Measure this screen against a bank card">Measure screen</button>
+    <button type="button" class="ghost" id="lbCorners">Corners</button>
+    <button type="button" class="ghost" id="lbOther">Other photo</button>
+    <button type="button" class="primary" id="lbLock" title="Lock it while you trace - touches do nothing; hold the lock to unlock">Lock</button>
+    <button type="button" class="ghost" id="lbClose" title="Close (Esc)">Close</button>
+    <span class="lb-say count" id="lbSizeNote"></span>
+  </div>
+  <div id="lbCalBar" class="lb-bar" hidden>
+    <span class="lb-say"><b>Measure the screen</b> Hold a bank card - or any card that size, an ID, a driving licence - against the glass,
+      and make the outline exactly as wide.</span>
+    <label class="opt">Width <input type="range" id="lbCardW" min="120" max="900" step="1" aria-label="The outline's width"></label>
+    <button type="button" class="primary" id="lbCalSave">That's it</button>
+    <button type="button" class="ghost" id="lbCalCancel">Cancel</button>
+  </div>
+  <button type="button" id="lbUnlock" data-icon="lock" aria-label="Locked - hold to unlock" title="Hold to unlock" hidden></button>
+  <input type="file" id="lbInput" accept="image/*" class="hidden">
+</div>
+
 <!-- Your data - see js/uploads.js (the sheet) and js/backup.js (the archive). -->
 <div id="dataSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
   <div class="sheet-box">
@@ -1648,7 +1709,7 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=687a48f3"></script>
+<script src="js/core.js?v=ecf56898"></script>
 <script src="js/setup.js?v=c879ed46"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
@@ -1664,12 +1725,12 @@
 <script src="js/layers.js?v=d1da01b9"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
 <script src="js/pins.js?v=644c95a3"></script>
-<script src="js/workspace.js?v=666aa28d"></script>
+<script src="js/workspace.js?v=9ff4ccee"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=41065b29"></script>
+<script src="js/command.js?v=4d660f08"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=633978bb"></script>
+<script src="js/whatsnew.js?v=7363eecb"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
@@ -1677,6 +1738,7 @@
 <script src="js/amounts.js?v=dddc01f3"></script>
 <script src="js/linework.js?v=4798592a"></script>
 <script src="js/tangents.js?v=67a34d15"></script>
+<script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/generate.js?v=a202c557"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps

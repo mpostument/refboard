@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'lightbox', title: 'Lightbox',
+    text: "Paint > Lightbox, or Workspace > Onto paper: your tablet as a lightbox, to trace a sketch onto good watercolour paper. Photograph the sketch; drag four corners onto the sheet's and it is straightened; Clean makes the paper white however it was lit, Dark lines turns a blue or red pencil as dark as graphite. Measure the screen once against a bank card and Real size shows it exactly as big as the sheet was. Mirror, turn, and Lock while you trace - touches do nothing, the screen stays on; hold the lock to unlock. Workspace's Learn tab is now Onto paper: how to draw it, the lightbox and the grid.",
+    act: 'Show me', run: () => openLightbox() },
   { id: 'glazing', title: 'Glazing chart',
     text: "Colour studio > Glazing: every paint of your palette glazed over every other, as the chart painters paint - first washes down, glazes across. Click a crossing and it is set beside the other order and the palette mix: which paint veils when it goes on top (the opaque ones - cadmiums, ochre, black), which mix on the palette gives the same colour, and where two layers get darker than any single wash can.",
     act: 'Show me', run: () => openColour('glazing') },
