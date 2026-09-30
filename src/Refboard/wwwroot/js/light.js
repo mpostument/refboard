@@ -185,7 +185,8 @@ function lightRender() {
   if (!rows.some(r => r.id === lt.sel)) lt.sel = rows.length ? rows[0].id : null;
   const cell = (rgb, title) => `<i style="background:${rgbCss(rgb)}" title="${esc(title)} - ${colHex(rgb)}"></i>`;
   const empty = lt.src === 'character' && !rows.some(r => r.id !== 'own')
-    ? '<div class="count">This character sheet has no colours yet - pick them on the Character tab, or look at the samples.</div>' : '';
+    ? '<div class="count">This character sheet has no colours yet - <button class="linkish" type="button" data-lt-go="character">pick them on the Character tab</button>, ' +
+      'or <button class="linkish" type="button" data-lt-go="samples">look at the samples</button>.</div>' : '';
   el('ltRows').innerHTML = (rows.length
     ? '<div class="lt-head"><span></span><span>Its own</span><span>In light</span><span>In shadow</span></div>' +
       rows.map(r => {
@@ -258,6 +259,13 @@ function initLight() {
   });
   el('ltOwnClear').addEventListener('click', () => { lt.own = null; ltSave(); lightRender(); });
   el('ltRows').addEventListener('click', e => {
+    // The empty sheet's two ways out: fill it, or back to the samples.
+    const go = e.target.closest('[data-lt-go]');
+    if (go) {
+      if (go.dataset.ltGo === 'character') colourTab('character');
+      else { lt.src = 'samples'; ltSave(); lightRender(); }
+      return;
+    }
     const b = e.target.closest('.lt-row');
     if (b) { lt.sel = b.dataset.id; ltSave(); lightRender(); }
   });

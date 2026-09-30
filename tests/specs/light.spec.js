@@ -76,6 +76,13 @@ test('the Light tab: a light, each colour in it, one explained, your own colour,
   await expect(page.locator('#ltSource [data-lt-src="character"]')).toHaveAttribute('aria-pressed', 'true');
   await page.click('#ltOwnClear');
   await expect(page.locator('.lt-row')).toHaveCount(0);
+  // The empty sheet's links: to the samples, and to the Character tab.
+  await page.click('[data-lt-go="samples"]');
+  await expect(page.locator('.lt-row')).toHaveCount(6);
+  await page.click('#ltSource [data-lt-src="character"]');
+  await page.click('[data-lt-go="character"]');
+  await expect(page.locator('#colTabs [data-tab="character"]')).toHaveAttribute('aria-selected', 'true');
+  await page.click('#colTabs [data-tab="light"]');
   // From the Character tab, and by Ctrl+K; Home and End on the tabs.
   await page.click('#colTabs [data-tab="character"]');
   await page.click('#charToLight');
