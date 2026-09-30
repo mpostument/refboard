@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'lineweight', title: 'Line weight',
+    text: "Over any picture in a session (k, or Workspace > Line): its contours drawn as ink, each as heavy as a line drawing wants - heavy on the shadow side, at the undersides and along the big outer contours, light on the lit side and for small inner lines, the ends tapered. An anime frame's own lines are redrawn, weighted. The note says which liner size, or how hard to press, for the line medium you have. Line is a new Workspace tab: line weight, lost edges and the angle tool.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'tangents', title: 'Tangents',
     text: "Over any picture in a session (n, or Workspace > Composition): a pink ring where two shapes just touch or nearly do, and an amber one where a shape just touches the edge of the paper. There the eye cannot tell which shape is in front, and the depth goes flat - overlap them or open a clear gap; move the shape in, or let it go clearly off. In a comic panel the border counts as the edge. Composition now has its own Workspace tab: the focal point, tangents, amounts and a crop.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

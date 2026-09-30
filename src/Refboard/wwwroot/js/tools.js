@@ -846,7 +846,7 @@ function refreshValueTools() {
    pre-transform values, which is what a positioned child inside the
    transformed wrapper needs. */
 function positionGrid() {
-  for (const [gridId, imgId] of [['grid', 'img'], ['gridValue', 'imgValue'], ['poseOverlay', 'img'], ['headOverlay', 'img'], ['edgeOverlay', 'img'], ['rangeOverlay', 'img'], ['tempOverlay', 'img'], ['tanOverlay', 'img']]) {
+  for (const [gridId, imgId] of [['grid', 'img'], ['gridValue', 'imgValue'], ['poseOverlay', 'img'], ['headOverlay', 'img'], ['edgeOverlay', 'img'], ['rangeOverlay', 'img'], ['tempOverlay', 'img'], ['tanOverlay', 'img'], ['lineOverlay', 'img']]) {
     const g = el(gridId), im = el(imgId);
     if (!im.naturalWidth) continue;   // nothing decoded yet - show()'s onload calls back
     g.style.left = im.offsetLeft + 'px';

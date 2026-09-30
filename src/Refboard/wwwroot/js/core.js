@@ -30,6 +30,7 @@ const ICONS = {
   edges: '<path d="M12 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7"/><path d="M12 4h7a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-7" stroke-dasharray="1.2 2.6"/><path d="M12 4v16"/>',
   range: '<path d="M4 6h16v12H4z"/><path d="M4 12h16" stroke-dasharray="2 2.5"/><path d="M8 6v12M16 6v12" opacity=".45"/>',
   tangents: '<circle cx="8" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4"/><path d="M3 4h18" opacity=".45"/>',
+  lineweight: '<path d="M4 6.5h16" stroke-width="1"/><path d="M4 12h16" stroke-width="2.2"/><path d="M4 17.5h16" stroke-width="3.6"/>',
   amounts: '<path d="M4 5h16v4H4z"/><path d="M4 11h9v3.5H4z"/><path d="M4 16.5h4V19H4z"/>',
   temp: '<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a3.5 3.5 0 1 1-4 0z"/><path d="M12 9v7"/><path d="M17 6h3M17 10h2"/>',
   layers: '<path d="M12 3 21 8l-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
@@ -530,6 +531,7 @@ const state = {
   tempOn: false,              // temperature map shown - see toggleTemp()
   amountsOn: false,           // unequal amounts counted - see toggleAmounts()
   tangentsOn: false,          // tangents marked - see toggleTangents()
+  lineWeightOn: false,        // contours weighed - see toggleLineWeight()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,
   // Browse mode - the stage opened on a grid cell rather than on a session.

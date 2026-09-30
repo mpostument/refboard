@@ -34,6 +34,9 @@ test('the first visit gets a short tour, once - ringing the real controls', asyn
 
 test('the tour again from Help or Ctrl+K, without the sections you hid', async ({ page }) => {
   await openApp(page);
+  // The tour opens a moment after boot: an Escape before it is lost, and
+  // the tour then opens over Help and keeps the keys.
+  await expect(page.locator('#tour')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('#tour')).toBeHidden();
 

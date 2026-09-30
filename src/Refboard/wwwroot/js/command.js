@@ -25,6 +25,7 @@ const COMMAND_WORDS = {
   btnHead: 'face construction ball thirds loomis anime eyes',
   btnPose: 'skeleton gesture figure body weight',
   btnEdges: 'hard soft lost edges wet in wet dry watercolour sharp blur',
+  btnLineWeight: 'line weight thick thin heavy light contour outline ink liner pen lineart line art taper anime',
   btnTangents: 'tangents touch touching kiss edges shapes overlap gap depth flat frame border composition',
   btnAmounts: 'unequal amounts dominant proportion light middle dark warm cool hard soft edges 60 30 10 composition balance',
   btnTemp: 'temperature warm cool colour color shadow light turn hue cel shading',

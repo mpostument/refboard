@@ -39,6 +39,11 @@ const WS_TABS = [
     { hud: 'angle', about: 'the angle of any line, and lengths against each other' },
     { layer: 'grid', label: 'Grid', key: 'r', about: 'squares to place things by' },
   ] },
+  { id: 'line', label: 'Line', q: 'How do I draw the lines?', tools: [
+    { hud: 'lineweight', about: 'which lines heavy, which light - the shadow side, the big contours, tapered ends' },
+    { hud: 'edges', about: 'where the line can be lost: a soft edge wants a broken line, or none' },
+    { hud: 'angle', about: 'the angle of a line, and lengths against each other, before it is drawn' },
+  ] },
   { id: 'figure', label: 'Figure', q: 'How is the body built?', tools: [
     { hud: 'pose', about: 'the gesture, the tilt of shoulders and hips, the weight' },
     { hud: 'head', about: 'the ball, the side plane, the face - Loomis or anime' },
@@ -51,6 +56,7 @@ const WS_TABS = [
     { hud: 'squint', about: 'do the big shapes match, before the details?' },
     { hud: 'amounts', about: 'does your painting have a dominant - value, temperature, edges - or all in equal amounts?' },
     { hud: 'tangents', about: 'did your drawing make shapes touch where the reference kept them apart?' },
+    { hud: 'lineweight', about: 'do your lines get heavier where the shadow is, or are they all one weight?' },
   ] },
   { id: 'learn', label: 'Learn', q: 'How do I draw it, step by step?', tools: [
     { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'this picture in the steps it is drawn in, for your medium',

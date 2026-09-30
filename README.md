@@ -193,6 +193,18 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   real neck (a waist, a wrist) by the ground beside it - a sharp wedge, or
   open. Composition is its own Workspace tab now (focal point, tangents,
   amounts, a crop), apart from Construction.
+- **Line weight** - in a session (`k`, Workspace > Line or My work, Layers):
+  the picture's contours drawn as ink over a sheet of paper, each as heavy as
+  a line drawing wants - heavy on the shadow side, at the undersides and
+  along the big outer contours, light on the lit side and for small inner
+  lines, the ends tapered. A picture with line art (an anime frame) has its
+  own lines weighed, and a big mass with no line round it (black hair on
+  white) gets its edge; a cel-shading edge, never lined in anime, stays
+  out. For a photo, the edges between its masses. Weight is relative: the
+  lightest third of the lines is drawn thin, the heaviest third heavy. The
+  note gives liner sizes (0.05 to 0.8), or how hard to press, for the line
+  medium you have. Line is its own Workspace tab: line weight, lost edges
+  and the angle tool.
 - **Character sheet** - the Colour studio's second tab: a character's hair,
   skin, eyes, clothes and an accent, each clicked on a picture, with its
   shadow and light worked out as anime cel shading paints them (a value

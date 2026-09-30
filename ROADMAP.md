@@ -703,9 +703,12 @@ Any medium:
   indecision - and a Where? that opens the map it counts. Still to come:
   bright against greyed colour, big shapes against small, and the same
   counts inside a crop, to find the one where something leads.
-- **Line weight.** Over a photo: where a contour wants to be heavier (the
-  shadow side, overlaps, the underside of a form) and where lighter (the
-  lit side).
+- **Line weight, the rest.** In place (`js/linework.js`, `k`, Workspace >
+  Line and My work, a layer): contours weighed by the darkness round them,
+  their size and length, with tapered ends; an anime frame's own line art
+  weighed. Still to come: heavier where one form overlaps another (a
+  T-junction), a whole strand of hair as one line rather than dashes, and
+  a photo of your own line drawing checked against it.
 - **Museum search.** The open collections with free APIs - the Met,
   Rijksmuseum, the Art Institute of Chicago - searched from the app
   ("Sargent watercolour"); a painting opens at full resolution, straight
