@@ -432,11 +432,52 @@ packs (below), and moving a picture to another folder by hand.
   (glaze cleanly, lift off, granulate, fade) that light the paints that
   answer. Glazing reads its opacity from the same table and says whether
   the first wash survives the glaze. Recipes tag granulates, stains and
-  fades, and a granulating one names the smooth recipe beside it. Still to
-  come: more pigments than the thirteen (quinacridones, pyrroles, a
-  permanent alizarin, the painter's own tubes by code), granulation in the
-  Glazing chart and the Preview as watercolour, and a recipe asked to keep
-  to smooth or lasting paints.
+  fades, and a granulating one names the smooth recipe beside it. Also in
+  place: **My Holbein box** (palette `box`, 28 Holbein Artists' Watercolor
+  tubes, each its own PIGMENTS entry with `tube`: pan position, code, what
+  it was bought for) - the Pigments tab lays it out as the pans sit, four
+  rows of seven, and recipes, glazing and greys read in the names on the
+  tubes. A paint flagged `body` (Chinese White) is a pan but not a mixing
+  paint in watercolour. Its colours and ratings are estimates - Holbein's
+  own chart could not be fetched - to be corrected from painted swatches
+  of the real tubes; Colour Index codes are given only where confirmed.
+  Still to come: more pigments (quinacridones, pyrroles, a permanent
+  alizarin), the paints of other makers and a palette builder (below),
+  granulation in the Glazing chart and the Preview as watercolour, and a
+  recipe asked to keep to smooth or lasting paints.
+- **Palette builder, with paints of many makers.** A tool to make a palette
+  of your own from real tubes: a catalogue of the main makers' watercolours
+  (Holbein, Winsor & Newton, Daniel Smith, Schmincke, Sennelier, Mijello,
+  Sakura Koi, Kuretake Gansai Tambi and others) with each tube's name,
+  code, Colour Index code, opacity, staining, granulation and lightfastness
+  as the maker prints them, and the colour of the tube as an estimate to be
+  corrected by a painted swatch. You pick tubes into pans, lay them out in
+  the box's rows (any size, with free slots), and the palette joins the
+  chips beside Zorn and the others - the Colour studio, the palette
+  generator and the eyedropper then mix from exactly it. Export it as a
+  file (JSON, one pan per entry: maker, code, name, position, colour) and
+  import one back, so a box can be kept, shared or moved between machines;
+  an unknown tube imports as a custom paint with its own colour and
+  ratings. Open questions: where the data comes from (the makers' charts
+  could not be fetched automatically, so the catalogue is typed from their
+  published lists and each entry marked as confirmed or estimated), and how
+  to tell a free slot's best candidate ("what to buy next" for the box).
+  The sample is the anime box in `box`.
+- **Faster recipe search.** The recipe search tries every pair of paints
+  in whole-number parts and each of nine washes, then a third paint on the
+  best pairs: about 85 000 mixtures for 12 paints, 250 000 for the 27 of the
+  Holbein box - 0.3 s and 0.8 s a colour. The palette generator does one
+  colour per timer tick, but the eyedropper and the Colour studio wait for
+  it. Measured: more than half the time is `Math.exp` (one per band per
+  wash); the nine washes are whole hundredths, so each is a power of one
+  `exp(-a/100)` and a chain of 14 multiplications builds all of them -
+  0.81 s to 0.45 s for the box, 0.30 s to 0.17 s for 12 paints, the same
+  maths. Not worth it: stopping the wash scan early (13-19 % saved, only
+  by risking a missed minimum). Still to try: a coarse pass over pairs and
+  thirds that keeps only the promising ones for the full search, and
+  running the search in a Web Worker so nothing waits. Done when a box of
+  28 gives a recipe in about 0.2 s and a test shows the recipes unchanged
+  against the committed search on a few hundred random colours.
 - **Camera eyedropper.** Point a phone at the real scene - plein air - and
   read the colour under the crosshair with its watercolour recipe, live.
   The mixing is already there (paint.js); this adds the camera's video.
