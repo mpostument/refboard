@@ -254,6 +254,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   tube. Ask it which of your paints lift, granulate or fade. Recipes
   everywhere tag the strong cases (granulates, stains, fades), a
   granulating one with the smooth recipe beside it, for skin.
+- **My Holbein box** - a palette of real tubes (the anime set, 28 Holbein
+  Artists' Watercolor tubes) in the names on them, laid out in the
+  Pigments tab as the pans sit: four rows of seven, each its colour,
+  with its place, code and what it was bought for. Recipes, glazing and
+  greys can use exactly these tubes. Chinese White is a pan but not a
+  mixing paint in watercolour. Colours and ratings are estimates until
+  checked against painted swatches.
 - **Generate references** - with a [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
   on a machine with a GPU (`COMFY_URL`): anime references made to order - a
   character (who, the hair, the eyes and their shape, how much of them, from where, the pose), a

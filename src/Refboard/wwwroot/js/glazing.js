@@ -95,7 +95,7 @@ function glazePair(under, over, s, medium = paintMedium()) {
 }
 
 // The chart's paints: the palette's, less white - a white glaze is a scumble.
-const gzKeys = (paletteKey, medium) => paintKeys(paletteKey, medium).filter(k => k !== 'white');
+const gzKeys = (paletteKey, medium) => paintKeys(paletteKey, medium).filter(k => !PIGMENTS[k].body);
 
 /* ---- the Glazing tab: a glazing chart, as painters paint one - each paint
    a stripe down (the first wash), each glazed across (the second) - and

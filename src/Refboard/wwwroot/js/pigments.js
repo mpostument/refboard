@@ -124,6 +124,26 @@ function pigPaint(cv, k, water) {
   ctx.putImageData(img, 0, 0);
 }
 
+// Where a tube sits and what it is: for a tube of the box its place and Holbein
+// code (and the Colour Index code, when known), otherwise its Colour Index code.
+const pigTag = p => p.tube ? [p.tube.pos, p.tube.code, p.ci].filter(Boolean).join(' · ') : p.ci;
+
+// The box as it sits on the desk: rows of pans, each its own colour, the
+// empty ones left empty. Only a palette of real tubes has one.
+function pigBoxHtml(keys, f) {
+  const at = {};
+  for (const k of keys) if (PIGMENTS[k].tube) at[PIGMENTS[k].tube.pos] = k;
+  let h = '';
+  for (let r = 1; r <= PIG_BOX_ROWS; r++) for (let c = 1; c <= PIG_BOX_COLS; c++) {
+    const k = at[r + '.' + c];
+    if (!k) { h += '<i class="pig-pan empty" title="Free slot"></i>'; continue; }
+    const p = PIGMENTS[k];
+    h += `<button type="button" class="pig-pan${k === pig.sel ? ' on' : ''}${f.test(p) ? '' : ' off'}" data-k="${k}" ` +
+      `style="background:${p.hex}" title="${esc(p.tube.pos + ' ' + p.name)}" aria-label="${esc(p.tube.pos + ' ' + p.name)}"></button>`;
+  }
+  return h;
+}
+
 // The four properties, short, as a row reads them.
 function pigWords(k, water) {
   const p = PIGMENTS[k], w = [pigmentOpacityWord(k)];
@@ -136,6 +156,8 @@ function pigmentsRender() {
   if (!paintInit()) { el('pigRows').textContent = 'The paint model has not loaded.'; return; }
   if (!pig) pigLoad();
   const water = col.medium === 'water', keys = paintKeys(col.paints, col.medium);
+  // The box shows every pan - the white too, which watercolour mixing leaves out.
+  const shelf = PAINT_PALETTES[col.paints].keys, box = shelf.some(k => PIGMENTS[k].tube);
   // A question about the paper means nothing in oil.
   const paperOnly = k => ['lift', 'grain'].includes(k);
   if (!water && paperOnly(pig.filter)) pig.filter = 'all';
@@ -148,12 +170,16 @@ function pigmentsRender() {
   el('pigHint').textContent = pig.filter === 'all'
     ? (water ? 'Each tube as a test swatch: rich to pale, and a band lifted with a damp brush while wet.' : 'Each tube straight, then let down with white. Staining and granulation do not show in oil.')
     : `${f.hint} ${match.length ? match.length + ' of these ' + keys.length + '.' : 'None of these paints.'}`;
-  if (!keys.includes(pig.sel)) pig.sel = match[0] || keys[0];
+  if (!keys.includes(pig.sel) && !(box && shelf.includes(pig.sel))) pig.sel = match[0] || keys[0];
+  el('pigBox').classList.toggle('hidden', !box);
+  el('pigBox').innerHTML = box ? pigBoxHtml(shelf, f) : '';
+  // With the box on screen, the paint picked from it is explained right under it, not below 27 rows.
+  el(box ? 'pigBox' : 'pigRows').after(el('pigOne'));
   el('pigRows').innerHTML = keys.map(k => {
     const p = PIGMENTS[k], on = f.test(p);
     return `<button type="button" class="pig-row${k === pig.sel ? ' on' : ''}${on ? '' : ' off'}" data-k="${k}" aria-pressed="${k === pig.sel}">` +
       `<canvas width="120" height="30" aria-hidden="true"></canvas>` +
-      `<span><b>${esc(p.name)}</b> <small>${p.ci}</small><br><span class="pig-words">${pigWords(k, water).join(' · ')}</span></span></button>`;
+      `<span><b>${esc(p.name)}</b> <small>${pigTag(p)}</small><br><span class="pig-words">${pigWords(k, water).join(' · ')}</span></span></button>`;
   }).join('');
   for (const b of el('pigRows').children) pigPaint(b.querySelector('canvas'), b.dataset.k, water);
   pigRenderOne(pig.sel, water);
@@ -169,13 +195,14 @@ function pigRenderOne(k, water) {
   const says = [['Transparency', pigmentOpacityWord(k), PIG_SAY.op(p.op)]];
   if (water) says.push(['Staining', PIGMENT_STAIN[p.stain], PIG_SAY.stain(p.stain)], ['Granulation', PIGMENT_GRAN[p.gran], PIG_SAY.gran(p.gran)]);
   says.push(['Lightfastness', PIGMENT_LF[p.lf], PIG_SAY.lf(p.lf)]);
-  host.innerHTML = `<div class="pig-one"><div class="gz-title"><b>${esc(p.name)}</b> · look for <b>${p.ci}</b> on the tube</div>` +
+  host.innerHTML = `<div class="pig-one"><div class="gz-title"><b>${esc(p.name)}</b>${p.tube ? ` · ${esc(pigTag(p))}` : ` · look for <b>${p.ci}</b> on the tube`}</div>` +
+    (p.tube ? `<div class="count">Bought for: ${esc(p.tube.role.toLowerCase())}${p.tube.note ? ' - ' + esc(p.tube.note.toLowerCase()) : ''}.</div>` : '') +
     `<canvas width="360" height="96" class="pig-big" role="img" aria-label="${esc(p.name)}, a test swatch"></canvas>` +
     (water ? '<div class="pig-cap"><span>rich</span><span>lifted while wet ↓</span><span>pale</span></div>' : '<div class="pig-cap"><span>straight</span><span></span><span>with white</span></div>') +
     `<dl class="pig-says">${says.map(([t, w, s]) => `<dt>${t}</dt><dd><b>${w}.</b> ${esc(pigSentence(s))}</dd>`).join('')}</dl>` +
     `<div class="count">${esc(p.note)}</div>` +
     `<div class="count">Recipes on the other tabs mark the strong cases: <em class="mix-tag">granulates</em> <em class="mix-tag">stains</em> <em class="mix-tag">fades</em> - click one to come here.</div>` +
-    (k !== 'white' ? `<button class="linkish" type="button" data-pig-go="glazing">${esc(p.name)} glazed over the others →</button>` : '') + '</div>';
+    (!p.body ? `<button class="linkish" type="button" data-pig-go="glazing">${esc(p.name)} glazed over the others →</button>` : '') + '</div>';
   pigPaint(host.querySelector('canvas'), k, water);
 }
 
@@ -194,10 +221,12 @@ function initPigments() {
     const b = e.target.closest('[data-pig]');
     if (b) { pig.filter = b.dataset.pig; pigSave(); pigmentsRender(); }
   });
-  el('pigRows').addEventListener('click', e => {
-    const b = e.target.closest('.pig-row');
+  const pick = e => {
+    const b = e.target.closest('.pig-row, .pig-pan[data-k]');
     if (b) { pig.sel = b.dataset.k; pigSave(); pigmentsRender(); }
-  });
+  };
+  el('pigRows').addEventListener('click', pick);
+  el('pigBox').addEventListener('click', pick);
   el('pigOne').addEventListener('click', e => {
     const go = e.target.closest('[data-pig-go]');
     if (!go) return;

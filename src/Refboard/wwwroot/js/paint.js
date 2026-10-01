@@ -53,11 +53,13 @@
 //   gran   0 a smooth wash, 1 a little texture, 2 granulates - the
 //          particles settle into the paper's grain;
 //   lf     lightfastness, the ASTM grade: I excellent, II very good, III
-//          fades - in pale washes first, which is how skin and sky use it.
+//          fades - in pale washes first, which is how skin and sky use it;
+//   body   an opaque white: in watercolour it is not mixed with, only laid
+//          on last, so the mixing tools leave it out.
 // Staining and granulation are watercolour's business: in oil the paint
 // sits on top and neither shows.
 const PIGMENTS = {
-  white:        { name: 'Titanium white',   hex: '#f4f4f0', ts: 1,   ci: 'PW6',    op: 0.9,  stain: 0, gran: 0, lf: 'I',
+  white:        { name: 'Titanium white',   hex: '#f4f4f0', ts: 1,   ci: 'PW6',    op: 0.9,  stain: 0, gran: 0, lf: 'I', body: true,
     note: "In oil, the paint every light mix needs. In watercolour it is body colour - it turns any colour chalky and opaque; the watercolourist's white is the paper." },
   lemon:        { name: 'Lemon yellow',     hex: '#f3e23a', ts: 0.9, ci: 'PY3',    op: 0.3,  stain: 1, gran: 0, lf: 'II',
     note: 'A cool, clean yellow: with ultramarine or phthalo blue, the brightest greens. The classic Hansa lemon fades a little in pale washes - one sold as PY175 or PY154 keeps better.' },
@@ -84,6 +86,101 @@ const PIGMENTS = {
   black:        { name: 'Ivory black',      hex: '#1e1d1c', ts: 1.2, ci: 'PBk9',   op: 0.4,  stain: 0, gran: 1, lf: 'I',
     note: 'Semi-opaque, a little grainy; it greys a colour flat. In Zorn\'s palette it plays the blue. For watercolour shadows a mixed dark - sienna and ultramarine - stays alive.' },
 };
+
+/* The tubes of one real box - Holbein Artists' Watercolor, the anime set - each
+   its own entry, so recipes read in the words on the tube ("Ultramarine
+   Deep", not "Ultramarine blue"). `tube` is where it sits in the box (pos,
+   row.column), its Holbein code, and what the painter bought it for. Only
+   the paints Holbein's own chart confirmed carry a Colour Index code (`ci`);
+   the colours and ratings are estimates from the usual pigment under each
+   name - painted swatches from the real tubes will correct them. */
+const PIG_BOX_ROWS = 4, PIG_BOX_COLS = 7;
+Object.assign(PIGMENTS, {
+  hLemon:      { name: 'Permanent Yellow Lemon', hex: '#f3e63f', ts: 0.9, ci: '',          op: 0.2,  stain: 1, gran: 0, lf: 'II',
+    tube: { pos: '1.1', code: 'W035', role: 'Cool light, fresh greens' },
+    note: 'A cool, clean yellow: the light end of the box, and the base of fresh greens with a blue.' },
+  hYellowDeep: { name: 'Permanent Yellow Deep', hex: '#f5b01c', ts: 1,   ci: 'PY74+PY83', op: 0.1,  stain: 1, gran: 0, lf: 'II',
+    tube: { pos: '1.2', code: 'W037', role: 'Warm light, sunset' },
+    note: 'A warm, transparent yellow that hard-lifts: sunsets and golden light in a glaze.' },
+  hYellowOrange: { name: 'Permanent Yellow Orange', hex: '#f08a1c', ts: 1, ci: '',        op: 0.15, stain: 1, gran: 0, lf: 'II',
+    tube: { pos: '1.3', code: 'W038', role: 'Lanterns, autumn' },
+    note: 'Between yellow and orange: lantern glow and autumn leaves without mixing.' },
+  hJaune1:     { name: 'Jaune Brilliant No.1', hex: '#f3d9a8', ts: 0.7, ci: '',          op: 0.5,  stain: 0, gran: 0, lf: 'II',
+    tube: { pos: '1.4', code: 'W031', role: 'Skin base', note: 'Semi-opaque' },
+    note: 'A pale, warm, semi-opaque yellow - the base of a skin wash. Lay it first: over a dark it veils.' },
+  hJaune2:     { name: 'Jaune Brilliant No.2', hex: '#f1c488', ts: 0.7, ci: '',          op: 0.5,  stain: 0, gran: 0, lf: 'II',
+    tube: { pos: '1.5', code: 'W032', role: 'Warmer skin, tan', note: 'Semi-opaque' },
+    note: 'The warmer sister of No.1: tanned skin. Semi-opaque, so lay it first.' },
+  hOchre:      { name: 'Yellow Ochre', hex: '#c28d31', ts: 0.6, ci: 'PY43',              op: 0.45, stain: 0, gran: 1, lf: 'I',
+    tube: { pos: '1.6', code: 'W034', role: 'Wood, walls, roof tiles' },
+    note: 'A natural earth, soft and semi-opaque, easy to lift: wood, walls, tiles.' },
+  hVermilion:  { name: 'Vermilion Hue', hex: '#e24b26', ts: 1,   ci: '',                  op: 0.3,  stain: 0, gran: 0, lf: 'II',
+    tube: { pos: '1.7', code: 'W019', role: 'Red clothes, maple' },
+    note: 'A warm orange-red: clothes and maple leaves, brighter than a mix of yellow and red.' },
+  hSienna:     { name: 'Burnt Sienna', hex: '#8a3d20', ts: 0.8, ci: 'PBr7',              op: 0.12, stain: 1, gran: 1, lf: 'I',
+    tube: { pos: '2.1', code: 'W134', role: 'Brick, chestnut hair' },
+    note: 'A transparent earth that glows in a glaze. With ultramarine, the painters\' greys and darks.' },
+  hCrimsonLake: { name: 'Crimson Lake', hex: '#a01b36', ts: 1,  ci: '',                  op: 0.1,  stain: 1, gran: 0, lf: 'II',
+    tube: { pos: '2.2', code: 'W010', role: 'Deep red' },
+    note: 'A deep, cool, transparent red for glazing over a lighter red.' },
+  hMaroon:     { name: 'Perylene Maroon', hex: '#5a1a22', ts: 1.2, ci: 'PR179',           op: 0.1,  stain: 1, gran: 0, lf: 'I',
+    tube: { pos: '2.3', code: 'W008', role: 'Burgundy shadows, chromatic black', note: 'Dark' },
+    note: 'A very dark transparent red: with a deep blue, a black that still has colour in it.' },
+  hShellPink:  { name: 'Shell Pink', hex: '#f4c8bc', ts: 0.5, ci: '',                    op: 0.4,  stain: 0, gran: 0, lf: 'II',
+    tube: { pos: '2.4', code: 'W026', role: 'Blush', note: 'Semi-opaque' },
+    note: 'A pale, semi-opaque pink straight from the tube: blush on a cheek.' },
+  hBrightRose: { name: 'Bright Rose', hex: '#e8387f', ts: 1.2, ci: '',                   op: 0.1,  stain: 2, gran: 0, lf: 'III',
+    tube: { pos: '2.5', code: 'W170', role: 'Bright pink', note: 'Luminous, fades' },
+    note: 'A luminous pink no ordinary mix reaches. It fades - for work that is scanned, not hung in the sun.' },
+  hOpera:      { name: 'Opera', hex: '#ea1f82', ts: 1.2, ci: 'PR122+BV10',                op: 0.05, stain: 2, gran: 0, lf: 'III',
+    tube: { pos: '2.6', code: 'W013', role: 'Glow, accents', note: 'Fades' },
+    note: 'A fluorescent-looking pink for glow and accents. The dye in it is not lightfast: scan the painting.' },
+  hQuinViolet: { name: 'Quinacridone Violet', hex: '#7a2a66', ts: 1.2, ci: 'PV19',        op: 0.08, stain: 2, gran: 0, lf: 'I',
+    tube: { pos: '2.7', code: 'W120', role: 'Dark violet shadows', note: 'Dark' },
+    note: 'A deep, transparent, staining magenta-violet: shadows that stay clear.' },
+  hBrightViolet: { name: 'Bright Violet', hex: '#7a38c8', ts: 1.3, ci: '',                op: 0.1,  stain: 2, gran: 0, lf: 'III',
+    tube: { pos: '3.1', code: 'W175', role: 'Shadows on skin and hair', note: 'Luminous, fades' },
+    note: 'A luminous violet for shadows on skin and hair. It fades - scan the painting.' },
+  hLavender:   { name: 'Lavender', hex: '#b9a8d8', ts: 0.6, ci: '',                      op: 0.4,  stain: 0, gran: 0, lf: 'II',
+    tube: { pos: '3.2', code: 'W116', role: 'Shadows on white', note: 'Semi-opaque' },
+    note: 'A soft, semi-opaque violet: the cool shadow on a white shirt.' },
+  hPrussian:   { name: 'Prussian Blue', hex: '#0f3050', ts: 2.2, ci: 'PB27',              op: 0.05, stain: 2, gran: 0, lf: 'II',
+    tube: { pos: '3.3', code: 'W097', role: 'Night sky', note: 'Dark, strong' },
+    note: 'A dark, strong, staining blue: night skies. A little goes a long way.' },
+  hUltraDeep:  { name: 'Ultramarine Deep', hex: '#27318c', ts: 1,  ci: 'PB29',            op: 0.1,  stain: 0, gran: 1, lf: 'I',
+    tube: { pos: '3.4', code: 'W094', role: 'Evening, deep shadows', note: 'Slightly granulates' },
+    note: 'The watercolourist\'s blue: evening and deep shadows; with burnt sienna, the classic greys.' },
+  hCobalt:     { name: 'Cobalt Blue', hex: '#2c64b0', ts: 0.8, ci: 'PB28',               op: 0.35, stain: 0, gran: 1, lf: 'I',
+    tube: { pos: '3.5', code: 'W090', role: 'Sky in depth', note: 'Slightly granulates' },
+    note: 'A calm, slightly granulating blue for the depths of a sky.' },
+  hPhthaloYS:  { name: 'Phthalo Blue Yellow Shade', hex: '#0b4b78', ts: 3, ci: '',       op: 0.03, stain: 2, gran: 0, lf: 'I',
+    tube: { pos: '3.6', code: 'W107', role: 'Even sky, dark mixes', note: 'Dark' },
+    note: 'A strong, greenish, staining blue: an even sky wash, and dark mixes. Mix it pale.' },
+  hHorizon:    { name: 'Horizon Blue', hex: '#6bb8e0', ts: 0.7, ci: '',                   op: 0.4,  stain: 0, gran: 0, lf: 'I',
+    tube: { pos: '3.7', code: 'W104', role: 'Anime sky', note: 'Semi-opaque' },
+    note: 'The light, clear blue of an anime sky, straight from the tube. Semi-opaque: put it down first.' },
+  hPeacock:    { name: 'Peacock Blue', hex: '#0a8aa6', ts: 1.5, ci: '',                   op: 0.1,  stain: 1, gran: 0, lf: 'II',
+    tube: { pos: '4.1', code: 'W101', role: 'Water, glass, metal' },
+    note: 'A blue-green: water, glass and metal.' },
+  hViridian:   { name: 'Viridian Hue', hex: '#0d6b52', ts: 1.2, ci: '',                  op: 0.08, stain: 1, gran: 0, lf: 'I',
+    tube: { pos: '4.2', code: 'W061', role: 'Depth of leaves' },
+    note: 'A deep, cool, transparent green: the shade inside foliage.' },
+  hSap:        { name: 'Sap Green', hex: '#5a7a1a', ts: 0.9, ci: '',                     op: 0.2,  stain: 0, gran: 0, lf: 'II',
+    tube: { pos: '4.3', code: 'W075', role: 'Grass' },
+    note: 'A warm, natural green: grass and leaves.' },
+  hLeaf:       { name: 'Leaf Green', hex: '#6aa82a', ts: 1,  ci: '',                     op: 0.2,  stain: 0, gran: 0, lf: 'II',
+    tube: { pos: '4.4', code: 'W077', role: 'Bright summer green' },
+    note: 'A bright, yellower green: summer.' },
+  hPaynes:     { name: "Payne's Grey", hex: '#3a4552', ts: 1.2, ci: '',                  op: 0.2,  stain: 1, gran: 0, lf: 'I',
+    tube: { pos: '4.5', code: 'W156', role: 'Concrete, asphalt, glass' },
+    note: 'A cool blue-grey: concrete, asphalt and glass.' },
+  hChineseWhite: { name: 'Chinese White', hex: '#f6f4ee', ts: 1, ci: 'PW4',               op: 0.5,  stain: 0, gran: 0, lf: 'I', body: true,
+    tube: { pos: '4.6', code: 'W001', role: 'Highlights in the eyes, glints, stars' },
+    note: 'Body colour: opaque, put on last over a dry wash for the glint in an eye, a star, a highlight on hair. It is not for mixing - the paper is the watercolourist\'s white.' },
+  hUmber:      { name: 'Burnt Umber', hex: '#4b3224', ts: 0.9, ci: 'PBr7',                op: 0.2,  stain: 0, gran: 1, lf: 'I',
+    tube: { pos: '4.7', code: 'W133', role: 'Brown hair, pupils, wood' },
+    note: 'A dark, quiet brown: hair, pupils and wood with no mixing.' },
+});
 const PIGMENT_LF = { I: 'lightfast', II: 'fairly lightfast', III: 'fades' };
 const PIGMENT_STAIN = ['lifts off', 'stains a little', 'stains'];
 const PIGMENT_GRAN = ['smooth', 'a little grainy', 'granulates'];
@@ -94,8 +191,8 @@ function pigmentOpacityWord(k) {
 
 // Palettes painters actually set out - each a choice about what is left out.
 const PAINT_PALETTES = {
-  full:    { label: 'Full palette', keys: Object.keys(PIGMENTS),
-    hint: 'Every pigment here - the closest mixes, not necessarily the simplest.' },
+  full:    { label: 'Full palette', keys: Object.keys(PIGMENTS).filter(k => !PIGMENTS[k].tube),
+    hint: 'Every general pigment here - the closest mixes, not necessarily the simplest.' },
   split:   { label: 'Split primary', keys: ['white', 'lemon', 'cadYellow', 'cadRed', 'alizarin', 'ultramarine', 'phthaloBlue'],
     hint: 'A warm and a cool of each primary: clean mixes of almost any hue.' },
   primary: { label: 'Primaries', keys: ['white', 'cadYellow', 'alizarin', 'phthaloBlue'],
@@ -104,6 +201,8 @@ const PAINT_PALETTES = {
     hint: "Anders Zorn's: ochre, red and black (and white, in oil) - flesh and warm greys, and a black that passes for blue next to them." },
   earth:   { label: 'Earth', keys: ['white', 'ochre', 'sienna', 'umber', 'ultramarine', 'black'],
     hint: 'Earth colours and ultramarine - the old masters\' portrait palette: rich darks, nothing that shouts.' },
+  box:     { label: 'My Holbein box', keys: Object.keys(PIGMENTS).filter(k => PIGMENTS[k].tube),
+    hint: 'The tubes of the anime box, in the names on them - the Pigments tab lays them out as the pans sit.' },
 };
 const PAINT_KEY = 'refboard.paints.v1';
 const PAINT_MEDIUM_KEY = 'refboard.paintMedium.v1';
@@ -121,7 +220,7 @@ function setPaintMedium(k) {
   try { localStorage.setItem(PAINT_MEDIUM_KEY, k); } catch {}
 }
 // A palette's pigments in a medium - watercolour has no white.
-const paintKeys = (paletteKey, medium) => PAINT_PALETTES[paletteKey].keys.filter(k => medium !== 'water' || k !== 'white');
+const paintKeys = (paletteKey, medium) => PAINT_PALETTES[paletteKey].keys.filter(k => medium !== 'water' || !PIGMENTS[k].body);
 function paintPaletteKey() {
   try { const k = localStorage.getItem(PAINT_KEY); if (PAINT_PALETTES[k]) return k; } catch {}
   return 'full';
@@ -158,17 +257,25 @@ function paintMix(parts) {
   }
   return new spectral.Color(R);
 }
-// A watercolour wash of a mixture at strength s, on the paper.
-function paintWash(parts, s) {
-  const D = paintInit(), R = new Array(38);
-  const t = parts.reduce((a, [k, n]) => a + n * PIGMENTS[k].ts, 0);
-  for (let i = 0; i < 38; i++) {
-    let a = 0;
-    for (const [k, n] of parts) a += n * PIGMENTS[k].ts / t * D[k].A[i];
-    R[i] = D.paper[i] * Math.exp(-s * a);
+// What a mixture absorbs at full strength, per band - the same at every
+// strength of wash, so a search over strengths works it out once.
+function paintAbsorbance(parts) {
+  const D = paintInit(), a = new Array(38).fill(0);
+  const t = parts.reduce((x, [k, n]) => x + n * PIGMENTS[k].ts, 0);
+  for (const [k, n] of parts) {
+    const w = n * PIGMENTS[k].ts / t;
+    for (let i = 0; i < 38; i++) a[i] += w * D[k].A[i];
   }
+  return a;
+}
+// That absorbance as a wash of strength s, on the paper.
+function paintWashOf(a, s) {
+  const D = paintInit(), R = new Array(38);
+  for (let i = 0; i < 38; i++) R[i] = D.paper[i] * Math.exp(-s * a[i]);
   return new spectral.Color(R);
 }
+// A watercolour wash of a mixture at strength s, on the paper.
+const paintWash = (parts, s) => paintWashOf(paintAbsorbance(parts), s);
 const paintRgb = c => c.sRGB.map(v => Math.round(Math.max(0, Math.min(255, v))));
 const gcd = (a, b) => b ? gcd(b, a % b) : a;
 
@@ -196,8 +303,9 @@ function paintRecipes(rgb, paletteKey = paintPaletteKey(), count = 4, medium = p
     const g = parts.reduce((a, [, n]) => gcd(a, n), 0);
     const p = parts.map(([k, n]) => [k, n / g]).sort((a, b) => b[1] - a[1]);
     let best = null;
+    const abs = water ? paintAbsorbance(p) : null;
     for (const w of water ? washes : [null]) {
-      const c = water ? paintWash(p, w) : paintMix(p), dE = dist(c.OKLab);
+      const c = water ? paintWashOf(abs, w) : paintMix(p), dE = dist(c.OKLab);
       if (!best || dE < best.dE) best = { parts: p, wash: w, dE, score: dE + 2.5 * (p.length - 1), set: p.map(q => q[0]).sort().join('+'), rgb: paintRgb(c) };
     }
     all.push(best);

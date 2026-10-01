@@ -7,7 +7,7 @@ test('the data: every paint rated, and recipes tagged where it matters', async (
   await page.click('.nav-item[data-view="colour"]');
   await page.waitForFunction(() => typeof pigmentsRender === 'function');
   const r = await page.evaluate(() => {
-    const bad = Object.entries(PIGMENTS).filter(([, p]) => !(p.ci && p.op >= 0 && p.op <= 1 && [0, 1, 2].includes(p.stain) &&
+    const bad = Object.entries(PIGMENTS).filter(([, p]) => !((p.ci || p.tube) && p.op >= 0 && p.op <= 1 && [0, 1, 2].includes(p.stain) &&
       [0, 1, 2].includes(p.gran) && PIGMENT_LF[p.lf] && p.note)).map(([k]) => k);
     const tags = (rgb, pal, med) => paintRecipes(rgb, pal, 3, med).map(x => ({ t: paintRecipeTags(x).map(t => t.word), smooth: !!x.smooth, set: x.set }));
     return { bad, glaze: GZ_OPACITY.ultramarine, word: gzOpacityWord('cadRed'),
@@ -86,4 +86,39 @@ test('the Pigments tab: swatches, a question, one paint explained, and the way i
   await page.keyboard.type('pigment guide');
   await page.keyboard.press('Enter');
   await expect(page.locator('#colTabs [data-tab="pigments"]')).toHaveAttribute('aria-selected', 'true');
+});
+
+test('my Holbein box: the pans as they sit, the tubes in the words on them, recipes from them', async ({ page }) => {
+  await openApp(page);
+  await page.click('.nav-item[data-view="colour"]');
+  await page.click('#colTabs [data-tab="pigments"]');
+  // The general palettes have no box.
+  await expect(page.locator('#pigBox')).toBeHidden();
+  await page.click('#colPaints [data-paint-palette="box"]');
+  // Four rows of seven pans, every one a tube; the white is a pan but no row to mix with.
+  await expect(page.locator('#pigBox .pig-pan[data-k]')).toHaveCount(28);
+  await expect(page.locator('.pig-row')).toHaveCount(27);
+  await expect(page.locator('.pig-row[data-k="hChineseWhite"]')).toHaveCount(0);
+  // One pan: where it sits, its code, what it was bought for - and the fading ones light up.
+  await page.click('#pigBox .pig-pan[data-k="hOpera"]');
+  await expect(page.locator('#pigOne')).toContainText('2.6 · W013');
+  await expect(page.locator('#pigOne')).toContainText('Bought for: glow, accents');
+  await page.click('#pigFilters [data-pig="fade"]');
+  await expect(page.locator('#pigBox .pig-pan[data-k="hOpera"]')).not.toHaveClass(/off/);
+  await expect(page.locator('#pigBox .pig-pan[data-k="hUltraDeep"]')).toHaveClass(/off/);
+  // The white can be looked at, and says what it is for.
+  await page.click('#pigBox .pig-pan[data-k="hChineseWhite"]');
+  await expect(page.locator('#pigOne')).toContainText('Chinese White');
+  await expect(page.locator('#pigOne')).toContainText('Body colour');
+  // Recipes use only the box, in its own names, and never the white.
+  const r = await page.evaluate(() => {
+    const rec = paintRecipes([240, 196, 180], 'box', 3, 'water');
+    const parts = rec.flatMap(x => x.parts.map(q => q[0]));
+    return { mixing: paintKeys('box', 'water').length, n: parts.length, onlyTubes: parts.every(k => PIGMENTS[k].tube && !PIGMENTS[k].body), text: rec.map(paintRecipeText) };
+  });
+  expect(r.mixing).toBe(27);
+  expect(r.n).toBeGreaterThan(0);
+  expect(r.onlyTubes).toBe(true);
+  // Its tubes' names, not a general pigment's.
+  expect(r.text.join(' ')).not.toMatch(/Cadmium|Titanium|Ivory black/);
 });

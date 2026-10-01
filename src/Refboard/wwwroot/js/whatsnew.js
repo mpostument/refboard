@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'box', title: 'My Holbein box',
+    text: "Colour studio > Pigments > My Holbein box: the anime set of 28 Holbein tubes laid out as the pans sit - four rows of seven, each pan its colour. Click one for its place, code and what it was bought for (skin base, night sky, glints in the eyes), and how it behaves on the paper; ask which fade and those pans stay lit. Recipes everywhere can mix from exactly these tubes, in the names on them. Chinese White is a pan, but held out of the mixing - it goes on last, for highlights. The colours and ratings are estimates until painted swatches from the real tubes correct them.",
+    act: 'Show me', run: () => { setPaintPaletteKey('box'); openColour('pigments'); } },
   { id: 'pigments', title: 'Pigment guide',
     text: "Colour studio > Pigments: each of your paints as a test swatch - a wash from rich to pale, with a band lifted while wet - and what it does on the paper: whether it glazes cleanly, lifts off or stains, lies smooth or granulates, lasts or fades, and the pigment code to look for on the tube. Ask it a question - which of mine lift? which granulate? - and the answers stay lit. Recipes everywhere now carry a tag where it matters: granulates (with the smooth recipe beside it, for skin), stains, fades.",
     act: 'Show me', run: () => openColour('pigments') },
