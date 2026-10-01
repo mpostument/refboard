@@ -160,6 +160,8 @@ function collectCommands() {
     run: () => openColour('glazing') });
   if (!inSession) out.push({ id: 'light', label: 'Light and shadow colours', hint: 'Colour studio', words: 'light shadow shade sun sky warm cool temperature golden hour window lamp candle moon moonlight overcast cel shading kelvin',
     run: () => openColour('light') });
+  if (!inSession) out.push({ id: 'pigments', label: 'Pigment guide', hint: 'Colour studio', words: 'pigment pigments paint paints tube guide transparent opaque staining stain lift lifting granulation granulating grainy lightfast lightfastness fade fading colour index watercolour',
+    run: () => openColour('pigments') });
   if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes iris lashes turn angle three-quarter manga model hair ring locks fringe bangs',
     run: () => openForms(() => showAnimeHead()) });
   // Its expressions, each by name - and all of them at once, as a sheet.

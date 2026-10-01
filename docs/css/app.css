@@ -733,7 +733,10 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #mixGuide:empty { display: none; }
 .mix-row { display: flex; align-items: center; gap: 7px; color: var(--ink); }
 .mix-row i { flex: none; width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.15); }
-.mix-row em { font-style: normal; color: var(--dim); }
+.mix-row em { font-style: normal; color: var(--dim); white-space: nowrap; }
+.mix-row.tagged { flex-wrap: wrap; row-gap: 3px; }
+.mix-row.tagged > span:not(.mix-tags) { flex: 1 1 0; min-width: 0; }
+.mix-tags { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px; padding-left: 21px; }
 .mix-note { color: var(--dim); }
 /* Rolling history of the last few sampled spots (see sampleEyedropper()) -
    click one to copy its hex without re-clicking the same spot on the
@@ -1256,6 +1259,8 @@ section { margin-bottom: 20px; }
 .col-right h4.col-first { margin-top: 0; }
 .col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; overflow-x: auto; scrollbar-width: none; }
 .col-tabs button { padding-left: 7px; padding-right: 7px; white-space: nowrap; }
+/* Six tabs in a phone's column: tighter, so none scrolls out of sight. */
+@media (max-width: 480px) { .col-tabs button { padding-left: 4px; padding-right: 4px; font-size: 12px; } }
 .col-tab { display: none; }
 .col-tab.on { display: block; }
 .col-tab > h4:first-of-type { margin-top: 12px; }
@@ -1341,6 +1346,27 @@ section { margin-bottom: 20px; }
 .lt-mix b { font-weight: 600; color: var(--ink); }
 .gz-swatches figcaption { font-size: 10.5px; color: var(--dim); text-align: center; margin-top: 3px; }
 #gzNote { margin-top: 10px; }
+
+/* The Pigment guide: a test swatch per paint, and one paint explained. */
+.pig-rows { margin-top: 8px; }
+.pig-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; align-items: center; width: 100%; padding: 3px; margin: 2px 0; border: 2px solid transparent; border-radius: 7px; background: none; color: var(--ink); font-size: 12px; text-align: left; cursor: pointer; line-height: 1.35; }
+.pig-row:hover { background: var(--hover); }
+.pig-row.on { border-color: var(--accent); }
+.pig-row.off { opacity: .38; }
+.pig-row canvas { width: 96px; height: 30px; border-radius: 4px; display: block; }
+.pig-row b { font-weight: 600; }
+.pig-row small, .pig-words { color: var(--dim); font-size: 11px; }
+.pig-one { display: grid; gap: 6px; margin-top: 12px; }
+.pig-big { width: 100%; height: auto; aspect-ratio: 360 / 96; border-radius: 6px; display: block; }
+.pig-cap { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--dim); margin-top: -2px; }
+.pig-says { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; margin: 4px 0; font-size: 12px; }
+.pig-says dt { color: var(--dim); }
+.pig-says dd { margin: 0; color: var(--ink); }
+.pig-says b { font-weight: 600; }
+/* A recipe's warning - granulates, stains, fades - beside its match. */
+.mix-row em.mix-tag, .pig-one .mix-tag { flex: none; font-style: normal; display: inline-block; padding: 0 5px; border: 1px solid var(--line); border-radius: 8px; font-size: 10.5px; line-height: 16px; color: var(--dim); white-space: nowrap; }
+#viewColour .mix-tag[data-pigment] { cursor: pointer; }
+#viewColour .mix-tag[data-pigment]:hover { color: var(--ink); border-color: var(--dim); }
 
 /* A palette colour's mixes, under its row. */
 .col-mix { margin: 0 0 6px 50px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }

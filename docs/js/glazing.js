@@ -23,26 +23,19 @@
    paint with two parts white, as an underpainting is lighter than the
    picture, and the glaze filters it the same way.
 
-   Opacity: from manufacturers' transparency ratings for the usual pigment
-   of each name (PY3/PY35/PY43/PR108/PR83/PBr7/PBr7/PB29/PB15/PG7/PV23/PBk9) -
-   0 transparent, 1 hides the layer under it at full strength.
+   Opacity is each paint's `op` in PIGMENTS (paint.js), which the Pigment
+   guide shows too: 0 transparent, 1 hides the layer under it at full
+   strength.
 
    Loaded with colour.js - see lazy-colour in index.html. */
 "use strict";
 
-const GZ_OPACITY = {
-  white: 0.9, lemon: 0.3, cadYellow: 0.55, ochre: 0.45, cadRed: 0.55, alizarin: 0.05,
-  sienna: 0.12, umber: 0.2, ultramarine: 0.1, phthaloBlue: 0.03, phthaloGreen: 0.03,
-  violet: 0.06, black: 0.4,
-};
+const GZ_OPACITY = Object.fromEntries(Object.entries(PIGMENTS).map(([k, p]) => [k, p.op]));
 // The glaze's strength - each layer's - as a watercolourist would say it.
 const GZ_STRENGTHS = { light: { label: 'Light', s: 0.25 }, medium: { label: 'Medium', s: 0.5 }, strong: { label: 'Strong', s: 0.8 } };
 const GZ_KEY = 'refboard.glazing.v1';
 
-function gzOpacityWord(k) {
-  const o = GZ_OPACITY[k];
-  return o < 0.12 ? 'transparent' : o < 0.3 ? 'semi-transparent' : o < 0.5 ? 'semi-opaque' : 'opaque';
-}
+const gzOpacityWord = pigmentOpacityWord;
 
 // A pigment's absorbance at strength s, per band.
 const gzAbs = (k, s) => paintInit()[k].A.map(a => a * s);
@@ -118,6 +111,15 @@ function gzLoad() {
 function gzSave() {
   try { localStorage.setItem(GZ_KEY, JSON.stringify(gz)); } catch {}
 }
+// From the Pigment guide: this paint as the glaze, over another of the chart's.
+function gzPick(k) {
+  if (!gz) gzLoad();
+  const keys = gzKeys(col.paints, col.medium);
+  if (!keys.includes(k)) return;
+  gz.over = k;
+  if (!keys.includes(gz.under) || gz.under === k) gz.under = keys.find(u => u !== k) || k;
+  gzSave();
+}
 function gzChart() {
   const s = GZ_STRENGTHS[gz.s].s, k = col.paints + '|' + col.medium + '|' + gz.s;
   if (!(k in gzCache)) {
@@ -188,8 +190,13 @@ function gzRenderPair() {
     else if (p.vsMix < 2) lines.push(`Mixed on the palette - ${gzMixText(p)} - gives the same colour. What the glaze buys is the edges: the first wash's shapes stay under it, and nothing is stirred into mud.`);
     else lines.push(`Mixed on the palette (${gzMixText(p)}) is ${gzDiffWord(p.vsMix)}: an opaque paint scatters inside its own layer, so glazed it veils, mixed it only tints.`);
   }
+  // Whether the first wash survives the brush: a staining paint is in the
+  // paper and stays put; one that lifts can be stirred up by the glaze.
+  if (p.water && p.under !== p.over) lines.push(PIGMENTS[p.under].stain >= 2
+    ? `${U} stains, so the glaze cannot disturb it - the safest kind of first wash.`
+    : PIGMENTS[p.under].stain === 0 ? `${U} lifts easily: let it dry completely and glaze in one light pass, or the brush brings it back up into the glaze.` : '');
   if (!p.water) lines.push('In oil: glaze only over a dry underpainting, the glaze thinned with medium, never with white.');
-  el('gzNote').textContent = lines.join(' ');
+  el('gzNote').textContent = lines.filter(Boolean).join(' ');
 }
 
 function initGlazing() {

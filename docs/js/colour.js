@@ -57,9 +57,10 @@ function saveColourPrefs() {
 }
 
 // The right column's tabs: the picture's colours, a character's sheet, the
-// greys the paints make (js/greys.js), their glazes (js/glazing.js), or
-// what a light does to a colour (js/light.js).
-const COL_TABS = ['picture', 'character', 'greys', 'glazing', 'light'];
+// greys the paints make (js/greys.js), their glazes (js/glazing.js), what
+// a light does to a colour (js/light.js), or the paints themselves - what
+// each does on the paper (js/pigments.js).
+const COL_TABS = ['picture', 'character', 'greys', 'glazing', 'light', 'pigments'];
 function colourTab(name) {
   col.tab = COL_TABS.includes(name) ? name : 'picture';
   for (const b of el('colTabs').children) b.setAttribute('aria-selected', String(b.dataset.tab === col.tab));
@@ -375,6 +376,7 @@ function colourRender() {
   if (col.tab === 'greys') greysRender();
   if (col.tab === 'glazing') glazingRender();
   if (col.tab === 'light') lightRender();
+  if (col.tab === 'pigments') pigmentsRender();
 }
 
 // Coalesced to a frame: dragging the mask repaints the whole image.
@@ -492,6 +494,7 @@ function initColour() {
   initGreys();
   initGlazing();
   initLight();
+  initPigments();
   el('charToLight').addEventListener('click', lightForCharacter);
   colourTab(col.tab);
   initCharacter().then(() => { if (col.tab === 'character') charRender(); });

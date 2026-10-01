@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=18691ba4">
+<link rel="stylesheet" href="css/app.css?v=b6966e14">
 </head>
 <body>
 <div id="setup">
@@ -374,6 +374,7 @@
               <button type="button" role="tab" data-tab="greys" aria-selected="false" title="Warm, neutral and cool greys from these paints, light to dark">Greys</button>
               <button type="button" role="tab" data-tab="glazing" aria-selected="false" title="One paint glazed over another, against mixing them on the palette">Glazing</button>
               <button type="button" role="tab" data-tab="light" aria-selected="false" title="A colour in the light and in its shadow, under the sun, a window, a lamp - and how to mix both">Light</button>
+              <button type="button" role="tab" data-tab="pigments" aria-selected="false" title="Your paints: which glaze cleanly, lift off, granulate or fade">Pigments</button>
             </div>
             <div class="col-tab on" data-tab="picture" role="tabpanel">
               <canvas id="colWheel" title="Hue round the circle, chroma out from grey in the middle. Dots: every colour in the image. Numbers: its palette."></canvas>
@@ -438,6 +439,14 @@
               <div id="ltRows" class="lt-rows" role="group" aria-label="Colours in this light"></div>
               <div id="ltOne"></div>
               <div class="count" id="ltNote"></div>
+            </div>
+            <!-- js/pigments.js: each paint's test swatch, and what it does on the paper. -->
+            <div class="col-tab" data-tab="pigments" role="tabpanel">
+              <h4>Pigment guide - what each paint does on the paper</h4>
+              <div class="chips" id="pigFilters" role="group" aria-label="Which paints"></div>
+              <div class="count" id="pigHint"></div>
+              <div id="pigRows" class="pig-rows" role="group" aria-label="Your paints"></div>
+              <div id="pigOne"></div>
             </div>
           </div>
         </div>
@@ -1729,14 +1738,14 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=333dddf1"></script>
-<script src="js/setup.js?v=95d26494"></script>
+<script src="js/core.js?v=ec89404b"></script>
+<script src="js/setup.js?v=d7dff5e3"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
 <script src="js/session.js?v=403fa730"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
-<script src="js/paint.js?v=0fa2b20b"></script>
+<script src="js/paint.js?v=a618101a"></script>
 <script src="js/tools.js?v=3144263c"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
 <script src="js/vision.js?v=0508274b"></script>
@@ -1748,9 +1757,9 @@
 <script src="js/workspace.js?v=9ff4ccee"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=b27ef337"></script>
+<script src="js/command.js?v=2ce2d89b"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=bbdc37ad"></script>
+<script src="js/whatsnew.js?v=cf08b913"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
@@ -1774,11 +1783,12 @@
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=dd37f301"></script>
+<script src="js/colour.js?v=583bf4b5"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=009fc308"></script>
-<script src="js/glazing.js?v=eee6c804"></script>
+<script src="js/glazing.js?v=141d01b7"></script>
 <script src="js/light.js?v=b67afe9c"></script>
+<script src="js/pigments.js?v=cdc64e9d"></script>
 </template>
 <script src="js/main.js?v=108cddb7"></script>
 </body>

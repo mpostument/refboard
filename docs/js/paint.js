@@ -41,21 +41,56 @@
 
 // Masstone colours (straight from the tube, thinly spread), and tinting
 // strength relative to an average pigment.
+//
+// Then what the Pigment guide (js/pigments.js) and the recipes' notes say
+// of each - for the usual pigment sold under the name, its Colour Index
+// code (ci) being what to look for on a tube, since names are marketing:
+//   op     opacity, 0 transparent, 1 hides the layer under it at full
+//          strength - from manufacturers' transparency ratings; the Glazing
+//          tab's veil is worked out from it;
+//   stain  0 lifts off with a damp brush, 1 partly, 2 stains - the paper
+//          keeps it;
+//   gran   0 a smooth wash, 1 a little texture, 2 granulates - the
+//          particles settle into the paper's grain;
+//   lf     lightfastness, the ASTM grade: I excellent, II very good, III
+//          fades - in pale washes first, which is how skin and sky use it.
+// Staining and granulation are watercolour's business: in oil the paint
+// sits on top and neither shows.
 const PIGMENTS = {
-  white:        { name: 'Titanium white',   hex: '#f4f4f0', ts: 1 },
-  lemon:        { name: 'Lemon yellow',     hex: '#f3e23a', ts: 0.9 },
-  cadYellow:    { name: 'Cadmium yellow',   hex: '#f7b50a', ts: 1 },
-  ochre:        { name: 'Yellow ochre',     hex: '#c28d31', ts: 0.6 },
-  cadRed:       { name: 'Cadmium red',      hex: '#d2331f', ts: 1 },
-  alizarin:     { name: 'Alizarin crimson', hex: '#7b1b2d', ts: 1 },
-  sienna:       { name: 'Burnt sienna',     hex: '#8a3d20', ts: 0.8 },
-  umber:        { name: 'Burnt umber',      hex: '#4b3224', ts: 0.9 },
-  ultramarine:  { name: 'Ultramarine blue', hex: '#27318c', ts: 1 },
-  phthaloBlue:  { name: 'Phthalo blue',     hex: '#10295f', ts: 3 },
-  phthaloGreen: { name: 'Phthalo green',    hex: '#0b4a3d', ts: 2.5 },
-  violet:       { name: 'Dioxazine violet', hex: '#36205a', ts: 1.5 },
-  black:        { name: 'Ivory black',      hex: '#1e1d1c', ts: 1.2 },
+  white:        { name: 'Titanium white',   hex: '#f4f4f0', ts: 1,   ci: 'PW6',    op: 0.9,  stain: 0, gran: 0, lf: 'I',
+    note: "In oil, the paint every light mix needs. In watercolour it is body colour - it turns any colour chalky and opaque; the watercolourist's white is the paper." },
+  lemon:        { name: 'Lemon yellow',     hex: '#f3e23a', ts: 0.9, ci: 'PY3',    op: 0.3,  stain: 1, gran: 0, lf: 'II',
+    note: 'A cool, clean yellow: with ultramarine or phthalo blue, the brightest greens. The classic Hansa lemon fades a little in pale washes - one sold as PY175 or PY154 keeps better.' },
+  cadYellow:    { name: 'Cadmium yellow',   hex: '#f7b50a', ts: 1,   ci: 'PY35',   op: 0.55, stain: 0, gran: 0, lf: 'I',
+    note: 'Warm and opaque: a bright, flat wash that covers. Lay it early - glazed over a dark it goes chalky.' },
+  ochre:        { name: 'Yellow ochre',     hex: '#c28d31', ts: 0.6, ci: 'PY43',   op: 0.45, stain: 0, gran: 1, lf: 'I',
+    note: 'A natural earth, soft and semi-opaque, and easy to lift. With a red, most of skin; with a blue, quiet greens that go chalky if overworked.' },
+  cadRed:       { name: 'Cadmium red',      hex: '#d2331f', ts: 1,   ci: 'PR108',  op: 0.55, stain: 0, gran: 1, lf: 'I',
+    note: 'An opaque warm red: bright on its own, heavy in a glaze. For a transparent red to glaze with, a pyrrole (PR254) or a quinacridone.' },
+  alizarin:     { name: 'Alizarin crimson', hex: '#7b1b2d', ts: 1,   ci: 'PR83',   op: 0.05, stain: 2, gran: 0, lf: 'III',
+    note: 'Deep, cool, transparent - and it stains. The traditional pigment fades in pale washes, just the way skin and sky use it: permanent alizarin (PR177) or quinacridone rose (PV19) mixes the same and keeps.' },
+  sienna:       { name: 'Burnt sienna',     hex: '#8a3d20', ts: 0.8, ci: 'PBr7',   op: 0.12, stain: 1, gran: 1, lf: 'I',
+    note: 'A transparent earth that glows in a glaze. With ultramarine, the painters\' greys and darks; with ochre, warm skin shadows.' },
+  umber:        { name: 'Burnt umber',      hex: '#4b3224', ts: 0.9, ci: 'PBr7',   op: 0.2,  stain: 0, gran: 1, lf: 'I',
+    note: 'A dark, semi-transparent earth with a little texture: wood, earth, dark hair. A dark with more life in it is sienna and ultramarine.' },
+  ultramarine:  { name: 'Ultramarine blue', hex: '#27318c', ts: 1,   ci: 'PB29',   op: 0.1,  stain: 0, gran: 2, lf: 'I',
+    note: "The watercolourist's blue: skies, and with burnt sienna the classic greys and darks. A cloud is a damp tissue pressed into a wet wash of it." },
+  phthaloBlue:  { name: 'Phthalo blue',     hex: '#10295f', ts: 3,   ci: 'PB15',   op: 0.03, stain: 2, gran: 0, lf: 'I',
+    note: 'A touch goes a long way - mix it pale. With lemon, clean bright greens; with burnt sienna, deep greens and near-blacks. The clear blue of an anime sky.' },
+  phthaloGreen: { name: 'Phthalo green',    hex: '#0b4a3d', ts: 2.5, ci: 'PG7',    op: 0.03, stain: 2, gran: 0, lf: 'I',
+    note: 'As strong and staining as phthalo blue. Alone a harsh green - knock it back with a red or burnt sienna for leaves.' },
+  violet:       { name: 'Dioxazine violet', hex: '#36205a', ts: 1.5, ci: 'PV23',   op: 0.06, stain: 2, gran: 0, lf: 'II',
+    note: 'Strong, transparent and staining: a glaze of it cools and deepens a shadow. Lightfastness varies by brand - sound in a rich wash, weaker in a pale one.' },
+  black:        { name: 'Ivory black',      hex: '#1e1d1c', ts: 1.2, ci: 'PBk9',   op: 0.4,  stain: 0, gran: 1, lf: 'I',
+    note: 'Semi-opaque, a little grainy; it greys a colour flat. In Zorn\'s palette it plays the blue. For watercolour shadows a mixed dark - sienna and ultramarine - stays alive.' },
 };
+const PIGMENT_LF = { I: 'lightfast', II: 'fairly lightfast', III: 'fades' };
+const PIGMENT_STAIN = ['lifts off', 'stains a little', 'stains'];
+const PIGMENT_GRAN = ['smooth', 'a little grainy', 'granulates'];
+function pigmentOpacityWord(k) {
+  const o = PIGMENTS[k].op;
+  return o < 0.12 ? 'transparent' : o < 0.3 ? 'semi-transparent' : o < 0.5 ? 'semi-opaque' : 'opaque';
+}
 
 // Palettes painters actually set out - each a choice about what is left out.
 const PAINT_PALETTES = {
@@ -210,7 +245,34 @@ function paintRecipes(rgb, paletteKey = paintPaletteKey(), count = 4, medium = p
     if (!out.includes(r)) out.push(r);
   }
   // Chosen with simplicity in the scales; shown closest first.
-  return out.sort((a, b) => a.dE - b.dE);
+  out.sort((a, b) => a.dE - b.dE);
+  // A granulating recipe points at the smooth one beside it, when there is
+  // one about as close - for skin, which wants a smooth wash.
+  if (water) for (const r of out) {
+    if (!r.parts.some(([k]) => PIGMENTS[k].gran >= 2)) continue;
+    r.smooth = out.find(o => o.parts.length && o.parts.every(([k]) => PIGMENTS[k].gran < 2) && o.dE < r.dE + 4) || null;
+  }
+  return out;
+}
+
+/* What a recipe's paints do on the paper, as tags beside it - only the
+   strong cases, or every recipe would carry one: granulates and stains in
+   watercolour (in oil the paint sits on top, and neither shows), fades in
+   any medium. Each names the paint, and its title says what to do. */
+function paintRecipeTags(r) {
+  const water = r.wash !== null, tags = [];
+  const of = test => r.parts.map(([k]) => k).filter(k => test(PIGMENTS[k]));
+  const name = ks => ks.map(k => PIGMENTS[k].name.toLowerCase()).join(' and ');
+  if (water) {
+    const g = of(p => p.gran >= 2);
+    if (g.length) tags.push({ k: g[0], word: 'granulates', title: `${name(g)} granulates - a grainy texture in the wash` +
+      (r.smooth ? `. For a smooth one: ${paintRecipeText(r.smooth)}` : '') });
+    const s = of(p => p.stain >= 2);
+    if (s.length) tags.push({ k: s[0], word: 'stains', title: `${name(s)} stains - it will not lift, so leave the lights before it goes on` });
+  }
+  const f = of(p => p.lf === 'III');
+  if (f.length) tags.push({ k: f[0], word: 'fades', title: `${name(f)} fades in light, pale washes first - see the Pigment guide for a lasting paint` });
+  return tags;
 }
 
 function paintMatchWord(dE) {
@@ -229,9 +291,13 @@ function paintRecipeText(r) {
   return r.wash === null ? mix : `${mix} · ${paintWashWord(r.wash)} (~${Math.round(r.wash * 100)}%)`;
 }
 // One recipe as a row: the mixture's colour beside the recipe and its match.
+// Its tags go on a line of their own under it, so a narrow column keeps
+// the recipe readable.
 function paintRecipeHtml(r) {
-  return `<span class="mix-row"><i style="background:${rgbCss(r.rgb)}" title="What this mix gives"></i>` +
-    `<span>${esc(paintRecipeText(r))}</span> <em>${paintMatchWord(r.dE)}</em></span>`;
+  const tags = paintRecipeTags(r);
+  return `<span class="mix-row${tags.length ? ' tagged' : ''}"><i style="background:${rgbCss(r.rgb)}" title="What this mix gives"></i>` +
+    `<span>${esc(paintRecipeText(r))}</span> <em>${paintMatchWord(r.dE)}</em>` +
+    (tags.length ? '<span class="mix-tags">' + tags.map(t => `<em class="mix-tag" data-pigment="${t.k}" title="${esc(t.title)}">${t.word}</em>`).join('') + '</span>' : '') + '</span>';
 }
 
 /* Every colour the palette can reach, as a shape on the colour wheel: the
