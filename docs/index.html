@@ -1612,12 +1612,13 @@
       <p><b>Second light</b> adds a fill (soft, from the other side of the
         camera - lifts the shadow side) or a rim (from behind - a bright edge
         that separates the form from the background), shown as a small blue
-        dot. <b>Fill</b> under Ambient lifts every shadow evenly; <b>Bounce</b>
+        dot, with a shadow of its own (untick <b>Casts a shadow</b> to leave it
+        out). <b>Fill</b> under Ambient lifts every shadow evenly; <b>Bounce</b>
         is reflected light coming up off the floor in the floor's own colour -
         set it to zero to see what it was doing inside the core shadow.
-        <b>Sky occlusion</b> darkens the floor round a form where the form shuts
-        the sky out - a soft halo, darkest at the foot; only the sky's light is
-        dimmed, not the lamp's.</p>
+        <b>Occlusion</b> darkens where a form shuts the sky out - a soft halo on
+        the floor round it, and a dark seam where two forms meet or one rests on
+        the floor; only the sky's light is dimmed, not the lamp's.</p>
       <p><b>Light and shadow zones</b> paints the families straight onto the
         forms - highlight, light, halftone, terminator, core shadow, reflected
         light, cast shadow - computed from the actual light and its shadows,
@@ -1762,7 +1763,7 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=5611d418"></script>
+<script src="js/core.js?v=2aaef8ff"></script>
 <script src="js/setup.js?v=d7dff5e3"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
@@ -1783,7 +1784,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=a0e8ba6e"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=d5a24645"></script>
+<script src="js/whatsnew.js?v=858e4d25"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
@@ -1797,8 +1798,8 @@
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
-<script src="js/forms-models.js?v=73510873"></script>
-<script src="js/forms.js?v=d99ccab5"></script>
+<script src="js/forms-models.js?v=54124e07"></script>
+<script src="js/forms.js?v=5101383a"></script>
 </template>
 <template id="lazy-backup">
 <script src="js/backup.js?v=e7ec2fe2"></script>
