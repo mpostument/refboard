@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=1ca00427">
+<link rel="stylesheet" href="css/app.css?v=6ea910a6">
 </head>
 <body>
 <div id="setup">
@@ -726,7 +726,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -859,6 +859,7 @@
     <button id="btnAmounts" data-icon="amounts" title="Amounts (u): how much is light, middle and dark, warm and cool, hard and soft - and whether one of each leads, or they are equal and the picture reads as undecided" aria-label="Amounts" aria-pressed="false"></button>
     <button id="btnTangents" data-icon="tangents" title="Tangents (n): where two shapes just touch, or a shape just touches the edge of the paper - there the depth goes flat. In a comic panel the panel border counts as the edge" aria-label="Tangents" aria-pressed="false"></button>
     <button id="btnLineWeight" data-icon="lineweight" title="Line weight (k): the contours as a line drawing - heavy on the shadow side, at the undersides and the big outer contours, light on the lit side and for small inner lines, ends tapered" aria-label="Line weight" aria-pressed="false"></button>
+    <button id="btnTone" data-icon="tone" title="Toned paper (j): on grey, tan or black paper the paper is the middle tone - what to leave bare, where the white pencil or gel pen goes, where the darks go" aria-label="Toned paper" aria-pressed="false"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <button id="btnWorkspace" data-icon="sliders" title="Workspace (w): the tools sorted by the question you ask of the picture - value, colour, construction, figure, your own work" aria-label="Workspace" aria-pressed="false"></button>
     <button id="btnLayers" data-icon="layers" title="Layers: every overlay in one list, each on or off and with its own opacity" aria-label="Layers" aria-pressed="false"></button>
@@ -883,7 +884,7 @@
     <button id="btnHelpHud" data-icon="help" title="What every feature does and how to use it (?)" aria-label="Help"></button>
     <button id="btnStop" data-icon="stop" title="Stop (Esc)" aria-label="Stop"></button>
     <span id="pos"></span>
-    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · p pose · l head · x edges · b range · t temperature · u amounts · n tangents · k line weight · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
+    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · h contrast · e eyedrop · p pose · l head · x edges · b range · j toned paper · t temperature · u amounts · n tangents · k line weight · d compare · i info · r grid · o overlays off · w workspace · m similar · s skip · esc stop · ? help · ctrl+k find</span>
   </div>
 </div>
 
@@ -1763,30 +1764,31 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=2aaef8ff"></script>
+<script src="js/core.js?v=569e06bd"></script>
 <script src="js/setup.js?v=d7dff5e3"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=69907552"></script>
-<script src="js/session.js?v=403fa730"></script>
+<script src="js/session.js?v=b472d9a5"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
-<script src="js/paint.js?v=3c405210"></script>
-<script src="js/tools.js?v=3144263c"></script>
+<script src="js/paint.js?v=a36cd59d"></script>
+<script src="js/tools.js?v=754df361"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
-<script src="js/vision.js?v=0508274b"></script>
+<script src="js/vision.js?v=8f5a61ba"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
-<script src="js/study.js?v=42b4f6d7"></script>
-<script src="js/layers.js?v=d1da01b9"></script>
+<script src="js/study.js?v=3d1848c2"></script>
+<script src="js/layers.js?v=bcdaa5fc"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=644c95a3"></script>
-<script src="js/workspace.js?v=9ff4ccee"></script>
+<script src="js/pins.js?v=a1c10bb4"></script>
+<script src="js/workspace.js?v=e7d2a012"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=a0e8ba6e"></script>
+<script src="js/command.js?v=ec939ed4"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=858e4d25"></script>
+<script src="js/whatsnew.js?v=43760798"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
+<script src="js/tone.js?v=a1b8782b"></script>
 <script src="js/steps.js?v=54a51fb5"></script>
 <script src="js/temperature.js?v=e7c001b3"></script>
 <script src="js/amounts.js?v=dddc01f3"></script>
@@ -1809,7 +1811,7 @@
 </template>
 <template id="lazy-colour">
 <script src="js/colour.js?v=535cc842"></script>
-<script src="js/wheel.js?v=e5cd53c0"></script>
+<script src="js/wheel.js?v=4f33cec4"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=eb123ff3"></script>
 <script src="js/glazing.js?v=e54dd6ce"></script>

@@ -29,6 +29,7 @@ const COMMAND_WORDS = {
   btnTangents: 'tangents touch touching kiss edges shapes overlap gap depth flat frame border composition',
   btnAmounts: 'unequal amounts dominant proportion light middle dark warm cool hard soft edges 60 30 10 composition balance',
   btnTemp: 'temperature warm cool colour color shadow light turn hue cel shading',
+  btnTone: 'toned paper tone grey tan black white pencil gel pen gouache chalk pastel mid tone middle value darks lights highlights leave the paper',
   btnRange: 'paper range darkest darks lights white clipped blown lost detail values limit medium contrast',
   btnEyedropper: 'colour color picker sample pipette mix recipe paint watercolour',
   btnCompare: 'overlay my drawing check photo',

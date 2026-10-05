@@ -461,6 +461,7 @@ document.addEventListener('keydown', e => {
     case 'u': case 'U': if (!e.ctrlKey && !e.metaKey) toggleAmounts(); break;
     case 'n': case 'N': if (!e.ctrlKey && !e.metaKey) toggleTangents(); break;
     case 'k': case 'K': if (!e.ctrlKey && !e.metaKey) toggleLineWeight(); break;
+    case 'j': case 'J': if (!e.ctrlKey && !e.metaKey) toggleTone(); break;
     case 'Backspace':
       if (state.constructMode === 'persp' && state.persp && state.persp.length) { e.preventDefault(); state.persp.pop(); renderConstructOverlay(); }
       break;

@@ -792,8 +792,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
    it only once its slider has been moved; until then the stylesheet's own
    value (the var() fallback) holds. */
-#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
-#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #angleOverlay,
+#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #angleOverlay,
   #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
 #peekBadge {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
@@ -915,6 +915,17 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Line weight - see js/linework.js. The same box and flip. */
 #lineOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #lineOverlay { transform: scaleX(-1); }
+/* Toned paper - see js/tone.js. The same box and flip; the paper chips in its note. */
+#toneOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #toneOverlay { transform: scaleX(-1); }
+#poseNote .tone-p { color: #5fd698; }
+#poseNote .tone-d { color: #a58fff; }
+#poseNote .tone-l { color: #ffc83c; }
+#poseNote .tone-h { color: #ff6fc4; }
+#poseNote .tone-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-bottom: 5px; }
+#poseNote .tone-bar .chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; font-size: 12px; }
+#poseNote .tone-sw { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); }
+#poseNote .tone-own input { width: 26px; height: 20px; padding: 0; border: 0; background: none; cursor: pointer; }
 /* One part per layer, each with the x that turns it off. */
 #poseNote .note-part + .note-part { border-top: 1px solid rgba(255,255,255,.25); margin-top: 6px; padding-top: 6px; }
 #poseNote .note-off {

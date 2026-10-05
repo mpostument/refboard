@@ -40,6 +40,8 @@ const LAYERS = [
     on: () => !!state.tangentsOn, toggle: () => toggleTangents() },
   { id: 'lineweight', label: 'Line weight', els: ['lineOverlay'], base: 1,
     on: () => !!state.lineWeightOn, toggle: () => toggleLineWeight() },
+  { id: 'tone', label: 'Toned paper', els: ['toneOverlay'], base: 1,
+    on: () => !!state.toneOn, toggle: () => toggleTone() },
   { id: 'pose', label: 'Pose skeleton', els: ['poseOverlay'], base: 1,
     on: () => !!state.poseOn, toggle: () => togglePose() },
   { id: 'grid', label: 'Grid', els: ['grid', 'gridValue'], base: 0.3,
