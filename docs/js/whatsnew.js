@@ -15,6 +15,15 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'occlusion', title: 'A dark halo under a form',
+    text: "3D forms > Light > Ambient > Sky occlusion: the floor beside a form is darker than the floor far from it, because the form shuts out part of the sky - darkest where it touches, fading in a soft halo, the way a ball on a table sits in its own dim ring. A ball's halo follows the physics (a third of the sky shut out a radius from its foot, a tenth at two), the foot of a wall gets about a third, and a form held in the air shuts out less. Only the sky's light is dimmed, not the sun's, so it shows most under an overcast sky or inside a cast shadow. Off in Anime and the zones view.",
+    act: 'Show me', run: () => openForms() },
+  { id: 'shadows', title: 'Shadows that soften as real ones do',
+    text: "3D forms > Light > Softness is now how big the light looks, and a shadow is sharp where a form touches the floor and softer the further it is thrown: lift a form off the floor and its shadow turns soft while one beside it stays hard at the foot. From the sun and from a lamp, with no grain in the shadow's edge and none of the speckle the old shadows left on a form lit by a lamp. Anime keeps its shadows hard. And the shadow side of a form is lit by the floor now - reflected light in the floor's colour, strongest low on the form and fading up it, so it shows where it did not before.",
+    act: 'Show me', run: () => openForms() },
+  { id: 'wheel', title: 'Colour wheel',
+    text: "Colour studio > Wheel: click or drag a colour on the wheel and pick a harmony - complementary, split, analogous, triad, tetrad, square, or one hue from pale to deep - and the colours that go with it are laid out round it, each with its hex and name. It is the painter's wheel, where yellow faces violet and blue faces orange (the Picture tab's perceptual wheel is one click away). The dashed line is everything your paints can mix: a colour past it is marked, and How to mix it finds the closest recipes. Start from a colour of an open picture, or send the harmony to the palette generator.",
+    act: 'Show me', run: () => openColour('wheel') },
   { id: 'box', title: 'My Holbein box',
     text: "Colour studio > Pigments > My Holbein box: the anime set of 28 Holbein tubes laid out as the pans sit - four rows of seven, each pan its colour. Click one for its place, code and what it was bought for (skin base, night sky, glints in the eyes), and how it behaves on the paper; ask which fade and those pans stay lit. Recipes everywhere can mix from exactly these tubes, in the names on them. Chinese White is a pan, but held out of the mixing - it goes on last, for highlights. The colours and ratings are estimates until painted swatches from the real tubes correct them.",
     act: 'Show me', run: () => { setPaintPaletteKey('box'); openColour('pigments'); } },

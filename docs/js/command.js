@@ -152,6 +152,8 @@ function collectCommands() {
   for (const [id, t] of Object.entries(allThemes())) {
     if (id !== themeId()) out.push({ id: 'theme-' + id, label: 'Theme: ' + t.label, hint: 'Appearance', words: 'colours dark light', run: () => setTheme(id) });
   }
+  if (!inSession) out.push({ id: 'wheel', label: 'Colour wheel', hint: 'Colour studio', words: 'wheel harmony harmonies complementary split analogous triad tetrad square scheme opposite hue ryb painter primary secondary mix',
+    run: () => openColour('wheel') });
   if (!inSession) out.push({ id: 'character', label: 'Character sheet', hint: 'Colour studio', words: 'hair skin eyes clothes palette recipe mix anime oc model sheet',
     run: () => openColour('character') });
   if (!inSession) out.push({ id: 'greys', label: 'Grey ladder', hint: 'Colour studio', words: 'grey gray greys neutral warm cool mix recipe muddy value scale paint watercolour',

@@ -120,10 +120,17 @@ async function formsInitThree() {
   // buffer the compositor may already have cleared.
   const renderer = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
   renderer.shadowMap.enabled = true;
-  // PCF rather than VSM: variance maps blur more smoothly, but the blur also
-  // smears the edge of the shadow camera's frustum into a faint line across
-  // the floor. PCF's jittered taps at shadow.radius read as a clean penumbra.
-  renderer.shadowMap.type = T.PCFShadowMap;
+  // Soft shadows that soften the way a real one does - sharp where a form
+  // touches what it shadows, wider the further the shadow is thrown (see
+  // formSoftShadowChunk) - need the shadow map's raw depths, to find what
+  // blocks the light. Three's own PCF compares them in hardware and never
+  // shows them, so the plain map is used and the filtering is ours. VSM
+  // would blur more smoothly, but smears the edge of the shadow camera's
+  // frustum into a faint line across the floor. Should the chunk no longer
+  // have the shape this expects (a newer three), the stock PCF stays.
+  const soft = formSoftShadowChunk(C.shadowmap_pars_fragment);
+  if (soft) C.shadowmap_pars_fragment = soft;
+  renderer.shadowMap.type = soft ? T.BasicShadowMap : T.PCFShadowMap;
 
   const scene = new T.Scene();
   const camera = new T.PerspectiveCamera(40, 4 / 3, 0.1, 1000);
@@ -192,7 +199,317 @@ function formGuideUniforms(T, lines) {
     uCel: { value: 0 }, uCelBase: { value: new T.Color() }, uCelShade: { value: new T.Color() },
     uCelHi: { value: new T.Color() }, uCelHiSize: { value: 0 },
     uCelRim: { value: new T.Color() }, uRimDir: { value: new T.Vector3(0, 0, 1) }, uRim: { value: 0 },
+    uSoft: formSoftUniform(T), uBounce: formBounceUniform(T),
+    // The sky's occlusion on the floor: how much of the floor's ambient light
+    // it takes away (0 on every form; the floor's own is set in formsRender),
+    // and the map it comes from (formOcclusionUniform).
+    uFloorAO: { value: 0 }, uAOTex: formOcclusionUniform(T).tex, uAOBox: formOcclusionUniform(T).box,
   };
+}
+// The occlusion map and where it lies on the floor: x, z of its centre and
+// the width it covers. One for the whole scene, like the soft shadow's.
+let formAOU = null;
+const formOcclusionUniform = T => formAOU || (formAOU = { tex: { value: null }, box: { value: new T.Vector3(0, 0, 1) } });
+
+/* ---- sky occlusion. Under a ball the sky is shut out, and for some way
+   around it the floor sees only part of it: the floor there is darker than
+   the floor far off, in the sky's own light - a soft dark halo, darkest where
+   the form touches. The key light's shadow cannot show it (a lit patch of
+   floor beside the ball is as bright as one a mile off), so the sky gets a
+   map of its own, and only the sky: the sun reaching the floor is not
+   dimmed by what is above the floor beside it.
+   The map is worked out on a square of floor round the forms, from two
+   pictures of them - from below the floor, the lowest height of anything
+   above each spot, and from above, the highest. From each spot of floor the
+   shader then looks out in sixteen directions, a step at a time, and notes
+   the highest and the lowest angle (above the horizon) at which a form is in
+   the way. The share of the sky that blocks, seen as a floor sees it (light
+   from straight above counts most), is sin^2(highest) - sin^2(lowest); the
+   map is the average over the directions. That is exact for a ball resting
+   on the floor - (1 + (d/r)^2)^-1.5 at a distance d from where it touches,
+   all the way from shut at the foot to a long faint tail - and it is a wall
+   for a box: half the sky at its foot. A form held up in the air shuts out
+   less, since the lowest angle is not the floor. */
+const FORM_AO_SIZE = 512, FORM_AO_MAP = 192;
+// How far the floor looks out, in units of the forms' size u (see formsRender).
+const FORM_AO_REACH = 3.5;
+/* The targets the pictures and the map are drawn into, and the camera that
+   looks at the forms from below or from above; made once, on first use. */
+function formOcclusionKit() {
+  const F = forms, T = F.T;
+  if (F.ao) return F.ao;
+  // Only the pictures of the forms need a depth buffer: it is what keeps the
+  // lowest (or the highest) surface above a spot, and not whichever was
+  // drawn last. They are read at exact texels - a filter would blend a form's
+  // edge with the empty floor beside it.
+  const target = (size, depthBuffer, filter) => new T.WebGLRenderTarget(size, size,
+    { type: T.HalfFloatType, minFilter: filter, magFilter: filter, depthBuffer });
+  const quadVert = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+  // Height, in the red channel; alpha says whether anything is there at all.
+  // gl_FragCoord.z is linear in an orthographic view: 0 at the camera, 1 at
+  // its far plane; uH turns it into a height above the floor.
+  const heightMat = () => new T.ShaderMaterial({
+    uniforms: { uH: { value: new T.Vector2() } }, side: T.DoubleSide,
+    vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform vec2 uH; void main() { gl_FragColor = vec4(gl_FragCoord.z * uH.x + uH.y, 0.0, 0.0, 1.0); }',
+  });
+  const ao = {
+    cam: new T.OrthographicCamera(-1, 1, 1, -1, 0, 1),
+    below: heightMat(), above: heightMat(),
+    map: new T.ShaderMaterial({
+      uniforms: { uTop: { value: null }, uBot: { value: null }, uWidth: { value: 1 }, uReach: { value: 1 } }, vertexShader: quadVert,
+      fragmentShader: `uniform sampler2D uTop, uBot; uniform float uWidth, uReach; varying vec2 vUv;
+        void main() {
+          // The picture from above is the floor mirrored front to back: it is read flipped.
+          // Where each spot starts round its circle, so sixteen directions
+          // do not show as sixteen rays; the blur after takes the grain out.
+          float turn = fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) ) * 0.3926991;
+          float sum = 0.0;
+          for ( int k = 0; k < 16; k ++ ) {
+            float a = turn + 0.3926991 * float( k );
+            vec2 dir = vec2( cos( a ), sin( a ) );
+            float hi = 0.0, lo = 1.5707963, seen = 0.0;
+            for ( int j = 1; j <= 16; j ++ ) {
+              float t = float( j ) / 16.0, s = uReach * t * t;
+              vec2 uv = vUv + dir * ( s / uWidth );
+              vec4 top = textureLod( uTop, vec2( uv.x, 1.0 - uv.y ), 0.0 );
+              if ( top.a > 0.5 ) {
+                hi = max( hi, atan( top.r, s ) );
+                lo = min( lo, atan( textureLod( uBot, uv, 0.0 ).r, s ) );
+                seen = 1.0;
+              }
+            }
+            sum += seen * max( 0.0, sin( hi ) * sin( hi ) - sin( lo ) * sin( lo ) );
+          }
+          gl_FragColor = vec4( sum / 16.0, 0.0, 0.0, 1.0 );
+        }`,
+    }),
+    // One pass of a nine-tap Gaussian along uStep (a uv step; tap spacing).
+    blur: new T.ShaderMaterial({
+      uniforms: { uTex: { value: null }, uStep: { value: new T.Vector2() } }, vertexShader: quadVert,
+      fragmentShader: `uniform sampler2D uTex; uniform vec2 uStep; varying vec2 vUv;
+        void main() {
+          float w[5] = float[5]( 0.2042, 0.1802, 0.1238, 0.0663, 0.0276 );
+          float s = w[0] * texture2D( uTex, vUv ).r;
+          for ( int i = 1; i < 5; i ++ ) s += w[i] * ( texture2D( uTex, vUv + uStep * float( i ) ).r + texture2D( uTex, vUv - uStep * float( i ) ).r );
+          gl_FragColor = vec4( s, 0.0, 0.0, 1.0 );
+        }`,
+    }),
+    quadScene: new T.Scene(), quadCam: new T.OrthographicCamera(-1, 1, 1, -1, 0, 1),
+    bot: target(FORM_AO_SIZE, true, T.NearestFilter), top: target(FORM_AO_SIZE, true, T.NearestFilter),
+    raw: target(FORM_AO_MAP, false, T.LinearFilter), out: target(FORM_AO_MAP, false, T.LinearFilter),
+  };
+  ao.quad = new T.Mesh(new T.PlaneGeometry(2, 2), ao.map);
+  ao.quad.frustumCulled = false;
+  ao.quadScene.add(ao.quad);
+  return (F.ao = ao);
+}
+/* Work out the occlusion map for the forms now in the scene: a square of
+   floor centred at (cx, cz), 2 * half wide, the forms no taller than `top`,
+   the floor looking out `reach` far. The result lands in ao.out and the
+   floor's uniforms. Everything but the forms is hidden for the two pictures,
+   the sun and lamp included: their shadow maps are not needed and would be
+   drawn twice. */
+function formOcclusionRender(cx, cz, half, top, reach) {
+  const F = forms, T = F.T, r = F.renderer, ao = formOcclusionKit();
+  // Looking from just past the floor, so a form resting on it (height 0) is
+  // not clipped away by the near plane.
+  const lift = Math.max(top, 0.1) * 0.02, span = top + 2 * lift;
+  const shown = new Map(), keep = new Set(F.meshes);
+  for (const c of F.scene.children) { shown.set(c, c.visible); c.visible = c.visible && keep.has(c); }
+  const bg = F.scene.background, fog = F.scene.fog, clear = r.getClearColor(new T.Color()), clearA = r.getClearAlpha();
+  F.scene.background = null; F.scene.fog = null;
+  r.setClearColor(0x000000, 0);
+  const look = (mat, target, y, upSign) => {
+    Object.assign(ao.cam, { left: -half, right: half, top: half, bottom: -half, near: 0, far: span });
+    ao.cam.position.set(cx, y, cz);
+    ao.cam.up.set(0, 0, upSign);          // from below: image right is +x, up is +z; from above, up is -z
+    ao.cam.lookAt(cx, y + upSign, cz);
+    ao.cam.updateProjectionMatrix();
+    ao.cam.updateMatrixWorld();
+    F.scene.overrideMaterial = mat;
+    r.setRenderTarget(target);
+    r.clear();
+    r.render(F.scene, ao.cam);
+  };
+  ao.below.uniforms.uH.value.set(span, -lift);               // height grows with the distance up from below
+  look(ao.below, ao.bot, -lift, 1);
+  ao.above.uniforms.uH.value.set(-span, top + lift);         // and falls with the distance down from above
+  look(ao.above, ao.top, top + lift, -1);
+  F.scene.overrideMaterial = null;
+  F.scene.background = bg; F.scene.fog = fog;
+  for (const [c, v] of shown) c.visible = v;
+  r.setClearColor(clear, clearA);
+
+  ao.quad.material = ao.map;
+  ao.map.uniforms.uTop.value = ao.top.texture;
+  ao.map.uniforms.uBot.value = ao.bot.texture;
+  ao.map.uniforms.uWidth.value = half * 2;
+  ao.map.uniforms.uReach.value = reach;
+  r.setRenderTarget(ao.raw);
+  r.render(ao.quadScene, ao.quadCam);
+  // The grain of the starting angles, and the steps between samples, blurred
+  // out: a nine-tap Gaussian a texel and a half apart, across then down.
+  const pass = (src, dst, dx, dy) => {
+    ao.quad.material = ao.blur;
+    ao.blur.uniforms.uTex.value = src.texture;
+    ao.blur.uniforms.uStep.value.set(dx * 1.5 / FORM_AO_MAP, dy * 1.5 / FORM_AO_MAP);
+    r.setRenderTarget(dst);
+    r.render(ao.quadScene, ao.quadCam);
+  };
+  pass(ao.raw, ao.out, 1, 0);
+  pass(ao.out, ao.raw, 0, 1);
+  r.setRenderTarget(null);
+
+  const U = formOcclusionUniform(T);
+  U.tex.value = ao.raw.texture;
+  U.box.value.set(cx, cz, half * 2);
+}
+// The floor's reflected light: rgb, in linear colour, is the floor's colour
+// times the Bounce slider times the light's strength; w is how high above the
+// floor it fades by a factor of e. One for the whole scene, set in formsRender.
+let formBounceU = null;
+const formBounceUniform = T => formBounceU || (formBounceU = { value: new T.Vector4(0, 0, 0, 1) });
+
+/* ---- soft shadows. A real shadow is sharp where the form touches what it
+   shadows and spreads as it is thrown, because a light is not a point: from
+   each spot of the floor, the light is a disc, and a form near the floor
+   hides all of it while one high above hides only part. That is the
+   penumbra, and it is why a shadow from a lamp looks soft at the far end
+   and hard at the foot. Three's PCF blurs every edge by the same amount,
+   with five samples, which reads as a drop shadow and shows its noise; this
+   is "percentage-closer soft shadows":
+     1. look around the point for what blocks the light, and how far above
+        the point it is on average (the gap);
+     2. the penumbra's radius is that gap times the light's apparent size;
+     3. average thirty-two samples over a disc that wide.
+   The receiver is treated as the plane it lies in - read off how its
+   position changes from one pixel to the next - so a sample beside the
+   point is compared with the plane's depth there, not the point's own.
+   Without that, any tilted lit surface shadows itself the wider the disc
+   gets (acne).
+   uSoft: x, how fast the sun's penumbra grows with the gap, in shadow-map
+   uv per unit of its depth; y, the widest penumbra, in texels; z, the
+   lamp's radius, in world units; w, the narrowest, in texels - what keeps
+   a hard shadow from stair-stepping. One for the whole scene, set in
+   formsRender: only one of the sun and the lamp is ever on. */
+let formSoftU = null;
+const formSoftUniform = T => formSoftU || (formSoftU = { value: new T.Vector4(0.1, 48, 0.05, 1.2) });
+
+const FORM_SOFT_COMMON_GLSL = `
+	uniform vec4 uSoft;
+	float rbNoise( vec2 p ) { return fract( 52.9829189 * fract( dot( p, vec2( 0.06711056, 0.00583715 ) ) ) ); }
+	vec2 rbDisk( int i, int n, float phi ) {
+		float r = sqrt( ( float( i ) + 0.5 ) / float( n ) );
+		float a = float( i ) * 2.399963229728653 + phi;
+		return vec2( cos( a ), sin( a ) ) * r;
+	}
+`;
+const FORM_SOFT_SUN_GLSL = `
+	float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord ) {
+		shadowCoord.xyz /= shadowCoord.w;
+		shadowCoord.z += shadowBias;
+		// The receiver's plane: depth change per unit of uv. Taken before any
+		// branch - derivatives are only defined where every pixel of the quad agrees.
+		vec3 dx = dFdx( shadowCoord.xyz ), dy = dFdy( shadowCoord.xyz );
+		float det = dx.x * dy.y - dx.y * dy.x;
+		vec2 slope = abs( det ) > 1e-14 ? vec2( dx.z * dy.y - dy.z * dx.y, dy.z * dx.x - dx.z * dy.x ) / det : vec2( 0.0 );
+		float shadow = 1.0;
+		if ( shadowCoord.x >= 0.0 && shadowCoord.x <= 1.0 && shadowCoord.y >= 0.0 && shadowCoord.y <= 1.0 && shadowCoord.z <= 1.0 ) {
+			float texel = 1.0 / shadowMapSize.x;
+			float rMin = max( uSoft.w, 1.0 ) * texel, rMax = max( uSoft.y, uSoft.w ) * texel;
+			float phi = rbNoise( gl_FragCoord.xy ) * 6.2831853;
+			float gap = 0.0, found = 0.0;
+			for ( int i = 0; i < 12; i ++ ) {
+				vec2 o = rbDisk( i, 12, phi ) * rMax;
+				float zr = shadowCoord.z + clamp( dot( o, slope ), - 0.02, 0.02 ) - 0.0004;
+				float d = textureLod( shadowMap, shadowCoord.xy + o, 0.0 ).r;
+				if ( d < zr ) { gap += zr - d; found += 1.0; }
+			}
+			if ( found > 0.0 ) {
+				float radius = clamp( gap / found * uSoft.x, rMin, rMax );
+				float lit = 0.0;
+				for ( int i = 0; i < 32; i ++ ) {
+					vec2 o = rbDisk( i, 32, phi + 1.0 ) * radius;
+					float zr = shadowCoord.z + clamp( dot( o, slope ), - 0.02, 0.02 ) - 0.0004;
+					lit += step( zr, textureLod( shadowMap, shadowCoord.xy + o, 0.0 ).r );
+				}
+				shadow = lit / 32.0;
+			}
+		}
+		return mix( 1.0, shadow, shadowIntensity );
+	}
+`;
+// The lamp: a cube map, whose depth is stored along the major axis and not
+// linearly - so each lookup is turned back into a distance before it is
+// compared, and the plane is intersected along each sample's own direction.
+const FORM_SOFT_LAMP_GLSL = `
+	#if NUM_POINT_LIGHT_SHADOWS > 0
+	float rbLinear( float d, float n, float f ) { return f * n / ( f - d * ( f - n ) ); }
+	// How far along its major axis the receiver's plane is in direction d.
+	float rbPlane( vec3 d, vec3 pn, float planeD, float dist ) {
+		float c = dot( pn, d );
+		float t = abs( c ) > 1e-5 ? clamp( planeD / c, 0.0, dist * 3.0 ) : dist;
+		vec3 a = abs( d );
+		return t * max( max( a.x, a.y ), a.z );
+	}
+	float getPointShadow( samplerCube shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord, float shadowCameraNear, float shadowCameraFar ) {
+		vec3 toP = shadowCoord.xyz;
+		vec3 pn = cross( dFdx( toP ), dFdy( toP ) );
+		float shadow = 1.0;
+		vec3 ab = abs( toP );
+		float vz = max( max( ab.x, ab.y ), ab.z );
+		float n = shadowCameraNear, f = shadowCameraFar;
+		if ( vz - f <= 0.0 && vz - n >= 0.0 ) {
+			float dist = length( toP );
+			vec3 dir = toP / dist;
+			vec3 tn = normalize( cross( dir, abs( dir.x ) > abs( dir.z ) ? vec3( 0.0, 1.0, 0.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
+			vec3 bn = cross( dir, tn );
+			float pl = length( pn );
+			pn = pl > 1e-20 ? pn / pl : dir;
+			float planeD = dot( pn, toP );
+			float texelA = 2.0 / shadowMapSize.x;
+			float rMin = max( uSoft.w, 1.0 ) * texelA;
+			float rMax = clamp( uSoft.z / dist * 2.0, rMin, max( uSoft.y, uSoft.w ) * texelA );
+			float phi = rbNoise( gl_FragCoord.xy ) * 6.2831853;
+			float ratio = 0.0, found = 0.0;
+			for ( int i = 0; i < 12; i ++ ) {
+				vec2 o = rbDisk( i, 12, phi ) * rMax;
+				vec3 d3 = normalize( dir + tn * o.x + bn * o.y );
+				float zr = rbPlane( d3, pn, planeD, dist );
+				float zb = rbLinear( textureLod( shadowMap, d3, 0.0 ).r, n, f );
+				if ( zb < zr * 0.996 - shadowBias ) { ratio += ( zr - zb ) / zb; found += 1.0; }
+			}
+			if ( found > 0.0 ) {
+				float radius = clamp( uSoft.z * ratio / found / dist, rMin, rMax );
+				float lit = 0.0;
+				for ( int i = 0; i < 32; i ++ ) {
+					vec2 o = rbDisk( i, 32, phi + 1.0 ) * radius;
+					vec3 d3 = normalize( dir + tn * o.x + bn * o.y );
+					float zr = rbPlane( d3, pn, planeD, dist );
+					lit += step( zr * 0.996 - shadowBias, rbLinear( textureLod( shadowMap, d3, 0.0 ).r, n, f ) );
+				}
+				shadow = lit / 32.0;
+			}
+		}
+		return mix( 1.0, shadow, shadowIntensity );
+	}
+	#endif
+`;
+
+/* Three's shadow chunk with its two lookups replaced by the above: its own
+   (renamed, so nothing in it can call them by mistake) stay for the types
+   that are not in use. The sun's goes in front of the cascade function that
+   calls getShadow, the lamp's in front of its own - the two places the
+   chunk is split on. null when it is not shaped as expected. */
+function formSoftShadowChunk(src) {
+  const sun = src.indexOf('float getSunShadow('), lamp = src.indexOf('float getPointShadow(');
+  if (sun < 0 || lamp < 0 || !src.includes('SHADOWMAP_TYPE_BASIC')) return null;
+  const sunIf = src.lastIndexOf('#if NUM_SUN_LIGHT_SHADOWS > 0', sun), lampIf = src.lastIndexOf('#if NUM_POINT_LIGHT_SHADOWS > 0', lamp);
+  if (sunIf < 0 || lampIf < sunIf) return null;
+  return src.slice(0, sunIf).replaceAll('float getShadow(', 'float getShadowStock(') +
+    FORM_SOFT_COMMON_GLSL + FORM_SOFT_SUN_GLSL + src.slice(sunIf, lampIf) +
+    FORM_SOFT_LAMP_GLSL + src.slice(lampIf).replaceAll('float getPointShadow(', 'float getPointShadowStock(');
 }
 
 // The key light is whichever light casts a shadow - the fill never does.
@@ -232,6 +549,10 @@ uniform float uCelHiSize;
 uniform vec3 uCelRim;
 uniform vec3 uRimDir;
 uniform float uRim;
+uniform vec4 uBounce;
+uniform float uFloorAO;
+uniform sampler2D uAOTex;
+uniform vec3 uAOBox;
 ` +
     frag.replace('#include <opaque_fragment>', `
     // Cel shading replaces the light three worked out, while it is still
@@ -264,6 +585,25 @@ uniform float uRim;
       float rd = dot(n, uRimDir), rw = max(fwidth(rd), 1e-4);
       c = mix(c, uCelRim, uRim * smoothstep(0.6 - fw, 0.6 + fw, fr) * smoothstep(-rw, rw, rd));
       outgoingLight = c;
+    } else {
+      // Reflected light: the floor is lit, and sends some of it back up
+      // into whatever faces it. It is the floor's own colour, strongest on a
+      // surface turned down and close to the floor, and gone a little way
+      // up - which is why it shows as a band along the shadow side's lower
+      // edge, and why a ball on a red floor has a red underside. Added to the
+      // light three worked out, in linear colour, before the tone mapping.
+      vec3 wN = normalize((vec4(geometryNormal, 0.0) * viewMatrix).xyz);
+      float wy = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).y;
+      float facing = clamp(0.5 - 0.5 * wN.y, 0.0, 1.0);
+      outgoingLight += diffuseColor.rgb * uBounce.rgb * facing * exp(-max(wy, 0.0) / uBounce.w);
+      // Sky occlusion, the floor's only: the sky's light (three's indirect
+      // diffuse) less what the forms shut out, from the map above. The
+      // key's light is not touched.
+      if (uFloorAO > 0.0) {
+        vec3 wP = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).xyz;
+        float occ = texture2D(uAOTex, (wP.xz - uAOBox.xy) / uAOBox.z + 0.5).r;
+        outgoingLight -= reflectedLight.indirectDiffuse * occ * uFloorAO;
+      }
     }
     #include <opaque_fragment>`).replace('#include <dithering_fragment>', `#include <dithering_fragment>
     if (uZones > 0.5) {${FORM_KEY_LIGHT_GLSL}
@@ -550,6 +890,7 @@ function formsRender(sc, w, h, clean = false) {
   // ground" is not a sum anyone should have to do with sliders. `precise`
   // measures actual vertices, not the rotated box around them.
   const union = new T.Box3();
+  let sizeSum = 0;
   sc.objects.forEach((o, i) => {
     const m = F.meshes[i], def = formShapeDef(o.shape);
     m.geometry = formGeometry(o.shape);
@@ -584,6 +925,11 @@ function formsRender(sc, w, h, clean = false) {
     // of it is lowest - a foot, or a knee when it kneels.
     m.position.set(def.rig ? o.x : o.x - c.x, o.y - box.min.y, def.rig ? o.z : o.z - c.z);
     m.updateMatrixWorld(true);
+    // The form's size for the sky occlusion: the side of the cube of the same
+    // volume as its box, halved - a ball's radius, a standing figure's much
+    // less than its height, since it is its feet the sky is shut out by.
+    const bs = box.getSize(new T.Vector3());
+    sizeSum += Math.cbrt(Math.max(bs.x * bs.y * bs.z, 1e-6)) / 2;
     union.union(box.translate(m.position));
     // The middle of the posed form, where its handles sit and what it turns
     // about - the same point x/z place, so a rotation never walks it away.
@@ -650,9 +996,10 @@ function formsRender(sc, w, h, clean = false) {
     return new T.Vector3(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a));
   };
   const L = dirFrom(sc.lightAz, sc.lightEl), elev = THREE_DEG * sc.lightEl;
-  // Softness blurs a shadow edge with scattered samples - noise a gradient
-  // averages away but cel shading's hard cut turns to speckle. Anime's cast
-  // shadows are hard anyway; the map is the light's, so it is the scene's.
+  // Softness is the size of the light (see formSoftShadowChunk). Anime's cast
+  // shadows are hard - a cel's edge is a cut, and a penumbra under it would
+  // only be the speckle of its dither - and the map is the light's, so it is
+  // the scene's: one Anime form makes every shadow in it hard.
   const softness = formSceneIsCel(sc) ? 0 : sc.softness;
 
   // The sun. Its shadow camera must reach the tip of the cast shadow, which
@@ -666,14 +1013,20 @@ function formsRender(sc, w, h, clean = false) {
   k.position.copy(target).addScaledVector(L, s * 3);
   Object.assign(k.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 0.01, far: s * 6 });
   k.shadow.camera.updateProjectionMatrix();
-  k.shadow.radius = 1 + softness * 24; // in shadow-map texels
+  // Softness is how big the light looks. The sun's half-width as a tangent -
+  // the real sun's is 0.005 - which the shader multiplies by the gap between
+  // a shadow and what throws it, so a form on the floor has a hard foot and
+  // one in the air a soft shadow. Out in the shadow map's own units that is
+  // the gap's share of the depth the map covers, per share of its width.
+  const sunTan = 0.006 + 0.2 * softness, shadowCam = k.shadow.camera;
+  formSoftUniform(T).value.x = (shadowCam.far - shadowCam.near) / (shadowCam.right - shadowCam.left) * sunTan;
   // Along the surface normal, in world units: enough to lift a lit face clear
-  // of its own recorded depth (the speckle of shadow acne). It has to grow
-  // with the softness, because PCF compares against depths up to `radius`
-  // texels to the side, where a curved surface already stands higher. Still
-  // far too little to open a gap where a form meets the floor.
+  // of its own recorded depth (the speckle of shadow acne). The wide
+  // penumbra needs no more - the shader compares the plane a surface lies in,
+  // not the point - and it is still far too little to open a gap where a
+  // form meets the floor.
   k.shadow.bias = 0;
-  k.shadow.normalBias = (2 * s / k.shadow.mapSize.x) * (1.5 + k.shadow.radius);
+  k.shadow.normalBias = (2 * s / k.shadow.mapSize.x) * 2;
 
   // The lamp. Only one of the two is ever on; an invisible light is left out
   // of both shading and shadow passes entirely, not just dimmed.
@@ -701,7 +1054,10 @@ function formsRender(sc, w, h, clean = false) {
   bulb.shadow.camera.near = rad * 0.1;
   bulb.shadow.camera.far = bulbDist + rad * 30;
   bulb.shadow.camera.updateProjectionMatrix();
-  bulb.shadow.radius = 1 + softness * 12;
+  // The lamp's radius, in world units - a bare bulb is small, a softbox big.
+  // Squared, so the low half of the slider stays a bulb; at 0.4 the lamp's
+  // penumbra matches the sun's at the same setting when it stands 3 radii off.
+  formSoftUniform(T).value.z = rad * (0.015 + 1.2 * softness * softness);
   // Normal offset in world units, not a depth bias: a cube shadow map stores
   // perspective depth, where a fixed bias near the far plane spans a large
   // real distance - enough to light the floor right under the form, the one
@@ -754,7 +1110,12 @@ function formsRender(sc, w, h, clean = false) {
   // floor's colour - the split that puts reflected light, of the right hue,
   // inside a core shadow.
   F.hemi.color.setRGB(1, 1, 1).multiplyScalar(sc.ambient);
-  F.hemi.groundColor.set(sc.ground ? sc.groundColor : sc.bg).multiplyScalar(sc.bounce);
+  // The ground half of the hemisphere is off: a bounce that does not depend on
+  // how high a point is, or how strong the light that reaches the floor, is
+  // what hid it. The floor's reflected light is the shader's (uBounce).
+  F.hemi.groundColor.setRGB(0, 0, 0);
+  const bounceCol = new T.Color(sc.ground ? sc.groundColor : sc.bg), bounceK = sc.bounce * 1.8 * Math.min(1.5, sc.intensity);
+  formBounceUniform(T).value.set(bounceCol.r * bounceK, bounceCol.g * bounceK, bounceCol.b * bounceK, rad * 0.9);
 
   // With no haze, the fog only dissolves the far floor into the background.
   // With it, the fog IS the air: it starts just in front of the nearest form
@@ -777,6 +1138,17 @@ function formsRender(sc, w, h, clean = false) {
   F.grid.position.set(0, rad * 0.002, 0);
 
   F.frame = { target, framed, rad, height: h3, anchor, anchorTop, L, Lf, sun, minPitch, markerDist: sun ? rad * 1.35 : bulbDist };
+
+  // The sky's occlusion on the floor (see formOcclusionRender). Left out
+  // where it would not show: no floor, Anime (a cel's floor is flat), the
+  // zones view, and when the sky gives the floor nothing to take away.
+  const aoOn = sc.ground && !formSceneIsCel(sc) && !(sc.zones && !clean) && sc.ambient > 0 && sc.occlusion > 0;
+  F.ground.material.userData.u.uFloorAO.value = aoOn ? Math.min(sc.occlusion, 1) : 0;
+  if (aoOn) {
+    const u = sizeSum / sc.objects.length, c = union.getCenter(new T.Vector3()), ext = union.getSize(new T.Vector3());
+    // The footprint of the forms and as far round it as the floor looks.
+    formOcclusionRender(c.x, c.z, Math.max(ext.x, ext.z) / 2 + FORM_AO_REACH * u, union.max.y, FORM_AO_REACH * u);
+  }
 
   F.renderer.setPixelRatio(1);
   F.renderer.setSize(w, h, false);
@@ -2414,7 +2786,7 @@ const FORM_PANEL = [
     ['lightMarker', 'Light handles', 'check']]],
   ['Use it', 'actions', []],
   ['Saved scenes', 'scenes', []],
-  ['Ambient', null, [['ambient', 'Fill', 0, 1, 0.01], ['bounce', 'Bounce', 0, 1, 0.01]]],
+  ['Ambient', null, [['ambient', 'Fill', 0, 1, 0.01], ['bounce', 'Bounce', 0, 1, 0.01], ['occlusion', 'Sky occlusion', 0, 1, 0.01]]],
   ['Scene', null, [['bg', 'Background', 'color'], ['groundColor', 'Ground', 'color'], ['ground', 'Ground and cast shadow', 'check']]],
   ['Air', 'air', [['haze', 'Haze', 0, 1, 0.02], ['hazeColor', 'Air colour', 'color']]],
 ];
@@ -2680,7 +3052,15 @@ function syncFormsPanel() {
   el('formCelNote').classList.toggle('hidden', !cel);
   const soft = panel.querySelector('[data-k="softness"]');
   soft.disabled = formSceneIsCel(formScene);
-  soft.closest('.frow').title = soft.disabled ? 'Cast shadows are hard-edged while a form is Anime' : '';
+  soft.closest('.frow').title = soft.disabled ? 'Cast shadows are hard-edged while a form is Anime'
+    : 'How big the light looks - a bare bulb is small, a window or an overcast sky is big. A bigger light throws a softer shadow: still sharp where a form touches the floor, softer the further it is thrown.';
+  for (const [k, tip] of [
+    ['ambient', 'The sky: light from above that reaches every surface, in the shadow too. Lifts every shadow evenly.'],
+    ['bounce', "Light coming up off the floor, in the floor's own colour - strongest low on a form, fading up it."],
+    ['occlusion', 'How much the forms shut the sky out of the floor beside them: a soft dark halo, darkest where a form touches, none far away. Only the sky is dimmed - the light itself is not. Off in Anime and the zones view.']]) {
+    const r = panel.querySelector('[data-k="' + k + '"]');
+    if (r) r.closest('.frow').title = tip;
+  }
   for (const b of panel.querySelectorAll('[data-preset]')) {
     const p = LIGHT_PRESETS[b.dataset.preset];
     b.setAttribute('aria-pressed', String(p.az === formScene.lightAz && p.el === formScene.lightEl));
