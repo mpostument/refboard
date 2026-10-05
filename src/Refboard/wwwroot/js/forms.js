@@ -147,6 +147,7 @@ async function formsInitThree() {
   // shadow is faint in life and mostly lost in the key's, and two shadow maps
   // would be twice the cost for something a drawing rarely shows.
   const fill = new T.DirectionalLight(0xffffff, 1);
+  fill.shadow.mapSize.set(1024, 1024); // half the key's: a fainter shadow, switched on only with the light
   scene.add(fill, fill.target);
   const hemi = new T.HemisphereLight(0xffffff, 0x000000, Math.PI);
   scene.add(hemi);
