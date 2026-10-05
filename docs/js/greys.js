@@ -107,7 +107,7 @@ function glLadder(parts, water) {
    best few get the whole ladder. */
 function greyLadder(paletteKey = paintPaletteKey(), medium = paintMedium()) {
   if (!paintInit()) return null;
-  const water = medium === 'water', keys = paintKeys(paletteKey, medium).filter(k => k !== 'white');
+  const water = medium === 'water', keys = paintKeys(paletteKey, medium).filter(k => !PIGMENTS[k].body);
   const cands = [];
   const addParts = list => {
     const g = list.reduce((a, [, n]) => gcd(a, n), 0);
