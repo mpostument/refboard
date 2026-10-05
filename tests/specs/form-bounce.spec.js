@@ -66,3 +66,24 @@ test.describe('light thrown between forms', () => {
     expect(out).toEqual([0, 0]);
   });
 });
+
+test('the reflex: a lighter strip at the edge of the shadow side, darker core inside it', async ({ page }) => {
+  await openForms(page);
+  const [edge, core] = await page.evaluate(() => {
+    Object.assign(formScene, { bg: '#2a2a30', lightMarker: false, floorGrid: false, ground: true, groundColor: '#7a746a',
+      yaw: 0, pitch: 10, zoom: 1, lightAz: 60, lightEl: 40, lightDist: LIGHT_SUN, fillOn: false, intensity: 1,
+      ambient: 0.18, bounce: 0.3, occlusion: 1, zones: false });
+    formScene.objects = [{ ...FORM_OBJECT_DEFAULTS, finish: 'matte', shape: 'cylinder', color: '#d8d0c4', sx: 1, sy: 1.6, sz: 1 }];
+    formScene.active = 0;
+    formsRender(formScene, 900, 560, true);
+    const c = document.createElement('canvas'); c.width = 900; c.height = 560;
+    const g = c.getContext('2d'); g.drawImage(el('formsCanvas'), 0, 0);
+    const T = forms.T, box = new T.Box3().setFromObject(forms.meshes[0]), mid = box.getCenter(new T.Vector3());
+    return [0.02, 0.2].map(f => {
+      const v = new T.Vector3(box.min.x + (box.max.x - box.min.x) * f, mid.y, mid.z).project(forms.camera);
+      const d = g.getImageData(Math.round((v.x * 0.5 + 0.5) * 900), Math.round((0.5 - v.y * 0.5) * 560), 1, 1).data;
+      return d[0] + d[1] + d[2];
+    });
+  });
+  expect(edge).toBeGreaterThan(core * 1.15);
+});

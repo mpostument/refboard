@@ -638,7 +638,18 @@ uniform sampler2D uAOTint;
       vec3 wN = normalize((vec4(geometryNormal, 0.0) * viewMatrix).xyz);
       float wy = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).y;
       float facing = clamp(0.5 - 0.5 * wN.y, 0.0, 1.0);
-      outgoingLight += diffuseColor.rgb * uBounce.rgb * facing * exp(-max(wy, 0.0) / uBounce.w);
+      // On the shadow side it is not even: the core shadow (turned square to
+      // the dark) gets less of it, and it rises toward the silhouette, where
+      // the surface turns edge-on and sees the lit floor and the room beside
+      // it - the reflex, a lighter strip between the core shadow and the
+      // edge. Where the key lights the surface it stays as it was.
+      float reflex;
+      {${FORM_KEY_LIGHT_GLSL}
+        vec3 rn = normalize(geometryNormal);
+        float edge = 1.0 - max(dot(rn, geometryViewDir), 0.0);
+        reflex = mix(1.0, 0.45 + 9.0 * edge * edge * edge, 1.0 - smoothstep(0.0, 0.5, dot(rn, kL)));
+      }
+      outgoingLight += diffuseColor.rgb * uBounce.rgb * facing * reflex * exp(-max(wy, 0.0) / uBounce.w);
       // Sky occlusion on the floor: the sky's light (three's indirect
       // diffuse) less what the forms shut out, from the map above. The
       // key's light is not touched.
