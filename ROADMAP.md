@@ -199,7 +199,7 @@ In place too: the masking plan, as How to draw it's "Save the whites" step
 for watercolour - the near-white areas with colour round them (not the
 paper round the subject, not a pale face cut up by its lines), the small
 or thin ones for masking fluid, the big ones to paint round.
-In place too: the character sheet, the Colour studio's second tab - hair,
+In place too: the character sheet, the Colour studio's third tab - hair,
 skin, eyes, clothes and an accent clicked on a picture, the shadow and the
 light worked out the cel-shading way (a value step down and toward violet,
 skin toward red), each with a recipe from your paints; kept, and made
@@ -608,6 +608,18 @@ Any medium:
   the reverse. Still to come: temperature read against the local colour
   (a red shadow on a red dress is still a cool red), and a picker for which
   hue counts as neutral under a coloured light.
+- **Colour wheel, the rest.** In place (`js/wheel.js`, Colour studio >
+  Wheel, Ctrl+K "wheel"): a painter's (RYB) and a perceptual (OKLCH) wheel,
+  the painter's a warp of the other through twelve named hues; seven
+  harmonies as turns on the drawn wheel; a base moved by pointer or keys; a
+  value slider; the paints' reach as a dashed outline and a mark on every
+  colour past it; recipes on request; a colour of the open picture as the
+  base; the harmony to the palette generator. Still to come: the picture's
+  own colours plotted on this wheel (the Picture tab's wheel is the
+  perceptual one only), the harmony a picture is closest to, a wheel of the
+  paints themselves - each tube as a dot, and a click on two shows what
+  they mix to - and the wheel's value as a plane you can tilt, to see
+  chroma fall away at the light and dark ends.
 - **Palette generator, the rest.** In place (`js/palette.js`, Prepare >
   Palettes): the row, Space, locks, reordering, tints and shades, the
   harmonies, a value structure, recipes for your paints, Only what my

@@ -136,6 +136,9 @@ test('a palette is saved, and opened again', async ({ page }) => {
 test("a picture's palette goes from the Colour studio to the generator", async ({ page }) => {
   await openApp(page);
   await page.click('.nav-item[data-view="colour"]');
+  // The studio loads its scripts on first open, and listens for the file only
+  // once they have run: a file given before that is dropped without a word.
+  await page.waitForFunction(() => typeof col !== 'undefined' && col !== null);
   await page.setInputFiles('#colInput', { name: 'q.png', mimeType: 'image/png', buffer: quadrantsPng() });
   await expect(page.locator('#colToPalette')).toBeVisible();
   await page.click('#colToPalette');

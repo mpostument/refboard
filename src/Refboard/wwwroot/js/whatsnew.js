@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'wheel', title: 'Colour wheel',
+    text: "Colour studio > Wheel: click or drag a colour on the wheel and pick a harmony - complementary, split, analogous, triad, tetrad, square, or one hue from pale to deep - and the colours that go with it are laid out round it, each with its hex and name. It is the painter's wheel, where yellow faces violet and blue faces orange (the Picture tab's perceptual wheel is one click away). The dashed line is everything your paints can mix: a colour past it is marked, and How to mix it finds the closest recipes. Start from a colour of an open picture, or send the harmony to the palette generator.",
+    act: 'Show me', run: () => openColour('wheel') },
   { id: 'box', title: 'My Holbein box',
     text: "Colour studio > Pigments > My Holbein box: the anime set of 28 Holbein tubes laid out as the pans sit - four rows of seven, each pan its colour. Click one for its place, code and what it was bought for (skin base, night sky, glints in the eyes), and how it behaves on the paper; ask which fade and those pans stay lit. Recipes everywhere can mix from exactly these tubes, in the names on them. Chinese White is a pan, but held out of the mixing - it goes on last, for highlights. The colours and ratings are estimates until painted swatches from the real tubes correct them.",
     act: 'Show me', run: () => { setPaintPaletteKey('box'); openColour('pigments'); } },

@@ -215,7 +215,18 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   note gives liner sizes (0.05 to 0.8), or how hard to press, for the line
   medium you have. Line is its own Workspace tab: line weight, lost edges
   and the angle tool.
-- **Character sheet** - the Colour studio's second tab: a character's hair,
+- **Colour wheel** - the Colour studio's Wheel tab: click or drag a colour
+  on the wheel (or press the arrow keys) and pick a harmony - complementary,
+  split, analogous, triad, tetrad, square, or one hue from pale to deep -
+  and the colours that go with it are laid out round the wheel, each as a
+  swatch with its hex and name. The painter's wheel is the default - yellow,
+  red and blue the primaries, opposites that mix to grey - with the
+  perceptual wheel of the Picture tab beside it. A dashed line shows all your
+  paints can mix; a harmony colour past it is marked, and "How to mix it"
+  finds the closest recipes from your paints and medium. Start from a colour
+  of the open picture, set the value, copy the hex codes or send the harmony
+  to the palette generator.
+- **Character sheet** - the Colour studio's third tab: a character's hair,
   skin, eyes, clothes and an accent, each clicked on a picture, with its
   shadow and light worked out as anime cel shading paints them (a value
   step darker and cooler, skin's warmer; lighter and paler) or clicked too,
