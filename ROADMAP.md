@@ -463,21 +463,6 @@ packs (below), and moving a picture to another folder by hand.
   published lists and each entry marked as confirmed or estimated), and how
   to tell a free slot's best candidate ("what to buy next" for the box).
   The sample is the anime box in `box`.
-- **Faster recipe search.** The recipe search tries every pair of paints
-  in whole-number parts and each of nine washes, then a third paint on the
-  best pairs: about 85 000 mixtures for 12 paints, 250 000 for the 27 of the
-  Holbein box - 0.3 s and 0.8 s a colour. The palette generator does one
-  colour per timer tick, but the eyedropper and the Colour studio wait for
-  it. Measured: more than half the time is `Math.exp` (one per band per
-  wash); the nine washes are whole hundredths, so each is a power of one
-  `exp(-a/100)` and a chain of 14 multiplications builds all of them -
-  0.81 s to 0.45 s for the box, 0.30 s to 0.17 s for 12 paints, the same
-  maths. Not worth it: stopping the wash scan early (13-19 % saved, only
-  by risking a missed minimum). Still to try: a coarse pass over pairs and
-  thirds that keeps only the promising ones for the full search, and
-  running the search in a Web Worker so nothing waits. Done when a box of
-  28 gives a recipe in about 0.2 s and a test shows the recipes unchanged
-  against the committed search on a few hundred random colours.
 - **Camera eyedropper.** Point a phone at the real scene - plein air - and
   read the colour under the crosshair with its watercolour recipe, live.
   The mixing is already there (paint.js); this adds the camera's video.

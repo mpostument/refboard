@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'fast-recipes', title: 'Recipes twice as fast',
+    text: "Every recipe - the eyedropper's, the Colour studio's, the palette generator's, the light and character sheets' - is now found in half the time (a colour from the 27 tubes of the Holbein box in well under a tenth of a second), with exactly the same recipes as before. So the Wheel no longer asks: the recipes for the chosen colour come up by themselves once the wheel is still.",
+    act: 'Show me', run: () => openColour('wheel') },
   { id: 'form-bounce', title: 'Colour from the form next door',
     text: "3D forms > Light > Ambient > Bounce now also carries colour between forms: a white ball beside a red wall takes a red glow on the side that faces it, a skin-coloured hand beside a blue sleeve a cool edge. It reaches about half a form's size, is as strong as the floor's bounce (same slider), and is not drawn in Anime or the zones view. The glow does not yet depend on how lit the neighbour is.",
     act: 'Show me', run: () => openForms() },

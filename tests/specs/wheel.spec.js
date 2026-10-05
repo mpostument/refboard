@@ -113,7 +113,7 @@ test('the other wheel keeps the same colour: switching wheels carries the hue ac
   expect(await hexOf()).toBe(painter);
 });
 
-test('a colour the paints cannot reach is marked; the recipe is found on request', async ({ page }) => {
+test('a colour the paints cannot reach is marked; its recipe is found by itself', async ({ page }) => {
   await openWheel(page);
   // A strong blue: the Zorn palette (ochre, red, black) has nothing like it.
   await page.evaluate(() => { wh.angle = 90 - 240; wh.r = 0.8; wh.lstar = 55; saveWheelPrefs(); wheelRender(); });
@@ -121,18 +121,19 @@ test('a colour the paints cannot reach is marked; the recipe is found on request
   await expect(page.locator('#whSwatches .wh-sw').first()).toHaveClass(/out/);
   await expect(page.locator('#whOne')).toContainText('cannot quite mix');
   await expect(page.locator('#whNote')).toContainText('past the dashed line');
-  // The full palette reaches a muted blue; a recipe is searched for, and kept.
+  // The full palette reaches a muted blue; its recipes come with no click,
+  // once the wheel is still, and are kept.
   await page.click('#colPaints [data-paint-palette="full"]');
   await page.evaluate(() => { wh.r = 0.15; wheelRender(); });
   await expect(page.locator('#whSwatches .wh-sw').first()).not.toHaveClass(/out/);
-  await page.click('#whMix');
   await expect(page.locator('#whOne .mix-row')).toHaveCount(3);
-  await expect(page.locator('#whMix')).toHaveCount(0);
-  // Another colour is not mixed until asked; the first is still there when it returns.
+  await expect(page.locator('#whOne [aria-busy]')).toHaveCount(0);
+  // Another colour is mixed too; the first is still there when it returns.
+  const first = await page.locator('#whOne .col-mix').innerHTML();
   await page.click('#whSwatches .wh-sw >> nth=1');
-  await expect(page.locator('#whMix')).toHaveCount(1);
-  await page.click('#whSwatches .wh-sw >> nth=0');
   await expect(page.locator('#whOne .mix-row')).toHaveCount(3);
+  await page.click('#whSwatches .wh-sw >> nth=0');
+  expect(await page.locator('#whOne .col-mix').innerHTML()).toBe(first);
 });
 
 test("a picture's colours start the wheel; the harmony goes on to the palette generator", async ({ page }) => {

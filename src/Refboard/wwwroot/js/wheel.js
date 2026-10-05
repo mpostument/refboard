@@ -218,12 +218,25 @@ function whRenderSwatches(colours) {
   }).join('');
 }
 
+// The recipes for the chosen colour, once the wheel stops moving: a drag
+// renders every frame, and a search a frame would hold it up.
+let whMixTimer = 0;
+function whMixSoon() {
+  clearTimeout(whMixTimer);
+  whMixTimer = setTimeout(() => {
+    const colours = whColours(), k = colours[Math.min(wh.sel, colours.length - 1)], key = whRecipeKey(k);
+    if (wh.recipes[key]) return;
+    wh.recipes[key] = paintRecipes(k.rgb, col.paints, 3, col.medium);
+    wheelRender();
+  }, 250);
+}
+
 function whRenderOne(colours) {
   const k = colours[Math.min(wh.sel, colours.length - 1)], [, C, h] = k.lch, out = !whReachable(k);
   const key = whRecipeKey(k), hit = wh.recipes[key];
   let body;
   if (hit) body = hit.length ? `<div class="col-mix">${hit.map(paintRecipeHtml).join('')}</div>` : '';
-  else body ='<button class="ghost" type="button" id="whMix" title="Search your paints for the closest mixtures - a moment\'s work">How to mix it</button>';
+  else { body = '<div class="col-mix count" aria-busy="true">Mixing...</div>'; whMixSoon(); }
   el('whOne').innerHTML = `<div class="wh-one"><i style="background:${rgbCss(k.rgb)}"></i>` +
     `<div><b>${colHex(k.rgb)}</b> · value L* ${Math.round(lstar(k.rgb))} · ${colChromaWord(C)}${C >= 0.03 ? ' ' + whName(k) : ''}` +
     (out ? '<div class="wh-warn">Your paints cannot quite mix this - the nearest they get is below.</div>' : '') +
@@ -288,16 +301,6 @@ function initWheel() {
   el('whSwatches').addEventListener('click', e => {
     const b = e.target.closest('.wh-sw');
     if (b) { wh.sel = +b.dataset.i; wheelRender(); }
-  });
-  el('whOne').addEventListener('click', e => {
-    if (!e.target.closest('#whMix')) return;
-    const k = whColours()[wh.sel], btn = e.target.closest('#whMix');
-    btn.disabled = true; btn.textContent = 'Mixing...';
-    // A frame for the button to change before the search holds the page up.
-    setTimeout(() => {
-      wh.recipes[whRecipeKey(k)] = paintRecipes(k.rgb, col.paints, 3, col.medium);
-      wheelRender();
-    }, 30);
   });
   el('whPictureChips').addEventListener('click', e => {
     const b = e.target.closest('.wh-pick');

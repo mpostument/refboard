@@ -222,8 +222,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   swatch with its hex and name. The painter's wheel is the default - yellow,
   red and blue the primaries, opposites that mix to grey - with the
   perceptual wheel of the Picture tab beside it. A dashed line shows all your
-  paints can mix; a harmony colour past it is marked, and "How to mix it"
-  finds the closest recipes from your paints and medium. Start from a colour
+  paints can mix; a harmony colour past it is marked, and the closest
+  recipes from your paints and medium come up under the chosen colour as
+  soon as the wheel is still. Start from a colour
   of the open picture, set the value, copy the hex codes or send the harmony
   to the palette generator.
 - **Character sheet** - the Colour studio's third tab: a character's hair,

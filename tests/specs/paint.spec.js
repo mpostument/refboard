@@ -52,3 +52,42 @@ for (const m of KNOWN_MIXES) {
     expect(found, `${m.uses.join(' + ')} among: ${list.map(r => r.set).join(' | ')}`).toBe(true);
   });
 }
+
+/* The search scores a few hundred thousand mixtures, so it skips
+   spectral.js's Color for its own sums. These keep it honest: the OKLab is
+   spectral.js's to the last bit, a wash built by multiplying is exp's to
+   rounding, and the recipes are those the slower search gave - the fixture
+   was written by the search as it was before (paint-recipes.json). */
+test('the fast sums are spectral.js\'s', async ({ page }) => {
+  await openApp(page);
+  const out = await page.evaluate(() => {
+    paintInit();
+    let seed = 3, labOff = 0, washOff = 0;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let n = 0; n < 200; n++) {
+      const R = Array.from({ length: 38 }, () => rnd());
+      const a = paintLab(R), b = new spectral.Color(R).OKLab;
+      if (a.some((v, i) => v !== b[i])) labOff++;
+      const abs = R.map(r => 4 * r), washes = paintWashesR(abs, 0, PAINT_WASH.length);
+      PAINT_WASH.forEach((s, k) => abs.forEach((x, i) => {
+        const want = paintData.paper[i] * Math.exp(-s * x);
+        washOff = Math.max(washOff, Math.abs(washes[k][i] - want) / want);
+      }));
+    }
+    return { labOff, washOff };
+  });
+  expect(out.labOff).toBe(0);
+  expect(out.washOff).toBeLessThan(1e-12);
+});
+
+test('the recipes are the ones the slower search gave', async ({ page }) => {
+  await openApp(page);
+  const cases = require('./paint-recipes.json');
+  const got = await page.evaluate(cases => cases.map(c => paintRecipes(c.rgb, c.palette, 4, c.medium)
+    .map(r => `${r.parts.map(p => p.join(':')).join(' ')} | ${r.wash} | ${r.rgb}`)), cases);
+  // Paints in equal parts may be listed either way round: the old search
+  // took whichever of two routes to the mixture won by a rounding.
+  const same = s => s.replace(/^[^|]+/, m => m.trim().split(' ').sort((a, b) =>
+    b.split(':')[1] - a.split(':')[1] || a.localeCompare(b)).join(' ') + ' ');
+  cases.forEach((c, i) => expect(got[i].map(same), `${c.palette} ${c.medium} ${c.rgb}`).toEqual(c.recipes.map(same)));
+});
