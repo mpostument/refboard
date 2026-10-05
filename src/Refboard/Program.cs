@@ -174,6 +174,22 @@ app.MapDelete("/api/items/{kind}/{id}", (string kind, string id) =>
     !UserStore.ValidName(kind) || !UserStore.ValidName(id) ? Results.BadRequest()
     : store.DeleteItem(kind, id) ? Results.NoContent() : Results.NotFound());
 
+// The 3D forms scene as an HTTP door - see SceneApi and js/forms-api.js. Thin
+// aliases over UserStore documents: the page reads scene-in/next while the 3D
+// forms are open, and writes scene-out/* for whoever sent it.
+app.MapGet("/api/scene", (HttpContext ctx) =>
+    Results.Text(SceneApi.Docs($"{ctx.Request.Scheme}://{ctx.Request.Host}"), "text/markdown; charset=utf-8"));
+app.MapPut("/api/scene", (System.Text.Json.JsonElement doc) =>
+{
+    store.PutItem("scene-in", "next", doc);
+    return Results.NoContent();
+});
+app.MapGet("/api/scene/{what}", (string what) =>
+    what is "schema" or "current" or "result" or "saved"
+        ? store.GetItem("scene-out", what) is { } doc ? Results.Ok(doc)
+          : Results.NotFound(new { error = "Not written yet: open the 3D forms view in a browser first." })
+        : Results.NotFound());
+
 app.Run();
 
 record FolderRequest(string? Folder);

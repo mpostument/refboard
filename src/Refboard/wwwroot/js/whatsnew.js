@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'scene-api', title: 'Build a 3D scene with Claude',
+    text: "3D forms > Use > Scene as text copies the whole scene as JSON and loads one back (or a share link). With the container, Claude can also build a scene for you over HTTP (GET /api/scene explains it) while this view is open: it reads the list of every name a scene may use, sends a scene, and is told what it had to change.",
+    act: 'Open 3D forms', run: () => openForms() },
   { id: 'tone', title: 'Toned paper',
     text: "Over any picture in a session (j, or Workspace > Value): for grey, tan or black paper, which parts to leave as the paper (green), where the darks go (violet), where a white pencil or gouache goes (amber) and the few brightest touches for a gel pen (pink). It names the medium's own way to do each, and says which of the three papers sits nearest the picture's middle value. Pick the paper in the note, or a colour of your own.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

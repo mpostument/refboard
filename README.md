@@ -121,6 +121,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 | `GET /api/items` | The kinds of document stored. |
 | `GET /api/items/{kind}` | Every document of a kind, as `{ id: document }`. |
 | `GET` / `PUT` / `DELETE /api/items/{kind}/{id}` | One JSON document. Kind and id: lower-case letters, digits, `-` and `_`. |
+| `GET /api/scene` | Markdown documentation of the scene API below - the one to hand to Claude or a script. |
+| `PUT /api/scene` | `{ "mode": "replace" or "patch", "scene": {...} }` - a 3D forms scene, queued; the page applies it while the 3D forms view is open. |
+| `GET /api/scene/schema`, `/current`, `/result` | Written by the page: every name a scene may use, the scene as it is now, and what the last `PUT` changed (`dropped`). 404 until the 3D forms have been opened once. |
 
 ## Features
 
