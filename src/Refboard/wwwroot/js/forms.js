@@ -596,6 +596,25 @@ uniform sampler2D uAOTop;
 uniform vec2 uAOForm;
 uniform float uNbr;
 uniform sampler2D uAOTint;
+// What the two height pictures hold at a point of the floor, with the
+// outline smoothed: the four texels around it, weighted bilinearly by how
+// much of each is covered. The heights are averaged over the covered texels
+// only, so a form's edge is not pulled down by the empty floor beside it.
+// cov is the covered share (0 to 1).
+void rbForm(vec2 uv, out float cov, out float hTop, out float hBot, out vec3 tint) {
+  vec2 p = vec2(uv.x, 1.0 - uv.y) * ${FORM_AO_SIZE}.0 - 0.5, i = floor(p), f = p - i;
+  cov = 0.0; hTop = 0.0; hBot = 0.0; tint = vec3(0.0);
+  for (int c = 0; c < 4; c++) {
+    vec2 o = vec2(mod(float(c), 2.0), floor(float(c) / 2.0));
+    vec2 t = (i + o + 0.5) / ${FORM_AO_SIZE}.0;
+    vec4 tp = textureLod(uAOTop, t, 0.0);
+    float w = (o.x > 0.5 ? f.x : 1.0 - f.x) * (o.y > 0.5 ? f.y : 1.0 - f.y) * tp.a;
+    cov += w; hTop += w * tp.r;
+    hBot += w * textureLod(uAOBot, vec2(t.x, 1.0 - t.y), 0.0).r;
+    tint += w * textureLod(uAOTint, t, 0.0).rgb;
+  }
+  if (cov > 0.0) { hTop /= cov; hBot /= cov; tint /= cov; }
+}
 ` +
     frag.replace('#include <opaque_fragment>', `
     // Cel shading replaces the light three worked out, while it is still
@@ -668,7 +687,8 @@ uniform sampler2D uAOTint;
       // itself: every ray leaves it. The start is lifted off the surface by a
       // few texels, or the picture's coarse edge would shut it. The rays are
       // the same at every pixel: starting them at a random angle each trades
-      // the faint steps this leaves for grain, which is far worse in a crease.
+      // the steps this leaves for grain, which is far worse in a crease - so
+      // each ray's hit is soft instead (see soft below), which hides the steps.
       // The same rays carry colour: what they hit sends the form's own colour
       // back (uNbr), weighted like the occlusion, so a red ball beside a white
       // one tints the white one's near side red.
@@ -687,11 +707,17 @@ uniform sampler2D uAOTint;
           vec3 q = o + d * (uAOForm.x * k);
           float w = (1.0 - k) * (1.0 - k);
           vec2 uv = (q.xz - uAOBox.xy) / uAOBox.z + 0.5;
-          vec4 top = textureLod(uAOTop, vec2(uv.x, 1.0 - uv.y), 0.0);
           float hit = (uAOForm.y > 0.5 && q.y < 0.0) ? 1.0 : 0.0;
-          if (top.a > 0.5 && q.y < top.r - 0.5 * texel && q.y > textureLod(uAOBot, uv, 0.0).r + 0.5 * texel) {
-            hit = 1.0;
-            thrown += w * textureLod(uAOTint, vec2(uv.x, 1.0 - uv.y), 0.0).rgb;
+          // The outline of a form is read smoothed (rbForm): a ray that lands
+          // a hair inside it counts a hair, not a whole texel. Counted whole,
+          // the staircase of texels along a circle's rim shows on a ball as
+          // ragged steps wherever another form throws light onto it.
+          float cov, hTop, hBot;
+          vec3 tint;
+          rbForm(uv, cov, hTop, hBot, tint);
+          if (cov > 0.0 && q.y < hTop - 0.5 * texel && q.y > hBot + 0.5 * texel) {
+            hit = max(hit, cov);
+            thrown += w * cov * tint;
           }
           shut += w * hit; all += w;
         }
