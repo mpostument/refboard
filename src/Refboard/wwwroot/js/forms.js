@@ -199,9 +199,14 @@ function formGuideUniforms(T, lines) {
     uCel: { value: 0 }, uCelBase: { value: new T.Color() }, uCelShade: { value: new T.Color() },
     uCelHi: { value: new T.Color() }, uCelHiSize: { value: 0 },
     uCelRim: { value: new T.Color() }, uRimDir: { value: new T.Vector3(0, 0, 1) }, uRim: { value: 0 },
-    uSoft: formSoftUniform(T),
+    uSoft: formSoftUniform(T), uBounce: formBounceUniform(T),
   };
 }
+// The floor's reflected light: rgb, in linear colour, is the floor's colour
+// times the Bounce slider times the light's strength; w is how high above the
+// floor it fades by a factor of e. One for the whole scene, set in formsRender.
+let formBounceU = null;
+const formBounceUniform = T => formBounceU || (formBounceU = { value: new T.Vector4(0, 0, 0, 1) });
 
 /* ---- soft shadows. A real shadow is sharp where the form touches what it
    shadows and spreads as it is thrown, because a light is not a point: from
@@ -381,6 +386,7 @@ uniform float uCelHiSize;
 uniform vec3 uCelRim;
 uniform vec3 uRimDir;
 uniform float uRim;
+uniform vec4 uBounce;
 ` +
     frag.replace('#include <opaque_fragment>', `
     // Cel shading replaces the light three worked out, while it is still
@@ -413,6 +419,17 @@ uniform float uRim;
       float rd = dot(n, uRimDir), rw = max(fwidth(rd), 1e-4);
       c = mix(c, uCelRim, uRim * smoothstep(0.6 - fw, 0.6 + fw, fr) * smoothstep(-rw, rw, rd));
       outgoingLight = c;
+    } else {
+      // Reflected light: the floor is lit, and sends some of it back up
+      // into whatever faces it. It is the floor's own colour, strongest on a
+      // surface turned down and close to the floor, and gone a little way
+      // up - which is why it shows as a band along the shadow side's lower
+      // edge, and why a ball on a red floor has a red underside. Added to the
+      // light three worked out, in linear colour, before the tone mapping.
+      vec3 wN = normalize((vec4(geometryNormal, 0.0) * viewMatrix).xyz);
+      float wy = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).y;
+      float facing = clamp(0.5 - 0.5 * wN.y, 0.0, 1.0);
+      outgoingLight += diffuseColor.rgb * uBounce.rgb * facing * exp(-max(wy, 0.0) / uBounce.w);
     }
     #include <opaque_fragment>`).replace('#include <dithering_fragment>', `#include <dithering_fragment>
     if (uZones > 0.5) {${FORM_KEY_LIGHT_GLSL}
@@ -913,7 +930,12 @@ function formsRender(sc, w, h, clean = false) {
   // floor's colour - the split that puts reflected light, of the right hue,
   // inside a core shadow.
   F.hemi.color.setRGB(1, 1, 1).multiplyScalar(sc.ambient);
-  F.hemi.groundColor.set(sc.ground ? sc.groundColor : sc.bg).multiplyScalar(sc.bounce);
+  // The ground half of the hemisphere is off: a bounce that does not depend on
+  // how high a point is, or how strong the light that reaches the floor, is
+  // what hid it. The floor's reflected light is the shader's (uBounce).
+  F.hemi.groundColor.setRGB(0, 0, 0);
+  const bounceCol = new T.Color(sc.ground ? sc.groundColor : sc.bg), bounceK = sc.bounce * 1.8 * Math.min(1.5, sc.intensity);
+  formBounceUniform(T).value.set(bounceCol.r * bounceK, bounceCol.g * bounceK, bounceCol.b * bounceK, rad * 0.9);
 
   // With no haze, the fog only dissolves the far floor into the background.
   // With it, the fog IS the air: it starts just in front of the nearest form

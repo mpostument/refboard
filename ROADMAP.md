@@ -501,7 +501,8 @@ packs (below), and moving a picture to another folder by hand.
   under a form where the hemisphere's light is blocked, which the key's shadow
   does not give (the floor beside a ball is as bright as the floor far from it,
   in the shadow's own light); shadows from the second light; bounce coloured by
-  the nearby forms and not only the floor; and the cost, if a scene of many
+  the nearby forms and not only the floor (the floor's own reflected light is
+  in place: `uBounce`, by height above the floor and the light's strength); and the cost, if a scene of many
   forms is slow - 44 depth reads a pixel is what a Worker or a half-size
   shadow pass would trim.
 - **Light and shadow, the rest.** In place (`js/light.js`, Colour studio >

@@ -464,7 +464,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     floor and softer the further it is thrown - a form in the air has a soft
     shadow, one on the floor a hard foot - from the sun and from a lamp, with
     no grain and no speckle on the lit side of a form. Anime keeps its
-    shadows hard.
+    shadows hard. A form's own shadow side is lit by the floor: reflected light
+    in the floor's colour, strongest low on the form and fading up it (the
+    Bounce slider), so a ball on a red floor has a red underside.
   - *Seeing it:* a light-and-shadow zones view that paints highlight, light,
     halftone, terminator, core shadow, reflected light and cast shadow onto the
     forms from the actual lighting; 1-, 2- and 3-point camera presets and a

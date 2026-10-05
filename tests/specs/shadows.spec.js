@@ -148,3 +148,48 @@ test('lit surfaces are smooth: no shadow acne from the lamp or the sun', async (
   expect(lamp.share).toBeLessThan(0.01);
   expect(sun.share).toBeLessThan(0.01);
 });
+
+/* A ball on a red floor, lit from the upper left with no sky fill: its shadow
+   side is lit by nothing but the floor. Returns the colour of a patch low on
+   the shadow side and one high on it, and the same with the bounce off. */
+const underside = (page, bounce) => page.evaluate(bounce => {
+  const W = 600, H = 420;
+  Object.assign(formScene, { bg: '#202024', lightMarker: false, fillOn: false, floorGrid: false, ground: true, groundColor: '#c03030',
+    yaw: 0, pitch: 5, zoom: 1, lightAz: -80, lightEl: 40, lightDist: LIGHT_SUN, softness: 0.3, ambient: 0, bounce });
+  formScene.objects = [{ ...FORM_OBJECT_DEFAULTS, shape: 'sphere', finish: 'matte', color: '#d8d8d8', sx: 1.5, sy: 1.5, sz: 1.5 }];
+  formScene.active = 0;
+  formsRender(formScene, W, H, true);
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.drawImage(el('formsCanvas'), 0, 0);
+  const d = g.getImageData(0, 0, W, H).data;
+  // The ball's box on the screen, from the mesh itself - not from its colour,
+  // which is what the bounce changes.
+  const T = forms.T, box = new T.Box3().setFromObject(forms.meshes[0]);
+  let x0 = W, x1 = 0, y0 = H, y1 = 0;
+  for (const cx of [box.min.x, box.max.x]) for (const cy of [box.min.y, box.max.y]) for (const cz of [box.min.z, box.max.z]) {
+    const v = new T.Vector3(cx, cy, cz).project(forms.camera), x = (v.x * 0.5 + 0.5) * W, y = (0.5 - v.y * 0.5) * H;
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  }
+  const patch = (fx, fy) => {
+    const cx = Math.round(x0 + (x1 - x0) * fx), cy = Math.round(y0 + (y1 - y0) * fy);
+    let r = 0, gg = 0, b = 0;
+    for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) { const k = ((cy + j) * W + cx + i) * 4; r += d[k]; gg += d[k + 1]; b += d[k + 2]; }
+    return [r / 49, gg / 49, b / 49];
+  };
+  // The shadow side is the right one: the light is from the left.
+  return { low: patch(0.78, 0.74), high: patch(0.78, 0.3), found: x1 > x0 };
+}, bounce);
+
+test('the floor lights the shadow side from below, in its own colour, and less the higher it goes', async ({ page }) => {
+  await openForms(page);
+  const on = await underside(page, 0.6), off = await underside(page, 0);
+  console.log('UNDER', JSON.stringify({ on, off }));
+  expect(on.found).toBe(true);
+  // Low on the shadow side: red and lit; with the bounce off, nearly black.
+  expect(on.low[0]).toBeGreaterThan(on.low[2] * 1.8);
+  expect(on.low[0]).toBeGreaterThan(off.low[0] + 15);
+  // And weaker higher up, where the floor is further and out of sight.
+  expect(on.low[0]).toBeGreaterThan(on.high[0] + 8);
+});
