@@ -99,24 +99,76 @@ test('left out where it would not show: Anime, the zones view, no floor, none as
     formsRender(formScene, 300, 200, false);
     return forms.ground.material.userData.u.uFloorAO.value;
   }, set);
+  const onForms = () => page.evaluate(() => forms.meshes[0].material.userData.u.uFormAO.value);
   expect(await state({})).toBe(1);
+  expect(await onForms()).toBe(1);
   expect(await state({ finish: 'anime' })).toBe(0);
+  expect(await onForms()).toBe(0);
   expect(await state({ zones: true })).toBe(0);
   expect(await state({ ground: false })).toBe(0);
+  // With no floor the forms still shut the sky out of one another.
+  expect(await onForms()).toBe(1);
   expect(await state({ occlusion: 0 })).toBe(0);
   expect(await state({ ambient: 0 })).toBe(0);
   expect(await state({ occlusion: 0.5 })).toBe(0.5);
 });
 
-test('Sky occlusion is a slider under Ambient, and old scenes get it at full', async ({ page }) => {
+test('Occlusion is a slider under Ambient, and old scenes get it at full', async ({ page }) => {
   await openForms(page);
   const slider = page.locator('#formsPanel [data-k="occlusion"]');
   await expect(slider).toHaveCount(1);
-  await expect(slider.locator('xpath=ancestor::label/span')).toHaveText('Sky occlusion');
+  await expect(slider.locator('xpath=ancestor::label/span')).toHaveText('Occlusion');
   const v = await page.evaluate(() => {
     const old = { ...formScene };
     delete old.occlusion;
     return normalizeFormScene(old).occlusion;
   });
   expect(v).toBe(1);
+});
+
+/* Two balls side by side, lit by the sky alone and with no floor, seen from the
+   front. Brightness of a point on the first ball's surface, with the occlusion
+   on as a share of off: `toward` faces the other ball (45 degrees round from
+   the front), `away` is its mirror on the far side. */
+const ballShares = (page, gap, set = {}) => page.evaluate(([gap, set]) => {
+  const W = 700, H = 500;
+  const shoot = occlusion => {
+    Object.assign(formScene, { bg: '#2a2a30', lightMarker: false, fillOn: false, floorGrid: false, ground: false,
+      yaw: 0, pitch: 0, zoom: 1, lightAz: -50, lightEl: 40, lightDist: LIGHT_SUN, intensity: 0, ambient: 0.8, bounce: 0,
+      zones: false, occlusion, ...set });
+    formScene.objects = [{ ...FORM_OBJECT_DEFAULTS, shape: 'sphere', finish: 'matte', x: 0 },
+      { ...FORM_OBJECT_DEFAULTS, shape: 'sphere', finish: 'matte', x: gap }];
+    formScene.active = 0;
+    formsRender(formScene, W, H, true);
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.drawImage(el('formsCanvas'), 0, 0);
+    return g.getImageData(0, 0, W, H).data;
+  };
+  const lin = v => Math.pow((v / 255 + 0.055) / 1.055, 2.4);
+  const on = shoot(1), off = shoot(0);
+  const T = forms.T, box = new T.Box3().setFromObject(forms.meshes[0]);
+  const c = box.getCenter(new T.Vector3()), r = (box.max.x - box.min.x) / 2;
+  const share = sx => {
+    const v = new T.Vector3(c.x + sx * r * 0.9397, c.y, c.z + r * 0.342).project(forms.camera);
+    const x = Math.round((v.x * 0.5 + 0.5) * W), y = Math.round((0.5 - v.y * 0.5) * H);
+    let a = 0, b = 0;
+    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) { const k = ((y + j) * W + x + i) * 4; a += lin(on[k]); b += lin(off[k]); }
+    return a / b;
+  };
+  return { r, toward: share(1), away: share(-1) };
+}, [gap, set]);
+
+test('where two forms meet the sky is shut out: the side facing a neighbour is darker, the far side is not', async ({ page }) => {
+  await openForms(page);
+  const r = (await ballShares(page, 0)).r;
+  const touching = await ballShares(page, 2.05 * r);
+  console.log('TOUCH', JSON.stringify(touching));
+  expect(touching.toward).toBeLessThan(0.9);
+  expect(touching.away).toBeGreaterThan(0.97);
+  // Pulled well apart, the neighbour is out of reach.
+  const apart = await ballShares(page, 8 * r);
+  console.log('APART', JSON.stringify(apart));
+  expect(apart.toward).toBeGreaterThan(0.97);
 });

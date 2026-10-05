@@ -501,9 +501,13 @@ packs (below), and moving a picture to another folder by hand.
   dark halo under a form where the hemisphere's light is blocked, which the
   key's shadow does not give. Two pictures of the forms (lowest and highest
   height above each spot of floor) and a horizon scan in sixteen directions;
-  exact for a ball, a wall at its foot, and less for a form held up. Still to
-  come: occlusion on the forms themselves (where two meet, or a limb meets a
-  body), not only on the floor; shadows from the second light; bounce coloured by
+  exact for a ball, a wall at its foot, and less for a form held up. The forms get it too: each
+  pixel casts sixteen rays out of its surface and counts those ending between
+  the lowest and highest height of a form above a spot (the same two pictures)
+  or under the floor (`FORM_AO_FORM_REACH`; the rays are the same at every
+  pixel - random angles gave grain). A column holds one span, so a gap between
+  two forms stacked above one spot reads as filled. Still to
+  come: shadows from the second light; bounce coloured by
   the nearby forms and not only the floor (the floor's own reflected light is
   in place: `uBounce`, by height above the floor and the light's strength); and the cost, if a scene of many
   forms is slow - 44 depth reads a pixel is what a Worker or a half-size

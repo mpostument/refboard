@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'form-occlusion', title: 'Dark seams where forms meet',
+    text: "3D forms > Light > Ambient > Occlusion now works on the forms too: where one form meets another, where a limb meets the body, or a form rests on the floor, the sky is shut out and a soft dark seam forms in the crease - darkest at the touch, fading within a fraction of a form's size. As before only the sky's light is dimmed, so it shows most in the shadow side and under an overcast sky. Off in Anime and the zones view (the slider is renamed from Sky occlusion).",
+    act: 'Show me', run: () => openForms() },
   { id: 'occlusion', title: 'A dark halo under a form',
     text: "3D forms > Light > Ambient > Sky occlusion: the floor beside a form is darker than the floor far from it, because the form shuts out part of the sky - darkest where it touches, fading in a soft halo, the way a ball on a table sits in its own dim ring. A ball's halo follows the physics (a third of the sky shut out a radius from its foot, a tenth at two), the foot of a wall gets about a third, and a form held in the air shuts out less. Only the sky's light is dimmed, not the sun's, so it shows most under an overcast sky or inside a cast shadow. Off in Anime and the zones view.",
     act: 'Show me', run: () => openForms() },

@@ -204,12 +204,20 @@ function formGuideUniforms(T, lines) {
     // it takes away (0 on every form; the floor's own is set in formsRender),
     // and the map it comes from (formOcclusionUniform).
     uFloorAO: { value: 0 }, uAOTex: formOcclusionUniform(T).tex, uAOBox: formOcclusionUniform(T).box,
+    // The same for the forms: their own strength (0 where it is off), the
+    // two height pictures, and how far a form looks (x), whether a floor lies
+    // under them (y).
+    uFormAO: { value: 0 }, uAOBot: formOcclusionUniform(T).bot, uAOTop: formOcclusionUniform(T).top,
+    uAOForm: formOcclusionUniform(T).form,
   };
 }
 // The occlusion map and where it lies on the floor: x, z of its centre and
 // the width it covers. One for the whole scene, like the soft shadow's.
 let formAOU = null;
-const formOcclusionUniform = T => formAOU || (formAOU = { tex: { value: null }, box: { value: new T.Vector3(0, 0, 1) } });
+const formOcclusionUniform = T => formAOU || (formAOU = {
+  tex: { value: null }, box: { value: new T.Vector3(0, 0, 1) },
+  bot: { value: null }, top: { value: null }, form: { value: new T.Vector2(1, 1) },
+});
 
 /* ---- sky occlusion. Under a ball the sky is shut out, and for some way
    around it the floor sees only part of it: the floor there is darker than
@@ -233,6 +241,8 @@ const formOcclusionUniform = T => formAOU || (formAOU = { tex: { value: null }, 
 const FORM_AO_SIZE = 512, FORM_AO_MAP = 192;
 // How far the floor looks out, in units of the forms' size u (see formsRender).
 const FORM_AO_REACH = 3.5;
+// And how far a form looks for another one touching it, in the same units.
+const FORM_AO_FORM_REACH = 0.6;
 /* The targets the pictures and the map are drawn into, and the camera that
    looks at the forms from below or from above; made once, on first use. */
 function formOcclusionKit() {
@@ -363,6 +373,7 @@ function formOcclusionRender(cx, cz, half, top, reach) {
 
   const U = formOcclusionUniform(T);
   U.tex.value = ao.raw.texture;
+  U.bot.value = ao.bot.texture; U.top.value = ao.top.texture;
   U.box.value.set(cx, cz, half * 2);
 }
 // The floor's reflected light: rgb, in linear colour, is the floor's colour
@@ -553,6 +564,10 @@ uniform vec4 uBounce;
 uniform float uFloorAO;
 uniform sampler2D uAOTex;
 uniform vec3 uAOBox;
+uniform float uFormAO;
+uniform sampler2D uAOBot;
+uniform sampler2D uAOTop;
+uniform vec2 uAOForm;
 ` +
     frag.replace('#include <opaque_fragment>', `
     // Cel shading replaces the light three worked out, while it is still
@@ -596,13 +611,45 @@ uniform vec3 uAOBox;
       float wy = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).y;
       float facing = clamp(0.5 - 0.5 * wN.y, 0.0, 1.0);
       outgoingLight += diffuseColor.rgb * uBounce.rgb * facing * exp(-max(wy, 0.0) / uBounce.w);
-      // Sky occlusion, the floor's only: the sky's light (three's indirect
+      // Sky occlusion on the floor: the sky's light (three's indirect
       // diffuse) less what the forms shut out, from the map above. The
       // key's light is not touched.
       if (uFloorAO > 0.0) {
         vec3 wP = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).xyz;
         float occ = texture2D(uAOTex, (wP.xz - uAOBox.xy) / uAOBox.z + 0.5).r;
         outgoingLight -= reflectedLight.indirectDiffuse * occ * uFloorAO;
+      }
+      // The same on the forms, where one meets another: sixteen rays out of
+      // the surface, thicker toward its normal (the sky counts most from
+      // straight out), each stopping at a point. A point is shut if it lies
+      // between the lowest and the highest height of some form above that
+      // spot of floor - the two pictures already drawn for the floor - or
+      // under the floor itself. The share that is shut, the nearer the more,
+      // takes away that much of the sky's light. A convex form never shuts
+      // itself: every ray leaves it. The start is lifted off the surface by a
+      // few texels, or the picture's coarse edge would shut it. The rays are
+      // the same at every pixel: starting them at a random angle each trades
+      // the faint steps this leaves for grain, which is far worse in a crease.
+      if (uFormAO > 0.0) {
+        vec3 wP = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).xyz;
+        float texel = uAOBox.z / ${FORM_AO_SIZE}.0;
+        vec3 o = wP + wN * (3.0 * texel);
+        vec3 tA = normalize(abs(wN.y) < 0.99 ? cross(wN, vec3(0.0, 1.0, 0.0)) : vec3(1.0, 0.0, 0.0));
+        vec3 tB = cross(wN, tA);
+        float shut = 0.0, all = 0.0;
+        for (int i = 0; i < 16; i++) {
+          float f = (float(i) + 0.5) / 16.0, a = 2.3999632 * float(i);
+          vec3 d = (tA * cos(a) + tB * sin(a)) * sqrt(f) + wN * sqrt(1.0 - f);
+          float k = 0.1 + 0.9 * fract(float(i) * 0.618034 + 0.3);
+          vec3 q = o + d * (uAOForm.x * k);
+          float w = (1.0 - k) * (1.0 - k);
+          vec2 uv = (q.xz - uAOBox.xy) / uAOBox.z + 0.5;
+          vec4 top = textureLod(uAOTop, vec2(uv.x, 1.0 - uv.y), 0.0);
+          float hit = (uAOForm.y > 0.5 && q.y < 0.0) ? 1.0 : 0.0;
+          if (top.a > 0.5 && q.y < top.r - 0.5 * texel && q.y > textureLod(uAOBot, uv, 0.0).r + 0.5 * texel) hit = 1.0;
+          shut += w * hit; all += w;
+        }
+        outgoingLight -= reflectedLight.indirectDiffuse * (shut / all) * uFormAO;
       }
     }
     #include <opaque_fragment>`).replace('#include <dithering_fragment>', `#include <dithering_fragment>
@@ -1142,10 +1189,13 @@ function formsRender(sc, w, h, clean = false) {
   // The sky's occlusion on the floor (see formOcclusionRender). Left out
   // where it would not show: no floor, Anime (a cel's floor is flat), the
   // zones view, and when the sky gives the floor nothing to take away.
-  const aoOn = sc.ground && !formSceneIsCel(sc) && !(sc.zones && !clean) && sc.ambient > 0 && sc.occlusion > 0;
-  F.ground.material.userData.u.uFloorAO.value = aoOn ? Math.min(sc.occlusion, 1) : 0;
+  const aoOn = !formSceneIsCel(sc) && !(sc.zones && !clean) && sc.ambient > 0 && sc.occlusion > 0;
+  const aoK = aoOn ? Math.min(sc.occlusion, 1) : 0;
+  F.ground.material.userData.u.uFloorAO.value = sc.ground ? aoK : 0;
+  for (const m of F.meshes) m.material.userData.u.uFormAO.value = aoK;
   if (aoOn) {
     const u = sizeSum / sc.objects.length, c = union.getCenter(new T.Vector3()), ext = union.getSize(new T.Vector3());
+    formOcclusionUniform(T).form.value.set(FORM_AO_FORM_REACH * u, sc.ground ? 1 : 0);
     // The footprint of the forms and as far round it as the floor looks.
     formOcclusionRender(c.x, c.z, Math.max(ext.x, ext.z) / 2 + FORM_AO_REACH * u, union.max.y, FORM_AO_REACH * u);
   }
@@ -2786,7 +2836,7 @@ const FORM_PANEL = [
     ['lightMarker', 'Light handles', 'check']]],
   ['Use it', 'actions', []],
   ['Saved scenes', 'scenes', []],
-  ['Ambient', null, [['ambient', 'Fill', 0, 1, 0.01], ['bounce', 'Bounce', 0, 1, 0.01], ['occlusion', 'Sky occlusion', 0, 1, 0.01]]],
+  ['Ambient', null, [['ambient', 'Fill', 0, 1, 0.01], ['bounce', 'Bounce', 0, 1, 0.01], ['occlusion', 'Occlusion', 0, 1, 0.01]]],
   ['Scene', null, [['bg', 'Background', 'color'], ['groundColor', 'Ground', 'color'], ['ground', 'Ground and cast shadow', 'check']]],
   ['Air', 'air', [['haze', 'Haze', 0, 1, 0.02], ['hazeColor', 'Air colour', 'color']]],
 ];
@@ -3057,7 +3107,7 @@ function syncFormsPanel() {
   for (const [k, tip] of [
     ['ambient', 'The sky: light from above that reaches every surface, in the shadow too. Lifts every shadow evenly.'],
     ['bounce', "Light coming up off the floor, in the floor's own colour - strongest low on a form, fading up it."],
-    ['occlusion', 'How much the forms shut the sky out of the floor beside them: a soft dark halo, darkest where a form touches, none far away. Only the sky is dimmed - the light itself is not. Off in Anime and the zones view.']]) {
+    ['occlusion', 'How much the forms shut the sky out of what is beside them: a soft dark halo on the floor, and a dark seam where one form meets another or rests on the floor - darkest at the touch, none far away. Only the sky is dimmed - the light itself is not. Off in Anime and the zones view.']]) {
     const r = panel.querySelector('[data-k="' + k + '"]');
     if (r) r.closest('.frow').title = tip;
   }

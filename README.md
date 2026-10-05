@@ -469,7 +469,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     Bounce slider), so a ball on a red floor has a red underside. The floor beside a form is
     darker than the floor far from it where the form shuts the sky out (the
     Sky occlusion slider) - a soft halo, darkest at the foot, that follows the
-    physics of a ball and a wall and fades under a form held in the air.
+    physics of a ball and a wall and fades under a form held in the air. The same
+    slider (Occlusion) puts a soft dark seam where one form meets another, a
+    limb meets the body, or a form rests on the floor.
   - *Seeing it:* a light-and-shadow zones view that paints highlight, light,
     halftone, terminator, core shadow, reflected light and cast shadow onto the
     forms from the actual lighting; 1-, 2- and 3-point camera presets and a
