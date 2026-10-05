@@ -3037,7 +3037,12 @@ function formsPanelHtml() {
     scenes: `<div class="factions">
         <input type="text" id="formSceneName" placeholder="Name this scene" maxlength="40">
         <button class="ghost" type="button" id="formSceneSave">Save</button></div>
-      <div class="chips" id="formScenes"></div>`,
+      <div class="chips" id="formScenes"></div>
+      <details class="scene-text"><summary>Scene as text</summary>
+        <textarea id="formSceneText" rows="6" spellcheck="false" placeholder="A scene as JSON, or a #forms= share link"></textarea>
+        <div class="factions"><button class="ghost" type="button" id="formSceneCopy" title="The whole scene as JSON, to keep or to give to Claude">Copy this scene</button>
+          <button class="ghost" type="button" id="formSceneLoad" title="Replace the scene with the text above">Load</button></div>
+        <div class="count" id="formSceneMsg" role="status"></div></details>`,
   };
   const groups = FORM_PANEL.map(([title, special, rows]) => {
     let body = (special && extras[special]) || '';
@@ -3755,6 +3760,7 @@ function showForms() {
     bindFormsOrbit();
     bindAnimeNote();
     bindFormsKeys();
+    bindFormsApi();
     bindViewDrill();
     syncFormsPanel();
     requestFormsRender();

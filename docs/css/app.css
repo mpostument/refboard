@@ -196,6 +196,12 @@ button, select, input { font: inherit; color: inherit; }
 .fgroup h4 { margin: 4px 0 0; font-size: 11px; color: var(--dim); font-weight: 500; }
 .scene-chip { display: inline-flex; align-items: center; gap: 2px; }
 .scene-chip .icon-btn { padding: 3px 5px; }
+.scene-text { margin-top: 6px; }
+.scene-text summary { cursor: pointer; font-size: 11px; color: var(--dim); }
+.scene-text textarea {
+  width: 100%; box-sizing: border-box; margin: 6px 0; background: var(--panel); color: inherit;
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: 11px/1.4 monospace; resize: vertical;
+}
 /* Study: a countdown badge over a still-visible form. Hidden: the form is
    covered, and the cover itself is the "reveal" button. */
 #formsCover { position: absolute; inset: 0; z-index: 2; }
