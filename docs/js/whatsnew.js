@@ -15,6 +15,15 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'form-bounce', title: 'Colour from the form next door',
+    text: "3D forms > Light > Ambient > Bounce now also carries colour between forms: a white ball beside a red wall takes a red glow on the side that faces it, a skin-coloured hand beside a blue sleeve a cool edge. It reaches about half a form's size, is as strong as the floor's bounce (same slider), and is not drawn in Anime or the zones view. The glow does not yet depend on how lit the neighbour is.",
+    act: 'Show me', run: () => openForms() },
+  { id: 'fill-shadow', title: 'A shadow from the second light',
+    text: "3D forms > Light > Second light now throws a shadow of its own, softening with distance like the first: a rim light from behind puts a thin shadow in front of a form, a fill from the other side leaves a second, fainter shadow beside the key's. Tick off Casts a shadow if you want it as a plain light. Not drawn in Anime, where the second light is only the rim.",
+    act: 'Show me', run: () => openForms() },
+  { id: 'form-occlusion', title: 'Dark seams where forms meet',
+    text: "3D forms > Light > Ambient > Occlusion now works on the forms too: where one form meets another, where a limb meets the body, or a form rests on the floor, the sky is shut out and a soft dark seam forms in the crease - darkest at the touch, fading within a fraction of a form's size. As before only the sky's light is dimmed, so it shows most in the shadow side and under an overcast sky. Off in Anime and the zones view (the slider is renamed from Sky occlusion).",
+    act: 'Show me', run: () => openForms() },
   { id: 'occlusion', title: 'A dark halo under a form',
     text: "3D forms > Light > Ambient > Sky occlusion: the floor beside a form is darker than the floor far from it, because the form shuts out part of the sky - darkest where it touches, fading in a soft halo, the way a ball on a table sits in its own dim ring. A ball's halo follows the physics (a third of the sky shut out a radius from its foot, a tenth at two), the foot of a wall gets about a third, and a form held in the air shuts out less. Only the sky's light is dimmed, not the sun's, so it shows most under an overcast sky or inside a cast shadow. Off in Anime and the zones view.",
     act: 'Show me', run: () => openForms() },
