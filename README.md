@@ -174,6 +174,17 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   lighter; strong where the area has detail that will be lost (the spread of
   L* in a small window), faint where it is a flat mass, which loses nothing.
   The note gives each share and what to do, in the medium's own ladder.
+- **Toned paper** - in a session (`j`, Workspace > Value, Layers): for grey,
+  tan or black paper, where the paper does the work. On a toned paper the
+  paper is the middle tone, so the picture is built outwards from it: green
+  marks what sits within a few steps of the paper's value (L*) - leave it
+  bare; violet what is darker (the pencil, ink or dark paint); amber what is
+  lighter (white pencil, gouache or pastel); pink the brightest top of the
+  light, a few touches for a gel pen. The note names each in your medium's
+  own words, says which of grey, tan and black sits nearest the picture's
+  middle value, and holds the paper's chips and a colour of your own (kept).
+  The picture is blurred a little first, so noise does not turn an area into
+  confetti. On a black paper there is nothing to darken - only lights.
 - **Temperature map** - in a session (`t`, Workspace > Colour, Layers): which
   areas are warm and which cool, and white lines where the temperature
   turns. Temperature is the colour on OKLab's orange-blue axis, measured

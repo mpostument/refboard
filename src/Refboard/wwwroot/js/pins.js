@@ -29,6 +29,7 @@ const HUD_TOOLS = [
   { id: 'amounts', label: 'Amounts - which leads', els: ['btnAmounts'], key: 'u', group: 'look' },
   { id: 'tangents', label: 'Tangents', els: ['btnTangents'], key: 'n', group: 'look' },
   { id: 'lineweight', label: 'Line weight', els: ['btnLineWeight'], key: 'k', group: 'look' },
+  { id: 'tone', label: 'Toned paper', els: ['btnTone'], key: 'j', group: 'look' },
   { id: 'compare', label: 'Compare your drawing', els: ['btnCompare'], key: 'd', group: 'look' },
   { id: 'workspace', label: 'Workspace - tools by question', els: ['btnWorkspace'], key: 'w', group: 'look' },
   { id: 'layers', label: 'Layers', els: ['btnLayers'], key: '', group: 'look' },

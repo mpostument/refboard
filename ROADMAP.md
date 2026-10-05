@@ -592,8 +592,6 @@ Any medium:
 - **Presets by medium.** "Liner sketch, 5 min", "watercolour study,
   45 min with stages", "pencil value study, 20 min" - each with its timer,
   its overlays and its advice.
-- **Toned paper.** For grey, tan or black paper: where to leave the paper,
-  where the white pencil or gel pen goes, where the darks go.
 - **Pencil grade map.** For graphite: over the photo, which grade each
   area wants, 2H to 8B, from its value.
 - **Calibration from a swatch photo.** Swatch your own pencils or markers

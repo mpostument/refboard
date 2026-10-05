@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'tone', title: 'Toned paper',
+    text: "Over any picture in a session (j, or Workspace > Value): for grey, tan or black paper, which parts to leave as the paper (green), where the darks go (violet), where a white pencil or gouache goes (amber) and the few brightest touches for a gel pen (pink). It names the medium's own way to do each, and says which of the three papers sits nearest the picture's middle value. Pick the paper in the note, or a colour of your own.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'fast-recipes', title: 'Recipes twice as fast',
     text: "Every recipe - the eyedropper's, the Colour studio's, the palette generator's, the light and character sheets' - is now found in half the time (a colour from the 27 tubes of the Holbein box in well under a tenth of a second), with exactly the same recipes as before. So the Wheel no longer asks: the recipes for the chosen colour come up by themselves once the wheel is still.",
     act: 'Show me', run: () => openColour('wheel') },
