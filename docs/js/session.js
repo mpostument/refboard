@@ -508,6 +508,7 @@ function show(src) {
     if (state.amountsOn) runAmounts();
     if (state.tangentsOn) runTangents();
     if (state.lineWeightOn) runLineWeight();
+    if (state.toneOn) runTone();
     refreshValueTools();
   };
   img.onerror = () => {
@@ -568,6 +569,7 @@ function show(src) {
   clearAmounts();
   clearTangents();
   clearLineWeight();
+  clearTone();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);

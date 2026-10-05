@@ -19,6 +19,7 @@ const WS_TABS = [
     { hud: 'squint', about: 'details blurred - the big shapes of light and dark' },
     { hud: 'edges', about: 'which edges are hard and which soft - on dry paper, or wet-in-wet' },
     { hud: 'range', about: 'what the paper can do: the darks and lights your medium cannot tell apart' },
+    { hud: 'tone', about: 'on grey, tan or black paper: what to leave as the paper, where the white goes, where the darks go' },
     { hud: 'amounts', about: 'how much light, middle and dark - one leads, or equal amounts that read as undecided' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },

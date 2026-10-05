@@ -8,7 +8,7 @@
 // updateFooterVersion() below overwrites it with the real running version
 // from /healthz, so this constant drifting a little on Pages costs nothing
 // where it actually matters.
-const APP_VERSION = '0.24.0';
+const APP_VERSION = '0.25.0';
 
 /* ---- icons. Line icons on a 24-unit grid, drawn in currentColor so they
    take the button's colour and its hover and pressed states. Any element
@@ -30,6 +30,7 @@ const ICONS = {
   edges: '<path d="M12 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7"/><path d="M12 4h7a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-7" stroke-dasharray="1.2 2.6"/><path d="M12 4v16"/>',
   range: '<path d="M4 6h16v12H4z"/><path d="M4 12h16" stroke-dasharray="2 2.5"/><path d="M8 6v12M16 6v12" opacity=".45"/>',
   tangents: '<circle cx="8" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4"/><path d="M3 4h18" opacity=".45"/>',
+  tone: '<path d="M4 6h16v12H4z"/><path d="M4 6h16v4H4z" opacity=".3" fill="currentColor"/><path d="M4 14h16v4H4z" opacity=".75" fill="currentColor"/>',
   lineweight: '<path d="M4 6.5h16" stroke-width="1"/><path d="M4 12h16" stroke-width="2.2"/><path d="M4 17.5h16" stroke-width="3.6"/>',
   amounts: '<path d="M4 5h16v4H4z"/><path d="M4 11h9v3.5H4z"/><path d="M4 16.5h4V19H4z"/>',
   temp: '<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a3.5 3.5 0 1 1-4 0z"/><path d="M12 9v7"/><path d="M17 6h3M17 10h2"/>',
@@ -533,6 +534,7 @@ const state = {
   amountsOn: false,           // unequal amounts counted - see toggleAmounts()
   tangentsOn: false,          // tangents marked - see toggleTangents()
   lineWeightOn: false,        // contours weighed - see toggleLineWeight()
+  toneOn: false,              // toned paper's zones shown - see toggleTone()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,
   // Browse mode - the stage opened on a grid cell rather than on a session.

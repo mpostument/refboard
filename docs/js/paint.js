@@ -243,28 +243,66 @@ function paintInit() {
       A: c.R.map((r, i) => Math.max(0, -Math.log(Math.max(r, 1e-4) / paper[i]))) };
   }
   paintData.paper = paper;
+  // The CIE curves spectral.js turns a spectrum into XYZ with: a spectrum
+  // that is 1 in one band and 0 elsewhere gives that band's column.
+  paintData.cmf = [0, 1, 2].map(() => new Float64Array(38));
+  for (let i = 0; i < 38; i++) {
+    const u = new Array(38).fill(0); u[i] = 1;
+    new spectral.Color(u).XYZ.forEach((v, j) => paintData.cmf[j][i] = v);
+  }
   return paintData;
+}
+
+/* A spectrum's OKLab, as spectral.js's Color(R).OKLab gives it - the same
+   sums in the same order, so the same numbers to the last bit - without
+   the sRGB the Color works out too. The recipe search scores a few hundred
+   thousand mixtures and needs only this; sRGB is for the few it shows. */
+const PAINT_XYZ_LMS = [
+  [0.819022437996703, 0.3619062600528904, -0.1288737815209879],
+  [0.0329836539323885, 0.9292868615863434, 0.0361446663506424],
+  [0.0481771893596242, 0.2642395317527308, 0.6335478284694309]];
+const PAINT_LMS_LAB = [
+  [0.210454268309314, 0.7936177747023054, -0.0040720430116193],
+  [1.9779985324311684, -2.4285922420485799, 0.450593709617411],
+  [0.0259040424655478, 0.7827717124575296, -0.8086757549230774]];
+function paintLab(R, out = new Array(3)) {
+  const [c0, c1, c2] = paintData.cmf, M = PAINT_XYZ_LMS, N = PAINT_LMS_LAB;
+  let X = 0, Y = 0, Z = 0;
+  for (let i = 0; i < 38; i++) { const r = R[i]; X += c0[i] * r; Y += c1[i] * r; Z += c2[i] * r; }
+  const l = Math.cbrt(M[0][0] * X + M[0][1] * Y + M[0][2] * Z);
+  const m = Math.cbrt(M[1][0] * X + M[1][1] * Y + M[1][2] * Z);
+  const s = Math.cbrt(M[2][0] * X + M[2][1] * Y + M[2][2] * Z);
+  for (let j = 0; j < 3; j++) out[j] = N[j][0] * l + N[j][1] * m + N[j][2] * s;
+  return out;
 }
 
 // A mixture - [[pigmentKey, parts], ...] - as a spectral.js Color.
 function paintMix(parts) {
-  const D = paintInit(), R = new Array(38);
+  return new spectral.Color(paintMixR(parts, new Array(38)));
+}
+// Its spectrum, into R.
+function paintMixR(parts, R) {
+  const D = paintInit(), KS = parts.map(([k]) => D[k].KS), c = parts.map(([k, n]) => n * D[k].w);
+  let t = 0;
+  for (let j = 0; j < c.length; j++) t += c[j];
   for (let i = 0; i < 38; i++) {
-    let ks = 0, t = 0;
-    for (const [k, n] of parts) { const c = n * D[k].w; ks += D[k].KS[i] * c; t += c; }
+    let ks = 0;
+    for (let j = 0; j < c.length; j++) ks += KS[j][i] * c[j];
     ks /= t;
     R[i] = 1 + ks - Math.sqrt(ks * ks + 2 * ks);
   }
-  return new spectral.Color(R);
+  return R;
 }
 // What a mixture absorbs at full strength, per band - the same at every
 // strength of wash, so a search over strengths works it out once.
-function paintAbsorbance(parts) {
-  const D = paintInit(), a = new Array(38).fill(0);
-  const t = parts.reduce((x, [k, n]) => x + n * PIGMENTS[k].ts, 0);
+function paintAbsorbance(parts, a = new Array(38)) {
+  const D = paintInit();
+  let t = 0;
+  for (const [k, n] of parts) t += n * PIGMENTS[k].ts;
+  a.fill(0);
   for (const [k, n] of parts) {
-    const w = n * PIGMENTS[k].ts / t;
-    for (let i = 0; i < 38; i++) a[i] += w * D[k].A[i];
+    const w = n * PIGMENTS[k].ts / t, A = D[k].A;
+    for (let i = 0; i < 38; i++) a[i] += w * A[i];
   }
   return a;
 }
@@ -273,6 +311,32 @@ function paintWashOf(a, s) {
   const D = paintInit(), R = new Array(38);
   for (let i = 0; i < 38; i++) R[i] = D.paper[i] * Math.exp(-s * a[i]);
   return new spectral.Color(R);
+}
+/* That absorbance at the strengths of PAINT_WASH from w0 up to w1, as
+   spectra - into buffers the next call reuses. Math.exp was more than half
+   the search; but every strength is a whole number of hundredths, so
+   exp(-s a) is exp(-a/100) to a whole power, and one exp per band and its
+   squarings (e, e^2, e^4 ... e^64) build all nine by multiplying. */
+const paintWashBufs = PAINT_WASH.map(() => new Float64Array(38));
+const paintWashBits = PAINT_WASH.map(s => {
+  const n = Math.round(s * 100), bits = [];
+  for (let b = 0; 1 << b <= n; b++) if (n & 1 << b) bits.push(b);
+  return bits;
+});
+const paintPow2 = new Float64Array(7);
+function paintWashesR(a, w0, w1) {
+  const paper = paintData.paper, P = paintPow2;
+  for (let i = 0; i < 38; i++) {
+    let e = Math.exp(-a[i] / 100);
+    for (let b = 0; b < 7; b++) { P[b] = e; e *= e; }
+    for (let k = w0; k < w1; k++) {
+      const bits = paintWashBits[k];
+      let r = paper[i];
+      for (let j = 0; j < bits.length; j++) r *= P[bits[j]];
+      paintWashBufs[k][i] = r;
+    }
+  }
+  return paintWashBufs;
 }
 // A watercolour wash of a mixture at strength s, on the paper.
 const paintWash = (parts, s) => paintWashOf(paintAbsorbance(parts), s);
@@ -296,46 +360,54 @@ function paintRecipes(rgb, paletteKey = paintPaletteKey(), count = 4, medium = p
   const keys = paintKeys(paletteKey, medium), water = medium === 'water';
   const target = new spectral.Color(rgb).OKLab;
   const dist = lab => 100 * Math.hypot(lab[0] - target[0], lab[1] - target[1], lab[2] - target[2]);
-  const all = [];
-  // In watercolour each mixture is tried at every strength of wash, and
-  // only its best kept.
-  const add = (parts, washes = PAINT_WASH) => {
+  // Only the best mixture of each set of pigments is ever offered, so only
+  // that is kept - the first to reach the lowest score, in the order sets
+  // were first tried.
+  const best = new Map(), R = new Float64Array(38), A = new Float64Array(38), lab = new Array(3);
+  // In watercolour each mixture is tried at every strength of wash - the
+  // ones from w0 up to w1 - and only its best kept. `set` names its
+  // pigments, sorted and joined by +.
+  const add = (parts, set, w0 = 0, w1 = PAINT_WASH.length) => {
     const g = parts.reduce((a, [, n]) => gcd(a, n), 0);
-    const p = parts.map(([k, n]) => [k, n / g]).sort((a, b) => b[1] - a[1]);
-    let best = null;
-    const abs = water ? paintAbsorbance(p) : null;
-    for (const w of water ? washes : [null]) {
-      const c = water ? paintWashOf(abs, w) : paintMix(p), dE = dist(c.OKLab);
-      if (!best || dE < best.dE) best = { parts: p, wash: w, dE, score: dE + 2.5 * (p.length - 1), set: p.map(q => q[0]).sort().join('+'), rgb: paintRgb(c) };
-    }
-    all.push(best);
+    // Most parts first, equal ones in palette order - the same mixture
+    // found by two routes reads the same whichever won by a rounding.
+    const p = parts.map(([k, n]) => [k, n / g]).sort((a, b) => b[1] - a[1] || keys.indexOf(a[0]) - keys.indexOf(b[0]));
+    let dE = Infinity, wash = null;
+    if (water) {
+      const washes = paintWashesR(paintAbsorbance(p, A), w0, w1);
+      for (let k = w0; k < w1; k++) {
+        const d = dist(paintLab(washes[k], lab));
+        if (d < dE) { dE = d; wash = PAINT_WASH[k]; }
+      }
+    } else dE = dist(paintLab(paintMixR(p, R), lab));
+    const score = dE + 2.5 * (p.length - 1), o = best.get(set);
+    if (!o || o.score > score) best.set(set, { parts: p, wash, dE, score, set });
   };
+  const ranking = sets => sets.sort((a, b) => a.score - b.score);
   // The paper itself - the watercolourist's white.
   if (water) {
     const c = new spectral.Color(paintInit().paper), dE = dist(c.OKLab);
-    all.push({ parts: [], wash: 0, dE, score: dE, set: 'paper', rgb: paintRgb(c) });
+    best.set('paper', { parts: [], wash: 0, dE, score: dE, set: 'paper', rgb: paintRgb(c) });
   }
-  for (const k of keys) add([[k, 1]]);
-  for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++)
-    for (const a of PAINT_PARTS) for (const b of PAINT_PARTS) if (gcd(a, b) === 1) add([[keys[i], a], [keys[j], b]]);
-  // Best pair per set, the top few of those, each with every third pigment.
-  const bestOf = list => {
-    const m = new Map();
-    for (const r of list) if (!m.has(r.set) || m.get(r.set).score > r.score) m.set(r.set, r);
-    return [...m.values()].sort((a, b) => a.score - b.score);
-  };
+  for (const k of keys) add([[k, 1]], k);
+  for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
+    const set = [keys[i], keys[j]].sort().join('+');
+    for (const a of PAINT_PARTS) for (const b of PAINT_PARTS) if (gcd(a, b) === 1) add([[keys[i], a], [keys[j], b]], set);
+  }
+  // The best few pairs, each with every third pigment.
   const T = water ? [1, 2, 3, 4, 6] : [1, 2, 3, 4, 6, 8, 12];
-  for (const pr of bestOf(all.filter(r => r.parts.length === 2)).slice(0, 8)) {
+  for (const pr of ranking([...best.values()].filter(r => r.parts.length === 2)).slice(0, 8)) {
     const [a, b] = pr.parts.map(q => q[0]);
     // Washes near the pair's own: a third pigment shifts the hue more than
     // how much water the colour wants.
-    const wi = PAINT_WASH.indexOf(pr.wash), washes = water ? PAINT_WASH.slice(Math.max(0, wi - 2), wi + 3) : undefined;
+    const wi = PAINT_WASH.indexOf(pr.wash), w0 = Math.max(0, wi - 2), w1 = Math.min(PAINT_WASH.length, wi + 3);
     for (const c of keys) {
       if (c === a || c === b) continue;
-      for (const x of T) for (const y of T) for (const z of T) add([[a, x], [b, y], [c, z]], washes);
+      const set = [a, b, c].sort().join('+');
+      for (const x of T) for (const y of T) for (const z of T) add([[a, x], [b, y], [c, z]], set, w0, w1);
     }
   }
-  const ranked = bestOf(all), out = [];
+  const ranked = ranking([...best.values()]), out = [];
   const within = Math.max(ranked[0].dE + 6, 8);
   for (const r of ranked) {
     if (out.length && r.dE > within) continue;
@@ -352,8 +424,10 @@ function paintRecipes(rgb, paletteKey = paintPaletteKey(), count = 4, medium = p
     if (out.length >= Math.min(3, count)) break;
     if (!out.includes(r)) out.push(r);
   }
-  // Chosen with simplicity in the scales; shown closest first.
+  // Chosen with simplicity in the scales; shown closest first, each with
+  // the colour it gives.
   out.sort((a, b) => a.dE - b.dE);
+  for (const r of out) r.rgb ??= paintRgb(water ? paintWash(r.parts, r.wash) : paintMix(r.parts));
   // A granulating recipe points at the smooth one beside it, when there is
   // one about as close - for skin, which wants a smooth wash.
   if (water) for (const r of out) {
