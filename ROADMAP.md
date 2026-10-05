@@ -488,6 +488,22 @@ packs (below), and moving a picture to another folder by hand.
   where the area is flat. Still to come: the range measured from a swatch
   photo (see Calibration), the paper's own tone, and the picture shown
   squeezed into the range, as a preview.
+- **Shadows in the 3D forms, the rest.** In place (`formSoftShadowChunk()` in
+  `js/forms.js`): percentage-closer soft shadows in place of three's PCF, whose
+  five samples blurred every edge alike and left the lit side of a form
+  speckled under a lamp (39% of a lit ball's pixels, measured; 0.3% now). The
+  map's raw depths are read to find what blocks the light and how far above the
+  point it is; the penumbra is that gap times the light's size, so the foot of
+  a form is sharp and a shadow thrown far is soft, from the sun (a tangent
+  from `softness`) and from a lamp (a radius in world units). A surface is
+  compared as the plane it lies in, which is what keeps a wide penumbra from
+  shadowing a tilted lit face. Still to come: sky occlusion - the dark halo
+  under a form where the hemisphere's light is blocked, which the key's shadow
+  does not give (the floor beside a ball is as bright as the floor far from it,
+  in the shadow's own light); shadows from the second light; bounce coloured by
+  the nearby forms and not only the floor; and the cost, if a scene of many
+  forms is slow - 44 depth reads a pixel is what a Worker or a half-size
+  shadow pass would trim.
 - **Light and shadow, the rest.** In place (`js/light.js`, Colour studio >
   Light, Ctrl+K "shadow"): a light as two spectra - the key (a black body
   at its colour temperature) and the fill that is all a shadow gets (the

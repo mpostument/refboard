@@ -457,8 +457,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     the pointer, scroll over it (or Shift+scroll) to move it nearer or further -
     from the sun's parallel rays to a close lamp with falloff across the form
     and a shadow that fans out. The lights stay put while you orbit. Plus
-    height, strength, colour and softness, presets, a second fill or rim
-    light, and separate fill and floor-coloured bounce light.
+    height, strength and colour, presets, a second fill or rim light, and
+    separate fill and floor-coloured bounce light.
+  - *Shadows that soften as real ones do:* Softness is how big the light looks
+    (a bare bulb to a window), and a shadow is sharp where a form touches the
+    floor and softer the further it is thrown - a form in the air has a soft
+    shadow, one on the floor a hard foot - from the sun and from a lamp, with
+    no grain and no speckle on the lit side of a form. Anime keeps its
+    shadows hard.
   - *Seeing it:* a light-and-shadow zones view that paints highlight, light,
     halftone, terminator, core shadow, reflected light and cast shadow onto the
     forms from the actual lighting; 1-, 2- and 3-point camera presets and a

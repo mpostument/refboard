@@ -120,10 +120,17 @@ async function formsInitThree() {
   // buffer the compositor may already have cleared.
   const renderer = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
   renderer.shadowMap.enabled = true;
-  // PCF rather than VSM: variance maps blur more smoothly, but the blur also
-  // smears the edge of the shadow camera's frustum into a faint line across
-  // the floor. PCF's jittered taps at shadow.radius read as a clean penumbra.
-  renderer.shadowMap.type = T.PCFShadowMap;
+  // Soft shadows that soften the way a real one does - sharp where a form
+  // touches what it shadows, wider the further the shadow is thrown (see
+  // formSoftShadowChunk) - need the shadow map's raw depths, to find what
+  // blocks the light. Three's own PCF compares them in hardware and never
+  // shows them, so the plain map is used and the filtering is ours. VSM
+  // would blur more smoothly, but smears the edge of the shadow camera's
+  // frustum into a faint line across the floor. Should the chunk no longer
+  // have the shape this expects (a newer three), the stock PCF stays.
+  const soft = formSoftShadowChunk(C.shadowmap_pars_fragment);
+  if (soft) C.shadowmap_pars_fragment = soft;
+  renderer.shadowMap.type = soft ? T.BasicShadowMap : T.PCFShadowMap;
 
   const scene = new T.Scene();
   const camera = new T.PerspectiveCamera(40, 4 / 3, 0.1, 1000);
@@ -192,7 +199,149 @@ function formGuideUniforms(T, lines) {
     uCel: { value: 0 }, uCelBase: { value: new T.Color() }, uCelShade: { value: new T.Color() },
     uCelHi: { value: new T.Color() }, uCelHiSize: { value: 0 },
     uCelRim: { value: new T.Color() }, uRimDir: { value: new T.Vector3(0, 0, 1) }, uRim: { value: 0 },
+    uSoft: formSoftUniform(T),
   };
+}
+
+/* ---- soft shadows. A real shadow is sharp where the form touches what it
+   shadows and spreads as it is thrown, because a light is not a point: from
+   each spot of the floor, the light is a disc, and a form near the floor
+   hides all of it while one high above hides only part. That is the
+   penumbra, and it is why a shadow from a lamp looks soft at the far end
+   and hard at the foot. Three's PCF blurs every edge by the same amount,
+   with five samples, which reads as a drop shadow and shows its noise; this
+   is "percentage-closer soft shadows":
+     1. look around the point for what blocks the light, and how far above
+        the point it is on average (the gap);
+     2. the penumbra's radius is that gap times the light's apparent size;
+     3. average thirty-two samples over a disc that wide.
+   The receiver is treated as the plane it lies in - read off how its
+   position changes from one pixel to the next - so a sample beside the
+   point is compared with the plane's depth there, not the point's own.
+   Without that, any tilted lit surface shadows itself the wider the disc
+   gets (acne).
+   uSoft: x, how fast the sun's penumbra grows with the gap, in shadow-map
+   uv per unit of its depth; y, the widest penumbra, in texels; z, the
+   lamp's radius, in world units; w, the narrowest, in texels - what keeps
+   a hard shadow from stair-stepping. One for the whole scene, set in
+   formsRender: only one of the sun and the lamp is ever on. */
+let formSoftU = null;
+const formSoftUniform = T => formSoftU || (formSoftU = { value: new T.Vector4(0.1, 48, 0.05, 1.2) });
+
+const FORM_SOFT_COMMON_GLSL = `
+	uniform vec4 uSoft;
+	float rbNoise( vec2 p ) { return fract( 52.9829189 * fract( dot( p, vec2( 0.06711056, 0.00583715 ) ) ) ); }
+	vec2 rbDisk( int i, int n, float phi ) {
+		float r = sqrt( ( float( i ) + 0.5 ) / float( n ) );
+		float a = float( i ) * 2.399963229728653 + phi;
+		return vec2( cos( a ), sin( a ) ) * r;
+	}
+`;
+const FORM_SOFT_SUN_GLSL = `
+	float getShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord ) {
+		shadowCoord.xyz /= shadowCoord.w;
+		shadowCoord.z += shadowBias;
+		// The receiver's plane: depth change per unit of uv. Taken before any
+		// branch - derivatives are only defined where every pixel of the quad agrees.
+		vec3 dx = dFdx( shadowCoord.xyz ), dy = dFdy( shadowCoord.xyz );
+		float det = dx.x * dy.y - dx.y * dy.x;
+		vec2 slope = abs( det ) > 1e-14 ? vec2( dx.z * dy.y - dy.z * dx.y, dy.z * dx.x - dx.z * dy.x ) / det : vec2( 0.0 );
+		float shadow = 1.0;
+		if ( shadowCoord.x >= 0.0 && shadowCoord.x <= 1.0 && shadowCoord.y >= 0.0 && shadowCoord.y <= 1.0 && shadowCoord.z <= 1.0 ) {
+			float texel = 1.0 / shadowMapSize.x;
+			float rMin = max( uSoft.w, 1.0 ) * texel, rMax = max( uSoft.y, uSoft.w ) * texel;
+			float phi = rbNoise( gl_FragCoord.xy ) * 6.2831853;
+			float gap = 0.0, found = 0.0;
+			for ( int i = 0; i < 12; i ++ ) {
+				vec2 o = rbDisk( i, 12, phi ) * rMax;
+				float zr = shadowCoord.z + clamp( dot( o, slope ), - 0.02, 0.02 ) - 0.0004;
+				float d = textureLod( shadowMap, shadowCoord.xy + o, 0.0 ).r;
+				if ( d < zr ) { gap += zr - d; found += 1.0; }
+			}
+			if ( found > 0.0 ) {
+				float radius = clamp( gap / found * uSoft.x, rMin, rMax );
+				float lit = 0.0;
+				for ( int i = 0; i < 32; i ++ ) {
+					vec2 o = rbDisk( i, 32, phi + 1.0 ) * radius;
+					float zr = shadowCoord.z + clamp( dot( o, slope ), - 0.02, 0.02 ) - 0.0004;
+					lit += step( zr, textureLod( shadowMap, shadowCoord.xy + o, 0.0 ).r );
+				}
+				shadow = lit / 32.0;
+			}
+		}
+		return mix( 1.0, shadow, shadowIntensity );
+	}
+`;
+// The lamp: a cube map, whose depth is stored along the major axis and not
+// linearly - so each lookup is turned back into a distance before it is
+// compared, and the plane is intersected along each sample's own direction.
+const FORM_SOFT_LAMP_GLSL = `
+	#if NUM_POINT_LIGHT_SHADOWS > 0
+	float rbLinear( float d, float n, float f ) { return f * n / ( f - d * ( f - n ) ); }
+	// How far along its major axis the receiver's plane is in direction d.
+	float rbPlane( vec3 d, vec3 pn, float planeD, float dist ) {
+		float c = dot( pn, d );
+		float t = abs( c ) > 1e-5 ? clamp( planeD / c, 0.0, dist * 3.0 ) : dist;
+		vec3 a = abs( d );
+		return t * max( max( a.x, a.y ), a.z );
+	}
+	float getPointShadow( samplerCube shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord, float shadowCameraNear, float shadowCameraFar ) {
+		vec3 toP = shadowCoord.xyz;
+		vec3 pn = cross( dFdx( toP ), dFdy( toP ) );
+		float shadow = 1.0;
+		vec3 ab = abs( toP );
+		float vz = max( max( ab.x, ab.y ), ab.z );
+		float n = shadowCameraNear, f = shadowCameraFar;
+		if ( vz - f <= 0.0 && vz - n >= 0.0 ) {
+			float dist = length( toP );
+			vec3 dir = toP / dist;
+			vec3 tn = normalize( cross( dir, abs( dir.x ) > abs( dir.z ) ? vec3( 0.0, 1.0, 0.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
+			vec3 bn = cross( dir, tn );
+			float pl = length( pn );
+			pn = pl > 1e-20 ? pn / pl : dir;
+			float planeD = dot( pn, toP );
+			float texelA = 2.0 / shadowMapSize.x;
+			float rMin = max( uSoft.w, 1.0 ) * texelA;
+			float rMax = clamp( uSoft.z / dist * 2.0, rMin, max( uSoft.y, uSoft.w ) * texelA );
+			float phi = rbNoise( gl_FragCoord.xy ) * 6.2831853;
+			float ratio = 0.0, found = 0.0;
+			for ( int i = 0; i < 12; i ++ ) {
+				vec2 o = rbDisk( i, 12, phi ) * rMax;
+				vec3 d3 = normalize( dir + tn * o.x + bn * o.y );
+				float zr = rbPlane( d3, pn, planeD, dist );
+				float zb = rbLinear( textureLod( shadowMap, d3, 0.0 ).r, n, f );
+				if ( zb < zr * 0.996 - shadowBias ) { ratio += ( zr - zb ) / zb; found += 1.0; }
+			}
+			if ( found > 0.0 ) {
+				float radius = clamp( uSoft.z * ratio / found / dist, rMin, rMax );
+				float lit = 0.0;
+				for ( int i = 0; i < 32; i ++ ) {
+					vec2 o = rbDisk( i, 32, phi + 1.0 ) * radius;
+					vec3 d3 = normalize( dir + tn * o.x + bn * o.y );
+					float zr = rbPlane( d3, pn, planeD, dist );
+					lit += step( zr * 0.996 - shadowBias, rbLinear( textureLod( shadowMap, d3, 0.0 ).r, n, f ) );
+				}
+				shadow = lit / 32.0;
+			}
+		}
+		return mix( 1.0, shadow, shadowIntensity );
+	}
+	#endif
+`;
+
+/* Three's shadow chunk with its two lookups replaced by the above: its own
+   (renamed, so nothing in it can call them by mistake) stay for the types
+   that are not in use. The sun's goes in front of the cascade function that
+   calls getShadow, the lamp's in front of its own - the two places the
+   chunk is split on. null when it is not shaped as expected. */
+function formSoftShadowChunk(src) {
+  const sun = src.indexOf('float getSunShadow('), lamp = src.indexOf('float getPointShadow(');
+  if (sun < 0 || lamp < 0 || !src.includes('SHADOWMAP_TYPE_BASIC')) return null;
+  const sunIf = src.lastIndexOf('#if NUM_SUN_LIGHT_SHADOWS > 0', sun), lampIf = src.lastIndexOf('#if NUM_POINT_LIGHT_SHADOWS > 0', lamp);
+  if (sunIf < 0 || lampIf < sunIf) return null;
+  return src.slice(0, sunIf).replaceAll('float getShadow(', 'float getShadowStock(') +
+    FORM_SOFT_COMMON_GLSL + FORM_SOFT_SUN_GLSL + src.slice(sunIf, lampIf) +
+    FORM_SOFT_LAMP_GLSL + src.slice(lampIf).replaceAll('float getPointShadow(', 'float getPointShadowStock(');
 }
 
 // The key light is whichever light casts a shadow - the fill never does.
@@ -650,9 +799,10 @@ function formsRender(sc, w, h, clean = false) {
     return new T.Vector3(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a));
   };
   const L = dirFrom(sc.lightAz, sc.lightEl), elev = THREE_DEG * sc.lightEl;
-  // Softness blurs a shadow edge with scattered samples - noise a gradient
-  // averages away but cel shading's hard cut turns to speckle. Anime's cast
-  // shadows are hard anyway; the map is the light's, so it is the scene's.
+  // Softness is the size of the light (see formSoftShadowChunk). Anime's cast
+  // shadows are hard - a cel's edge is a cut, and a penumbra under it would
+  // only be the speckle of its dither - and the map is the light's, so it is
+  // the scene's: one Anime form makes every shadow in it hard.
   const softness = formSceneIsCel(sc) ? 0 : sc.softness;
 
   // The sun. Its shadow camera must reach the tip of the cast shadow, which
@@ -666,14 +816,20 @@ function formsRender(sc, w, h, clean = false) {
   k.position.copy(target).addScaledVector(L, s * 3);
   Object.assign(k.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 0.01, far: s * 6 });
   k.shadow.camera.updateProjectionMatrix();
-  k.shadow.radius = 1 + softness * 24; // in shadow-map texels
+  // Softness is how big the light looks. The sun's half-width as a tangent -
+  // the real sun's is 0.005 - which the shader multiplies by the gap between
+  // a shadow and what throws it, so a form on the floor has a hard foot and
+  // one in the air a soft shadow. Out in the shadow map's own units that is
+  // the gap's share of the depth the map covers, per share of its width.
+  const sunTan = 0.006 + 0.2 * softness, shadowCam = k.shadow.camera;
+  formSoftUniform(T).value.x = (shadowCam.far - shadowCam.near) / (shadowCam.right - shadowCam.left) * sunTan;
   // Along the surface normal, in world units: enough to lift a lit face clear
-  // of its own recorded depth (the speckle of shadow acne). It has to grow
-  // with the softness, because PCF compares against depths up to `radius`
-  // texels to the side, where a curved surface already stands higher. Still
-  // far too little to open a gap where a form meets the floor.
+  // of its own recorded depth (the speckle of shadow acne). The wide
+  // penumbra needs no more - the shader compares the plane a surface lies in,
+  // not the point - and it is still far too little to open a gap where a
+  // form meets the floor.
   k.shadow.bias = 0;
-  k.shadow.normalBias = (2 * s / k.shadow.mapSize.x) * (1.5 + k.shadow.radius);
+  k.shadow.normalBias = (2 * s / k.shadow.mapSize.x) * 2;
 
   // The lamp. Only one of the two is ever on; an invisible light is left out
   // of both shading and shadow passes entirely, not just dimmed.
@@ -701,7 +857,10 @@ function formsRender(sc, w, h, clean = false) {
   bulb.shadow.camera.near = rad * 0.1;
   bulb.shadow.camera.far = bulbDist + rad * 30;
   bulb.shadow.camera.updateProjectionMatrix();
-  bulb.shadow.radius = 1 + softness * 12;
+  // The lamp's radius, in world units - a bare bulb is small, a softbox big.
+  // Squared, so the low half of the slider stays a bulb; at 0.4 the lamp's
+  // penumbra matches the sun's at the same setting when it stands 3 radii off.
+  formSoftUniform(T).value.z = rad * (0.015 + 1.2 * softness * softness);
   // Normal offset in world units, not a depth bias: a cube shadow map stores
   // perspective depth, where a fixed bias near the far plane spans a large
   // real distance - enough to light the floor right under the form, the one
@@ -2680,7 +2839,8 @@ function syncFormsPanel() {
   el('formCelNote').classList.toggle('hidden', !cel);
   const soft = panel.querySelector('[data-k="softness"]');
   soft.disabled = formSceneIsCel(formScene);
-  soft.closest('.frow').title = soft.disabled ? 'Cast shadows are hard-edged while a form is Anime' : '';
+  soft.closest('.frow').title = soft.disabled ? 'Cast shadows are hard-edged while a form is Anime'
+    : 'How big the light looks - a bare bulb is small, a window or an overcast sky is big. A bigger light throws a softer shadow: still sharp where a form touches the floor, softer the further it is thrown.';
   for (const b of panel.querySelectorAll('[data-preset]')) {
     const p = LIGHT_PRESETS[b.dataset.preset];
     b.setAttribute('aria-pressed', String(p.az === formScene.lightAz && p.el === formScene.lightEl));
