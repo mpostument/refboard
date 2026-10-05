@@ -210,6 +210,9 @@ function formGuideUniforms(T, lines) {
     // under them (y).
     uFormAO: { value: 0 }, uAOBot: formOcclusionUniform(T).bot, uAOTop: formOcclusionUniform(T).top,
     uAOForm: formOcclusionUniform(T).form,
+    // Light thrown from one form onto another: its strength (the Bounce
+    // slider's, 0 where off) and the picture of the forms' colours from above.
+    uNbr: { value: 0 }, uAOTint: formOcclusionUniform(T).tint,
   };
 }
 // The occlusion map and where it lies on the floor: x, z of its centre and
@@ -218,6 +221,7 @@ let formAOU = null;
 const formOcclusionUniform = T => formAOU || (formAOU = {
   tex: { value: null }, box: { value: new T.Vector3(0, 0, 1) },
   bot: { value: null }, top: { value: null }, form: { value: new T.Vector2(1, 1) },
+  tint: { value: null },
 });
 
 /* ---- sky occlusion. Under a ball the sky is shut out, and for some way
@@ -308,6 +312,9 @@ function formOcclusionKit() {
     }),
     quadScene: new T.Scene(), quadCam: new T.OrthographicCamera(-1, 1, 1, -1, 0, 1),
     bot: target(FORM_AO_SIZE, true, T.NearestFilter), top: target(FORM_AO_SIZE, true, T.NearestFilter),
+    // The forms' own colours, seen from above (a form's flat colour, not lit).
+    tint: target(FORM_AO_SIZE, true, T.NearestFilter),
+    tintMats: new WeakMap(),
     raw: target(FORM_AO_MAP, false, T.LinearFilter), out: target(FORM_AO_MAP, false, T.LinearFilter),
   };
   ao.quad = new T.Mesh(new T.PlaneGeometry(2, 2), ao.map);
@@ -347,6 +354,22 @@ function formOcclusionRender(cx, cz, half, top, reach) {
   look(ao.below, ao.bot, -lift, 1);
   ao.above.uniforms.uH.value.set(-span, top + lift);         // and falls with the distance down from above
   look(ao.above, ao.top, top + lift, -1);
+  // The same view again in the forms' colours, for the light they throw on
+  // one another: each part is drawn flat in its material's colour, and the
+  // depth buffer keeps the one on top, the one the height picture holds.
+  const worn = [];
+  for (const root of F.meshes) root.traverse(o => {
+    if (!o.isMesh || Array.isArray(o.material)) return;
+    let tm = ao.tintMats.get(o);
+    if (!tm) ao.tintMats.set(o, tm = new T.ShaderMaterial({ uniforms: { uC: { value: new T.Color() } }, side: T.DoubleSide,
+      vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform vec3 uC; void main() { gl_FragColor = vec4(uC, 1.0); }' }));
+    tm.uniforms.uC.value.copy(o.material.color || new T.Color(0.5, 0.5, 0.5));
+    worn.push([o, o.material]);
+    o.material = tm;
+  });
+  look(null, ao.tint, top + lift, -1);
+  for (const [o, mat] of worn) o.material = mat;
   F.scene.overrideMaterial = null;
   F.scene.background = bg; F.scene.fog = fog;
   for (const [c, v] of shown) c.visible = v;
@@ -374,7 +397,7 @@ function formOcclusionRender(cx, cz, half, top, reach) {
 
   const U = formOcclusionUniform(T);
   U.tex.value = ao.raw.texture;
-  U.bot.value = ao.bot.texture; U.top.value = ao.top.texture;
+  U.bot.value = ao.bot.texture; U.top.value = ao.top.texture; U.tint.value = ao.tint.texture;
   U.box.value.set(cx, cz, half * 2);
 }
 // The floor's reflected light: rgb, in linear colour, is the floor's colour
@@ -571,6 +594,8 @@ uniform float uFormAO;
 uniform sampler2D uAOBot;
 uniform sampler2D uAOTop;
 uniform vec2 uAOForm;
+uniform float uNbr;
+uniform sampler2D uAOTint;
 ` +
     frag.replace('#include <opaque_fragment>', `
     // Cel shading replaces the light three worked out, while it is still
@@ -633,13 +658,17 @@ uniform vec2 uAOForm;
       // few texels, or the picture's coarse edge would shut it. The rays are
       // the same at every pixel: starting them at a random angle each trades
       // the faint steps this leaves for grain, which is far worse in a crease.
-      if (uFormAO > 0.0) {
+      // The same rays carry colour: what they hit sends the form's own colour
+      // back (uNbr), weighted like the occlusion, so a red ball beside a white
+      // one tints the white one's near side red.
+      if (uFormAO > 0.0 || uNbr > 0.0) {
         vec3 wP = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).xyz;
         float texel = uAOBox.z / ${FORM_AO_SIZE}.0;
         vec3 o = wP + wN * (3.0 * texel);
         vec3 tA = normalize(abs(wN.y) < 0.99 ? cross(wN, vec3(0.0, 1.0, 0.0)) : vec3(1.0, 0.0, 0.0));
         vec3 tB = cross(wN, tA);
         float shut = 0.0, all = 0.0;
+        vec3 thrown = vec3(0.0);
         for (int i = 0; i < 16; i++) {
           float f = (float(i) + 0.5) / 16.0, a = 2.3999632 * float(i);
           vec3 d = (tA * cos(a) + tB * sin(a)) * sqrt(f) + wN * sqrt(1.0 - f);
@@ -649,10 +678,14 @@ uniform vec2 uAOForm;
           vec2 uv = (q.xz - uAOBox.xy) / uAOBox.z + 0.5;
           vec4 top = textureLod(uAOTop, vec2(uv.x, 1.0 - uv.y), 0.0);
           float hit = (uAOForm.y > 0.5 && q.y < 0.0) ? 1.0 : 0.0;
-          if (top.a > 0.5 && q.y < top.r - 0.5 * texel && q.y > textureLod(uAOBot, uv, 0.0).r + 0.5 * texel) hit = 1.0;
+          if (top.a > 0.5 && q.y < top.r - 0.5 * texel && q.y > textureLod(uAOBot, uv, 0.0).r + 0.5 * texel) {
+            hit = 1.0;
+            thrown += w * textureLod(uAOTint, vec2(uv.x, 1.0 - uv.y), 0.0).rgb;
+          }
           shut += w * hit; all += w;
         }
         outgoingLight -= reflectedLight.indirectDiffuse * (shut / all) * uFormAO;
+        outgoingLight += diffuseColor.rgb * thrown / all * uNbr;
       }
     }
     #include <opaque_fragment>`).replace('#include <dithering_fragment>', `#include <dithering_fragment>
@@ -1209,11 +1242,15 @@ function formsRender(sc, w, h, clean = false) {
   // The sky's occlusion on the floor (see formOcclusionRender). Left out
   // where it would not show: no floor, Anime (a cel's floor is flat), the
   // zones view, and when the sky gives the floor nothing to take away.
-  const aoOn = !formSceneIsCel(sc) && !(sc.zones && !clean) && sc.ambient > 0 && sc.occlusion > 0;
+  const shaded = !formSceneIsCel(sc) && !(sc.zones && !clean);
+  const aoOn = shaded && sc.ambient > 0 && sc.occlusion > 0;
   const aoK = aoOn ? Math.min(sc.occlusion, 1) : 0;
+  // Light thrown between forms: as strong as the floor's (Bounce), and only
+  // worth the pictures when there is a second form to receive it.
+  const nbrOn = shaded && sc.bounce > 0 && sc.objects.length > 1;
   F.ground.material.userData.u.uFloorAO.value = sc.ground ? aoK : 0;
-  for (const m of F.meshes) m.material.userData.u.uFormAO.value = aoK;
-  if (aoOn) {
+  for (const m of F.meshes) { const u = m.material.userData.u; u.uFormAO.value = aoK; u.uNbr.value = nbrOn ? bounceK : 0; }
+  if (aoOn || nbrOn) {
     const u = sizeSum / sc.objects.length, c = union.getCenter(new T.Vector3()), ext = union.getSize(new T.Vector3());
     formOcclusionUniform(T).form.value.set(FORM_AO_FORM_REACH * u, sc.ground ? 1 : 0);
     // The footprint of the forms and as far round it as the floor looks.
@@ -3128,7 +3165,7 @@ function syncFormsPanel() {
   for (const [k, tip] of [
     ['fillShadow',"The second light throws a shadow of its own, like the first - fainter, since it is weaker, but it shows a rim light's shadow behind a form and a fill's across the floor. Off, it only lights. Not drawn in Anime."],
     ['ambient', 'The sky: light from above that reaches every surface, in the shadow too. Lifts every shadow evenly.'],
-    ['bounce', "Light coming up off the floor, in the floor's own colour - strongest low on a form, fading up it."],
+    ['bounce', "Light coming up off the floor, in the floor's own colour - strongest low on a form, fading up it - and light thrown from one form onto another near it, in the first one's colour."],
     ['occlusion', 'How much the forms shut the sky out of what is beside them: a soft dark halo on the floor, and a dark seam where one form meets another or rests on the floor - darkest at the touch, none far away. Only the sky is dimmed - the light itself is not. Off in Anime and the zones view.']]) {
     const r = panel.querySelector('[data-k="' + k + '"]');
     if (r) r.closest('.frow, .opt').title = tip;

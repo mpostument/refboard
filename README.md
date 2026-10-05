@@ -473,7 +473,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     slider (Occlusion) puts a soft dark seam where one form meets another, a
     limb meets the body, or a form rests on the floor. The second light throws a
     shadow of its own (a rim light's behind a form, a fill's across the floor),
-    switched off with Casts a shadow.
+    switched off with Casts a shadow. Bounce also
+    carries colour from one form to the next: a white ball beside a red wall
+    gets a red glow on the side that faces it.
   - *Seeing it:* a light-and-shadow zones view that paints highlight, light,
     halftone, terminator, core shadow, reflected light and cast shadow onto the
     forms from the actual lighting; 1-, 2- and 3-point camera presets and a

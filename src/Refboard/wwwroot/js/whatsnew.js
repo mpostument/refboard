@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'form-bounce', title: 'Colour from the form next door',
+    text: "3D forms > Light > Ambient > Bounce now also carries colour between forms: a white ball beside a red wall takes a red glow on the side that faces it, a skin-coloured hand beside a blue sleeve a cool edge. It reaches about half a form's size, is as strong as the floor's bounce (same slider), and is not drawn in Anime or the zones view. The glow does not yet depend on how lit the neighbour is.",
+    act: 'Show me', run: () => openForms() },
   { id: 'fill-shadow', title: 'A shadow from the second light',
     text: "3D forms > Light > Second light now throws a shadow of its own, softening with distance like the first: a rim light from behind puts a thin shadow in front of a form, a fill from the other side leaves a second, fainter shadow beside the key's. Tick off Casts a shadow if you want it as a plain light. Not drawn in Anime, where the second light is only the rim.",
     act: 'Show me', run: () => openForms() },

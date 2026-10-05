@@ -508,10 +508,10 @@ packs (below), and moving a picture to another folder by hand.
   pixel - random angles gave grain). A column holds one span, so a gap between
   two forms stacked above one spot reads as filled. The second light has its own shadow map now (`aimSunShadow()`, one
   helper for both directional lights, the penumbra growth the light's own
-  `shadow.radius`); it is left out in Anime. Still to
-  come: bounce coloured by
-  the nearby forms and not only the floor (the floor's own reflected light is
-  in place: `uBounce`, by height above the floor and the light's strength); and the cost, if a scene of many
+  `shadow.radius`); it is left out in Anime. Bounce also
+  carries colour from one form to a near one (the 16 occlusion rays read a
+  colour picture of the forms from above, `ao.tint`; not weighted by how lit
+  the neighbour is, and one colour per column, the topmost). Still to come: the cost, if a scene of many
   forms is slow - 44 depth reads a pixel is what a Worker or a half-size
   shadow pass would trim.
 - **Light and shadow, the rest.** In place (`js/light.js`, Colour studio >
