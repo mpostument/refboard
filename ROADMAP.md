@@ -497,10 +497,13 @@ packs (below), and moving a picture to another folder by hand.
   a form is sharp and a shadow thrown far is soft, from the sun (a tangent
   from `softness`) and from a lamp (a radius in world units). A surface is
   compared as the plane it lies in, which is what keeps a wide penumbra from
-  shadowing a tilted lit face. Still to come: sky occlusion - the dark halo
-  under a form where the hemisphere's light is blocked, which the key's shadow
-  does not give (the floor beside a ball is as bright as the floor far from it,
-  in the shadow's own light); shadows from the second light; bounce coloured by
+  shadowing a tilted lit face. Sky occlusion is in place too (`formOcclusionRender()`): the
+  dark halo under a form where the hemisphere's light is blocked, which the
+  key's shadow does not give. Two pictures of the forms (lowest and highest
+  height above each spot of floor) and a horizon scan in sixteen directions;
+  exact for a ball, a wall at its foot, and less for a form held up. Still to
+  come: occlusion on the forms themselves (where two meet, or a limb meets a
+  body), not only on the floor; shadows from the second light; bounce coloured by
   the nearby forms and not only the floor (the floor's own reflected light is
   in place: `uBounce`, by height above the floor and the light's strength); and the cost, if a scene of many
   forms is slow - 44 depth reads a pixel is what a Worker or a half-size

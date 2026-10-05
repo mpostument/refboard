@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'occlusion', title: 'A dark halo under a form',
+    text: "3D forms > Light > Ambient > Sky occlusion: the floor beside a form is darker than the floor far from it, because the form shuts out part of the sky - darkest where it touches, fading in a soft halo, the way a ball on a table sits in its own dim ring. A ball's halo follows the physics (a third of the sky shut out a radius from its foot, a tenth at two), the foot of a wall gets about a third, and a form held in the air shuts out less. Only the sky's light is dimmed, not the sun's, so it shows most under an overcast sky or inside a cast shadow. Off in Anime and the zones view.",
+    act: 'Show me', run: () => openForms() },
   { id: 'shadows', title: 'Shadows that soften as real ones do',
     text: "3D forms > Light > Softness is now how big the light looks, and a shadow is sharp where a form touches the floor and softer the further it is thrown: lift a form off the floor and its shadow turns soft while one beside it stays hard at the foot. From the sun and from a lamp, with no grain in the shadow's edge and none of the speckle the old shadows left on a form lit by a lamp. Anime keeps its shadows hard. And the shadow side of a form is lit by the floor now - reflected light in the floor's colour, strongest low on the form and fading up it, so it shows where it did not before.",
     act: 'Show me', run: () => openForms() },

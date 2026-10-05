@@ -89,7 +89,7 @@ const FORM_DEFAULTS = {
   objects: [FORM_OBJECT_DEFAULTS], active: 0, lightOn: 0,
   lightAz: -45, lightEl: 40, lightDist: LIGHT_SUN, intensity: 1, softness: 0.25, lightColor: '#fff4e6',
   fillOn: false, fillAz: 60, fillEl: 15, fillStrength: 0.35, fillColor: '#d6e4ff',
-  ambient: 0.18, bounce: 0.3,
+  ambient: 0.18, bounce: 0.3, occlusion: 1,
   bg: '#2a2a30', groundColor: '#7a746a', ground: true,
   focal: 50, yaw: 35, pitch: 22, zoom: 1,
   // The camera's roll (a Dutch angle) in degrees, and the fisheye lens -
