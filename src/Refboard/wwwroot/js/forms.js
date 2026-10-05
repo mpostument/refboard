@@ -399,11 +399,13 @@ const formBounceUniform = T => formBounceU || (formBounceU = { value: new T.Vect
    point is compared with the plane's depth there, not the point's own.
    Without that, any tilted lit surface shadows itself the wider the disc
    gets (acne).
-   uSoft: x, how fast the sun's penumbra grows with the gap, in shadow-map
-   uv per unit of its depth; y, the widest penumbra, in texels; z, the
-   lamp's radius, in world units; w, the narrowest, in texels - what keeps
-   a hard shadow from stair-stepping. One for the whole scene, set in
-   formsRender: only one of the sun and the lamp is ever on. */
+   How fast a sun's penumbra grows with the gap, in shadow-map uv per unit
+   of its depth, is the light's own shadow.radius (see aimSunShadow): the key
+   and the second light each have a camera of their own.
+   uSoft: y, the widest penumbra, in texels; z, the lamp's radius, in world
+   units; w, the narrowest, in texels - what keeps a hard shadow from
+   stair-stepping; x is unused. One for the whole scene, set in formsRender:
+   only one of the sun and the lamp is ever on. */
 let formSoftU = null;
 const formSoftUniform = T => formSoftU || (formSoftU = { value: new T.Vector4(0.1, 48, 0.05, 1.2) });
 
@@ -438,7 +440,7 @@ const FORM_SOFT_SUN_GLSL = `
 				if ( d < zr ) { gap += zr - d; found += 1.0; }
 			}
 			if ( found > 0.0 ) {
-				float radius = clamp( gap / found * uSoft.x, rMin, rMax );
+				float radius = clamp( gap / found * shadowRadius, rMin, rMax );
 				float lit = 0.0;
 				for ( int i = 0; i < 32; i ++ ) {
 					vec2 o = rbDisk( i, 32, phi + 1.0 ) * radius;
@@ -914,6 +916,36 @@ function applyFormFinish(mat, o, def) {
   mat.roughness = 1 - o.gloss * 0.95;
 }
 
+/* Aims a directional light's shadow camera at the scene: `L` is the direction
+   toward the light, `elev` its height in radians, `rad` the scene's radius
+   and `h3` its height. Used for the key and for the second light, which each
+   have a map of their own. */
+function aimSunShadow(light, target, L, elev, rad, h3, softness) {
+  // The camera must reach the tip of the cast shadow, which a low light
+  // stretches out to height / tan(elevation) - capped, or a grazing light
+  // would spread the map over so much floor it went blocky.
+  const s = rad * 1.1 + Math.min(h3 / Math.tan(Math.max(elev, THREE_DEG * 5)), rad * 7);
+  const cam = light.shadow.camera;
+  light.position.copy(target).addScaledVector(L, s * 3);
+  Object.assign(cam, { left: -s, right: s, top: s, bottom: -s, near: 0.01, far: s * 6 });
+  cam.updateProjectionMatrix();
+  // Softness is how big the light looks. The sun's half-width as a tangent -
+  // the real sun's is 0.005 - which the shader multiplies by the gap between
+  // a shadow and what throws it, so a form on the floor has a hard foot and
+  // one in the air a soft shadow. Out in the shadow map's own units that is
+  // the gap's share of the depth the map covers, per share of its width.
+  // Handed to the shader as the light's own `shadow.radius` (three passes it
+  // to getShadow), so each light has the growth its own camera needs.
+  light.shadow.radius = (cam.far - cam.near) / (cam.right - cam.left) * (0.006 + 0.2 * softness);
+  // Along the surface normal, in world units: enough to lift a lit face clear
+  // of its own recorded depth (the speckle of shadow acne). The wide
+  // penumbra needs no more - the shader compares the plane a surface lies in,
+  // not the point - and it is still far too little to open a gap where a
+  // form meets the floor.
+  light.shadow.bias = 0;
+  light.shadow.normalBias = (2 * s / light.shadow.mapSize.x) * 2;
+}
+
 /* Poses the forms, the lights and the camera for `sc` and draws it at w x h.
    The same call serves the live view and every export - a snapshot is this
    at formExportSize(), so it cannot drift from what the preview showed. `clean`
@@ -1052,28 +1084,10 @@ function formsRender(sc, w, h, clean = false) {
   // The sun. Its shadow camera must reach the tip of the cast shadow, which
   // a low light stretches out to height / tan(elevation) - capped, or a
   // grazing light would spread the map over so much floor it went blocky.
-  const s = rad * 1.1 + Math.min(h3 / Math.tan(Math.max(elev, THREE_DEG * 5)), rad * 7);
   const k = F.key;
   k.color.set(sc.lightColor);
   k.intensity = sc.intensity * Math.PI; // three's units: π is "albedo at full light"
-  k.target.position.copy(target);
-  k.position.copy(target).addScaledVector(L, s * 3);
-  Object.assign(k.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 0.01, far: s * 6 });
-  k.shadow.camera.updateProjectionMatrix();
-  // Softness is how big the light looks. The sun's half-width as a tangent -
-  // the real sun's is 0.005 - which the shader multiplies by the gap between
-  // a shadow and what throws it, so a form on the floor has a hard foot and
-  // one in the air a soft shadow. Out in the shadow map's own units that is
-  // the gap's share of the depth the map covers, per share of its width.
-  const sunTan = 0.006 + 0.2 * softness, shadowCam = k.shadow.camera;
-  formSoftUniform(T).value.x = (shadowCam.far - shadowCam.near) / (shadowCam.right - shadowCam.left) * sunTan;
-  // Along the surface normal, in world units: enough to lift a lit face clear
-  // of its own recorded depth (the speckle of shadow acne). The wide
-  // penumbra needs no more - the shader compares the plane a surface lies in,
-  // not the point - and it is still far too little to open a gap where a
-  // form meets the floor.
-  k.shadow.bias = 0;
-  k.shadow.normalBias = (2 * s / k.shadow.mapSize.x) * 2;
+  aimSunShadow(k, target, L, elev, rad, h3, softness);
 
   // The lamp. Only one of the two is ever on; an invisible light is left out
   // of both shading and shadow passes entirely, not just dimmed.
@@ -1126,6 +1140,11 @@ function formsRender(sc, w, h, clean = false) {
   F.fill.intensity = sc.fillStrength * sc.intensity * Math.PI;
   F.fill.target.position.copy(target);
   F.fill.position.copy(target).addScaledVector(Lf, rad * 10);
+  // Its shadow - a second map, so only while it will be seen: the light is on,
+  // the scene is not Anime (a cel ignores this light's shading, it is only the
+  // rim there), and the shadow is not switched off.
+  F.fill.castShadow = sc.fillOn && sc.fillShadow !== false && !formSceneIsCel(sc);
+  if (F.fill.castShadow) aimSunShadow(F.fill, target, Lf, THREE_DEG * sc.fillEl, rad, h3, softness);
 
   // Cel shading. Its tones are flat colours, so it ignores the lights'
   // strength and the ambient; the second light turns into its rim - given in
@@ -2826,7 +2845,7 @@ const FORM_PANEL = [
   ['Light', 'presets', [['lightAz', 'Direction', -180, 180, 1, '°'], ['lightEl', 'Height', 3, 89, 1, '°'],
     ['lightDist', 'Distance', 1.5, LIGHT_SUN, 0.1],
     ['intensity', 'Strength', 0, 2, 0.05], ['softness', 'Softness', 0, 1, 0.02], ['lightColor', 'Colour', 'color']]],
-  ['Second light', 'fill', [['fillOn', 'On', 'check'], ['fillAz', 'Direction', -180, 180, 1, '°'],
+  ['Second light', 'fill', [['fillOn', 'On', 'check'], ['fillShadow', 'Casts a shadow', 'check'], ['fillAz', 'Direction', -180, 180, 1, '°'],
     ['fillEl', 'Height', 3, 89, 1, '°'], ['fillStrength', 'Strength', 0, 1, 0.02], ['fillColor', 'Colour', 'color']]],
   ['Camera', 'camera', [['focal', 'Lens', 18, 200, 1, 'mm'], ['pitch', 'Eye height', -60, 88, 1, '°'], ['roll', 'Roll', -45, 45, 1, '°'],
     ['fisheye', 'Fisheye lens', 'check']]],
@@ -3104,12 +3123,14 @@ function syncFormsPanel() {
   soft.disabled = formSceneIsCel(formScene);
   soft.closest('.frow').title = soft.disabled ? 'Cast shadows are hard-edged while a form is Anime'
     : 'How big the light looks - a bare bulb is small, a window or an overcast sky is big. A bigger light throws a softer shadow: still sharp where a form touches the floor, softer the further it is thrown.';
+  panel.querySelector('[data-k="fillShadow"]').disabled = formSceneIsCel(formScene);
   for (const [k, tip] of [
+    ['fillShadow',"The second light throws a shadow of its own, like the first - fainter, since it is weaker, but it shows a rim light's shadow behind a form and a fill's across the floor. Off, it only lights. Not drawn in Anime."],
     ['ambient', 'The sky: light from above that reaches every surface, in the shadow too. Lifts every shadow evenly.'],
     ['bounce', "Light coming up off the floor, in the floor's own colour - strongest low on a form, fading up it."],
     ['occlusion', 'How much the forms shut the sky out of what is beside them: a soft dark halo on the floor, and a dark seam where one form meets another or rests on the floor - darkest at the touch, none far away. Only the sky is dimmed - the light itself is not. Off in Anime and the zones view.']]) {
     const r = panel.querySelector('[data-k="' + k + '"]');
-    if (r) r.closest('.frow').title = tip;
+    if (r) r.closest('.frow, .opt').title = tip;
   }
   for (const b of panel.querySelectorAll('[data-preset]')) {
     const p = LIGHT_PRESETS[b.dataset.preset];

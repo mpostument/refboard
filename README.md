@@ -471,7 +471,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     Sky occlusion slider) - a soft halo, darkest at the foot, that follows the
     physics of a ball and a wall and fades under a form held in the air. The same
     slider (Occlusion) puts a soft dark seam where one form meets another, a
-    limb meets the body, or a form rests on the floor.
+    limb meets the body, or a form rests on the floor. The second light throws a
+    shadow of its own (a rim light's behind a form, a fill's across the floor),
+    switched off with Casts a shadow.
   - *Seeing it:* a light-and-shadow zones view that paints highlight, light,
     halftone, terminator, core shadow, reflected light and cast shadow onto the
     forms from the actual lighting; 1-, 2- and 3-point camera presets and a

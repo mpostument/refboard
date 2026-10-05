@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'fill-shadow', title: 'A shadow from the second light',
+    text: "3D forms > Light > Second light now throws a shadow of its own, softening with distance like the first: a rim light from behind puts a thin shadow in front of a form, a fill from the other side leaves a second, fainter shadow beside the key's. Tick off Casts a shadow if you want it as a plain light. Not drawn in Anime, where the second light is only the rim.",
+    act: 'Show me', run: () => openForms() },
   { id: 'form-occlusion', title: 'Dark seams where forms meet',
     text: "3D forms > Light > Ambient > Occlusion now works on the forms too: where one form meets another, where a limb meets the body, or a form rests on the floor, the sky is shut out and a soft dark seam forms in the crease - darkest at the touch, fading within a fraction of a form's size. As before only the sky's light is dimmed, so it shows most in the shadow side and under an overcast sky. Off in Anime and the zones view (the slider is renamed from Sky occlusion).",
     act: 'Show me', run: () => openForms() },

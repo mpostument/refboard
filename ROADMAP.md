@@ -506,8 +506,10 @@ packs (below), and moving a picture to another folder by hand.
   the lowest and highest height of a form above a spot (the same two pictures)
   or under the floor (`FORM_AO_FORM_REACH`; the rays are the same at every
   pixel - random angles gave grain). A column holds one span, so a gap between
-  two forms stacked above one spot reads as filled. Still to
-  come: shadows from the second light; bounce coloured by
+  two forms stacked above one spot reads as filled. The second light has its own shadow map now (`aimSunShadow()`, one
+  helper for both directional lights, the penumbra growth the light's own
+  `shadow.radius`); it is left out in Anime. Still to
+  come: bounce coloured by
   the nearby forms and not only the floor (the floor's own reflected light is
   in place: `uBounce`, by height above the floor and the light's strength); and the cost, if a scene of many
   forms is slow - 44 depth reads a pixel is what a Worker or a half-size
