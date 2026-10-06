@@ -229,6 +229,30 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   note gives liner sizes (0.05 to 0.8), or how hard to press, for the line
   medium you have. Line is its own Workspace tab: line weight, lost edges
   and the angle tool.
+- **Symmetry check** - in a session (`y`, Workspace > Construction or My work,
+  Layers): the picture folded on a vertical line, pink wherever the two
+  halves part - for a face, a vase or a building seen square on, or a photo
+  of your drawing of one. The fold is found, not assumed: a drawing is rarely
+  centred on its sheet, so every fold in the middle half is tried and the one
+  that makes the halves agree best wins; the note's arrows nudge it by a
+  percent, *Middle* puts it back and *Find it* searches again. It counts the
+  share of the drawing (not of the empty sheet, where a small error would
+  vanish) that differs from its mirror, and says which half runs farther
+  from the fold, which is darker, and in which third the worst of it is.
+- **Reilly rhythms** - in a session (`z`, Workspace > Figure, Layers): the
+  long curves Frank Reilly drew before any contour - each shoulder across the
+  chest and past the opposite hip to the foot (cyan and pink), the spine
+  (red) and the arms (amber) - smooth curves through the pose model's points.
+  Each is measured against the straight line from end to end; the note names
+  the one with most swing and any that are nearly straight - a stiff pose, or
+  a figure drawn from sticks.
+- **Grey markers** - in a session (Workspace > Value, Layers, Ctrl+K): the
+  picture split into the greys of a marker set - Tombow's N-series, ten or
+  the twelve of the ABT set - each area with its marker's number on it,
+  lightest first, the paper left white. Three, five, seven or every grey,
+  spread between the picture's own darkest and lightest and matched each to
+  its nearest marker; the key says how much of the picture each takes. The
+  greys' lightness is an estimate until corrected from a swatch.
 - **Colour wheel** - the Colour studio's Wheel tab: click or drag a colour
   on the wheel (or press the arrow keys) and pick a harmony - complementary,
   split, analogous, triad, tetrad, square, or one hue from pale to deep -
@@ -528,6 +552,12 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   Pages, with *Keep in this browser* ticked), or not at all. *Your data*
   downloads everything - settings, materials, themes, 3D scenes, practice
   log, trainer scores, uploads - as one .zip, and restores from one.
+- **Portfolio site** - *Your data > Make a portfolio site*: the pictures kept
+  as your own work (the photos Compare takes of your drawing, and anything
+  sorted into My work), newest first, as one .zip - an index.html with its
+  style inside it and no script, the pictures under images/, and a README on
+  publishing it with GitHub Pages. References are left out: they are other
+  people's.
 - **Sorted uploads** - behind the container, each picture you drop is looked
   at in the browser (the pose and face models, and an image classifier),
   tagged - *one person, sitting, three-quarter view, lit from the left, low

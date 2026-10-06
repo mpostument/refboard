@@ -24,10 +24,13 @@ clickable mock-up of it - workspace, easel mode, settings - is agreed.
   Colour, Construction, Figure, My work - each row the toolbar's own tool.
   A library image opens there from the grid, a dropped photo opens with
   the panel at Value, and the Colour studio's picture with "Open in
-  workspace", at Colour (`openInWorkspace()`). Still to come: the tools
-  the tabs are waiting for - the paper's range (Value), temperature (Colour),
-  tangents (Construction), eyes and rhythms (Figure), a painting check and
-  likeness (My work).
+  workspace", at Colour (`openInWorkspace()`). Every tab now holds its tools:
+  the paper's range and grey markers (Value), temperature (Colour), tangents
+  (Composition), the symmetry check (Construction, My work), Reilly rhythms
+  (Figure). Still to come: the two the tabs are still waiting for - eyes and
+  gaze (Figure; see Eye and gaze construction) and a painting check and
+  likeness (My work; see Checking your own work, and Likeness and figure
+  checks).
 - **Easel mode for a tablet.** Big controls, gestures, one hand, the
   screen kept awake; a left-handed layout.
 
@@ -576,9 +579,16 @@ pigment dissolves and it is watercolour, so the wash model applies:
 - **Blending groups.** Runs of markers in a set that blend smoothly into
   one another, suggested for a gradient in the photo, and how the set's
   codes are organised.
-- **Grey markers for value studies.** The photo split into areas for the
-  set's greys (Tombow N15-N95, say), with the marker number on each - the
-  simplest first step with markers.
+- **Grey markers for value studies, the rest.** In place (`js/markers.js`,
+  Workspace > Value, a layer): the photo split into areas for the greys of a
+  set (`MARKER_SETS`: Tombow Dual Brush's grayscale ten, N95 to N15, and the
+  ABT twelve), each area with its marker's number; three, five, seven or all,
+  spread between the picture's own 2nd and 98th percentile and matched each to
+  its nearest marker, the paper left white, a key with each grey's share. The
+  codes are the maker's; each one's lightness (L*) is an estimate. Still to
+  come: other makers' sets and your own (My marker set), warm and cool greys
+  told apart and not only by lightness, runs that blend for a gradient
+  (Blending groups), and the lightness from a swatch photo (Calibration).
 
 Any medium:
 
@@ -667,16 +677,30 @@ Any medium:
 - **Framed.** A photo of the work in a mat and frame on a wall, with the
   format and mat colour to choose - to decide how to crop and present it.
 
-- **Symmetry check.** A photo of your drawing (a face, a vase, a
-  building) mirrored over itself - where the two halves part.
+- **Symmetry check, the rest.** In place (`js/symmetry.js`, `y`, Workspace >
+  Construction and My work, a layer): the picture folded on a vertical line,
+  found by trying every fold in the middle half and keeping the one with the
+  least difference (nudged by hand, or put back in the middle), pink where the
+  halves differ by more than 14 L*; counted as a share of the drawing, not of
+  the empty sheet round it, with the half that runs farther, the darker half
+  and the third the worst of it is in. Still to come: a tilted fold (a face
+  turned or leaning), a horizontal one for reflections in water, colour and
+  not only value, and the fold dragged by the pointer.
 - **Digitise your work.** A phone photo of a sketchbook page turned into a
   clean scan: perspective straightened, the shadow and the paper's tint
   taken out, white balance corrected. Kept in the local version's archive
   next to its reference.
 
-- **Portfolio site from the archive.** One click turns your digitised
-  work into a simple static gallery site, to publish on GitHub Pages like
-  refboard itself.
+- **Portfolio site, the rest.** In place (`js/portfolio.js`, Your data > Make
+  a portfolio site): the pictures kept as your work - Compare's photos of your
+  drawing (`from: 'work'`) and the My work folder - newest first, as a .zip
+  with one index.html (its style inside, no script, nothing fetched), the
+  pictures under images/, a .nojekyll and a README on publishing with GitHub
+  Pages; the site's title is yours, and kept. Still to come: digitised pages
+  (see Digitise your work) in place of the photos as they were taken, a
+  caption and a date of your own per piece in place of the file's name, an
+  order you choose, and a project's pieces as a page of their own (once
+  Projects are in).
 
 - **Sketch layer.** Draw with a stylus straight over the reference - a
   quick study, marking proportions or lines of action - kept in the
@@ -722,8 +746,16 @@ Any medium:
 - **Figure proportions and angles.** The same with the pose model: the
   angles of arms, legs and torso in the drawing against the photo - where
   the shoulder tilt or a leg's length went off.
-- **Reilly rhythms.** Frank Reilly's rhythm lines, crossing from one side
-  of a form to the other, laid over a figure photo from its pose points.
+- **Reilly rhythms, the rest.** In place (`js/rhythms.js`, `z`, Workspace >
+  Figure, a layer): from a photo's pose points, the two long curves from each
+  shoulder across the chest and past the opposite hip to the foot (`diagL`,
+  `diagR`), the spine from the head to the pelvis and each arm - smooth curves
+  (`smoothPath()`), each measured against the straight line from end to end;
+  the one with most swing is named, and any within 3% of straight called
+  stiff. Still to come: the curves carried on past the joints the way Reilly
+  drew them, a figure's rhythms on the 3D mannequin and its pose library, and
+  the drawing's own rhythms checked against the photo's (see Figure
+  proportions and angles).
 - **Foreshortening.** A 3D figure with an arm or leg pointing at the
   viewer; draw it as a chain of boxes and cylinders, then see the
   construction.

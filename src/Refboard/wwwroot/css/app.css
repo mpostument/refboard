@@ -798,8 +798,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
    it only once its slider has been moved; until then the stylesheet's own
    value (the var() fallback) holds. */
-#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
-#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #angleOverlay,
+#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #angleOverlay,
   #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
 #peekBadge {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
@@ -932,6 +932,34 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #poseNote .tone-bar .chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; font-size: 12px; }
 #poseNote .tone-sw { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); }
 #poseNote .tone-own input { width: 26px; height: 20px; padding: 0; border: 0; background: none; cursor: pointer; }
+/* Symmetry check - see js/symmetry.js. The same box and flip; the fold's chips. */
+#symOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #symOverlay { transform: scaleX(-1); }
+#poseNote .sym-p { color: #ff50d2; }
+#poseNote .sym-f { color: #ffc428; }
+#poseNote .sym-ok { color: #5fd698; }
+#poseNote .sym-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-bottom: 5px; }
+#poseNote .sym-bar .chip { padding: 1px 8px; font-size: 12px; }
+#poseNote .sym-at { font-size: 12px; opacity: .75; }
+/* Reilly rhythms - see js/rhythms.js. An svg in the picture's pixels. */
+#rhythmOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #rhythmOverlay { transform: scaleX(-1); }
+#rhythmOverlay path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+#rhythmOverlay .r-o { stroke: rgba(0,0,0,.55); }
+#rhythmOverlay .r-a { stroke: #38d6ff; }
+#rhythmOverlay .r-b { stroke: #ff50d2; }
+#rhythmOverlay .r-s { stroke: #ff5a4d; }
+#rhythmOverlay .r-c { stroke: #ffc428; }
+#rhythmOverlay .r-end { fill: #fff; stroke: rgba(0,0,0,.6); stroke-width: 1.5; }
+#poseNote .r-ta { color: #38d6ff; }
+#poseNote .r-tb { color: #ff50d2; }
+/* Grey markers - see js/markers.js. The same box and flip; the key in its note. */
+#markerOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #markerOverlay { transform: scaleX(-1); }
+#poseNote .mk-key { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-bottom: 5px; font-size: 12px; }
+#poseNote .mk-row { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+#poseNote .mk-sw { width: 11px; height: 11px; border-radius: 2px; border: 1px solid rgba(255,255,255,.5); }
+#poseNote .mk-paper { background: #fff; }
 /* One part per layer, each with the x that turns it off. */
 #poseNote .note-part + .note-part { border-top: 1px solid rgba(255,255,255,.25); margin-top: 6px; padding-top: 6px; }
 #poseNote .note-off {
@@ -1694,6 +1722,9 @@ section { margin-bottom: 20px; }
   display: flex; flex-direction: column; gap: 12px;
 }
 .sheet-box h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.sheet-box h3 { margin: 6px 0 0; font-size: 13px; font-weight: 600; }
+#dataSheet .te-actions label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+#dataSheet .te-actions input[type=text] { flex: 1; min-width: 0; }
 /* A button that reads as a link - the footer's What's new. */
 button.linkish { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
 .sheet-box .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 6px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
