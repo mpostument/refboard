@@ -21,6 +21,7 @@ const WS_TABS = [
     { hud: 'range', about: 'what the paper can do: the darks and lights your medium cannot tell apart' },
     { hud: 'tone', about: 'on grey, tan or black paper: what to leave as the paper, where the white goes, where the darks go' },
     { hud: 'amounts', about: 'how much light, middle and dark - one leads, or equal amounts that read as undecided' },
+    { hud: 'markers', about: 'the picture in the greys of a marker set - each area with its marker number, lightest first' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [
@@ -38,6 +39,7 @@ const WS_TABS = [
   { id: 'construction', label: 'Construction', q: 'Where are things, and at what angle?', tools: [
     { hud: 'guides', about: 'thirds, a plumb line, a viewfinder, a perspective check' },
     { hud: 'angle', about: 'the angle of any line, and lengths against each other' },
+    { hud: 'symmetry', about: 'a face, a vase, a building: the picture folded on a line - where the two halves part' },
     { layer: 'grid', label: 'Grid', key: 'r', about: 'squares to place things by' },
   ] },
   { id: 'line', label: 'Line', q: 'How do I draw the lines?', tools: [
@@ -47,6 +49,7 @@ const WS_TABS = [
   ] },
   { id: 'figure', label: 'Figure', q: 'How is the body built?', tools: [
     { hud: 'pose', about: 'the gesture, the tilt of shoulders and hips, the weight' },
+    { hud: 'rhythms', about: "Reilly's rhythms: each shoulder across the chest to the opposite foot - the long curves to draw first" },
     { hud: 'head', about: 'the ball, the side plane, the face - Loomis or anime' },
     { layer: 'ghost', label: 'Ghost of the last pose', key: '', about: 'the pose before, to compare the two' },
     { hud: 'similar', about: 'more poses like this one next' },
@@ -55,6 +58,7 @@ const WS_TABS = [
     { hud: 'compare', about: 'a photo of your drawing over the reference' },
     { hud: 'flip', about: 'fresh eyes - mistakes jump out mirrored' },
     { hud: 'squint', about: 'do the big shapes match, before the details?' },
+    { hud: 'symmetry', about: 'a photo of a face or a vase you drew, folded on itself: is the left the right?' },
     { hud: 'amounts', about: 'does your painting have a dominant - value, temperature, edges - or all in equal amounts?' },
     { hud: 'tangents', about: 'did your drawing make shapes touch where the reference kept them apart?' },
     { hud: 'lineweight', about: 'do your lines get heavier where the shadow is, or are they all one weight?' },

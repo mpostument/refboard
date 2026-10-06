@@ -6,6 +6,10 @@
 "use strict";
 
 const UPLOADS_SHOWN = 24;
+// What the portfolio site is made of (js/portfolio.js): the photos Compare takes of
+// your drawing, and anything sorted into My work.
+const isWork = u => u.type.startsWith('image/') && (u.from === 'work' || u.folder === 'my-work');
+const PORTFOLIO_KEY = 'refboard.portfolioTitle.v1';
 // A size to read, not to compute with: "340 KB", "12.5 MB".
 const fmtBytes = n => n < 1048576 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1048576).toFixed(1)} MB`;
 let uploadsShown = [];   // what the list is drawing, newest first
@@ -73,6 +77,13 @@ async function openData() {
   const bytes = list.reduce((a, u) => a + (u.bytes || 0), 0);
   el('dataCounts').textContent = `${list.length.toLocaleString()} upload${list.length === 1 ? '' : 's'}` +
     (bytes ? ` (${fmtBytes(bytes)})` : '') + ` · ${localKeys().length} settings kept in this browser`;
+  // The portfolio: how much there is to publish, and what it is called.
+  const works = list.filter(isWork).length;
+  el('dataPortfolio').disabled = !works;
+  el('portfolioCount').textContent = works
+    ? `${works} picture${works === 1 ? '' : 's'} of your work will go in.`
+    : 'No photos of your work are kept yet: Compare your drawing keeps the ones it takes, and a picture sorted into My work joins them.';
+  try { el('portfolioTitle').value = localStorage.getItem(PORTFOLIO_KEY) || ''; } catch { /* private mode */ }
   loadSection('backup').catch(() => { /* the buttons will say */ });
 }
 function closeData() {
@@ -112,6 +123,7 @@ function initUploads() {
   initSheet(el('dataSheet'), closeData);
   const lazy = fn => () => loadSection('backup').then(fn, () => dataMessage('The backup could not load - check the connection.', true));
   el('dataBackup').addEventListener('click', lazy(() => downloadBackup()));
+  el('dataPortfolio').addEventListener('click', lazy(() => makePortfolio()));
   el('dataRestore').addEventListener('click', () => el('dataRestoreInput').click());
   el('dataRestoreInput').addEventListener('change', e => {
     const f = e.target.files[0];
