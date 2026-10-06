@@ -15,6 +15,18 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'portfolio', title: 'A portfolio site from your work',
+    text: "Your data > Make a portfolio site: the photos of your drawings that Compare keeps, and anything sorted into My work, as one .zip - a single page of your pictures, newest first, with no script and nothing fetched from anywhere, and a README on putting it on GitHub Pages. References are left out. Give it a title of your own.",
+    act: 'Open Your data', run: () => openData() },
+  { id: 'symmetry', title: 'Symmetry check',
+    text: "Over any picture in a session (y, or Workspace > Construction): the picture folded on a vertical line, pink wherever the two halves part. The fold is found for you - the one that makes the halves agree best - and can be nudged or put back in the middle; the note says how much of the fold differs, which half runs farther from it and which third of the picture the worst of it is in. For a face, a vase, a building seen square on.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'rhythms', title: 'Reilly rhythms',
+    text: "Over a figure (z, or Workspace > Figure): the long curves Frank Reilly drew before any contour - each shoulder across the chest and past the opposite hip to the foot, the spine, the arms - worked out from the pose model's points. The note names the one with the most swing and any that are nearly straight, which are a stiff pose or a figure drawn from sticks.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'grey-markers', title: 'Grey markers for a value study',
+    text: "Over any picture in a session (Workspace > Value, or Ctrl+K): the picture split into the greys of a marker set - Tombow's N-series, ten or twelve - with each marker's number on its area, lightest first and the paper left white. Three, five, seven or every grey; the key says how much of the picture each takes. The greys' lightness is an estimate until calibrated from a swatch.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'scene-api', title: 'Build a 3D scene with Claude',
     text: "3D forms > Use > Scene as text copies the whole scene as JSON and loads one back (or a share link). With the container, Claude can also build a scene for you over HTTP (GET /api/scene explains it) while this view is open: it reads the list of every name a scene may use, sends a scene, and is told what it had to change.",
     act: 'Open 3D forms', run: () => openForms() },
