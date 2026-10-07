@@ -67,7 +67,7 @@ function formSceneSchema() {
     enums: {
       shape: Object.entries(FORM_SHAPES).map(([id, v]) => ({ id, label: v.label, rig: v.rig || null })),
       finish: names(FORM_FINISHES), hair: names(HAIR_STYLES), eyes: names(ANIME_EYES),
-      expression: names(ANIME_EXPRESSIONS), build: names(FIGURE_BUILDS),
+      expression: names(ANIME_EXPRESSIONS), build: names(FIGURE_BUILDS), setting: names(FORM_SETTINGS),
     },
     rigs,
   };

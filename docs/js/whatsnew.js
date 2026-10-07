@@ -15,6 +15,21 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'amounts-more', title: 'Amounts: bright and grey, big and small, and the crop that leads',
+    text: "Over any picture in a session (u): two more bars beside light and dark, warm and cool, hard and soft - how much of it is bright colour and how much greyed, and how much is in big shapes and how much in small ones, each with a Where? that draws its map. And where the whole picture has no leader but a part of it does - the left half is mostly dark, say - the note offers that crop, and Try it draws it as the viewfinder.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'settings-3d', title: 'Japanese settings in 3D',
+    text: "3D forms > View > Setting: a classroom, a train carriage, a lane with power poles and a shrine with its torii, built of simple volumes round the forms - a figure is 1.7 metres in them, so a desk is a desk. The walls between you and the room fall away as you turn, so you always look in. Lit and shadowed like the forms (zones, Anime and haze too). Move the forms about the room with Placement; a setting suggests a sky and a distance to stand back.",
+    act: 'Open 3D forms', run: () => openForms() },
+  { id: 'museums', title: 'Museums: search the Met and the Rijksmuseum',
+    text: "Prepare > Museums: public-domain pictures from the Met and the Rijksmuseum, searched from the app (\"Sargent watercolour\", \"Hokusai\", \"storm clouds\") with both museums on or either alone. A picture shows its artist, date, medium and licence; Open in workspace brings it in at a size to work on, ready for every tool, Full size fetches the museum's original, and Copy credit puts who made it, where it is kept and the licence on the clipboard. The Art Institute of Chicago is not here - its image server turns browsers away.",
+    act: 'Open Museums', run: () => setView({ kind: 'museum' }) },
+  { id: 'body-types', title: 'Body types for the mannequin',
+    text: "3D forms > Body: six more builds beside Realistic, Anime, Long-legged and Chibi - Child, Older, Heavier, Muscular, Female and Male. The torso is two parts now, chest and waist, not one, so a build can widen the shoulders without the hips or the other way round: Heavier fills out the waist most, Muscular the chest, Female and Male go opposite ways. One rig still fits every build, and a photo's pose (the pose skeleton's note) redraws in these the same way it already did in Anime or Chibi.",
+    act: 'Open 3D forms', run: () => openForms() },
+  { id: 'linewash', title: 'Line and wash',
+    text: "Over any picture in a session (Workspace > Line, or Ctrl+K): the big contours - the shadow's edge, the big outer shapes, where one thing overlaps another - inked, the small inner ones left bare over a wash of the picture's own colour, blurred down to its broad masses. The note says how much is inked and how much is left for the colour change alone to carry - the urban sketcher's liner-plus-watercolour plan, before the first line goes down.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'portfolio', title: 'A portfolio site from your work',
     text: "Your data > Make a portfolio site: the photos of your drawings that Compare keeps, and anything sorted into My work, as one .zip - a single page of your pictures, newest first, with no script and nothing fetched from anywhere, and a README on putting it on GitHub Pages. References are left out. Give it a title of your own.",
     act: 'Open Your data', run: () => openData() },

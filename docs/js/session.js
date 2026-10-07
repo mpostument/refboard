@@ -508,6 +508,7 @@ function show(src) {
     if (state.amountsOn) runAmounts();
     if (state.tangentsOn) runTangents();
     if (state.lineWeightOn) runLineWeight();
+    if (state.lineWashOn) runLineWash();
     if (state.toneOn) runTone();
     if (state.symmetryOn) runSymmetry();
     if (state.rhythmsOn) runRhythms();
@@ -572,6 +573,7 @@ function show(src) {
   clearAmounts();
   clearTangents();
   clearLineWeight();
+  clearLineWash();
   clearTone();
   clearSymmetry();
   clearRhythms();

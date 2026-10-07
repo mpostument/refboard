@@ -798,8 +798,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
    it only once its slider has been moved; until then the stylesheet's own
    value (the var() fallback) holds. */
-#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
-#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #angleOverlay,
+#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #amtOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #amtOverlay, #angleOverlay,
   #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
 #peekBadge {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
@@ -921,6 +921,9 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Line weight - see js/linework.js. The same box and flip. */
 #lineOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #lineOverlay { transform: scaleX(-1); }
+/* Line and wash - see js/linewash.js. The same box and flip. */
+#lineWashOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #lineWashOverlay { transform: scaleX(-1); }
 /* Toned paper - see js/tone.js. The same box and flip; the paper chips in its note. */
 #toneOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #toneOverlay { transform: scaleX(-1); }
@@ -956,6 +959,9 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Grey markers - see js/markers.js. The same box and flip; the key in its note. */
 #markerOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #markerOverlay { transform: scaleX(-1); }
+/* The amounts' colour and shape maps - see js/amounts.js. */
+#amtOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #amtOverlay { transform: scaleX(-1); }
 #poseNote .mk-key { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-bottom: 5px; font-size: 12px; }
 #poseNote .mk-row { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 #poseNote .mk-sw { width: 11px; height: 11px; border-radius: 2px; border: 1px solid rgba(255,255,255,.5); }
@@ -993,6 +999,15 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #poseNote .amt-c { background: #6fb6ff; }
 #poseNote .amt-h { background: #ff5470; }
 #poseNote .amt-s { background: #50beff; }
+#poseNote .amt-v { background: #ff5fa2; }
+#poseNote .amt-u { background: #c9a66b; }
+#poseNote .amt-g { background: #8a8a8e; }
+#poseNote .amt-b { background: #9b7bff; }
+#poseNote .amt-y { background: #5fd0b0; }
+#poseNote .amt-z { background: #ffd23f; }
+/* Where a crop would lead - the window to try, and the button that draws it. */
+#poseNote .amt-crop { grid-column: 1 / 4; margin-top: 3px; padding-left: 8px; border-left: 2px solid rgba(255,255,255,.35); }
+#poseNote .amt-crop .amt-where { margin-left: 4px; }
 #poseNote .amt-where {
   padding: 1px 7px; border: 1px solid rgba(255,255,255,.35); border-radius: 4px;
   background: transparent; color: #fff; font: inherit; font-size: 12px; cursor: pointer;
@@ -1023,7 +1038,7 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #headOverlay circle.gleam { fill: #fff; stroke: #000; stroke-width: 1; }
 #headOverlay circle.dot.pink { fill: #ff8fc8; }
 #poseNote b.pink { color: #ff8fc8; }
-#poseNote .head-style { display: inline-flex; gap: 2px; margin-right: 8px; vertical-align: 1px; }
+#poseNote .head-style { display: inline-flex; flex-wrap: wrap; gap: 2px; margin-right: 8px; vertical-align: 1px; }
 #poseNote .head-style button {
   font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 5px; cursor: pointer;
   border: 1px solid rgba(255,255,255,.35); background: transparent; color: #fff;
@@ -1935,3 +1950,37 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #stepsStrip button[aria-current="true"] { border-color: var(--accent); color: var(--ink); }
 #stepsStrip canvas { display: block; border-radius: 4px; background: #fbfaf6; }
 @media (max-width: 760px) { .steps-main { grid-template-columns: 1fr; } }
+
+/* Museums - see js/museum.js. Search bar, the results as a grid of
+   thumbnails, and the chosen picture beside them (under them on a phone). */
+.mu-bar { gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; max-width: 1300px; }
+.mu-query { flex: 1 1 260px; min-width: 0; }
+.mu-bar .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
+.mu-bar .primary:disabled { opacity: .5; cursor: progress; }
+.mu-status { min-height: 1.4em; margin-bottom: 8px; }
+.mu-status.mu-bad { color: var(--bad); }
+.mu-empty { max-width: 640px; color: var(--dim); }
+.mu-empty p { margin: 0 0 10px; line-height: 1.5; }
+.mu-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; max-width: 1300px; }
+.mu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.mu-card { display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; color: var(--ink); }
+.mu-card:hover { border-color: var(--line-hi); }
+.mu-card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.mu-card img { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--panel-2); display: block; }
+.mu-cap { padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mu-cap b { font-size: 12px; font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mu-cap small { color: var(--dim); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-detail { width: 320px; position: sticky; top: 0; display: flex; flex-direction: column; gap: 6px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; box-sizing: border-box; }
+.mu-detail img { width: 100%; max-height: 360px; object-fit: contain; background: var(--panel-2); border-radius: 6px; }
+.mu-detail h3 { margin: 4px 0 0; font-size: 14px; line-height: 1.3; }
+.mu-actions { flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.mu-actions .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+.mu-actions a.ghost { text-decoration: none; display: inline-flex; align-items: center; }
+.mu-foot { margin: 14px 0; }
+@media (max-width: 800px) {
+  .mu-body { grid-template-columns: 1fr; }
+  .mu-detail { width: auto; position: static; order: -1; }
+  .mu-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}
