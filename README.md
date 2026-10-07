@@ -127,6 +127,19 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 
 ## Features
 
+- **Museums** - public-domain pictures from open collections, searched from
+  the app (Prepare > Museums): the Met and the Rijksmuseum, both or either,
+  with "Sargent watercolour" or "Hokusai" or "storm clouds". Each picture
+  shows its artist, date, medium and licence; *Open in workspace* brings it in
+  at no more than 1600 pixels on its longest side, ready for every tool,
+  *Full size* fetches the museum's original, *Copy credit* puts who made it,
+  where it is kept and the licence on the clipboard, and *Museum page* is its
+  page on the museum's site. It runs in the browser against the museums' own
+  APIs - nothing goes through the server, so it works on GitHub Pages too. The
+  Met's search cannot filter by licence, so some pages come back short; the
+  Rijksmuseum's has no free-text field, so the words are tried as a title and
+  as a maker. The Art Institute of Chicago is left out: its image server turns
+  browsers away with a bot check.
 - **Palettes** - a palette generator (Prepare > Palettes): a row of five
   colours, Space for a new one, a lock on each to keep it while the rest
   change, drag or the arrow keys to reorder, tints and shades to pick a
@@ -678,7 +691,7 @@ src/Refboard/
                               a file may use at load time only what earlier files
                               define). Opens straight from disk too - classic
                               scripts, unlike modules, load over file://. The
-                              3D view, the Colour studio, Palettes and the backup load
+                              3D view, the Colour studio, Palettes, Museums and the backup load
                               when first opened: see loadSection() in core.js.
 docs/
   index.html               - GitHub Pages source (Settings > Pages > main /docs).

@@ -126,6 +126,8 @@ refboard setting in localStorage, every document, every upload - as one
 - **Source and licence of a reference.** For each image from the web or a
   museum, where it came from and under what licence - so when a piece is
   posted, it is plain whom to credit, and whether it may be used at all.
+  Museums shows the licence and copies the credit while you are choosing;
+  still to come is keeping it with the picture once it is open.
 
 ## At the easel
 
@@ -851,10 +853,14 @@ the wash.
   weighed. Still to come: heavier where one form overlaps another (a
   T-junction), a whole strand of hair as one line rather than dashes, and
   a photo of your own line drawing checked against it.
-- **Museum search.** The open collections with free APIs - the Met,
-  Rijksmuseum, the Art Institute of Chicago - searched from the app
-  ("Sargent watercolour"); a painting opens at full resolution, straight
-  into a master copy with build-up stages.
+- **Museum search.** In place (`js/museum.js`, Prepare > Museums): the Met
+  and the Rijksmuseum searched from the app ("Sargent watercolour"), a
+  picture opened in the workspace at 1600 px or at the museum's original,
+  with its licence shown and its credit to copy. Still to come: the Art
+  Institute of Chicago - its image server answers a browser with a Cloudflare
+  bot check, so it needs the container's backend as a proxy (and is then not
+  on GitHub Pages); and a painting opened straight into a master copy with
+  build-up stages.
 
 - **Classic composition schemes.** Carlson's and Loomis's templates -
   S-curve, L, steelyard (a big mass against a small one), radiating,

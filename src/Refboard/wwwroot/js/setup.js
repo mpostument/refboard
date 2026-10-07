@@ -1188,6 +1188,10 @@ function updateViewMeta() {
     m.textContent = 'Palette, colour wheel and gamut mask for any image - a character sheet: her colours, with how to mix them - the greys your paints make, what they give glazed one over another, a colour in the light and in shadow, and what each paint does on the paper.';
     return;
   }
+  if (view.kind === 'museum') {
+    m.textContent = 'Public-domain pictures from the Met and the Rijksmuseum - open one in the workspace, with the credit to copy.';
+    return;
+  }
   if (view.kind === 'palette') {
     m.textContent = 'Colours to plan a picture with, in harmony and spread over the values - each with how to mix it from your paints.';
     return;
@@ -1217,6 +1221,7 @@ function viewTitle() {
     case 'colour': return 'Colour studio';
     case 'generate': return 'Generate references';
     case 'palette': return 'Palettes';
+    case 'museum': return 'Museums';
     default:      return 'Dashboard';
   }
 }
@@ -1231,19 +1236,20 @@ function setView(next) {
   const browsing = view.kind === 'all' || view.kind === 'pack' || view.kind === 'group';
 
   const forms = view.kind === 'forms', train = view.kind === 'train', colour = view.kind === 'colour';
-  const generate = view.kind === 'generate', palette = view.kind === 'palette';
+  const generate = view.kind === 'generate', palette = view.kind === 'palette', museum = view.kind === 'museum';
   el('viewBrowse').classList.toggle('hidden', !browsing);
   el('viewForms').classList.toggle('hidden', !forms);
   el('viewTrain').classList.toggle('hidden', !train);
   el('viewColour').classList.toggle('hidden', !colour);
   el('viewGenerate').classList.toggle('hidden', !generate);
   el('viewPalette').classList.toggle('hidden', !palette);
+  el('viewMuseum').classList.toggle('hidden', !museum);
   el('mainBody').classList.toggle('forms-mode', forms);
   // The Session inspector is for drawing from the library. Here it only took
   // width from the stage; its one use in this view - the interval for Draw
   // random forms - has its own control in the 3D panel. The trainers have
   // no use for it at all.
-  const tool = forms || train || colour || generate || palette;
+  const tool = forms || train || colour || generate || palette || museum;
   el('setup').classList.toggle('forms-mode', tool);
   el('viewDashboard').classList.toggle('hidden', browsing || tool);
   el('searchbar').classList.toggle('hidden', !browsing);
@@ -1262,6 +1268,7 @@ function setView(next) {
   if (train) showTrain();
   if (colour) openLazyView('colour', () => showColour());
   if (palette) openLazyView('palette', () => showPalette());
+  if (museum) openLazyView('museum', () => showMuseum());
   if (generate) showGenerate();
   el('sidebar').classList.remove('peek');
   shellSync();

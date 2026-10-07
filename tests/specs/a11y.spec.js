@@ -18,7 +18,7 @@ const unnamed = page => page.evaluate(() => {
 
 test('every control on every screen has a name', async ({ page }) => {
   await openApp(page);
-  for (const view of ['dashboard', 'colour', 'palette', 'train', 'forms']) {
+  for (const view of ['dashboard', 'colour', 'palette', 'museum', 'train', 'forms']) {
     await page.click(`.nav-item[data-view="${view}"]`);
     if (view === 'forms') await expect(page.locator('#formsPanel button').first()).toBeVisible();
     expect(await unnamed(page), view).toEqual([]);

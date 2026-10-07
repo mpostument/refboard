@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'museums', title: 'Museums: search the Met and the Rijksmuseum',
+    text: "Prepare > Museums: public-domain pictures from the Met and the Rijksmuseum, searched from the app (\"Sargent watercolour\", \"Hokusai\", \"storm clouds\") with both museums on or either alone. A picture shows its artist, date, medium and licence; Open in workspace brings it in at a size to work on, ready for every tool, Full size fetches the museum's original, and Copy credit puts who made it, where it is kept and the licence on the clipboard. The Art Institute of Chicago is not here - its image server turns browsers away.",
+    act: 'Open Museums', run: () => setView({ kind: 'museum' }) },
   { id: 'body-types', title: 'Body types for the mannequin',
     text: "3D forms > Body: six more builds beside Realistic, Anime, Long-legged and Chibi - Child, Older, Heavier, Muscular, Female and Male. The torso is two parts now, chest and waist, not one, so a build can widen the shoulders without the hips or the other way round: Heavier fills out the waist most, Muscular the chest, Female and Male go opposite ways. One rig still fits every build, and a photo's pose (the pose skeleton's note) redraws in these the same way it already did in Anime or Chibi.",
     act: 'Open 3D forms', run: () => openForms() },

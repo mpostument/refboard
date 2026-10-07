@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=14cbaf21">
+<link rel="stylesheet" href="css/app.css?v=88445fa5">
 </head>
 <body>
 <div id="setup">
@@ -63,7 +63,8 @@
       <span class="rail-stage-name" aria-hidden="true">Prepare</span>
       <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
       <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images - browse and search" aria-label="All images"></button>
-      <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
+      <button class="nav-item" type="button" data-view="museum" data-icon="museum" data-tip="Museums - search the Met and the Rijksmuseum, open a painting in the workspace" aria-label="Museums"></button>
+      <button class="nav-item" type="button" data-view="colour" data-icon="palette"data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
       <button class="nav-item" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
       <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
@@ -472,6 +473,40 @@
           </div>
         </div>
         <input type="file" id="colInput" accept="image/*" class="hidden">
+      </div>
+
+      <!-- Museums - see showMuseum() in js/museum.js, which loads the first
+           time this opens. Nothing here needs a library. -->
+      <div id="viewMuseum" class="hidden">
+        <form id="muForm" class="row mu-bar" role="search">
+          <input id="muQuery" type="search" class="mu-query" placeholder="An artist, a subject, a medium" aria-label="Search the museums" autocomplete="off" spellcheck="false">
+          <button type="submit" id="muSearch" class="primary" title="Search the chosen museums">Search</button>
+          <span class="count">Search in</span>
+          <div class="chips" id="muSources" role="group" aria-label="Museums to search"></div>
+        </form>
+        <div class="count mu-status" id="muStatus" role="status" aria-live="polite"></div>
+        <div id="muEmpty" class="mu-empty">
+          <p>Public-domain pictures from open collections. A painting opens in the workspace like a photo of your own, with every tool on it. Try:</p>
+          <div class="chips" id="muExamples"></div>
+        </div>
+        <div class="mu-body">
+          <div id="muGrid" class="mu-grid" role="group" aria-label="Results"></div>
+          <aside id="muDetail" class="mu-detail hidden" aria-label="The chosen picture">
+            <img id="muPreview" alt="">
+            <h3 id="muTitle"></h3>
+            <div id="muBy"></div>
+            <div class="count" id="muMedium"></div>
+            <div class="count" id="muSource"></div>
+            <div class="count" id="muCredit"></div>
+            <div class="row mu-actions">
+              <button type="button" id="muOpen" class="primary" title="Open it in the workspace, at a size to work on">Open in workspace</button>
+              <button type="button" id="muFull" class="ghost" title="The museum's original file - sharper, but often many megapixels and slow to open">Full size</button>
+              <button type="button" id="muCopy" class="ghost" title="Copy who made it, where it is kept and its licence">Copy credit</button>
+              <a id="muPage" class="ghost" target="_blank" rel="noopener noreferrer" title="Its page on the museum's site">Museum page</a>
+            </div>
+          </aside>
+        </div>
+        <div class="row mu-foot"><button type="button" id="muMore" class="ghost hidden" title="The next pictures for these words">More</button></div>
       </div>
 
       <!-- Palette generator - see showPalette() in js/palette.js, which
@@ -1777,8 +1812,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=b75a39b5"></script>
-<script src="js/setup.js?v=d7dff5e3"></script>
+<script src="js/core.js?v=5dc055c2"></script>
+<script src="js/setup.js?v=f4624429"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
@@ -1798,7 +1833,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=521cfc7f"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=6bc6586d"></script>
+<script src="js/whatsnew.js?v=d19b4b2d"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1824,6 +1859,9 @@
 <template id="lazy-backup">
 <script src="js/portfolio.js?v=6dcc64d8"></script>
 <script src="js/backup.js?v=e7ec2fe2"></script>
+</template>
+<template id="lazy-museum">
+<script src="js/museum.js?v=029edce5"></script>
 </template>
 <template id="lazy-palette">
 <script src="js/palette.js?v=3af4eb0c"></script>

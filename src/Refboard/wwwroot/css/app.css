@@ -1938,3 +1938,37 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #stepsStrip button[aria-current="true"] { border-color: var(--accent); color: var(--ink); }
 #stepsStrip canvas { display: block; border-radius: 4px; background: #fbfaf6; }
 @media (max-width: 760px) { .steps-main { grid-template-columns: 1fr; } }
+
+/* Museums - see js/museum.js. Search bar, the results as a grid of
+   thumbnails, and the chosen picture beside them (under them on a phone). */
+.mu-bar { gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; max-width: 1300px; }
+.mu-query { flex: 1 1 260px; min-width: 0; }
+.mu-bar .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
+.mu-bar .primary:disabled { opacity: .5; cursor: progress; }
+.mu-status { min-height: 1.4em; margin-bottom: 8px; }
+.mu-status.mu-bad { color: var(--bad); }
+.mu-empty { max-width: 640px; color: var(--dim); }
+.mu-empty p { margin: 0 0 10px; line-height: 1.5; }
+.mu-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; max-width: 1300px; }
+.mu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.mu-card { display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; color: var(--ink); }
+.mu-card:hover { border-color: var(--line-hi); }
+.mu-card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.mu-card img { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--panel-2); display: block; }
+.mu-cap { padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mu-cap b { font-size: 12px; font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mu-cap small { color: var(--dim); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-detail { width: 320px; position: sticky; top: 0; display: flex; flex-direction: column; gap: 6px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; box-sizing: border-box; }
+.mu-detail img { width: 100%; max-height: 360px; object-fit: contain; background: var(--panel-2); border-radius: 6px; }
+.mu-detail h3 { margin: 4px 0 0; font-size: 14px; line-height: 1.3; }
+.mu-actions { flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.mu-actions .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+.mu-actions a.ghost { text-decoration: none; display: inline-flex; align-items: center; }
+.mu-foot { margin: 14px 0; }
+@media (max-width: 800px) {
+  .mu-body { grid-template-columns: 1fr; }
+  .mu-detail { width: auto; position: static; order: -1; }
+  .mu-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}
