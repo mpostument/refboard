@@ -101,6 +101,8 @@ const FORM_DEFAULTS = {
   heads: false,
   // Atmospheric perspective - see formsRender(). 0 is the clean studio.
   haze: 0, hazeColor: '#b9c6d6',
+  // A Japanese setting round the forms - a key of FORM_SETTINGS (js/forms-settings.js).
+  setting: 'none',
 };
 const defaultFormScene = () => structuredClone(FORM_DEFAULTS);
 

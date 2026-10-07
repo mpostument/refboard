@@ -364,9 +364,13 @@ shoulder and other two-figure shots, and a lens's distortion on a photo.
 - **Simplified hands.** The anime construction of a hand (a mitten with
   fingers) on the existing 3D hand: drawing it in a few shapes rather than
   joint by joint.
-- **Japanese settings in 3D.** A classroom, a train carriage, a street
-  with power poles, a shrine gate - simple volumes for the backgrounds
-  anime keeps returning to.
+- **Japanese settings in 3D.** In place (`js/forms-settings.js`, 3D forms >
+  View > Setting): a classroom, a train carriage, a lane with power poles and
+  a shrine with its torii, as simple volumes in metres round the forms, with
+  walls that face in so the near ones fall away as you turn. Still to come: a
+  convenience store, a rooftop with a fence, a station platform, a bedroom
+  and a school gate with cherry trees; furniture you can move; windows that
+  show a sky.
 - **Manga page layout.** Panel templates for a page, right-to-left
   reading order, where speech balloons go - for pages and comics, not
   only single illustrations.

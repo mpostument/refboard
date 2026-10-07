@@ -597,6 +597,21 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   lowest foot - a real pose, seen as anime would draw it, over the photo's
   own skeleton kept faint, with a ruler of its heads down the side. Switched
   in the note, or from Ctrl+K.
+- **Japanese settings in 3D** - in 3D forms, View > Setting: the places anime
+  keeps coming back to, as simple volumes round the forms - a *Classroom*
+  (the blackboard wall, windows on the left, rows of desks either side of an
+  aisle), a *Train carriage* (a bench along each wall, doors, straps on the
+  rails), a *Lane* (block walls, tile-roofed houses, power poles running off
+  with their wires, a vending machine, a corner mirror) and a *Shrine* (a
+  vermilion torii, stone lanterns in pairs, cedars, the hall with its offering
+  box and rope). A figure is 1.7 metres in them, so a desk is the height of a
+  desk. Walls are single planes facing in, so the ones between you and the
+  room vanish as you turn: you always look in, like a model of a room. They
+  are lit and shadowed like the forms (the zones view, Anime's flat tones and
+  the haze reach them too), and move the forms about them with Placement. A
+  setting suggests a sky, a ground and a standing-back distance, but only
+  into values still at their defaults. Shadows are a little coarser in a
+  setting: the same shadow map covers more floor.
 - **Body types for the mannequin** - in 3D forms, the figure's Body row:
   *Child* (five and a half heads, the head near full size already), *Older*
   (a little shorter and narrower in the shoulders), *Heavier* and *Muscular*
