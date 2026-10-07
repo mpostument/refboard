@@ -33,7 +33,7 @@ const WS_TABS = [
   { id: 'composition', label: 'Composition', q: 'Does the arrangement work?', tools: [
     { layer: 'focal', label: 'Focal point', key: '', about: 'where the eye goes first' },
     { hud: 'tangents', about: 'shapes that just touch each other or the edge - where the depth goes flat' },
-    { hud: 'amounts', about: 'does one value, one temperature, one kind of edge lead?' },
+    { hud: 'amounts', about: 'does one value, one temperature, one colour strength, one size of shape, one kind of edge lead?' },
     { hud: 'guides', about: 'thirds and a viewfinder, to try a crop' },
   ] },
   { id: 'construction', label: 'Construction', q: 'Where are things, and at what angle?', tools: [

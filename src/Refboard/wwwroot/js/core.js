@@ -537,6 +537,7 @@ const state = {
   rangeOn: false,             // the paper's range shown - see toggleRange()
   tempOn: false,              // temperature map shown - see toggleTemp()
   amountsOn: false,           // unequal amounts counted - see toggleAmounts()
+  amtMap: null,               // the row whose colour or shape map the amounts show, or null - see showAmountsMap()
   tangentsOn: false,          // tangents marked - see toggleTangents()
   lineWeightOn: false,        // contours weighed - see toggleLineWeight()
   lineWashOn: false,          // line-and-wash plan shown - see toggleLineWash()

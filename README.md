@@ -210,12 +210,20 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   reverse, for cel shading and for mixing in your medium. Every overlay's
   part of the note has an x that turns just that layer off.
 - **Amounts** - in a session (`u`, Workspace > Value, Composition or My work): how much
-  of the picture is light, middle and dark, warm and cool, hard-edged and
-  soft, as three bars. A picture with a dominant (60/30/10) reads as meant;
-  equal amounts read as indecision, and the note says which it is and what
-  to push. Each bar's Where? opens the map it counts - the value split at 3,
-  the temperature map, the edge map. For a reference, or a photo of your
-  own painting.
+  of the picture is light, middle and dark, warm and cool, bright and greyed
+  (colour's strength over areas, in OKLab), big shapes and small (each
+  connected area of one value third is a shape; a big one is 4% of the
+  picture or more, a small one under 0.4%, and what is thinner than a few
+  pixels is no shape at all), hard-edged and soft - five bars. A picture with
+  a dominant (60/30/10) reads as meant; equal amounts read as indecision, and
+  the note says which it is and what to push: grey the big areas so the
+  bright one sings; join small shapes into big ones. Each bar's Where? opens
+  the map it counts - the value split at 3, the temperature map, the edge
+  map, and for colour and shapes a map of their own. Where the whole picture
+  has no leader but a part of it does - one of nine windows, the halves, the
+  corners at two thirds, the middle - the note says so ("Cropped to the
+  right half, the cool leads - 47% of it") and Try it draws that window as
+  the viewfinder. For a reference, or a photo of your own painting.
 - **Tangents** - in a session (`n`, Workspace > Composition or My work,
   Layers): a pink ring where two shapes just touch or nearly do, an amber
   one where a shape just touches the paper's edge or is cut by it by a

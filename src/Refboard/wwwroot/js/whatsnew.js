@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'amounts-more', title: 'Amounts: bright and grey, big and small, and the crop that leads',
+    text: "Over any picture in a session (u): two more bars beside light and dark, warm and cool, hard and soft - how much of it is bright colour and how much greyed, and how much is in big shapes and how much in small ones, each with a Where? that draws its map. And where the whole picture has no leader but a part of it does - the left half is mostly dark, say - the note offers that crop, and Try it draws it as the viewfinder.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'settings-3d', title: 'Japanese settings in 3D',
     text: "3D forms > View > Setting: a classroom, a train carriage, a lane with power poles and a shrine with its torii, built of simple volumes round the forms - a figure is 1.7 metres in them, so a desk is a desk. The walls between you and the room fall away as you turn, so you always look in. Lit and shadowed like the forms (zones, Anime and haze too). Move the forms about the room with Placement; a setting suggests a sky and a distance to stand back.",
     act: 'Open 3D forms', run: () => openForms() },

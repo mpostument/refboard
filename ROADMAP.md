@@ -846,11 +846,15 @@ the wash.
   exactly into a corner, and edges that run parallel just inside the frame.
 - **Unequal amounts, the rest.** In place (`js/amounts.js`, `u`,
   Workspace > Value, Composition and My work): light, middle and dark (the thirds `v` at
-  3 shows), warm, neutral and cool, hard and soft edges, each as a bar with
-  its verdict - a clear lead, a lean, or equal amounts that read as
-  indecision - and a Where? that opens the map it counts. Still to come:
-  bright against greyed colour, big shapes against small, and the same
-  counts inside a crop, to find the one where something leads.
+  3 shows), warm, neutral and cool, bright, muted and grey, big, medium and
+  small shapes, hard and soft edges, each as a bar with its verdict - a clear
+  lead, a lean, or equal amounts that read as indecision - and a Where? that
+  opens the map it counts. Where the whole has no leader, the same counts in
+  nine windows (the halves, the corners, the middle) find the crop where
+  something does, and the viewfinder tries it. Still to come: a crop searched
+  at any size and place rather than from nine windows; shapes cut by colour
+  as well as value; and the bright held against where the picture's focus is,
+  not only against the rest.
 - **Line weight, the rest.** In place (`js/linework.js`, `k`, Workspace >
   Line and My work, a layer): contours weighed by the darkness round them,
   their size and length, with tapered ends; an anime frame's own line art
