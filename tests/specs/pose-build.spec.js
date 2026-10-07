@@ -74,6 +74,17 @@ test('bones keep their angle, the lowest foot stays put, and the heads count fol
   expect(h.anime).toBeLessThan(h.real);
   expect(h.real).toBeLessThan(h.tall);
   expect(h.chibi).toBeLessThan(4);
+
+  // Male widens the shoulders and narrows the hips against the photo's
+  // own; Female the other way - the chest/waist split carried into the
+  // 2D rebuild too, not only the 3D figure's.
+  const width = Q => Math.hypot(Q.lSh[0] - Q.rSh[0], Q.lSh[1] - Q.rSh[1]);
+  const hipWidth = Q => Math.hypot(Q.lHip[0] - Q.rHip[0], Q.lHip[1] - Q.rHip[1]);
+  const photoShoulder = width(P), photoHip = hipWidth(P);
+  expect(width(out.male.Q)).toBeGreaterThan(photoShoulder);
+  expect(hipWidth(out.male.Q)).toBeLessThan(photoHip);
+  expect(width(out.female.Q)).toBeLessThan(photoShoulder);
+  expect(hipWidth(out.female.Q)).toBeGreaterThan(photoHip);
 });
 
 test('Ctrl+K "pose chibi" turns the skeleton on in Chibi', async ({ page }) => {

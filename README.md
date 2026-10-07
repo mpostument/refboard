@@ -579,10 +579,22 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   pointed chin. Switched in the note under the picture, or from Ctrl+K.
 - **A photo's pose in anime proportions** - the pose skeleton (`p`) redrawn
   in the 3D figure's builds: *Anime* (7 heads), *Long-legged* (9) or *Chibi*
-  (2.5). Every bone keeps the photo's angle and only its length changes, hung
-  from the joint above it and planted on the lowest foot - a real pose, seen
-  as anime would draw it, over the photo's own skeleton kept faint, with a
-  ruler of its heads down the side. Switched in the note, or from Ctrl+K.
+  (2.5), and the body types below. Every bone keeps the photo's angle and
+  only its length changes, hung from the joint above it and planted on the
+  lowest foot - a real pose, seen as anime would draw it, over the photo's
+  own skeleton kept faint, with a ruler of its heads down the side. Switched
+  in the note, or from Ctrl+K.
+- **Body types for the mannequin** - in 3D forms, the figure's Body row:
+  *Child* (five and a half heads, the head near full size already), *Older*
+  (a little shorter and narrower in the shoulders), *Heavier* and *Muscular*
+  (the realistic figure's own height, wider through the torso and limbs -
+  Heavier fullest at the waist, Muscular broadest at the chest), and
+  *Female* and *Male* (narrower shoulders and fuller hips, or the other way
+  round). The torso is two parts, chest and waist, not one: the chest's
+  girth carries the shoulders' width and the waist's the hips', so a build
+  can widen one without the other - which the four style builds above never
+  do. One rig, so a pose fits every build, and the same builds redraw a
+  photo's pose (above).
 - **Anime head in 3D** - in 3D forms, a head built to the same proportions
   with its face drawn on (the heavy lash line, the tall iris, the gleam on the
   light's side), to turn and light like any form. Its face is a flat mask, so

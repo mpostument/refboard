@@ -1026,7 +1026,7 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #headOverlay circle.gleam { fill: #fff; stroke: #000; stroke-width: 1; }
 #headOverlay circle.dot.pink { fill: #ff8fc8; }
 #poseNote b.pink { color: #ff8fc8; }
-#poseNote .head-style { display: inline-flex; gap: 2px; margin-right: 8px; vertical-align: 1px; }
+#poseNote .head-style { display: inline-flex; flex-wrap: wrap; gap: 2px; margin-right: 8px; vertical-align: 1px; }
 #poseNote .head-style button {
   font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 5px; cursor: pointer;
   border: 1px solid rgba(255,255,255,.35); background: transparent; color: #fff;

@@ -265,16 +265,22 @@ head read for its expression.
 
 Body:
 
-In place: anime proportions for the mannequin - the figure's Body row
-above its pose (`FIGURE_BUILDS`, `figureScale()` in `js/forms-models.js`):
-Realistic (7.8 heads), Anime (7), Long-legged (9), Chibi (2.5), each part
-of the body a girth and a length times the real one's, a joint hung where
-its parent's length puts it - so one rig and every pose fit all four. The
-count is worked out from the rig (`figureHeights()`), not written down, and
-the Heads grid (`drawFormHeads()` in `js/forms.js`) draws it across the
-figure, from the floor as it would stand. Still to come on it: body types
-(slim, heavy, muscular), a child's proportions by age, and the build sent
-to Generate.
+In place: anime proportions for the mannequin, and body types, on the
+figure's Body row above its pose (`FIGURE_BUILDS`, `figureScale()` in
+`js/forms-models.js`): Realistic (7.8 heads), Anime (7), Long-legged (9),
+Chibi (2.5) - a style, each stretching the whole figure at its own rate -
+and Child (5.5), Older (7.5), Heavier, Muscular, Female and Male, which
+keep the realistic figure's own style and vary the build instead: wider or
+narrower through the chest and the waist, which are two parts, not one, so
+shoulders and hips can widen apart from each other (Heavier fullest at the
+waist, Muscular broadest at the chest, Female and Male opposite ways
+round). Each part of the body a girth and a length times the real one's, a
+joint hung where its parent's length puts it - so one rig and every pose
+fit every build. The count is worked out from the rig (`figureHeights()`),
+not written down, and the Heads grid (`drawFormHeads()` in `js/forms.js`)
+draws it across the figure, from the floor as it would stand. Still to
+come on it: a child's proportions scaled further by age, and the build
+sent to Generate.
 
 In place too: a photo's pose in anime proportions - the pose skeleton's
 switch (`rebuildPose()` in `js/vision.js`, which now holds FIGURE_BUILDS for
@@ -931,9 +937,10 @@ the wash.
   cylinder, a head.
 - **Character turnaround.** The 3D figure in one pose, front, side, back
   and three-quarter, on one sheet - a reference for illustrators.
-- **Body types.** The mannequin as a child, an older person, heavier,
-  muscular, with female and male proportions - there is only the one,
-  ideal figure now.
+In place: body types for the mannequin - Child, Older, Heavier, Muscular,
+Female and Male, on the figure's Body row beside Realistic, Anime,
+Long-legged and Chibi (see Anime proportions for the mannequin, under
+Anime > Body, above).
 - **Still life.** The usual still-life objects - bottle, apple, cup,
   glass, jug - on drapery, to arrange, with lighting set-ups ready. The
   classic watercolour subject; glass and metal are already finishes.

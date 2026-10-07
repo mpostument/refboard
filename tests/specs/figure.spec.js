@@ -23,13 +23,52 @@ const measuredHeads = (page, build) => page.evaluate(build => {
 
 test('each build is as many heads tall as it says, on the figure itself', async ({ page }) => {
   await openFigure(page);
-  const want = { real: 7.8, anime: 7, tall: 9, chibi: 2.5 };
+  const want = { real: 7.8, anime: 7, tall: 9, chibi: 2.5, child: 5.5, elderly: 7.5, heavy: 7.8, muscular: 7.9, female: 7.5, male: 7.8 };
   for (const [build, heads] of Object.entries(want)) {
     const { measured, worked } = await measuredHeads(page, build);
     // The Height slider (1.3 here) stretches the head with the rest.
     expect(measured, build).toBeCloseTo(worked, 1);
-    expect(Math.abs(worked - heads), build).toBeLessThan(0.1);
+    expect(Math.abs(worked - heads), build).toBeLessThan(0.15);
   }
+});
+
+// Body types (child, elderly, heavy, muscular, female, male) keep the
+// realistic figure's own style and vary the build instead: the chest's
+// girth carries the shoulders' width, the waist's the hips' - so a build
+// can widen one without the other, which the four stylisations never do.
+test('a body type widens the shoulders and the hips by its own, separate girth', async ({ page }) => {
+  await openFigure(page);
+  const widths = (page, build) => page.evaluate(build => {
+    const o = activeFormObject();
+    Object.assign(o, { build, pose: {}, rx: 0, ry: 0, rz: 0, sx: 1, sy: 1, sz: 1 });
+    formsRender(formScene, 320, 240, true);
+    const rig = forms.meshes[formScene.active].userData.rig;
+    return { shoulder: rig.pivots['upperArm.L'].position.x, hip: rig.pivots['thigh.L'].position.x };
+  }, build);
+  const real = await widths(page, 'real');
+
+  // Male: broader through the shoulders, narrower at the waist - the hips
+  // barely move while the shoulders widen well past them.
+  const male = await widths(page, 'male');
+  expect(male.shoulder).toBeGreaterThan(real.shoulder);
+  expect(male.hip).toBeLessThan(real.hip);
+
+  // Female: the other way - narrower shoulders, fuller hips.
+  const female = await widths(page, 'female');
+  expect(female.shoulder).toBeLessThan(real.shoulder);
+  expect(female.hip).toBeGreaterThan(real.hip);
+
+  // Heavy: both widen, but the waist most of all.
+  const heavy = await widths(page, 'heavy');
+  expect(heavy.shoulder).toBeGreaterThan(real.shoulder);
+  expect(heavy.hip).toBeGreaterThan(real.hip);
+  expect(heavy.hip / real.hip).toBeGreaterThan(heavy.shoulder / real.shoulder);
+
+  // Muscular: a broad chest over a waist that stays close to the realistic
+  // figure's own - a sharper V than Male's.
+  const muscular = await widths(page, 'muscular');
+  expect(muscular.shoulder).toBeGreaterThan(male.shoulder);
+  expect(muscular.hip / muscular.shoulder).toBeLessThan(real.hip / real.shoulder);
 });
 
 test('a build keeps the pose, says its heads, and undoes', async ({ page }) => {

@@ -1118,11 +1118,13 @@ const FORM_RIG = [
 ];
 // The builds themselves (FIGURE_BUILDS) are in js/vision.js, which loads
 // first: a photo's pose is redrawn in them too (rebuildPose()).
-// Which part of the body a joint is: its row in a build. The pelvis (null) is the torso's.
-const FIGURE_PART = { spine: 'torso', chest: 'torso', neck: 'neck', head: 'head', upperArm: 'arm', forearm: 'arm', hand: 'hand', thigh: 'leg', shin: 'leg', foot: 'foot' };
+// Which part of the body a joint is: its row in a build. The pelvis (null,
+// and the thighs that hang from it) is the waist's - shoulder width is the
+// chest's own, so a build can widen one without the other.
+const FIGURE_PART = { spine: 'waist', chest: 'chest', neck: 'neck', head: 'head', upperArm: 'arm', forearm: 'arm', hand: 'hand', thigh: 'leg', shin: 'leg', foot: 'foot' };
 // A joint's scale, [x, y, z], in a build and under the Proportions sliders.
 function figureScale(build, joint, sc) {
-  const [g, l] = (FIGURE_BUILDS[build] || FIGURE_BUILDS.real)[joint ? FIGURE_PART[joint.split('.')[0]] : 'torso'] || [1, 1];
+  const [g, l] = (FIGURE_BUILDS[build] || FIGURE_BUILDS.real)[joint ? FIGURE_PART[joint.split('.')[0]] : 'waist'] || [1, 1];
   return [g * sc[0], l * sc[1], g * sc[2]];
 }
 /* Standing straight, in the figure's own frame: the top of the head, the
