@@ -46,6 +46,8 @@ const LAYERS = [
     on: () => !!state.markersOn, toggle: () => toggleMarkers() },
   { id: 'lineweight', label: 'Line weight', els: ['lineOverlay'], base: 1,
     on: () => !!state.lineWeightOn, toggle: () => toggleLineWeight() },
+  { id: 'linewash', label: 'Line and wash', els: ['lineWashOverlay'], base: 1,
+    on: () => !!state.lineWashOn, toggle: () => toggleLineWash() },
   { id: 'tone', label: 'Toned paper', els: ['toneOverlay'], base: 1,
     on: () => !!state.toneOn, toggle: () => toggleTone() },
   { id: 'pose', label: 'Pose skeleton', els: ['poseOverlay'], base: 1,

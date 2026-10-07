@@ -229,6 +229,16 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   note gives liner sizes (0.05 to 0.8), or how hard to press, for the line
   medium you have. Line is its own Workspace tab: line weight, lost edges
   and the angle tool.
+- **Line and wash** - in a session (Workspace > Line, Layers, or Ctrl+K):
+  the urban sketcher's liner-plus-watercolour plan. Line weight's own
+  contours, but kept or left out whole, by connected run rather than point
+  by point - each run inked only if it is among the few carrying most of
+  the picture's own weight (length and darkness summed along it), so one
+  strong contour is inked entire and a small mark beside a big shape is
+  left out, never a single line dashed by quantiles alone. What is left
+  bare sits over a wash: the picture's own colour, blurred to its broad
+  masses, so the colour change still says what the line does not. The note
+  gives each side's share.
 - **Symmetry check** - in a session (`y`, Workspace > Construction or My work,
   Layers): the picture folded on a vertical line, pink wherever the two
   halves part - for a face, a vase or a building seen square on, or a photo

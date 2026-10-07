@@ -592,9 +592,19 @@ pigment dissolves and it is watercolour, so the wash model applies:
 
 Any medium:
 
-- **Line and wash.** The urban sketcher's liner-plus-watercolour: the
-  main contours pulled from the photo as a plan for the line drawing, and
-  the wash plan over it - what to say with line, what to leave to colour.
+In place: Line and wash (`js/linewash.js`, Workspace > Line) - the urban
+sketcher's liner-plus-watercolour plan. Line weight's own contours
+(linework.js), but judged whole rather than point by point: each connected
+run is kept for ink only if it is among the few that carry most of the
+picture's own weight (length and darkness summed along it), so one strong
+contour is inked entire and a small mark beside a big shape is left out -
+never a single line dashed by the quantiles' own arithmetic. What is left
+bare sits over a wash: the picture's own colour, blurred down to its broad
+masses, so the colour change alone still says what the line does not. The
+note gives the share each side takes. Still to come: the wash read against
+the painter's own palette, so it shows what the paints can actually mix
+rather than the photo's own colour; and a slider for how much is left to
+the wash.
 - **Line art preview.** The photo shown as a line drawing, as hatching or
   as stippling - to plan a piece in liner, ballpoint or ink.
 - **Texture library for pen.** How to say wood, stone, foliage, fur,

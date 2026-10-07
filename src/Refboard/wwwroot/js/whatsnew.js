@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'linewash', title: 'Line and wash',
+    text: "Over any picture in a session (Workspace > Line, or Ctrl+K): the big contours - the shadow's edge, the big outer shapes, where one thing overlaps another - inked, the small inner ones left bare over a wash of the picture's own colour, blurred down to its broad masses. The note says how much is inked and how much is left for the colour change alone to carry - the urban sketcher's liner-plus-watercolour plan, before the first line goes down.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'portfolio', title: 'A portfolio site from your work',
     text: "Your data > Make a portfolio site: the photos of your drawings that Compare keeps, and anything sorted into My work, as one .zip - a single page of your pictures, newest first, with no script and nothing fetched from anywhere, and a README on putting it on GitHub Pages. References are left out. Give it a title of your own.",
     act: 'Open Your data', run: () => openData() },

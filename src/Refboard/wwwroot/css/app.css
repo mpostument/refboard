@@ -798,8 +798,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
    it only once its slider has been moved; until then the stylesheet's own
    value (the var() fallback) holds. */
-#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
-#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #angleOverlay,
+#poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #angleOverlay,
   #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
 #peekBadge {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
@@ -921,6 +921,9 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Line weight - see js/linework.js. The same box and flip. */
 #lineOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #lineOverlay { transform: scaleX(-1); }
+/* Line and wash - see js/linewash.js. The same box and flip. */
+#lineWashOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #lineWashOverlay { transform: scaleX(-1); }
 /* Toned paper - see js/tone.js. The same box and flip; the paper chips in its note. */
 #toneOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #toneOverlay { transform: scaleX(-1); }
