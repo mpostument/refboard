@@ -95,7 +95,7 @@ const FORM_DEFAULTS = {
   // The camera's roll (a Dutch angle) in degrees, and the fisheye lens -
   // see ANIME_SHOTS and renderFisheye().
   roll: 0, fisheye: false,
-  lines: false, horizon: false, lightMarker: true, vp: false, ellipses: false, floorGrid: false, zones: false,
+  lines: false, horizon: false, lightMarker: true, vp: false, ellipses: false, floorGrid: false, zones: false, bones: false, muscles: false,
   count: 10, anyShape: true, memorySecs: 15,
   // A figure's height in heads, drawn across it - see drawFormHeads().
   heads: false,
@@ -1314,6 +1314,102 @@ const FORM_RIGS = {
 };
 for (const r of Object.values(FORM_RIGS)) r.jointMap = new Map(r.joints.map(j => [j[0], j]));
 const formRigOf = shape => FORM_RIGS[formShapeDef(shape).rig] || null;
+
+/* ---- anatomy on the figure: the bony landmarks and the muscle groups an
+   artist looks for under the skin. Every place is a point on the surface of
+   one of the mannequin's own forms, written in that joint's frame, so it
+   turns, bends and stretches with the pose and the build and needs no mesh
+   of its own: drawFormAnatomy() projects them over the view.
+   A point is [joint, centre, radius, direction]: from the centre (the middle
+   of an ellipsoid, or a spot on a limb's axis) out along the direction to
+   the form's surface - radius is a number for a ball or a limb, or [x, y, z]
+   for an ellipsoid. null is the pelvis. +x is the figure's left, +z front. */
+function anatomySurface(c, r, d) {
+  const R = typeof r === 'number' ? [r, r, r] : r;
+  // Scaling the direction by 1/R first puts the end of it on the ellipsoid.
+  const k = Math.hypot(...d.map((v, i) => v / R[i])) || 1;
+  const n = d.map((v, i) => v / (R[i] * R[i]));
+  const nl = Math.hypot(...n) || 1;
+  return { p: c.map((v, i) => v + d[i] / k), n: n.map(v => v / nl) };
+}
+const ANAT = {
+  chest: ['chest', [0, 0.32, 0], [0.36, 0.38, 0.22]],
+  waist: ['spine', [0, 0.2, 0], [0.27, 0.24, 0.18]],
+  pelvis: [null, [0, 0.02, 0], [0.33, 0.2, 0.2]],
+  head: ['head', [0, 0.25, 0.02], [0.19, 0.25, 0.22]],
+};
+const anatAt = (k, d) => [ANAT[k][0], ANAT[k][1], ANAT[k][2], d];
+// Both sides of the body: f(side, 'L' | 'R', +1 | -1), +1 the figure's left.
+const anatSides = f => [['L', 1], ['R', -1]].flatMap(([n, s]) => f(n, s));
+// A spot on a limb's axis, y down from its joint.
+const anatLimb = (j, y, r, d) => [j, [0, y, 0], r, d];
+
+// The bones you can feel: [label, point]. Where the same label comes up on
+// both sides, the figure's one name serves them all.
+const FORM_ANATOMY_BONES = [
+  ['Jugular notch (the pit of the neck)', anatAt('chest', [0, 1, 0.55])],
+  ['C7, the bump at the neck\'s base', anatAt('chest', [0, 0.9, -0.55])],
+  ['Xiphoid, the point of the breastbone', anatAt('chest', [0, -0.55, 1])],
+  ['Pubic bone', anatAt('pelvis', [0, -0.9, 1])],
+  ['Sacrum', anatAt('pelvis', [0, -0.1, -1])],
+  ['Chin', anatAt('head', [0, -1, 0.65])],
+  ['Brow ridge', anatAt('head', [0, 0.35, 1])],
+  ['Back of the skull (occiput)', anatAt('head', [0, 0.05, -1])],
+  ...anatSides((n, s) => [
+    ['Acromion, the tip of the shoulder', [`upperArm.${n}`, [0, 0, 0], 0.11, [s * 0.2, 1, 0.1]]],
+    ['Shoulder blade (lower tip)', anatAt('chest', [s * 0.45, 0, -1])],
+    ['Iliac crest (front point)', anatAt('pelvis', [s, 0.7, 0.5])],
+    ['Dimples of the back (rear of the pelvis)', anatAt('pelvis', [s * 0.35, 0.7, -1])],
+    ['Greater trochanter, the hip bump', [`thigh.${n}`, [0, -0.12, 0], 0.13, [s, 0, -0.1]]],
+    ['Elbow point (olecranon)', [`forearm.${n}`, [0, 0, 0], 0.075, [0, 0.2, -1]]],
+    ['Elbow knobs (epicondyles)', [`forearm.${n}`, [0, 0.02, 0], 0.08, [1, 0, 0]]],
+    ['Elbow knobs (epicondyles)', [`forearm.${n}`, [0, 0.02, 0], 0.08, [-1, 0, 0]]],
+    ['Wrist knobs (ends of the forearm bones)', [`hand.${n}`, [0, 0, 0], 0.05, [1, 0, 0]]],
+    ['Wrist knobs (ends of the forearm bones)', [`hand.${n}`, [0, 0, 0], 0.05, [-1, 0, 0]]],
+    ['Kneecap (patella)', [`shin.${n}`, [0, 0.03, 0], 0.1, [0, 0, 1]]],
+    ['Knee knobs (ends of the thigh bone)', [`shin.${n}`, [0, 0.04, 0], 0.1, [1, 0.4, 0]]],
+    ['Knee knobs (ends of the thigh bone)', [`shin.${n}`, [0, 0.04, 0], 0.1, [-1, 0.4, 0]]],
+    ['Inner ankle knob (medial malleolus)', [`foot.${n}`, [0, 0.02, 0], 0.08, [-s, 0, 0]]],
+    ['Outer ankle knob (lateral malleolus)', [`foot.${n}`, [0, 0.02, 0], 0.08, [s, 0, 0]]],
+    ['Heel bone', [`foot.${n}`, [0, -0.08, -0.04], 0.07, [0, -0.3, -1]]],
+    ['Cheekbone', anatAt('head', [s, -0.1, 0.6])],
+    ['Jaw angle', anatAt('head', [s, -0.65, -0.1])],
+    ['Mastoid, the bone behind the ear', anatAt('head', [s, -0.35, -0.25])],
+  ]),
+];
+// The long bones and edges between them, as lines through two or more
+// points: [label, [point, point...]].
+const FORM_ANATOMY_LINES = [
+  ['Sternum (breastbone)', [anatAt('chest', [0, 1, 0.55]), anatAt('chest', [0, -0.55, 1])]],
+  ['Spine', [anatAt('chest', [0, 0.9, -0.55]), anatAt('chest', [0, -0.3, -1]), anatAt('waist', [0, -0.3, -1]), anatAt('pelvis', [0, -0.1, -1])]],
+  ...anatSides((n, s) => [
+    ['Collarbone (clavicle)', [anatAt('chest', [s * 0.12, 0.95, 0.55]), [`upperArm.${n}`, [0, 0, 0], 0.11, [s * 0.2, 1, 0.1]]]],
+    ['Spine of the shoulder blade', [anatAt('chest', [s * 0.25, 0.45, -1]), [`upperArm.${n}`, [0, 0, 0], 0.11, [s * 0.2, 1, -0.3]]]],
+    ['Rib cage edge', [anatAt('chest', [0, -0.55, 1]), anatAt('chest', [s * 0.6, -0.7, 0.8]), anatAt('chest', [s, -0.6, 0.1])]],
+    ['Crest of the pelvis (iliac crest)', [anatAt('pelvis', [s, 0.7, 0.5]), anatAt('pelvis', [s, 0.8, 0]), anatAt('pelvis', [s * 0.35, 0.7, -1])]],
+    ['Shin (front edge of the shin bone)', [anatLimb(`shin.${n}`, -0.12, 0.095, [0, 0, 1]), anatLimb(`shin.${n}`, -0.78, 0.095, [0, 0, 1])]],
+  ]),
+];
+// The muscle groups, each a patch between two points on the surface:
+// [label, from, to, half-width]. The half-width is in the form's own units.
+const FORM_ANATOMY_MUSCLES = [
+  ['Trapezius', anatAt('chest', [0, 1, -0.35]), anatAt('chest', [0, -0.1, -1]), 0.17],
+  ...anatSides((n, s) => [
+    ['Pectoralis (chest muscle)', anatAt('chest', [s * 0.1, 0.3, 1]), anatAt('chest', [s * 0.9, 0.5, 0.5]), 0.1],
+    ['Deltoid (shoulder cap)', [`upperArm.${n}`, [0, 0, 0], 0.11, [s * 0.3, 1, 0]], anatLimb(`upperArm.${n}`, -0.28, 0.085, [s, 0, 0]), 0.08],
+    ['Biceps', anatLimb(`upperArm.${n}`, -0.12, 0.085, [0, 0, 1]), anatLimb(`upperArm.${n}`, -0.5, 0.085, [0, 0, 1]), 0.055],
+    ['Triceps', anatLimb(`upperArm.${n}`, -0.12, 0.085, [0, 0, -1]), anatLimb(`upperArm.${n}`, -0.5, 0.085, [0, 0, -1]), 0.055],
+    ['Forearm muscles', anatLimb(`forearm.${n}`, -0.05, 0.075, [0, 0, 1]), anatLimb(`forearm.${n}`, -0.45, 0.06, [0, 0, 1]), 0.055],
+    ['Latissimus (the back wing)', anatAt('chest', [s * 0.9, 0.1, -0.5]), anatAt('waist', [s * 0.3, -0.5, -1]), 0.12],
+    ['Obliques (side of the waist)', anatAt('waist', [s * 0.9, 0.6, 0.5]), anatAt('waist', [s * 0.9, -0.7, 0.3]), 0.07],
+    ['Gluteus (buttock)', anatAt('pelvis', [s * 0.2, 0.6, -1]), anatAt('pelvis', [s * 0.8, -0.5, -0.8]), 0.12],
+    ['Quadriceps (front of the thigh)', anatLimb(`thigh.${n}`, -0.15, 0.12, [0, 0, 1]), anatLimb(`thigh.${n}`, -0.78, 0.11, [0, 0, 1]), 0.095],
+    ['Hamstrings (back of the thigh)', anatLimb(`thigh.${n}`, -0.15, 0.12, [0, 0, -1]), anatLimb(`thigh.${n}`, -0.78, 0.11, [0, 0, -1]), 0.09],
+    ['Calf (gastrocnemius)', anatLimb(`shin.${n}`, -0.12, 0.095, [0, 0, -1]), anatLimb(`shin.${n}`, -0.55, 0.09, [0, 0, -1]), 0.07],
+    ['Neck muscle (sternocleidomastoid)', ['neck', [0, 0.02, 0], 0.075, [s * 0.4, 0, 0.9]], anatAt('head', [s, -0.35, -0.25]), 0.035],
+  ]),
+  ['Abdominals (rectus abdominis)', anatAt('waist', [0, 0.7, 1]), anatAt('waist', [0, -0.9, 1]), 0.1],
+];
 
 /* The zones view. Colours are arbitrary but ordered warm-to-cool the way the
    families run from the light round to the shadow side; the thresholds are

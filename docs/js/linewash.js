@@ -108,7 +108,7 @@ function lineWashDraw(plan, p, c) {
   g.fillStyle = LW_INK;
   for (const a of plan.inkIdx) {
     const i = m.pts[a], x = i % m.w, y = (i - x) / m.w;
-    const r = LW_WIDTH[m.cls[a]] * (0.85 + 0.3 * m.weight[a]) * m.taper[a] * k / 2;
+    const r = LW_WIDTH[m.cls[a]] * (0.85 + 0.3 * Math.min(1, m.weight[a])) * m.taper[a] * k / 2;
     g.beginPath(); g.arc(x + 0.5, y + 0.5, Math.max(0.35, r), 0, 2 * Math.PI); g.fill();
   }
   return c;

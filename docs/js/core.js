@@ -31,6 +31,7 @@ const ICONS = {
   range: '<path d="M4 6h16v12H4z"/><path d="M4 12h16" stroke-dasharray="2 2.5"/><path d="M8 6v12M16 6v12" opacity=".45"/>',
   symmetry: '<path d="M12 3v18" stroke-dasharray="2 2.2"/><path d="M10 7C6 7 4.5 10 5 13.5S8 18 10 17"/><path d="M14 7c4 0 5.500 3 5 6.500S16 18 14 17" opacity=".55"/>',
   rhythms: '<path d="M6 4c1 5 8 6 6 11s-1 4 0 5"/><path d="M18 4c-1 5-8 6-6 11"/><circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="18" cy="4" r="1" fill="currentColor"/>',
+  grades: '<path d="M15.500 5.500l3 3L8 19l-4 1 1-4z"/><path d="M13.500 7.500l3 3"/><path d="M5 16l3 3" opacity=".5"/>',
   markers: '<path d="M5 20l3-1 9.500-11.500-2-2L6 17z"/><path d="M14 8l2 2"/><path d="M5 20l.5-2.500" opacity=".5"/>',
   tangents: '<circle cx="8" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4"/><path d="M3 4h18" opacity=".45"/>',
   tone: '<path d="M4 6h16v12H4z"/><path d="M4 6h16v4H4z" opacity=".3" fill="currentColor"/><path d="M4 14h16v4H4z" opacity=".75" fill="currentColor"/>',
@@ -544,6 +545,7 @@ const state = {
   symmetryOn: false,          // the picture folded - see toggleSymmetry()
   rhythmsOn: false,           // Reilly's rhythms drawn - see toggleRhythms()
   markersOn: false,           // grey markers' areas shown - see toggleMarkers()
+  gradesOn: false,            // pencil grades' areas shown - see toggleGrades()
   toneOn: false,              // toned paper's zones shown - see toggleTone()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,

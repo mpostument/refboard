@@ -1436,6 +1436,7 @@ function drawFormsOverlay() {
   }
 
   if (formScene.heads) drawFormHeads(ctx, dpr, toScreen);
+  if (formScene.bones || formScene.muscles) drawFormAnatomy(ctx, dpr, toScreen);
   drawFormRig(ctx, dpr, toScreen);
   drawFormGizmo(ctx, dpr, toScreen);
 
@@ -1570,6 +1571,100 @@ function drawFormHeads(ctx, dpr, toScreen) {
       ctx.strokeText(String(k + 1), x, yy + 4 * dpr); ctx.fillText(String(k + 1), x, yy + 4 * dpr);
       ctx.lineWidth = 1 * dpr;
     });
+  });
+  ctx.restore();
+}
+
+/* Anatomy on the figure (FORM_ANATOMY_*): over the view, so the render and
+   the export stay clean. A place is drawn only while the surface it sits on
+   faces the camera - the far side of the body would show through it - and a
+   label only where it does not run into one already placed, so a crowded
+   figure names the nearer, bigger things first. A name shared by both sides
+   is written once: right of the point furthest right on the screen, or, if
+   that is taken, left of the one furthest left. */
+function drawFormAnatomy(ctx, dpr, toScreen) {
+  const F = forms, T = F.T, cam = F.camera;
+  const right = new T.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+  const placed = [];
+  ctx.save();
+  ctx.font = `${10.5 * dpr}px system-ui, sans-serif`;
+  ctx.textBaseline = 'middle';
+  const label = (text, [x1, y1], [x0, y0]) => {
+    const w = ctx.measureText(text).width, h = 12 * dpr, gap = 8 * dpr;
+    for (const [x, y] of [[x1 + gap, y1], [x0 - gap - w, y0]]) {
+      const box = [x, y - h / 2, x + w, y + h / 2];
+      if (placed.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
+      placed.push(box);
+      ctx.lineWidth = 3 * dpr; ctx.strokeStyle = 'rgba(0, 0, 0, .75)'; ctx.lineJoin = 'round';
+      ctx.strokeText(text, x, y); ctx.fillStyle = '#f4ecd8'; ctx.fillText(text, x, y);
+      return;
+    }
+  };
+  F.meshes.forEach((m, i) => {
+    const rig = m.userData.rig;
+    if (!rig || rig.kind !== 'figure' || formShapeDef(formScene.objects[i].shape).rig !== 'figure') return;
+    // A spec to where it is in the world, which way the surface faces, and
+    // whether that is toward you.
+    const where = ([j, c, r, d]) => {
+      const node = j ? rig.nodes[j] : m, s = anatomySurface(c, r, d);
+      node.updateWorldMatrix(true, false);
+      const P = new T.Vector3(...s.p).applyMatrix4(node.matrixWorld);
+      const N = new T.Vector3(...s.n).transformDirection(node.matrixWorld);
+      return { P, N, node, front: N.dot(cam.position.clone().sub(P).normalize()) > 0.05 };
+    };
+    const px = v => toScreen(v);
+    const names = new Map(); // label -> its rightmost and its leftmost [x, y]
+    const name = (text, x, y) => {
+      const n = names.get(text);
+      if (!n) names.set(text, [[x, y], [x, y]]);
+      else { if (x > n[0][0]) n[0] = [x, y]; if (x < n[1][0]) n[1] = [x, y]; }
+    };
+
+    if (formScene.muscles) {
+      ctx.fillStyle = 'rgba(190, 78, 66, .36)'; ctx.strokeStyle = 'rgba(232, 128, 110, .8)'; ctx.lineWidth = 1 * dpr;
+      for (const [text, from, to, hw] of FORM_ANATOMY_MUSCLES) {
+        const a = where(from), b = where(to);
+        if (!(a.front && b.front)) continue;
+        const [ax, ay, az] = px(a.P), [bx, by, bz] = px(b.P);
+        if (az >= 1 || bz >= 1) continue;
+        // Half as wide on screen as it is in the world, from where the
+        // camera's right hand takes a point of that distance.
+        const wide = hw * a.node.matrixWorld.getMaxScaleOnAxis(), [ex, ey] = px(a.P.clone().addScaledVector(right, wide));
+        const len = Math.hypot(bx - ax, by - ay), half = Math.max(2 * dpr, Math.hypot(ex - ax, ey - ay));
+        ctx.beginPath();
+        ctx.ellipse((ax + bx) / 2, (ay + by) / 2, len / 2 + half * 0.4, half, Math.atan2(by - ay, bx - ax), 0, 2 * Math.PI);
+        ctx.fill(); ctx.stroke();
+        name(text, (ax + bx) / 2, (ay + by) / 2);
+      }
+    }
+    if (formScene.bones) {
+      ctx.strokeStyle = 'rgba(244, 236, 216, .85)'; ctx.lineWidth = 2 * dpr; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const [text, pts] of FORM_ANATOMY_LINES) {
+        const ws = pts.map(where), ps = ws.map(w => px(w.P));
+        let mid = null;
+        ctx.beginPath();
+        for (let k = 0; k < ws.length - 1; k++) {
+          // A piece is drawn where the two ends together face you: a bone
+          // that runs round the side shows from the front and the back, but
+          // not the collarbone from behind.
+          const a = ws[k], b = ws[k + 1], m = a.P.clone().add(b.P).multiplyScalar(0.5);
+          if (a.N.clone().add(b.N).dot(cam.position.clone().sub(m).normalize()) < 0.4 || ps[k][2] >= 1 || ps[k + 1][2] >= 1) continue;
+          ctx.moveTo(ps[k][0], ps[k][1]); ctx.lineTo(ps[k + 1][0], ps[k + 1][1]);
+          mid = [(ps[k][0] + ps[k + 1][0]) / 2, (ps[k][1] + ps[k + 1][1]) / 2];
+        }
+        ctx.stroke();
+        if (mid) name(text, mid[0], mid[1]);
+      }
+      for (const [text, spec] of FORM_ANATOMY_BONES) {
+        const w = where(spec), [x, y, z] = px(w.P);
+        if (!w.front || z >= 1) continue;
+        ctx.beginPath(); ctx.arc(x, y, 3.5 * dpr, 0, 2 * Math.PI);
+        ctx.fillStyle = '#f4ecd8'; ctx.strokeStyle = 'rgba(0, 0, 0, .75)'; ctx.lineWidth = 1.2 * dpr;
+        ctx.fill(); ctx.stroke();
+        name(text, x, y);
+      }
+    }
+    for (const [text, [hi, lo]] of names) label(text, hi, lo);
   });
   ctx.restore();
 }
@@ -3015,6 +3110,8 @@ function formsPanelHtml() {
     // A figure's proportions first - what kind of body, then how it stands.
     pose: `<div id="formBuildWrap"><h4>Body</h4>` + chips('formBuilds', Object.entries(FIGURE_BUILDS), 'build', b => b.hint) +
       `<label class="opt"><input type="checkbox" data-k="heads"> Heads grid</label>
+      <label class="opt"><input type="checkbox" data-k="bones"> Bony landmarks</label>
+      <label class="opt"><input type="checkbox" data-k="muscles"> Muscle groups</label>
       <div class="count" id="formBuildNote"></div><h4>Pose</h4></div>
       <select id="formJoint" title="Which joint to bend - or click its dot in the view"></select>
       <div class="count" id="formJointHint"></div>
@@ -3232,6 +3329,8 @@ function syncFormsPanel() {
     : 'How big the light looks - a bare bulb is small, a window or an overcast sky is big. A bigger light throws a softer shadow: still sharp where a form touches the floor, softer the further it is thrown.';
   panel.querySelector('[data-k="fillShadow"]').disabled = formSceneIsCel(formScene);
   for (const [k, tip] of [
+    ['bones', 'The bones you can feel under the skin - collarbone, ribs, hip crest, knee and ankle knobs, cheekbone - as labelled dots on the figure. They move with the pose; only those facing you are drawn.'],
+    ['muscles', 'The muscle groups an artist draws - pectoralis, deltoid, biceps, abdominals, quadriceps, calf - as patches on the figure. Only those facing you are drawn.'],
     ['fillShadow',"The second light throws a shadow of its own, like the first - fainter, since it is weaker, but it shows a rim light's shadow behind a form and a fill's across the floor. Off, it only lights. Not drawn in Anime."],
     ['ambient', 'The sky: light from above that reaches every surface, in the shadow too. Lifts every shadow evenly.'],
     ['bounce', "Light coming up off the floor, in the floor's own colour - strongest low on a form, fading up it - and light thrown from one form onto another near it, in the first one's colour."],

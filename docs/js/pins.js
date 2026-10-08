@@ -31,6 +31,7 @@ const HUD_TOOLS = [
   { id: 'symmetry', label: 'Symmetry check', els: ['btnSymmetry'], key: 'y', group: 'look' },
   { id: 'rhythms', label: 'Reilly rhythms', els: ['btnRhythms'], key: 'z', group: 'look' },
   { id: 'markers', label: 'Grey markers', els: ['btnMarkers'], key: '', group: 'look' },
+  { id: 'grades', label: 'Pencil grades', els: ['btnGrades'], key: '', group: 'look' },
   { id: 'lineweight', label: 'Line weight', els: ['btnLineWeight'], key: 'k', group: 'look' },
   { id: 'linewash', label: 'Line and wash', els: ['btnLineWash'], key: '', group: 'look' },
   { id: 'tone', label: 'Toned paper', els: ['btnTone'], key: 'j', group: 'look' },
