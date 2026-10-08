@@ -22,6 +22,7 @@ const WS_TABS = [
     { hud: 'tone', about: 'on grey, tan or black paper: what to leave as the paper, where the white goes, where the darks go' },
     { hud: 'amounts', about: 'how much light, middle and dark - one leads, or equal amounts that read as undecided' },
     { hud: 'markers', about: 'the picture in the greys of a marker set - each area with its marker number, lightest first' },
+    { hud: 'grades', about: 'for graphite: which grade of pencil each area wants, 2H to 8B - the hardest first' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [

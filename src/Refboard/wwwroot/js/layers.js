@@ -44,6 +44,8 @@ const LAYERS = [
     on: () => !!state.rhythmsOn, toggle: () => toggleRhythms() },
   { id: 'markers', label: 'Grey markers', els: ['markerOverlay'], base: 0.85,
     on: () => !!state.markersOn, toggle: () => toggleMarkers() },
+  { id: 'grades', label: 'Pencil grades', els: ['gradeOverlay'], base: 0.85,
+    on: () => !!state.gradesOn, toggle: () => toggleGrades() },
   { id: 'lineweight', label: 'Line weight', els: ['lineOverlay'], base: 1,
     on: () => !!state.lineWeightOn, toggle: () => toggleLineWeight() },
   { id: 'linewash', label: 'Line and wash', els: ['lineWashOverlay'], base: 1,

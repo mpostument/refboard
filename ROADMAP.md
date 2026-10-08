@@ -318,9 +318,6 @@ choose, and locks you can move.
 
 Line and background:
 
-- **Line for anime.** A heavier outer contour, lighter inner lines,
-  tapered ends, thicker at overlaps and in shadow - the line weight item,
-  for anime line art.
 - **Anime backgrounds.** Ghibli's backgrounds are largely painted in
   gouache and watercolour - a direct line to watercolour. Sky and
   landscape palettes in the manner of Ghibli or Makoto Shinkai, with
@@ -624,8 +621,6 @@ the wash.
 - **Presets by medium.** "Liner sketch, 5 min", "watercolour study,
   45 min with stages", "pencil value study, 20 min" - each with its timer,
   its overlays and its advice.
-- **Pencil grade map.** For graphite: over the photo, which grade each
-  area wants, 2H to 8B, from its value.
 - **Calibration from a swatch photo.** Swatch your own pencils or markers
   on your own paper, dry and wetted, photograph it, and the app takes the
   colours from your materials - the published charts are approximate. The
@@ -858,9 +853,13 @@ the wash.
 - **Line weight, the rest.** In place (`js/linework.js`, `k`, Workspace >
   Line and My work, a layer): contours weighed by the darkness round them,
   their size and length, with tapered ends; an anime frame's own line art
-  weighed. Still to come: heavier where one form overlaps another (a
-  T-junction), a whole strand of hair as one line rather than dashes, and
-  a photo of your own line drawing checked against it.
+  weighed; heavier where one line meets another (a T: found where three
+  long branches meet, or a line ends a hair short of another - not at the
+  whisker of a stroke's end), and a line that ends against another does
+  not taper there. Still to come: a whole strand of hair as one line
+  rather than dashes, a heavier line where a form passes in front (not
+  only where lines meet), and a photo of your own line drawing checked
+  against it.
 - **Museum search.** In place (`js/museum.js`, Prepare > Museums): the Met
   and the Rijksmuseum searched from the app ("Sargent watercolour"), a
   picture opened in the workspace at 1600 px or at the museum's original,
@@ -977,6 +976,9 @@ Anime > Body, above).
   foreshortening are among the hardest things to draw.
 - **Animal mannequins.** A cat, a dog and a horse built from basic
   volumes, jointed like the figure.
-- **Anatomy on the mannequin.** Bony landmarks on the figure (clavicle,
-  iliac crest, the condyles) and muscle groups as a layer that can be
-  turned on.
+- **Anatomy on the mannequin, the rest.** In place (`FORM_ANATOMY_*` in
+  `js/forms-models.js`, `drawFormAnatomy()` in `js/forms.js`; 3D forms > a
+  figure > Body): bony landmarks and muscle groups as labelled marks on the
+  figure's own forms, turning with the pose and drawn where they face you.
+  Still to come: the hand and the foot (carpals, the arches), the deeper
+  muscles under the surface ones, and the same on the Head scan.

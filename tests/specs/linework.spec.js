@@ -13,8 +13,8 @@ async function weigh(page, w, h, paint) {
     new Function('g', src)(g);
     const img = new Image(); img.src = c.toDataURL(); await img.decode();
     const m = lineWeightOf(stepsRead(img));
-    return { pts: Array.from(m.pts, (i, k) => ({ x: i % m.w, y: Math.floor(i / m.w), c: m.cls[k], t: m.taper[k] })),
-      share: m.share, say: lineWeightVerdict(m, null) };
+    return { pts: Array.from(m.pts, (i, k) => ({ x: i % m.w, y: Math.floor(i / m.w), c: m.cls[k], t: m.taper[k], wt: m.weight[k] })),
+      share: m.share, joins: m.joins, say: lineWeightVerdict(m, null) };
   }, [w, h, paint]);
 }
 const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
@@ -62,6 +62,52 @@ test('an open line tapers toward its ends; a flat picture has no lines', async (
   const flat = await weigh(page, 200, 200, '');
   expect(flat.pts).toHaveLength(0);
   expect(flat.say).toContain('No clear contours');
+});
+
+// Line art: four long dark strokes, so the picture is read as drawn lines. The
+// second of them has a short stem set against it from above, ending on it (a
+// form behind another); the third is the same line left alone - the control.
+const TEE = `
+  g.fillStyle = '#222';
+  g.fillRect(40, 100, 320, 4);
+  g.fillRect(40, 200, 320, 4);
+  g.fillRect(198, 130, 4, 72);
+  g.fillRect(40, 300, 320, 4);
+  g.fillRect(40, 360, 320, 4);`;
+
+test('a line that ends against another swells both, the way an inker presses at an overlap', async ({ page }) => {
+  await openApp(page);
+  const m = await weigh(page, 400, 400, TEE);
+  expect(m.joins).toBeGreaterThan(0);
+  // The line the stem lands on, and its twin with nothing against it.
+  const near = y => m.pts.filter(p => Math.abs(p.y - y) < 6 && Math.abs(p.x - 200) < 12);
+  const hit = near(202), alone = near(302);
+  expect(hit.length).toBeGreaterThan(5);
+  expect(alone.length).toBeGreaterThan(5);
+  expect(mean(hit.map(p => p.wt))).toBeGreaterThan(mean(alone.map(p => p.wt)) + 0.05);
+  // The note says why.
+  expect(m.say).toContain('meets another');
+});
+
+test('a stem that lands on a line does not taper there; one that stops in the open does', async ({ page }) => {
+  await openApp(page);
+  const m = await weigh(page, 400, 400, TEE);
+  // The stem's foot (y 190-200) is on the line: full width. Its head
+  // (y 130-140) is a free end.
+  const foot = m.pts.filter(p => Math.abs(p.x - 200) < 4 && p.y > 175 && p.y < 198);
+  const head = m.pts.filter(p => Math.abs(p.x - 200) < 4 && p.y >= 128 && p.y < 138);
+  expect(foot.length).toBeGreaterThan(3);
+  expect(head.length).toBeGreaterThan(3);
+  expect(Math.min(...foot.map(p => p.t))).toBeGreaterThan(0.95);
+  expect(Math.min(...head.map(p => p.t))).toBeLessThan(0.7);
+});
+
+test('a staircase of one line is not a junction, so a lone diagonal gets no swelling', async ({ page }) => {
+  await openApp(page);
+  const m = await weigh(page, 400, 400, `
+    g.strokeStyle = '#222'; g.lineWidth = 4;
+    for (const y of [60, 140, 220, 300]) { g.beginPath(); g.moveTo(40, y); g.lineTo(360, y + 70); g.stroke(); }`);
+  expect(m.joins).toBe(0);
 });
 
 test('in a session: k draws the lines as a layer, with a liner size in the note; the note x turns it off', async ({ page }) => {

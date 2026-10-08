@@ -246,8 +246,11 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   own lines weighed, and a big mass with no line round it (black hair on
   white) gets its edge; a cel-shading edge, never lined in anime, stays
   out. For a photo, the edges between its masses. Weight is relative: the
-  lightest third of the lines is drawn thin, the heaviest third heavy. The
-  note gives liner sizes (0.05 to 0.8), or how hard to press, for the line
+  lightest third of the lines is drawn thin, the heaviest third heavy. Where
+  one line meets another - a line ending against the line in front of it, or
+  three lines meeting, a form passing behind a form - both swell, the way an
+  inker presses at an overlap, and a line that ends against another is not
+  tapered there. The note gives liner sizes (0.05 to 0.8), or how hard to press, for the line
   medium you have. Line is its own Workspace tab: line weight, lost edges
   and the angle tool.
 - **Line and wash** - in a session (Workspace > Line, Layers, or Ctrl+K):
@@ -284,6 +287,15 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   spread between the picture's own darkest and lightest and matched each to
   its nearest marker; the key says how much of the picture each takes. The
   greys' lightness is an estimate until corrected from a swatch.
+- **Pencil grades** - in a session (Workspace > Value, Layers, Ctrl+K): for
+  graphite, the picture split into the grades of pencil, 2H to 8B, each area
+  with its grade written on it, the paper left white. The same splitting as
+  the grey markers, matched to the pencils in your case - all twelve, a set
+  of six (2H, HB, 2B, 4B, 6B, 8B) or three (HB, 3B, 6B); the key says how
+  much of the picture each takes. The note says to work from the hardest
+  grade to the softest, and when the picture's darks are darker than any
+  graphite goes. A grade's lightness is the darkest it lays comfortably, an
+  estimate; the grey markers and the pencils are never shown together.
 - **Colour wheel** - the Colour studio's Wheel tab: click or drag a colour
   on the wheel (or press the arrow keys) and pick a harmony - complementary,
   split, analogous, triad, tetrad, square, or one hue from pale to deep -
@@ -511,7 +523,11 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     dot and bend it with rings, R or sliders, from classic poses (contrapposto,
     walk, kneel...), random ones, or a mirror of the last, in realistic, anime
     (7 heads), long-legged (9) or chibi (2.5) proportions, with a numbered
-    heads grid across it. Each with its own placement, proportions, rotation,
+    heads grid across it - and, over the figure only, its **bony landmarks**
+    (collarbone, hip crest, kneecap, ankle knobs, cheekbone...) and **muscle
+    groups** (pectoralis, deltoid, biceps, abdominals, quadriceps, calf...),
+    labelled, moving with the pose and drawn only where they face you. Each
+    with its own placement, proportions, rotation,
     colour and surface: matte, satin, glossy, metal, glass or velvet - or
     **Anime**, cel shading: a flat colour, one hard-edged shadow tone of its
     own (pulled toward blue-violet, as anime colours it), a highlight, and the
