@@ -15,6 +15,15 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anatomy-3d', title: 'Anatomy on the 3D figure',
+    text: "3D forms > a figure > Body: Bony landmarks and Muscle groups. The collarbone, the notch of the neck, the hip crest, the kneecap, the ankle knobs, the cheekbone and a dozen more are labelled dots on the figure; the pectoralis, deltoid, biceps, abdominals, quadriceps and calf are patches on it. They move with the pose and the build, and only what faces you is drawn - turn it round and the back's landmarks (C7, the dimples of the pelvis) come up instead. Over the view only: never in an export.",
+    act: 'Open 3D forms', run: () => openForms() },
+  { id: 'line-joins', title: 'Line weight: heavier where one line meets another',
+    text: "Line weight (k) now swells the lines where one form overlaps another - a line ending against the line in front of it, or three lines meeting - the way an inker presses at an overlap, and a line that ends against another no longer tapers there. On an anime frame the hair and the eyes show it most. Line and wash uses the same weights.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'pencil-grades', title: 'Pencil grades: which pencil for each area',
+    text: "Over any picture in a session (Workspace > Value, or Ctrl+K): the picture split into the grades of graphite, 2H for the palest tone to 8B for the darkest, each area with its grade written on it. Choose the pencils you own - all twelve, a set of six, or three - and the note says how much of the picture each takes, to work hardest-to-softest, and when the darks are darker than any graphite goes. The grey markers and the pencils are never on together.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'amounts-more', title: 'Amounts: bright and grey, big and small, and the crop that leads',
     text: "Over any picture in a session (u): two more bars beside light and dark, warm and cool, hard and soft - how much of it is bright colour and how much greyed, and how much is in big shapes and how much in small ones, each with a Where? that draws its map. And where the whole picture has no leader but a part of it does - the left half is mostly dark, say - the note offers that crop, and Try it draws it as the viewfinder.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

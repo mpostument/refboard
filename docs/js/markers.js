@@ -20,6 +20,8 @@
    Areas are blocked in the way a painter reads them - each pixel takes the grey
    most of its neighbourhood has - and an area too small to be worth a label
    (under 0.6% of the picture) is left unlabelled: it is drawn like the rest.
+   grades.js splits a picture into pencil grades by the same rules: it gives
+   markersOf() the picks itself.
    One of the classic scripts index.html loads in order; see the note there. */
 "use strict";
 
@@ -85,11 +87,11 @@ function markersPick(set, n, lo, hi) {
      share  per pick, then the paper last: percent of the picture;
      spots  where each labelled area's code goes: { i, x, y, size } - the
             pixel of the area nearest its middle, and its side (sqrt of area). */
-function markersOf(p, { set = 'tombow10', n = 5 } = {}) {
+function markersOf(p, { set = 'tombow10', n = 5, picks: given } = {}) {
   const { w, h } = p, px = w * h, S = Math.max(w, h);
   const sorted = Float32Array.from(p.L).sort();
   const lo = sorted[Math.floor(px * 0.02)], hi = sorted[Math.min(px - 1, Math.floor(px * 0.98))];
-  const picks = markersPick(set, n, Math.min(lo, hi - 1), hi);
+  const picks = given || markersPick(set, n, Math.min(lo, hi - 1), hi);
   // The paper is whatever is lighter than half way from the lightest marker
   // to white: a value that would rather be white than that marker.
   const paperAt = (picks[0].L + 100) / 2;
@@ -205,6 +207,8 @@ function toggleMarkers() {
   state.markersOn = !state.markersOn;
   el('btnMarkers').setAttribute('aria-pressed', String(state.markersOn));
   clearMarkers();
+  // Two ways of reading the same values in greys: one at a time.
+  if (state.markersOn && state.gradesOn) toggleGrades();
   if (state.markersOn) runMarkers();
 }
 

@@ -12,7 +12,9 @@
      form and its underside are dark on the form's side, and a line into a
      dark place is a heavy one;
    - how big the contour is - how much of the edge survives a heavy blur:
-     the outline of a head does, a strand of hair inside it does not.
+     the outline of a head does, a strand of hair inside it does not;
+   - whether it meets another line - where one form overlaps another a line
+     ends against the line in front of it (a T), and an inker presses there.
    Weight is relative - a line is heavy against the lighter ones - so the
    classes are split by the picture's own lines: the lightest third thin,
    the heaviest third heavy.
@@ -32,6 +34,10 @@ const LW_FILL = 25;
 const LW_THIN = 0.35, LW_HEAVY = 0.3;
 // Line widths, in pixels of the picture read at STEPS_SIDE, thin to heavy.
 const LW_WIDTH = [1.2, 2.2, 3.8];
+// A T where one line meets another swells both: this much more weight at
+// the meeting, falling off over a line-length of about LW_JOIN_REACH of the
+// picture's side.
+const LW_JOIN = 0.4, LW_JOIN_REACH = 1 / 40;
 const LW_INK = '#1d1a24', LW_PAPER = 'rgba(250, 248, 242, 0.86)';
 
 /* Every point of every contour, weighed. p: stepsRead(). pts: the pixel
@@ -103,7 +109,7 @@ function lineWeightOf(p) {
   // Specks and stubs out: a painter draws a contour, not a pixel. Each
   // point keeps its line's length: a short line is a small inner one.
   const minRun = Math.max(6, Math.round(S / 45)), len = new Float32Array(n);
-  const seen = new Uint8Array(n), stack = new Int32Array(n), run = [];
+  const seen = new Uint8Array(n), stack = new Int32Array(n), run = [], id = new Int32Array(n);
   for (let s = 0; s < n; s++) {
     if (!crest[s] || seen[s]) continue;
     run.length = 0;
@@ -117,7 +123,7 @@ function lineWeightOf(p) {
         if ((dx || dy) && x + dx >= 0 && x + dx < w && j >= 0 && j < n && crest[j] && !seen[j]) { seen[j] = 1; stack[top++] = j; }
       }
     }
-    for (const i of run) if (run.length < minRun) crest[i] = 0; else len[i] = run.length;
+    for (const i of run) if (run.length < minRun) crest[i] = 0; else { len[i] = run.length; id[i] = s + 1; }
   }
 
   // Darkness round each point: both sides of it, a little way off, on the
@@ -141,6 +147,62 @@ function lineWeightOf(p) {
     if (Math.max(at(soft, x + D * nx, y + D * ny), at(soft, x - D * nx, y - D * ny)) < Math.min(lo + 3, LW_FILL)) crest[i] = 0;
     else pts.push(i);
   }
+  // The neighbours of a point on a line, along it.
+  const nb = i => {
+    const x = i % w, out = [];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const j = i + dy * w + dx;
+      if ((dx || dy) && x + dx >= 0 && x + dx < w && j >= 0 && j < n && crest[j]) out.push(j);
+    }
+    return out;
+  };
+  // The end of a line: all of its own line a few pixels round the point
+  // lies to one side. (A neighbour count would miss an end drawn two
+  // pixels wide.)
+  const endish = new Uint8Array(n);
+  for (const i of pts) {
+    const x = i % w, y = (i - x) / w;
+    let sx = 0, sy = 0, c = 0;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if ((dx || dy) && xx >= 0 && yy >= 0 && xx < w && yy < h && id[yy * w + xx] === id[i]) { sx += dx; sy += dy; c++; }
+    }
+    if (c && Math.hypot(sx, sy) / c > 1) endish[i] = 1;
+  }
+  // Where one line meets another: a point with three long branches (a
+  // staircase has two, and the stub across the end of a stroke is only a few
+  // pixels - so the branches are counted out at 4 to arm pixels, in the
+  // directions the line takes there), and the end of a line that stops a
+  // hair short of another - one that is a line, not the end of one.
+  const arm = Math.max(8, Math.round(S / 50));
+  const branches = i => {
+    const x = i % w, y = (i - x) / w, sector = new Uint8Array(8);
+    for (let dy = -arm; dy <= arm; dy++) for (let dx = -arm; dx <= arm; dx++) {
+      const xx = x + dx, yy = y + dy, d = Math.hypot(dx, dy);
+      if (d < 4 || d > arm || xx < 0 || yy < 0 || xx >= w || yy >= h || id[yy * w + xx] !== id[i]) continue;
+      sector[Math.floor(((Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI)) * 8) % 8]++;
+    }
+    // Round the circle, the groups of sectors with a pixel or two in them.
+    let groups = 0;
+    for (let k = 0; k < 8; k++) if (sector[k] >= 2 && sector[(k + 7) % 8] < 2) groups++;
+    return groups;
+  };
+  const joints = [], lands = new Uint8Array(n), near2 = Math.max(3, Math.round(S / 90));
+  for (const i of pts) {
+    const ring = nb(i);
+    if (ring.length >= 3 && !endish[i] && branches(i) >= 3) joints.push(i);
+    if (!endish[i]) continue;
+    const x = i % w, y = (i - x) / w;
+    let best = 0, found = -1;
+    for (let dy = -near2; dy <= near2; dy++) for (let dx = -near2; dx <= near2; dx++) {
+      const xx = x + dx, yy = y + dy, d = Math.hypot(dx, dy);
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h || d > near2) continue;
+      const j = yy * w + xx;
+      if (!crest[j] || !id[j] || id[j] === id[i] || endish[j]) continue;
+      if (found < 0 || d < best) { best = d; found = j; }
+    }
+    if (found >= 0) { joints.push(found); lands[i] = 1; }
+  }
   const dark = new Float32Array(pts.length), size = new Float32Array(pts.length);
   pts.forEach((i, k) => {
     const x = i % w, y = (i - x) / w, nx = NX[i], ny = NY[i];
@@ -155,6 +217,17 @@ function lineWeightOf(p) {
   // A line an eighth of the picture long or more counts as long.
   const long = S / 8;
   pts.forEach((i, k) => { raw[i] = 0.5 * dark[k] + 0.3 * Math.min(1, size[k] / bigTop) + 0.2 * Math.min(1, len[i] / long) + 1e-3; });
+  // The meetings swell the lines round them, the most at the point itself.
+  const reach = Math.max(4, S * LW_JOIN_REACH);
+  for (const q of joints) {
+    const qx = q % w, qy = (q - qx) / w;
+    for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) {
+      const xx = qx + dx, yy = qy + dy;
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h || !raw[yy * w + xx]) continue;
+      const d = Math.hypot(dx, dy);
+      if (d < reach) raw[yy * w + xx] += LW_JOIN * (1 - d / reach);
+    }
+  }
 
   // Each point judged with its neighbours along the line, so a line swells
   // and thins smoothly rather than flickering pixel by pixel.
@@ -174,16 +247,9 @@ function lineWeightOf(p) {
   // Tapered ends: how far each point is, along its line, from the nearest
   // end (a point with one neighbour) - a walk out from all the ends at once.
   const T = Math.max(6, S / 35), far = new Float32Array(n).fill(Infinity), queue = new Int32Array(n);
-  const nb = i => {
-    const x = i % w, out = [];
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-      const j = i + dy * w + dx;
-      if ((dx || dy) && x + dx >= 0 && x + dx < w && j >= 0 && j < n && crest[j]) out.push(j);
-    }
-    return out;
-  };
   let qh = 0, qt = 0;
-  for (const i of pts) if (nb(i).length <= 1) { far[i] = 0; queue[qt++] = i; }
+  // A line that ends against another does not taper: it joins it.
+  for (const i of pts) if (nb(i).length <= 1 && !lands[i]) { far[i] = 0; queue[qt++] = i; }
   while (qh < qt) {
     const i = queue[qh++];
     if (far[i] >= T) continue;
@@ -197,7 +263,7 @@ function lineWeightOf(p) {
   const cls = Uint8Array.from(weight, v => v >= cut2 ? 2 : v >= cut1 ? 1 : 0);
   const share = [0, 0, 0];
   for (const c of cls) share[c]++;
-  return { w, h, lineArt, pts: Int32Array.from(pts), weight, cls, taper,
+  return { w, h, lineArt, joins: joints.length, pts: Int32Array.from(pts), weight, cls, taper,
     share: share.map(v => pts.length ? v / pts.length * 100 : 0) };
 }
 
@@ -215,7 +281,7 @@ function lineWeightDraw(m, c) {
   for (let a = 0; a < m.pts.length; a++) {
     const i = m.pts[a], x = i % m.w, y = (i - x) / m.w;
     // Within a class, a little more or less by the weight itself.
-    const r = LW_WIDTH[m.cls[a]] * (0.85 + 0.3 * m.weight[a]) * m.taper[a] * k / 2;
+    const r = LW_WIDTH[m.cls[a]] * (0.85 + 0.3 * Math.min(1, m.weight[a])) * m.taper[a] * k / 2;
     g.beginPath(); g.arc(x + 0.5, y + 0.5, Math.max(0.35, r), 0, 2 * Math.PI); g.fill();
   }
   return c;
@@ -237,7 +303,8 @@ function lineWeightTool() {
 /* What the lines say - two lines: the note sits over the picture. */
 function lineWeightVerdict(m, tool = lineWeightTool()) {
   if (!m.pts.length) return 'No clear contours here - nothing to weigh.';
-  return '<b>Heavy</b> - the shadow side, undersides and the big outer contours. <b>Light</b> - the lit side and small inner lines; ends taper.<br>' +
+  return '<b>Heavy</b> - the shadow side, undersides, the big outer contours' + (m.joins ? ' and where one line meets another (the form in front)' : '') +
+    '. <b>Light</b> - the lit side and small inner lines; ends taper.<br>' +
     (LW_TOOLS[tool] || 'Press into the heavy lines, lift toward the light ones and at the ends.');
 }
 

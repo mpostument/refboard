@@ -513,6 +513,7 @@ function show(src) {
     if (state.symmetryOn) runSymmetry();
     if (state.rhythmsOn) runRhythms();
     if (state.markersOn) runMarkers();
+    if (state.gradesOn) runGrades();
     refreshValueTools();
   };
   img.onerror = () => {
@@ -578,6 +579,7 @@ function show(src) {
   clearSymmetry();
   clearRhythms();
   clearMarkers();
+  clearGrades();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);
