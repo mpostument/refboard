@@ -32,6 +32,7 @@ const HUD_TOOLS = [
   { id: 'rhythms', label: 'Reilly rhythms', els: ['btnRhythms'], key: 'z', group: 'look' },
   { id: 'markers', label: 'Grey markers', els: ['btnMarkers'], key: '', group: 'look' },
   { id: 'lineweight', label: 'Line weight', els: ['btnLineWeight'], key: 'k', group: 'look' },
+  { id: 'linewash', label: 'Line and wash', els: ['btnLineWash'], key: '', group: 'look' },
   { id: 'tone', label: 'Toned paper', els: ['btnTone'], key: 'j', group: 'look' },
   { id: 'compare', label: 'Compare your drawing', els: ['btnCompare'], key: 'd', group: 'look' },
   { id: 'workspace', label: 'Workspace - tools by question', els: ['btnWorkspace'], key: 'w', group: 'look' },

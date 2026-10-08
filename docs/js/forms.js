@@ -44,6 +44,7 @@ function normalizeFormScene(raw) {
     return n;
   });
   if (objs.length) s.objects = objs;
+  if (!FORM_SETTINGS[s.setting]) s.setting = 'none';
   s.roll = Math.min(Math.max(Math.round(s.roll) || 0, -45), 45);
   s.active = Math.min(Math.max(s.active | 0, 0), s.objects.length - 1);
   s.lightOn = Math.min(Math.max(s.lightOn | 0, 0), s.objects.length - 1);
@@ -98,10 +99,11 @@ function storeSavedFormScenes(a) {
 }
 
 async function formsInitThree() {
-  const [T, { OrbitControls }, { RoomEnvironment }] = await Promise.all([
+  const [T, { OrbitControls }, { RoomEnvironment }, { mergeGeometries }] = await Promise.all([
     import('three'),
     import('three/addons/controls/OrbitControls.js'),
     import('three/addons/environments/RoomEnvironment.js'),
+    import('three/addons/utils/BufferGeometryUtils.js'),
   ]);
   // Fog (the Air) by the distance from the eye, not the depth along the line
   // of sight: the fisheye renders six views with six lines of sight, and fog
@@ -181,7 +183,9 @@ async function formsInitThree() {
   controls.enablePan = false; // the forms stay centred; panning only loses them
 
   return { T, renderer, scene, camera, key, bulb, fill, hemi, env, ground, grid, controls,
-    meshes: [], geometries: {}, models: {}, modelCount: 0, frame: null, marker: null, badges: [] };
+    meshes: [], geometries: {}, models: {}, modelCount: 0, frame: null, marker: null, badges: [],
+    // The Japanese settings (js/forms-settings.js): built once each, one in the scene at a time.
+    merge: mergeGeometries, settings: {}, settingId: null, settingGroup: null };
 }
 
 /* Contour lines and the zones view, mixed in at the very end of three's own
@@ -750,7 +754,8 @@ void rbForm(vec2 uv, out float cov, out float hTop, out float hBot, out vec3 tin
     }`);
 }
 
-function newFormMesh() {
+/* The material every form (and every part of a setting) is drawn with. */
+function newFormMaterial() {
   const T = forms.T;
   const mat = new T.MeshPhysicalMaterial({ metalness: 0 });
   // Merged into three's own { STANDARD, PHYSICAL }, not replacing them -
@@ -766,7 +771,12 @@ function newFormMesh() {
   // be darkest. Front faces sit well above it there; the acne they would
   // cause on lit surfaces is what normalBias below is for.
   mat.shadowSide = T.FrontSide;
-  const m = new T.Mesh(undefined, mat);
+  return mat;
+}
+
+function newFormMesh() {
+  const T = forms.T;
+  const m = new T.Mesh(undefined, newFormMaterial());
   m.castShadow = true;
   m.receiveShadow = true;
   // 'YXZ' applies turn last, so "Turn" always spins the form about the
@@ -1034,6 +1044,9 @@ function formsRender(sc, w, h, clean = false) {
     m.userData.hairMat?.dispose();
     m.userData.face?.userData.mats.dispose();
   }
+  // The setting round the forms, if any. It takes no part in the framing -
+  // the camera is placed for the forms - only in the light and the haze.
+  const setDef = syncFormSetting(sc);
 
   // Each form rests on the floor at its own x/z: a form floating above its
   // own shadow reads as a mistake, and "which rotation leaves it touching the
@@ -1155,10 +1168,14 @@ function formsRender(sc, w, h, clean = false) {
   // The sun. Its shadow camera must reach the tip of the cast shadow, which
   // a low light stretches out to height / tan(elevation) - capped, or a
   // grazing light would spread the map over so much floor it went blocky.
+  // With a setting the shadow map reaches as far as its furniture matters
+  // (`reach`), not just round the forms: the same 2048 texels over a wider
+  // floor, so the forms' own shadows are a little coarser in a room.
+  const shadowRad = setDef ? Math.max(rad, setDef.reach * SETTING_UNIT) : rad;
   const k = F.key;
   k.color.set(sc.lightColor);
   k.intensity = sc.intensity * Math.PI; // three's units: π is "albedo at full light"
-  aimSunShadow(k, target, L, elev, rad, h3, softness);
+  aimSunShadow(k, target, L, elev, shadowRad, h3, softness);
 
   // The lamp. Only one of the two is ever on; an invisible light is left out
   // of both shading and shadow passes entirely, not just dimmed.
@@ -1215,13 +1232,14 @@ function formsRender(sc, w, h, clean = false) {
   // the scene is not Anime (a cel ignores this light's shading, it is only the
   // rim there), and the shadow is not switched off.
   F.fill.castShadow = sc.fillOn && sc.fillShadow !== false && !formSceneIsCel(sc);
-  if (F.fill.castShadow) aimSunShadow(F.fill, target, Lf, THREE_DEG * sc.fillEl, rad, h3, softness);
+  if (F.fill.castShadow) aimSunShadow(F.fill, target, Lf, THREE_DEG * sc.fillEl, shadowRad, h3, softness);
 
   // Cel shading. Its tones are flat colours, so it ignores the lights'
   // strength and the ambient; the second light turns into its rim - given in
   // view space, as the shader's normals are.
   cam.updateMatrixWorld();
   const rimDir = Lf.clone().transformDirection(cam.matrixWorldInverse);
+  if (setDef) styleFormSetting(sc, clean, rimDir);
   sc.objects.forEach((o, i) => {
     const m = F.meshes[i], u = m.material.userData.u;
     const cel = !!(FORM_FINISHES[o.finish] || {}).cel;
@@ -1265,6 +1283,12 @@ function formsRender(sc, w, h, clean = false) {
   // haze the far side is nearly lost and at half it is roughly half gone.
   F.scene.fog.near = air ? Math.max(0.1, dist - rad) : dist + rad * 1.5;
   F.scene.fog.far = air ? F.scene.fog.near + rad * (1.5 + 12 * (1 - sc.haze) ** 2) : dist + rad * 9;
+  // A setting's far wall is no part of the floor dissolving: with no haze the
+  // fog starts beyond the farthest of it. With haze the air is the user's.
+  if (setDef && !air) {
+    F.scene.fog.near = Math.max(F.scene.fog.near, dist + setDef.depth * SETTING_UNIT);
+    F.scene.fog.far = Math.max(F.scene.fog.far, F.scene.fog.near + setDef.depth * SETTING_UNIT * 3);
+  }
   F.ground.visible = sc.ground;
   F.ground.material.color.set(sc.groundColor);
   F.ground.scale.setScalar(rad * 200);
@@ -2931,7 +2955,8 @@ const FORM_PANEL = [
   ['Use it', 'actions', []],
   ['Saved scenes', 'scenes', []],
   ['Ambient', null, [['ambient', 'Fill', 0, 1, 0.01], ['bounce', 'Bounce', 0, 1, 0.01], ['occlusion', 'Occlusion', 0, 1, 0.01]]],
-  ['Scene', null, [['bg', 'Background', 'color'], ['groundColor', 'Ground', 'color'], ['ground', 'Ground and cast shadow', 'check']]],
+  // Where the forms stand: a Japanese setting, if any, then the sky and the floor.
+  ['Scene', 'setting', [['bg', 'Background', 'color'], ['groundColor', 'Ground', 'color'], ['ground', 'Ground and cast shadow', 'check']]],
   ['Air', 'air', [['haze', 'Haze', 0, 1, 0.02], ['hazeColor', 'Air colour', 'color']]],
 ];
 
@@ -3057,6 +3082,8 @@ function formsPanelHtml() {
         <button class="ghost" type="button" id="formMemory" title="Study a random scene, draw it with it hidden, then compare">Memory drill</button>
         <button class="ghost" type="button" id="formViewDrill" title="Draw a random scene the way it is NOT shown - from another side, above, a different light or lens - then see the answer">View drill</button>
       </div>`,
+    setting: chips('formSettings', Object.entries(FORM_SETTINGS), 'setting', s => s.hint) +
+      `<div class="count" id="formSettingNote"></div>`,
     air: `<div class="count">The air between you and a far form: with distance its contrast drops, its darks lift
         and everything drifts toward the colour of the air - how a painting says "far" without a line of perspective.</div>
       <div class="factions"><button class="ghost" type="button" id="formDepthPlanes" title="Four of the same form, receding into haze - near, middle and far planes">Depth planes</button></div>`,
@@ -3228,6 +3255,11 @@ function syncFormsPanel() {
       Math.round(formScene.yaw) === p.yaw && Math.round(formScene.pitch) === p.pitch));
   }
   syncShotNote(panel);
+  for (const b of panel.querySelectorAll('[data-setting]')) b.setAttribute('aria-pressed', String(b.dataset.setting === formScene.setting));
+  const place = FORM_SETTINGS[formScene.setting];
+  el('formSettingNote').textContent = place.build
+    ? place.hint + ' The walls nearest you fall away as you turn, so you always look in. Move the forms about it with Placement.'
+    : place.hint + ' Pick a Japanese setting to put the forms in a room or a street.';
   el('formCount').value = formScene.count;
   // Mirrors the session interval rather than keeping one of its own: the two
   // are the same setting, and changing it here changes it there.
@@ -3240,6 +3272,20 @@ function syncFormsPanel() {
 }
 
 function formsChanged() { syncFormsPanel(); saveFormScene(); requestFormsRender(); }
+
+/* Picks a setting. It suggests a sky, a ground and how far to stand back - a
+   room is seen from further than a form - but only into values still at their
+   defaults (or at the last setting's suggestion), so a background you chose
+   yourself survives, and None gives back the studio's. */
+function pickFormSetting(id) {
+  const was = FORM_SETTINGS[formScene.setting], now = FORM_SETTINGS[id];
+  const suggest = k => formScene[k] === FORM_DEFAULTS[k] || (was.stage && formScene[k] === was.stage[k]);
+  for (const k of ['bg', 'groundColor', 'zoom', 'pitch']) if (suggest(k)) formScene[k] = (now.stage && now.stage[k]) ?? FORM_DEFAULTS[k];
+  // The yaw through setFormYaw, which turns the lights with it.
+  if (suggest('yaw')) setFormYaw((now.stage && now.stage.yaw) ?? FORM_DEFAULTS.yaw);
+  formScene.setting = id;
+  formsChanged();
+}
 
 // Moving the camera must not drag the lights with it (see bindFormsOrbit).
 function setFormYaw(yaw) {
@@ -3331,6 +3377,7 @@ function bindFormsPanel() {
       formsChanged();
       return;
     }
+    if ((b = hit('[data-setting]'))) { pickFormSetting(b.dataset.setting); return; }
     if ((b = hit('[data-shot]'))) { applyAnimeShot(b.dataset.shot); return; }
     if ((b = hit('#formShotGen'))) { formShotToGenerate(); return; }
     if ((b = hit('[data-preset]'))) {

@@ -31,18 +31,41 @@ const POSE_BONES = [['lSh', 'rSh'], ['lSh', 'lEl'], ['lEl', 'lWr'], ['rSh', 'rEl
    figureScale()) and a photo's pose redrawn in them (rebuildPose()). Each part of the body is [girth, length] times
    the real one's - girth across and through it, length along it - and a
    joint hangs where its parent's length puts it: a longer thigh carries the
-   knee down with it. The rig itself stays one table, so a pose fits every
-   build. Worked out to the heads count each is known by (figureHeights()):
-   anime shortens the torso and lengthens the legs round a bigger head;
-   chibi is a head as big as the rest of the body. */
+   knee down with it. The torso is two parts, not one - chest and waist -
+   so a build can widen the shoulders without the hips, or the other way
+   round: the chest's girth carries the shoulders' width with it (the arms
+   hang from it) and the waist's carries the hips' (the legs hang from the
+   pelvis, which is the waist's own). The rig itself stays one table, so a
+   pose fits every build. Worked out to the heads count each is known by
+   (figureHeights()): anime shortens the torso and lengthens the legs round
+   a bigger head; chibi is a head as big as the rest of the body.
+
+   real, anime, tall and chibi are stylisations - how many heads tall the
+   whole figure is drawn, the way a style guide picks it. child, elderly,
+   heavy, muscular, female and male stay at the realistic figure's own
+   style and vary the build instead - a body type, not an art style - so
+   either kind can be reached from the Body row without the other
+   disappearing. */
 const FIGURE_BUILDS = {
   real: { label: 'Realistic', hint: 'A real body, about eight heads tall: the crotch halfway down, the elbow at the waist.' },
-  anime: { label: 'Anime', torso: [0.9, 0.9], arm: [0.85, 0.98], hand: [0.85, 0.9], leg: [0.88, 1.1], foot: [0.8, 0.9], head: [1.15, 1.15],
+  anime: { label: 'Anime', chest: [0.9, 0.9], waist: [0.9, 0.9], arm: [0.85, 0.98], hand: [0.85, 0.9], leg: [0.88, 1.1], foot: [0.8, 0.9], head: [1.15, 1.15],
     hint: 'Standard anime, about seven heads: a bigger head, a shorter torso and longer, slimmer legs - a little more than half the height.' },
-  tall: { label: 'Long-legged', torso: [0.85, 0.92], neck: [0.9, 1.15], arm: [0.85, 1.08], hand: [0.85, 0.95], leg: [0.85, 1.25], head: [0.95, 0.95],
+  tall: { label: 'Long-legged', chest: [0.85, 0.92], waist: [0.85, 0.92], neck: [0.9, 1.15], arm: [0.85, 1.08], hand: [0.85, 0.95], leg: [0.85, 1.25], head: [0.95, 0.95],
     hint: 'Stylised, about nine heads, as fashion drawing and some anime do it: a small head and legs more than half the height.' },
-  chibi: { label: 'Chibi', torso: [0.85, 0.45], neck: [0.8, 0.3], arm: [1.05, 0.5], hand: [1.1, 0.7], leg: [1.05, 0.5], foot: [1.1, 0.8], head: [2.2, 2.2],
+  chibi: { label: 'Chibi', chest: [0.85, 0.45], waist: [0.85, 0.45], neck: [0.8, 0.3], arm: [1.05, 0.5], hand: [1.1, 0.7], leg: [1.05, 0.5], foot: [1.1, 0.8], head: [2.2, 2.2],
     hint: 'Chibi, about two and a half heads: the head is as big as the body under it, the limbs short stubs with no elbows or knees to speak of.' },
+  child: { label: 'Child', chest: [0.95, 0.62], waist: [1, 0.62], neck: [0.85, 0.65], arm: [0.92, 0.65], hand: [1, 0.85], leg: [0.95, 0.67], foot: [1, 0.9],
+    hint: "About five and a half heads - a six or seven year old's proportion: the head is already near full size, and the rest of the body has not yet caught up to it." },
+  elderly: { label: 'Older', chest: [0.95, 0.94], waist: [1.05, 0.92], neck: [0.9, 0.94], arm: [0.92, 0.98], leg: [0.92, 0.96],
+    hint: 'A little shorter than the realistic figure and narrower through the shoulders, with a fuller waist - the height loss and softening of later life.' },
+  heavy: { label: 'Heavier', chest: [1.22, 1], waist: [1.38, 1], arm: [1.22, 1], hand: [1.08, 1], leg: [1.22, 1], foot: [1.08, 1],
+    hint: "The realistic figure's own height, carrying more weight through the torso and limbs - heaviest at the waist." },
+  muscular: { label: 'Muscular', chest: [1.3, 1], waist: [1.02, 1], neck: [1.2, 1], arm: [1.3, 1.03], leg: [1.18, 1.02],
+    hint: "The realistic figure's own height, built up through the chest, neck and limbs, with a waist that stays comparatively narrow against the chest." },
+  female: { label: 'Female', chest: [0.86, 0.95], waist: [1.04, 0.95], neck: [0.9, 0.95], arm: [0.9, 0.96], hand: [0.93, 0.95], leg: [0.95, 0.96], foot: [0.93, 0.95],
+    hint: 'About seven and a half heads: narrower through the shoulders than through the waist and hips - the classic proportion for a female figure.' },
+  male: { label: 'Male', chest: [1.1, 1], waist: [0.94, 1], neck: [1.08, 1],
+    hint: "Close to the realistic figure's own height, broader through the shoulders and narrower at the waist - the classic V of a male figure." },
 };
 const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 // The MediaPipe tasks this page uses - one runtime, fetched once, shared by
@@ -84,7 +107,7 @@ function loadVision(kind) {
 // off - with three maps on, the note is how you find what to close. The
 // keys are LAYERS' ids (js/layers.js), or for a tool that only speaks -
 // no overlay - its HUD_TOOLS id (js/pins.js), whose button the x presses.
-const overlayNotes = { head: '', pose: '', edges: '', range: '', temp: '', amounts: '', tangents: '', lineweight: '', tone: '', symmetry: '', rhythms: '', markers: '' };
+const overlayNotes = { head: '', pose: '', edges: '', range: '', temp: '', amounts: '', tangents: '', lineweight: '', linewash: '', tone: '', symmetry: '', rhythms: '', markers: '' };
 const noteOwner = k => (typeof LAYERS !== 'undefined' && LAYERS.find(l => l.id === k))
   || (typeof HUD_TOOLS !== 'undefined' && HUD_TOOLS.find(t => t.id === k));
 function overlayNote(key, html) {
@@ -155,11 +178,11 @@ function smoothPath(pts) {
 
 /* A photo's pose in other proportions (FIGURE_BUILDS): each bone the model
    found keeps its direction on the page and only grows or shrinks by its
-   part's length - the shoulders' and hips' width by the torso's girth - hung
-   from the joint above it, the rule the 3D figure's joints follow
-   (poseFormRig()). So the angles stay the photo's and only the body changes.
-   Then the whole is moved so the foot lowest in the picture stays where it
-   was: the figure still stands where it stood.
+   part's length - the shoulders' width by the chest's girth, the hips' by
+   the waist's - hung from the joint above it, the rule the 3D figure's
+   joints follow (poseFormRig()). So the angles stay the photo's and only
+   the body changes. Then the whole is moved so the foot lowest in the
+   picture stays where it was: the figure still stands where it stood.
    The head is a circle, a real head's height taken as the neck-to-hip
    length over 2.5 (the classic figure's measure) - or from the ears, when
    the torso is turned toward you and foreshortened. */
@@ -168,14 +191,17 @@ function rebuildPose(P, build, torso) {
   const mid = (a, b) => a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : null;
   const neck = mid(P.lSh, P.rSh), pelvis = mid(P.lHip, P.rHip);
   if (!neck || !pelvis) return null;
-  const Q = { neck: [pelvis[0] + (neck[0] - pelvis[0]) * part('torso')[1], pelvis[1] + (neck[1] - pelvis[1]) * part('torso')[1]] };
+  // The chest and the waist share the neck-to-pelvis span in the 3D rig;
+  // here, with no joint of its own between them, their lengths average.
+  const torsoLen = (part('chest')[1] + part('waist')[1]) / 2;
+  const Q = { neck: [pelvis[0] + (neck[0] - pelvis[0]) * torsoLen, pelvis[1] + (neck[1] - pelvis[1]) * torsoLen] };
   // The joint `to`, hung from `from`'s new place by the bone's own vector times k.
   const hang = (to, from, base, k) => { if (P[to] && base) Q[to] = [base[0] + (P[to][0] - from[0]) * k, base[1] + (P[to][1] - from[1]) * k]; };
   for (const s of ['l', 'r']) {
-    hang(s + 'Sh', neck, Q.neck, part('torso')[0]);
+    hang(s + 'Sh', neck, Q.neck, part('chest')[0]);
     hang(s + 'El', P[s + 'Sh'], Q[s + 'Sh'], part('arm')[1]);
     hang(s + 'Wr', P[s + 'El'], Q[s + 'El'], part('arm')[1]);
-    hang(s + 'Hip', pelvis, pelvis, part('torso')[0]);
+    hang(s + 'Hip', pelvis, pelvis, part('waist')[0]);
     hang(s + 'Kn', P[s + 'Hip'], Q[s + 'Hip'], part('leg')[1]);
     hang(s + 'An', P[s + 'Kn'], Q[s + 'Kn'], part('leg')[1]);
     hang(s + 'Toe', P[s + 'An'], Q[s + 'An'], part('foot')[1]);

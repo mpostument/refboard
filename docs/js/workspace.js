@@ -33,7 +33,7 @@ const WS_TABS = [
   { id: 'composition', label: 'Composition', q: 'Does the arrangement work?', tools: [
     { layer: 'focal', label: 'Focal point', key: '', about: 'where the eye goes first' },
     { hud: 'tangents', about: 'shapes that just touch each other or the edge - where the depth goes flat' },
-    { hud: 'amounts', about: 'does one value, one temperature, one kind of edge lead?' },
+    { hud: 'amounts', about: 'does one value, one temperature, one colour strength, one size of shape, one kind of edge lead?' },
     { hud: 'guides', about: 'thirds and a viewfinder, to try a crop' },
   ] },
   { id: 'construction', label: 'Construction', q: 'Where are things, and at what angle?', tools: [
@@ -44,6 +44,7 @@ const WS_TABS = [
   ] },
   { id: 'line', label: 'Line', q: 'How do I draw the lines?', tools: [
     { hud: 'lineweight', about: 'which lines heavy, which light - the shadow side, the big contours, tapered ends' },
+    { hud: 'linewash', about: 'liner plus watercolour: which contours to ink, which to leave for the colour change alone' },
     { hud: 'edges', about: 'where the line can be lost: a soft edge wants a broken line, or none' },
     { hud: 'angle', about: 'the angle of a line, and lengths against each other, before it is drawn' },
   ] },

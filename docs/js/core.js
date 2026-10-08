@@ -8,7 +8,7 @@
 // updateFooterVersion() below overwrites it with the real running version
 // from /healthz, so this constant drifting a little on Pages costs nothing
 // where it actually matters.
-const APP_VERSION = '0.27.0';
+const APP_VERSION = '0.28.0';
 
 /* ---- icons. Line icons on a 24-unit grid, drawn in currentColor so they
    take the button's colour and its hover and pressed states. Any element
@@ -35,6 +35,7 @@ const ICONS = {
   tangents: '<circle cx="8" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4"/><path d="M3 4h18" opacity=".45"/>',
   tone: '<path d="M4 6h16v12H4z"/><path d="M4 6h16v4H4z" opacity=".3" fill="currentColor"/><path d="M4 14h16v4H4z" opacity=".75" fill="currentColor"/>',
   lineweight: '<path d="M4 6.5h16" stroke-width="1"/><path d="M4 12h16" stroke-width="2.2"/><path d="M4 17.5h16" stroke-width="3.6"/>',
+  linewash: '<path d="M3 7h9" stroke-width="2"/><path d="M3 12h7" stroke-width="1"/><path d="M3 17h5" stroke-width="2"/><path d="M19 9a4 4 0 1 1-5 0l2.5-5z" fill="currentColor" opacity=".4"/>',
   amounts: '<path d="M4 5h16v4H4z"/><path d="M4 11h9v3.5H4z"/><path d="M4 16.5h4V19H4z"/>',
   temp: '<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a3.5 3.5 0 1 1-4 0z"/><path d="M12 9v7"/><path d="M17 6h3M17 10h2"/>',
   layers: '<path d="M12 3 21 8l-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
@@ -69,7 +70,8 @@ const ICONS = {
   unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.7-1.5"/>',
   sparkle: '<path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15.5c.3 1.6 1 2.3 2.5 2.5-1.5.2-2.2.9-2.5 2.5-.3-1.6-1-2.3-2.5-2.5 1.5-.2 2.2-.9 2.5-2.5z"/>',
   lightbox: '<rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="M8 16c1.5-4 4.5-7 8-8.5"/><path d="M8 19h8" stroke-dasharray="1.5 2"/>',
-  clean: '<path d="m3 3 18 18"/><path d="M10.6 5.1Q11.3 5 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.1 3.8M6.6 6.6C3.6 8.5 2 12 2 12s3.5 7 10 7c1.8 0 3.3-.5 4.6-1.2"/>',
+  museum: '<path d="M3 9.5 12 4l9 5.5"/><path d="M5.5 10.5v7M10 10.5v7M14 10.5v7M18.5 10.5v7"/><path d="M3.5 20h17"/>',
+  clean:'<path d="m3 3 18 18"/><path d="M10.6 5.1Q11.3 5 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.1 3.8M6.6 6.6C3.6 8.5 2 12 2 12s3.5 7 10 7c1.8 0 3.3-.5 4.6-1.2"/>',
 };
 function iconSvg(name) {
   return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
@@ -535,8 +537,10 @@ const state = {
   rangeOn: false,             // the paper's range shown - see toggleRange()
   tempOn: false,              // temperature map shown - see toggleTemp()
   amountsOn: false,           // unequal amounts counted - see toggleAmounts()
+  amtMap: null,               // the row whose colour or shape map the amounts show, or null - see showAmountsMap()
   tangentsOn: false,          // tangents marked - see toggleTangents()
   lineWeightOn: false,        // contours weighed - see toggleLineWeight()
+  lineWashOn: false,          // line-and-wash plan shown - see toggleLineWash()
   symmetryOn: false,          // the picture folded - see toggleSymmetry()
   rhythmsOn: false,           // Reilly's rhythms drawn - see toggleRhythms()
   markersOn: false,           // grey markers' areas shown - see toggleMarkers()
