@@ -515,6 +515,7 @@ function show(src) {
     if (state.markersOn) runMarkers();
     if (state.gradesOn) runGrades();
     if (state.watercolourOn) runWatercolour();
+    if (state.vignetteOn) runVignette();
     refreshValueTools();
   };
   img.onerror = () => {

@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'vignette', title: 'Vignette: where a study can end',
+    text: "Over any picture in a session (Workspace > Composition, or Ctrl+K): where a watercolour study could stop and dissolve into bare paper, so the focus stays inside. The island is the smallest area that keeps most of the picture's edges, colour and darks - Tight, Medium or Loose - with a soft wet edge or a ragged dry-brush one. The note says what shape it is, which sides of the sheet it runs off, and whether the picture's darkest accent is kept, with how to paint it: the focus first, then thin the wash outward.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'watercolour-preview', title: 'Preview as watercolour',
     text: "Over any picture in a session (Workspace > Colour, or Ctrl+K): the picture painted as it could be in watercolour, before the first stroke - flat washes, a darker rim where a hard edge stops a wash, soft edges that run together, grain in the paper's tooth, and the whites left as bare paper (the note says how much is). Detail runs from a few big washes to most of the detail; Grain from smooth to a granulating pigment; Colours can be kept to what your own palette mixes. How to paint it opens the steps in order.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

@@ -522,9 +522,19 @@ packs (below), and moving a picture to another folder by hand.
   ground bounce (green grass, a red floor), and the Character tab's
   automatic shadows following the light chosen here.
 
-- **Vignette.** A watercolour study often fades out before the edge of
-  the paper: suggest the vignette's shape - where the picture should end
-  and dissolve so the focus stays inside.
+- **Vignette, the rest.** In place (`js/vignette.js`, Workspace > Composition
+  and Onto paper, a layer, Ctrl+K "vignette"): interest from the gradient of
+  lightness, colour strength and darkness, each over its own mean and
+  blurred into masses; the island the most interesting places that hold 62,
+  80 or 92% of it (Tight, Medium, Loose), rounded by a blur and a threshold
+  and let out a little; the paper let in across a band, its edge shifted by
+  noise (Soft, Ragged). The note names the shape, the sides it reaches and
+  whether the darkest accent is kept. Still to come: a shape you drag by
+  hand, a vignette on the Watercolour preview itself (the paper over its
+  washes, not over the photo), a choice of shapes (an oval, a diagonal
+  sweep, a rectangle with one corner dissolved), and the picture's own
+  focus point leading it when it has one.
+
 - **Weather for watercolour.** Humidity and temperature for the plein air
   spot from Open-Meteo (free, no key). They set how fast watercolour
   dries.

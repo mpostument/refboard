@@ -33,6 +33,7 @@ const COMMAND_WORDS = {
   btnSymmetry: 'symmetry symmetrical mirror fold halves axis centre center face vase building lopsided crooked drawing check',
   btnRhythms: 'reilly rhythm rhythms figure flow line of action gesture diagonal curve shoulder hip leg arm abstract',
   btnMarkers: 'grey gray markers tombow n95 n15 value study greys brush pen numbers',
+  btnVignette: 'vignette fade dissolve edge lost paper bare end border island focus shape watercolour study unpainted margin',
   btnWatercolour: 'watercolour preview painted wash washes render paint it as granulation grain paper white bare edges wet soft hard bloom transparent look before painting',
   btnGrades: 'pencil grades graphite 2h h hb b 2b 4b 6b 8b hardness lead soft hard value study greys which pencil',
   btnTone: 'toned paper tone grey tan black white pencil gel pen gouache chalk pastel mid tone middle value darks lights highlights leave the paper',

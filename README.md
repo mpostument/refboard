@@ -296,6 +296,15 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   grade to the softest, and when the picture's darks are darker than any
   graphite goes. A grade's lightness is the darkest it lays comfortably, an
   estimate; the grey markers and the pencils are never shown together.
+- **Vignette** - in a session (Workspace > Composition and Onto paper,
+  Layers, Ctrl+K): where a watercolour study could end and dissolve into bare
+  paper. Interest is worked out from edges, strong colour and darkness against
+  the paper; the island is the smallest area that holds 62%, 80% or 92% of it
+  (Tight, Medium, Loose), rounded and let out a little, and the paper let in
+  across a band with a soft or a ragged (dry-brush) edge. The note says what
+  shape it is, which sides of the sheet it reaches (a bleed), and whether the
+  darkest accent is inside it - and how to paint it: the focus first, then
+  thin the wash outward with a damp brush.
 - **Preview as watercolour** - in a session (Workspace > Colour, Layers,
   Ctrl+K): the picture painted as it could be in watercolour, before the
   first stroke. Flat washes (a Kuwahara filter: flat areas stay flat, edges
