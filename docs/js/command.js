@@ -33,6 +33,8 @@ const COMMAND_WORDS = {
   btnSymmetry: 'symmetry symmetrical mirror fold halves axis centre center face vase building lopsided crooked drawing check',
   btnRhythms: 'reilly rhythm rhythms figure flow line of action gesture diagonal curve shoulder hip leg arm abstract',
   btnMarkers: 'grey gray markers tombow n95 n15 value study greys brush pen numbers',
+  btnVignette: 'vignette fade dissolve edge lost paper bare end border island focus shape watercolour study unpainted margin',
+  btnWatercolour: 'watercolour preview painted wash washes render paint it as granulation grain paper white bare edges wet soft hard bloom transparent look before painting',
   btnGrades: 'pencil grades graphite 2h h hb b 2b 4b 6b 8b hardness lead soft hard value study greys which pencil',
   btnTone: 'toned paper tone grey tan black white pencil gel pen gouache chalk pastel mid tone middle value darks lights highlights leave the paper',
   btnRange: 'paper range darkest darks lights white clipped blown lost detail values limit medium contrast',
@@ -52,6 +54,7 @@ const COMMAND_WORDS = {
   'view-drop': 'open file upload photo check own image video',
   'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading hair',
   'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
+  'view-perspective': 'perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex',
   'view-train': 'drill practice exercise test',
   btnLibrary: 'folders packs',
@@ -164,6 +167,8 @@ function collectCommands() {
     run: () => openColour('character') });
   if (!inSession) out.push({ id: 'greys', label: 'Grey ladder', hint: 'Colour studio', words: 'grey gray greys neutral warm cool mix recipe muddy value scale paint watercolour',
     run: () => openColour('greys') });
+  if (!inSession) out.push({ id: 'mixing', label: 'Mixing chart', hint: 'Colour studio', words: 'mix mixing chart grid pairs every paint with every other swatch test print paint palette learn tubes dilution water wash equal parts watercolour oil',
+    run: () => openColour('mixing') });
   if (!inSession) out.push({ id: 'glazing', label: 'Glazing chart', hint: 'Colour studio', words: 'glaze glazing layer layers wash over transparent opaque veil order mix watercolour underpainting',
     run: () => openColour('glazing') });
   if (!inSession) out.push({ id: 'light', label: 'Light and shadow colours', hint: 'Colour studio', words: 'light shadow shade sun sky warm cool temperature golden hour window lamp candle moon moonlight overcast cel shading kelvin',
@@ -199,7 +204,7 @@ function collectCommands() {
 
 /* Best first: the name starting with what was typed, then a word in the
    name starting with it, then anywhere in the name, then only in the extra
-   words. Every typed word has to be found somewhere. With nothing typed,
+   words; the shorter name first among equals. Every typed word has to be found somewhere. With nothing typed,
    the ones used last come first. */
 function rankCommands(all, query) {
   const recent = commandRecent();
@@ -215,7 +220,9 @@ function rankCommands(all, query) {
     const score = label.startsWith(q) ? 0 : label.split(/[^a-z0-9]+/).some(w => w.startsWith(words[0])) ? 1 : label.includes(q) ? 2 : 3;
     scored.push([score, c]);
   }
-  return scored.sort((a, b) => a[0] - b[0]).map(s => s[1]);
+  // The same score: the shorter name is the closer to what was typed ("Perspective
+  // trainer" before "Perspective grid - one, two or three vanishing points...").
+  return scored.sort((a, b) => a[0] - b[0] || a[1].label.length - b[1].label.length).map(s => s[1]);
 }
 
 function renderCommands() {

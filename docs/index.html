@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=14b4e3c8">
+<link rel="stylesheet" href="css/app.css?v=6897b657">
 </head>
 <body>
 <div id="setup">
@@ -64,8 +64,9 @@
       <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
       <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images - browse and search" aria-label="All images"></button>
       <button class="nav-item" type="button" data-view="museum" data-icon="museum" data-tip="Museums - search the Met and the Rijksmuseum, open a painting in the workspace" aria-label="Museums"></button>
-      <button class="nav-item" type="button" data-view="colour" data-icon="palette"data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
+      <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
       <button class="nav-item" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
+      <button class="nav-item" type="button" data-view="perspective" data-icon="perspective" data-tip="Perspective grid - one, two or three vanishing points on your paper, to print and draw over" aria-label="Perspective grid"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
       <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
     </div>
@@ -374,6 +375,7 @@
               <button type="button" role="tab" data-tab="wheel" aria-selected="false" title="A colour wheel: pick a colour and a harmony, and mix the colours that go with it from your paints">Wheel</button>
               <button type="button" role="tab" data-tab="character" aria-selected="false" title="A character's colours - hair, skin, eyes, clothes - with shadow, light and how to mix them">Character</button>
               <button type="button" role="tab" data-tab="greys" aria-selected="false" title="Warm, neutral and cool greys from these paints, light to dark">Greys</button>
+              <button type="button" role="tab" data-tab="mixing" aria-selected="false" title="Every paint mixed with every other, on a sheet to print and paint">Mixing</button>
               <button type="button" role="tab" data-tab="glazing" aria-selected="false" title="One paint glazed over another, against mixing them on the palette">Glazing</button>
               <button type="button" role="tab" data-tab="light" aria-selected="false" title="A colour in the light and in its shadow, under the sun, a window, a lamp - and how to mix both">Light</button>
               <button type="button" role="tab" data-tab="pigments" aria-selected="false" title="Your paints: which glaze cleanly, lift off, granulate or fade">Pigments</button>
@@ -433,6 +435,26 @@
               <div class="count" id="glReadout"></div>
               <div id="glMixes"></div>
               <div class="count" id="glNote"></div>
+            </div>
+            <!-- js/mixing.js: every paint with every other, on a sheet to print. -->
+            <div class="col-tab" data-tab="mixing" role="tabpanel">
+              <h4>Mixing chart - every paint with every other</h4>
+              <div class="chips" id="mcLevel" role="group" aria-label="How much water"></div>
+              <div class="chips" id="mcRatio" role="group" aria-label="Proportions"></div>
+              <div class="count" id="mcRatioNote"></div>
+              <div id="mcChart" class="gz-chart" role="group" aria-label="Mixing chart"></div>
+              <div class="count" id="mcReadout">Point at a square to see what it is; click it for the colour and what the mix does.</div>
+              <div id="mcPair"></div>
+              <h4>The sheet to paint</h4>
+              <div class="row mc-sheet">
+                <label for="mcPaper">Paper</label><select id="mcPaper" title="The paper the chart is laid out for - printed at its real size"></select>
+                <label class="opt" title="Fill each square with the colour the model expects. Leave off to print empty squares to paint"><input type="checkbox" id="mcColours"> Predicted colours</label>
+              </div>
+              <div class="row mc-sheet">
+                <button type="button" id="mcPrint" class="primary" title="Print the sheet at its real size - empty squares to paint, the paints numbered">Print</button>
+                <button type="button" id="mcSave" class="ghost" title="The same sheet as an SVG at the paper's real size">Save SVG</button>
+              </div>
+              <div class="count" id="mcSheetNote"></div>
             </div>
             <!-- js/glazing.js: each paint over each, and one crossing explained. -->
             <div class="col-tab" data-tab="glazing" role="tabpanel">
@@ -507,6 +529,56 @@
           </aside>
         </div>
         <div class="row mu-foot"><button type="button" id="muMore" class="ghost hidden" title="The next pictures for these words">More</button></div>
+      </div>
+
+      <!-- Perspective grid - see showPerspective() in js/perspective.js, which
+           loads the first time this opens. Nothing here needs a library. -->
+      <div id="viewPerspective" class="hidden">
+        <div class="pg-body">
+          <div class="pg-controls" role="group" aria-label="The perspective sheet">
+            <div class="pg-row"><span class="pg-label">Vanishing points</span>
+              <div class="chips" id="pgPoints" role="group" aria-label="Vanishing points">
+                <button type="button" class="chip" data-points="1" title="One point: a corridor or a street seen square on">1</button>
+                <button type="button" class="chip" data-points="2" title="Two points: a box seen at a corner - the usual one">2</button>
+                <button type="button" class="chip" data-points="3" title="Three points: a tall building seen from above or below">3</button>
+              </div></div>
+            <div class="pg-row"><label class="pg-label" for="pgFormat">Paper</label>
+              <select id="pgFormat" title="The paper you will draw on - the print is its real size"></select>
+              <div class="chips" id="pgOrient" role="group" aria-label="Which way round">
+                <button type="button" class="chip" data-orient="landscape">Landscape</button>
+                <button type="button" class="chip" data-orient="portrait">Portrait</button>
+              </div></div>
+            <div class="pg-row hidden" id="pgCustom"><span class="pg-label">Size, mm</span>
+              <input type="number" id="pgCustomW" min="50" max="1200" step="1" aria-label="Width in millimetres">
+              <span aria-hidden="true">&times;</span>
+              <input type="number" id="pgCustomH" min="50" max="1200" step="1" aria-label="Height in millimetres"></div>
+            <label class="pg-slide"><span>Horizon</span><input type="range" id="pgHorizon" min="5" max="95" step="1" title="Eye level, from the top of the sheet. Near the top: you look down on things; near the bottom: up at them"><output id="pgHorizonOut" for="pgHorizon"></output></label>
+            <label class="pg-slide" data-pts="1"><span>The point</span><input type="range" id="pgVp1x" min="0" max="100" step="1" title="Where the point is across the sheet - where the eye should go"><output id="pgVp1xOut" for="pgVp1x"></output></label>
+            <label class="pg-slide" data-pts="2 3"><span>Points apart</span><input type="range" id="pgSpread" min="30" max="250" step="5" title="How far each point is from the middle. Far apart: boxes look right. Close: they stretch at the edges. The note says how wide the view is"><output id="pgSpreadOut" for="pgSpread"></output></label>
+            <div class="pg-row" data-pts="3"><span class="pg-label">Third point</span>
+              <div class="chips" id="pgThird" role="group" aria-label="Where the third point is">
+                <button type="button" class="chip" data-third="down" title="Looking down: verticals draw together toward the ground">Below</button>
+                <button type="button" class="chip" data-third="up" title="Looking up: verticals draw together toward the sky">Above</button>
+              </div></div>
+            <label class="pg-slide" data-pts="3"><span>How far</span><input type="range" id="pgThirdDist" min="40" max="400" step="10" title="The third point's distance from the horizon. Near: a steep view. Far: nearly upright verticals"><output id="pgThirdDistOut" for="pgThirdDist"></output></label>
+            <label class="pg-slide"><span>Lines</span><input type="range" id="pgLines" min="6" max="48" step="1" title="How many lines run from each point"><output id="pgLinesOut" for="pgLines"></output></label>
+            <label class="opt" data-pts="1 2" title="Plumb lines - and, in one point, level ones as squares - to build the box on"><input type="checkbox" id="pgUpright"> Plumb and level lines</label>
+            <div class="pg-row"><label class="pg-label" for="pgInk">Ink</label>
+              <select id="pgInk" title="A colour for each point, or one grey - for a photocopier"><option value="colour">Colour per point</option><option value="one">One grey</option></select>
+              <label class="pg-label" for="pgMargin">Margin</label>
+              <select id="pgMargin" title="Where the lines stop, inside the paper's edge - a printer cannot reach the very edge"><option value="0">None</option><option value="5">5 mm</option><option value="10">10 mm</option></select>
+              <button type="button" class="ghost" id="pgReset" title="Put the sliders back, keeping the paper and the number of points">Reset</button></div>
+          </div>
+          <div class="pg-stage">
+            <div id="pgSheet" class="pg-sheet" role="img"></div>
+            <div class="pg-foot">
+              <span class="count" id="pgSize"></span>
+              <button type="button" id="pgPrint" class="primary" title="Print it on the paper chosen, at its real size">Print</button>
+              <button type="button" id="pgSavefile" class="ghost" title="An SVG at the paper's real size - to print elsewhere or draw over on a tablet">Save SVG</button>
+            </div>
+            <div class="count pg-note" id="pgNote" aria-live="polite"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Palette generator - see showPalette() in js/palette.js, which
@@ -653,14 +725,24 @@
         <label class="opt"><input type="checkbox" id="optFlipRandom"> Randomly mirror</label>
         <label class="opt"><input type="checkbox" id="optGrid"> Grid overlay</label>
         <select id="gridStyle" title="Which guide lines the grid overlay draws">
-          <option value="thirds">Rule of thirds</option>
-          <option value="golden">Golden ratio</option>
-          <option value="dynamic">Dynamic symmetry</option>
-          <option value="armature">Harmonic armature</option>
-          <option value="rabatment">Rabatment</option>
-          <option value="diagonal">Diagonals</option>
-          <option value="center">Center only</option>
+          <optgroup label="Divide the frame">
+            <option value="thirds">Rule of thirds</option>
+            <option value="golden">Golden ratio</option>
+            <option value="dynamic">Dynamic symmetry</option>
+            <option value="armature">Harmonic armature</option>
+            <option value="rabatment">Rabatment</option>
+            <option value="diagonal">Diagonals</option>
+            <option value="center">Center only</option>
+          </optgroup>
+          <optgroup label="Lay a shape (Carlson, Loomis)">
+            <option value="scurve">S-curve</option>
+            <option value="ell">L</option>
+            <option value="steelyard">Steelyard</option>
+            <option value="radiating">Radiating</option>
+            <option value="triangle">Triangle</option>
+          </optgroup>
         </select>
+        <div class="count" id="gridStyleNote" aria-live="polite"></div>
         <label class="opt" title="Black-outlined white lines with a distinct dash pattern per line, instead of one accent colour and opacity - for bright light or low contrast sensitivity. Also 'h' mid-session."><input type="checkbox" id="optHighContrast"> High-contrast overlays</label>
         <label class="opt" title="Overlay a faint edge-detected silhouette of whatever pose was on screen just before this one, to help track how a gesture or form carries from pose to pose."><input type="checkbox" id="optGhost"> Ghost previous pose</label>
         <label class="opt" title="Mark this pose's approximate visual-weight centroid (from its own brightness distribution) - a rough guide to where the eye lands first."><input type="checkbox" id="optFocalPoint"> Focal-point marker</label>
@@ -761,7 +843,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><canvas id="watercolourOverlay" class="hidden"></canvas><canvas id="vignetteOverlay" class="hidden"></canvas><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -898,6 +980,8 @@
     <button id="btnTone" data-icon="tone" title="Toned paper (j): on grey, tan or black paper the paper is the middle tone - what to leave bare, where the white pencil or gel pen goes, where the darks go" aria-label="Toned paper" aria-pressed="false"></button>
     <button id="btnSymmetry" data-icon="symmetry" title="Symmetry check (y): the picture folded on a vertical line - pink where the two halves part. The fold is found for you, and can be moved" aria-label="Symmetry check" aria-pressed="false"></button>
     <button id="btnRhythms" data-icon="rhythms" title="Reilly rhythms (z): the long curves through a figure - each shoulder across the chest to the foot opposite, the spine, the arms - to draw before any contour" aria-label="Reilly rhythms" aria-pressed="false"></button>
+    <button id="btnVignette" data-icon="vignette" title="Vignette: where a watercolour study could end and dissolve into bare paper, so the focus stays inside - the shape, the sides it runs off, and whether the darkest accent is kept" aria-label="Vignette" aria-pressed="false"></button>
+    <button id="btnWatercolour" data-icon="watercolour" title="Preview as watercolour: the picture painted as washes - hard edges with a darker rim, soft ones run together, grain, the whites left as the paper - before the first stroke" aria-label="Preview as watercolour" aria-pressed="false"></button>
     <button id="btnGrades" data-icon="grades" title="Pencil grades: for graphite, which grade of pencil each area of the picture wants - 2H for the palest tone to 8B for the darkest - with the grade written on it" aria-label="Pencil grades" aria-pressed="false"></button>
     <button id="btnMarkers" data-icon="markers" title="Grey markers: the picture split into the greys of a marker set - Tombow N-series - with each marker's number on its area" aria-label="Grey markers" aria-pressed="false"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
@@ -1578,9 +1662,12 @@
         (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>),
         via the three.js examples. <b>Hand</b> poses like the figure, joint by joint - the wrist,
         three joints on each finger and the thumb - with its own poses:
-        relaxed, spread, fist, pointing, pinching, gripping. In <b>Draw random
-        forms</b> a head nods, tilts and turns and a hand takes a new pose,
-        instead of being swapped for a random shape.</p>
+        relaxed, spread, fist, pointing, pinching, gripping. <b>Foot</b> is
+        the same for a right foot - the ankle, the middle of the foot and every
+        toe - with relaxed, pointed, flexed, on-the-toes, curled and spread
+        poses. In <b>Draw random forms</b> a head nods, tilts and turns and a
+        hand or a foot takes a new pose, instead of being swapped for a random
+        shape.</p>
       <p><b>Anime head</b> is built the anime way - the same proportions as
         the Anime style of Head construction on a photo: a big round cranium,
         the jaw almost straight to a pointed chin, a nose that is barely there,
@@ -1816,28 +1903,28 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=8cc6b544"></script>
-<script src="js/setup.js?v=f4624429"></script>
+<script src="js/core.js?v=22c8ce74"></script>
+<script src="js/setup.js?v=9d314563"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
-<script src="js/session.js?v=0c6e7968"></script>
+<script src="js/session.js?v=d3c2a536"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
-<script src="js/tools.js?v=101eea54"></script>
+<script src="js/tools.js?v=da91f60d"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
-<script src="js/vision.js?v=ded51f5a"></script>
+<script src="js/vision.js?v=483a5b64"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
 <script src="js/study.js?v=fc69529c"></script>
-<script src="js/layers.js?v=03a1a04c"></script>
+<script src="js/layers.js?v=7624d9af"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=9aa7cc1f"></script>
-<script src="js/workspace.js?v=10307d08"></script>
+<script src="js/pins.js?v=4236ff1b"></script>
+<script src="js/workspace.js?v=ee1d5d03"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=bbba5e41"></script>
+<script src="js/command.js?v=e89c8cb0"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=cada7b9e"></script>
+<script src="js/whatsnew.js?v=bdc0902d"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1849,6 +1936,8 @@
 <script src="js/symmetry.js?v=5488c74f"></script>
 <script src="js/rhythms.js?v=e8a373cc"></script>
 <script src="js/markers.js?v=a6cedb10"></script>
+<script src="js/watercolour.js?v=83b4415a"></script>
+<script src="js/vignette.js?v=38944d49"></script>
 <script src="js/grades.js?v=05c09ec4"></script>
 <script src="js/tangents.js?v=67a34d15"></script>
 <script src="js/lightbox.js?v=558bc8d9"></script>
@@ -1857,9 +1946,9 @@
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
-<script src="js/forms-models.js?v=5888c726"></script>
+<script src="js/forms-models.js?v=e99aefb1"></script>
 <script src="js/forms-settings.js?v=47a50035"></script>
-<script src="js/forms.js?v=d427110c"></script>
+<script src="js/forms.js?v=fced3f57"></script>
 <script src="js/forms-api.js?v=26a7a46c"></script>
 </template>
 <template id="lazy-backup">
@@ -1869,15 +1958,19 @@
 <template id="lazy-museum">
 <script src="js/museum.js?v=029edce5"></script>
 </template>
+<template id="lazy-perspective">
+<script src="js/perspective.js?v=44d5bc98"></script>
+</template>
 <template id="lazy-palette">
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=535cc842"></script>
+<script src="js/colour.js?v=fae53b1d"></script>
 <script src="js/wheel.js?v=4f33cec4"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=eb123ff3"></script>
 <script src="js/glazing.js?v=e54dd6ce"></script>
+<script src="js/mixing.js?v=0d50a6f6"></script>
 <script src="js/light.js?v=b67afe9c"></script>
 <script src="js/pigments.js?v=55a1f5c1"></script>
 </template>

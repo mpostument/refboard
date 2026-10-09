@@ -58,10 +58,11 @@ function saveColourPrefs() {
 
 // The right column's tabs: the picture's colours, a colour wheel to choose
 // a harmony on (js/wheel.js), a character's sheet, the greys the paints
-// make (js/greys.js), their glazes (js/glazing.js), what a light does to a
+// make (js/greys.js), every pair of them mixed (js/mixing.js), their glazes
+// (js/glazing.js), what a light does to a
 // colour (js/light.js), or the paints themselves - what each does on the
 // paper (js/pigments.js).
-const COL_TABS = ['picture', 'wheel', 'character', 'greys', 'glazing', 'light', 'pigments'];
+const COL_TABS = ['picture', 'wheel', 'character', 'greys', 'mixing', 'glazing', 'light', 'pigments'];
 function colourTab(name) {
   col.tab = COL_TABS.includes(name) ? name : 'picture';
   for (const b of el('colTabs').children) b.setAttribute('aria-selected', String(b.dataset.tab === col.tab));
@@ -376,6 +377,7 @@ function colourRender() {
   if (col.tab === 'wheel') wheelRender();
   if (col.tab === 'character') charRender();
   if (col.tab === 'greys') greysRender();
+  if (col.tab === 'mixing') mixingRender();
   if (col.tab === 'glazing') glazingRender();
   if (col.tab === 'light') lightRender();
   if (col.tab === 'pigments') pigmentsRender();
@@ -495,6 +497,7 @@ function initColour() {
   });
   initWheel();
   initGreys();
+  initMixing();
   initGlazing();
   initLight();
   initPigments();

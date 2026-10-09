@@ -276,8 +276,11 @@ async function boot() {
   if (saved.memorySecs) el('memorySecs').value = String(saved.memorySecs);
   el('memorySecs').addEventListener('change', saveSettings);
   el('gridStyle').value = saved.gridStyle || 'thirds';
+  const showGridNote = () => { el('gridStyleNote').textContent = GRID_NOTES[el('gridStyle').value] || ''; };
+  showGridNote();
   el('gridStyle').addEventListener('change', () => {
     state.gridStyle = el('gridStyle').value;
+    showGridNote();
     saveSettings();
     if (el('optGrid').checked) drawGrid();
   });
@@ -1192,6 +1195,10 @@ function updateViewMeta() {
     m.textContent = 'Public-domain pictures from the Met and the Rijksmuseum - open one in the workspace, with the credit to copy.';
     return;
   }
+  if (view.kind === 'perspective') {
+    m.textContent = 'A sheet to print and draw over: one, two or three vanishing points on a horizon, on your own paper at its real size.';
+    return;
+  }
   if (view.kind === 'palette') {
     m.textContent = 'Colours to plan a picture with, in harmony and spread over the values - each with how to mix it from your paints.';
     return;
@@ -1222,6 +1229,7 @@ function viewTitle() {
     case 'generate': return 'Generate references';
     case 'palette': return 'Palettes';
     case 'museum': return 'Museums';
+    case 'perspective': return 'Perspective grid';
     default:      return 'Dashboard';
   }
 }
@@ -1237,6 +1245,7 @@ function setView(next) {
 
   const forms = view.kind === 'forms', train = view.kind === 'train', colour = view.kind === 'colour';
   const generate = view.kind === 'generate', palette = view.kind === 'palette', museum = view.kind === 'museum';
+  const perspective = view.kind === 'perspective';
   el('viewBrowse').classList.toggle('hidden', !browsing);
   el('viewForms').classList.toggle('hidden', !forms);
   el('viewTrain').classList.toggle('hidden', !train);
@@ -1244,12 +1253,13 @@ function setView(next) {
   el('viewGenerate').classList.toggle('hidden', !generate);
   el('viewPalette').classList.toggle('hidden', !palette);
   el('viewMuseum').classList.toggle('hidden', !museum);
+  el('viewPerspective').classList.toggle('hidden', !perspective);
   el('mainBody').classList.toggle('forms-mode', forms);
   // The Session inspector is for drawing from the library. Here it only took
   // width from the stage; its one use in this view - the interval for Draw
   // random forms - has its own control in the 3D panel. The trainers have
   // no use for it at all.
-  const tool = forms || train || colour || generate || palette || museum;
+  const tool = forms || train || colour || generate || palette || museum || perspective;
   el('setup').classList.toggle('forms-mode', tool);
   el('viewDashboard').classList.toggle('hidden', browsing || tool);
   el('searchbar').classList.toggle('hidden', !browsing);
@@ -1269,6 +1279,7 @@ function setView(next) {
   if (colour) openLazyView('colour', () => showColour());
   if (palette) openLazyView('palette', () => showPalette());
   if (museum) openLazyView('museum', () => showMuseum());
+  if (perspective) openLazyView('perspective', () => showPerspective());
   if (generate) showGenerate();
   el('sidebar').classList.remove('peek');
   shellSync();

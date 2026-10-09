@@ -27,12 +27,14 @@ const WS_TABS = [
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [
     { hud: 'eyedropper', about: 'one spot: its colour, its value step, a recipe in your medium' },
+    { hud: 'watercolour', about: 'the picture painted as watercolour: flat washes, hard and soft edges, grain, the whites left as paper - and in your own paints' },
     { hud: 'temp', about: 'warm and cool areas, and where the temperature turns - is the shadow cooler than the light?' },
     { hud: 'info', about: 'the main colours of the picture' },
     { hud: 'gray', about: 'is it the colour that is off, or the value?' },
   ] },
   { id: 'composition', label: 'Composition', q: 'Does the arrangement work?', tools: [
     { layer: 'focal', label: 'Focal point', key: '', about: 'where the eye goes first' },
+    { hud: 'vignette', about: 'where a watercolour study could end and dissolve into paper, so the focus stays inside' },
     { hud: 'tangents', about: 'shapes that just touch each other or the edge - where the depth goes flat' },
     { hud: 'amounts', about: 'does one value, one temperature, one colour strength, one size of shape, one kind of edge lead?' },
     { hud: 'guides', about: 'thirds and a viewfinder, to try a crop' },
@@ -69,6 +71,8 @@ const WS_TABS = [
   { id: 'learn', label: 'Onto paper', q: 'How do I get it onto the paper?', tools: [
     { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'the order to draw it in, step by step, for your medium',
       run: () => openSteps(state.current) },
+    { hud: 'watercolour', about: 'how it could look painted, before the first stroke - then How to draw it for the order' },
+    { hud: 'vignette', about: 'a study need not reach the edge: where it fades into bare paper' },
     { action: 'lightbox', label: 'Lightbox', icon: 'lightbox', about: 'trace it: good paper over the screen, the picture lit through it - as big as you want it',
       run: () => openLightbox(state.current) },
     { layer: 'grid', label: 'Grid', key: 'r', about: 'or copy it freehand, a square at a time' },
