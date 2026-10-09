@@ -653,14 +653,24 @@
         <label class="opt"><input type="checkbox" id="optFlipRandom"> Randomly mirror</label>
         <label class="opt"><input type="checkbox" id="optGrid"> Grid overlay</label>
         <select id="gridStyle" title="Which guide lines the grid overlay draws">
-          <option value="thirds">Rule of thirds</option>
-          <option value="golden">Golden ratio</option>
-          <option value="dynamic">Dynamic symmetry</option>
-          <option value="armature">Harmonic armature</option>
-          <option value="rabatment">Rabatment</option>
-          <option value="diagonal">Diagonals</option>
-          <option value="center">Center only</option>
+          <optgroup label="Divide the frame">
+            <option value="thirds">Rule of thirds</option>
+            <option value="golden">Golden ratio</option>
+            <option value="dynamic">Dynamic symmetry</option>
+            <option value="armature">Harmonic armature</option>
+            <option value="rabatment">Rabatment</option>
+            <option value="diagonal">Diagonals</option>
+            <option value="center">Center only</option>
+          </optgroup>
+          <optgroup label="Lay a shape (Carlson, Loomis)">
+            <option value="scurve">S-curve</option>
+            <option value="ell">L</option>
+            <option value="steelyard">Steelyard</option>
+            <option value="radiating">Radiating</option>
+            <option value="triangle">Triangle</option>
+          </optgroup>
         </select>
+        <div class="count" id="gridStyleNote" aria-live="polite"></div>
         <label class="opt" title="Black-outlined white lines with a distinct dash pattern per line, instead of one accent colour and opacity - for bright light or low contrast sensitivity. Also 'h' mid-session."><input type="checkbox" id="optHighContrast"> High-contrast overlays</label>
         <label class="opt" title="Overlay a faint edge-detected silhouette of whatever pose was on screen just before this one, to help track how a gesture or form carries from pose to pose."><input type="checkbox" id="optGhost"> Ghost previous pose</label>
         <label class="opt" title="Mark this pose's approximate visual-weight centroid (from its own brightness distribution) - a rough guide to where the eye lands first."><input type="checkbox" id="optFocalPoint"> Focal-point marker</label>
@@ -1822,11 +1832,11 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=48a944f9"></script>
-<script src="js/setup.js?v=f4624429"></script>
+<script src="js/setup.js?v=f046b72b"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
-<script src="js/session.js?v=1299491c"></script>
+<script src="js/session.js?v=d3c2a536"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
 <script src="js/tools.js?v=101eea54"></script>
@@ -1842,7 +1852,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=5c9f51b0"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=3af212fc"></script>
+<script src="js/whatsnew.js?v=15026e25"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>

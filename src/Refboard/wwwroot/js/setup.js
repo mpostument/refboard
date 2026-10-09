@@ -276,8 +276,11 @@ async function boot() {
   if (saved.memorySecs) el('memorySecs').value = String(saved.memorySecs);
   el('memorySecs').addEventListener('change', saveSettings);
   el('gridStyle').value = saved.gridStyle || 'thirds';
+  const showGridNote = () => { el('gridStyleNote').textContent = GRID_NOTES[el('gridStyle').value] || ''; };
+  showGridNote();
   el('gridStyle').addEventListener('change', () => {
     state.gridStyle = el('gridStyle').value;
+    showGridNote();
     saveSettings();
     if (el('optGrid').checked) drawGrid();
   });

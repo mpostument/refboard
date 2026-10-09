@@ -890,9 +890,16 @@ the wash.
   on GitHub Pages); and a painting opened straight into a master copy with
   build-up stages.
 
-- **Classic composition schemes.** Carlson's and Loomis's templates -
-  S-curve, L, steelyard (a big mass against a small one), radiating,
-  triangle - laid over a photo like the present grids.
+- **Classic composition schemes, the rest.** In place (`GRID_STYLES` in
+  `js/session.js`, the Grid overlay's picker under Display, in a group of
+  its own, *Lay a shape*): Carlson's and Loomis's S-curve, L, steelyard,
+  radiating lines and triangle, worked out in the picture's W x 1 frame
+  like the armatures so a ring stays round and a curve keeps its shape on
+  any format; the steelyard's two rings balance (areas 4 : 1 at distances
+  1 : 4 from the fulcrum). A line under the picker says what the chosen
+  guide is for (`GRID_NOTES`). Still to come: the scheme fitted to the
+  picture (the S-curve through its own masses, the triangle round its
+  subject), a cross and a circle, and the shape dragged by hand.
 
 - **Streets of the world.** Open street-level photos from Mapillary (like
   Street View, but freely licensed) as references for urban sketching of

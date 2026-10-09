@@ -504,7 +504,12 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   fitted to the reference's own rendered box rather than the pane around it,
   so its lines land on the image's real thirds whatever its aspect ratio -
   and the tonal-value split draws one per pane, since a single grid stretched
-  across two images side by side divides neither of them.
+  across two images side by side divides neither of them. The picker is in
+  two groups: *Divide the frame* (thirds, golden ratio, dynamic symmetry, the
+  harmonic armature, rabatment, diagonals) and *Lay a shape* - Carlson's and
+  Loomis's compositions: the S-curve, the L, the steelyard (a big mass near
+  the fulcrum balances a small one far out), radiating lines and the triangle.
+  A line under the picker says in a sentence what the chosen guide is for.
 - **Understand the pose, not just look at it** - a collapsible drawer next to
   the HUD (`Info`, or `i`) keeps three things current on every pose:
   - **Colour scheme for the tonal-value view** - grayscale, three duotones

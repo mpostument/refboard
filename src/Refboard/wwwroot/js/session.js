@@ -824,6 +824,21 @@ function rayToEdge(x, y, dx, dy, W) {
   if (dy > 0) t = Math.min(t, (1 - y) / dy); else if (dy < 0) t = Math.min(t, -y / dy);
   return [x, y, x + dx * t, y + dy * t];
 }
+/* The shape schemes below (Carlson's and Loomis's) are worked out in the same
+   W x 1 frame as the armatures, but they are drawn heavier than a grid line:
+   they are a figure to arrange the picture's masses along, not a ruler. A
+   path's points go through the one mapping, so a curve or a circle keeps its
+   shape on any format (a Bezier survives an affine stretch, an ellipse is
+   given the radii that stretch back into a circle). */
+const SHAPE_W = '.5';
+function framePt(W, [x, y]) { return `${x / W * 100} ${y * 100}`; }
+function shapePath(W, d, extra = '') {
+  return `<path d="${d(p => framePt(W, p))}" fill="none" stroke="#fff" stroke-width="${SHAPE_W}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>`;
+}
+// A circle of radius r (in the frame's units, a share of the height) drawn dashed.
+function shapeCircle(W, x, y, r) {
+  return `<ellipse cx="${x / W * 100}" cy="${y * 100}" rx="${r / W * 100}" ry="${r * 100}" fill="none" stroke="#fff" stroke-width=".3" stroke-dasharray="1.5 1.5"/>`;
+}
 const GRID_STYLES = {
   thirds: () => cuts(33.33),
   golden: () => cuts(38.2), // ~1/phi - the wider-spaced of the two classic ratios
@@ -851,6 +866,56 @@ const GRID_STYLES = {
   rabatment: W => W >= 1
     ? gridLines(W, [[1, 0, 1, 1], [W - 1, 0, W - 1, 1]])
     : gridLines(W, [[0, W, W, W], [0, 1 - W, W, 1 - W]]),
+  // Hogarth's line of beauty, as Carlson draws the S: one curve the eye
+  // follows from a corner to the far one, through the middle. Mass and
+  // interest are strung along it. Not mirrored: a symmetric S reads static.
+  scurve: W => shapePath(W, p =>
+    `M${p([0.08 * W, 0.94])} C${p([0.95 * W, 0.88])} ${p([0.05 * W, 0.12])} ${p([0.92 * W, 0.06])}`),
+  // Carlson's L: a tall mass down one side and a long one along the base
+  // hold the picture; the open corner is where the eye goes in. The heavy
+  // line is the two masses, the ring marks the focus the open corner leads to.
+  ell: W => shapePath(W, p => `M${p([0.2 * W, 0.08])} L${p([0.2 * W, 0.82])} L${p([0.94 * W, 0.82])}`) +
+    shapeCircle(W, 0.62 * W, 0.4, 0.05 * Math.min(1, W)),
+  // The steelyard: a big mass close to the fulcrum balances a small one far
+  // out on the beam (weight times distance). The fulcrum is a third of the
+  // way along; the two rings are masses that balance - areas 4 : 1 at
+  // distances 1 : 4.
+  steelyard: W => {
+    const f = W / 3, r = 0.2 * Math.min(1, W), rs = r / 2, big = f - 0.12 * W, small = f + 4 * (f - big);
+    return gridLines(W, [[0.04 * W, 0.62, 0.96 * W, 0.62]]) +
+      shapePath(W, p => `M${p([f - 0.035 * W, 0.7])} L${p([f, 0.62])} L${p([f + 0.035 * W, 0.7])} Z`) +
+      shapeCircle(W, big, 0.4, r) + shapeCircle(W, small, 0.5, rs);
+  },
+  // Rays from one point (the upper right third's crossing) out to the frame:
+  // the eye is drawn in toward it, and the lines are where the edges,
+  // branches or folds of the picture can run.
+  radiating: W => {
+    const fx = 2 * W / 3, fy = 1 / 3, rays = [];
+    for (let i = 0; i < 12; i++) {
+      const a = (i + 0.5) / 12 * Math.PI * 2;
+      rays.push(rayToEdge(fx, fy, Math.cos(a), Math.sin(a), W));
+    }
+    return gridLines(W, rays) + shapeCircle(W, fx, fy, 0.03 * Math.min(1, W));
+  },
+  // Carlson's triangle: a broad base and an apex off the middle, the masses
+  // grouped inside it. The dashed line is its median to the apex.
+  triangle: W => shapePath(W, p => `M${p([0.06 * W, 0.92])} L${p([0.94 * W, 0.92])} L${p([0.4 * W, 0.1])} Z`) +
+    gridLines(W, [[0.5 * W, 0.92, 0.4 * W, 0.1]]),
+};
+// One line for the picker: what the chosen guide is for.
+const GRID_NOTES = {
+  thirds: 'Put the focus on a crossing, not in the middle.',
+  golden: 'Like thirds, the lines a little closer to the middle.',
+  dynamic: 'Diagonals and their perpendiculars; the crossings are strong places for a focus.',
+  armature: 'Diagonals, the diamond and the lines to the middles of the sides.',
+  rabatment: 'The square folded in from each short side; hang the main vertical on its edge.',
+  diagonal: 'Both diagonals: lead the main direction along one.',
+  center: 'Only the centre cross.',
+  scurve: "Hogarth's S: string the masses along the curve, corner to corner.",
+  ell: "Carlson's L: a mass down one side and one along the base; the eye enters by the open corner.",
+  steelyard: 'A big mass near the fulcrum balances a small one far out - sizes and distances, not equal halves.',
+  radiating: 'Everything leans toward one point; run edges and folds along the rays.',
+  triangle: 'Group the masses inside a broad-based triangle with its apex off the middle.',
 };
 
 function drawGrid() {
@@ -861,6 +926,8 @@ function drawGrid() {
     `<line x1="0" y1="50" x2="100" y2="50" stroke="#fff" stroke-width=".15" stroke-dasharray="2 2"/>`;
   // Both panes, identically: each grid is stretched over its own pane, which
   // is the whole reason the split view needed two of them.
+  const note = el('gridStyleNote');
+  if (note) note.textContent = GRID_NOTES[style] || '';
   for (const id of ['grid', 'gridValue']) {
     const g = el(id);
     g.setAttribute('viewBox', '0 0 100 100');

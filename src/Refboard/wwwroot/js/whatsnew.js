@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'composition-schemes', title: 'Composition schemes: S, L, steelyard, triangle',
+    text: "Beside the thirds, in the Grid overlay's picker (Display): Carlson's and Loomis's shapes to arrange a picture's masses along - the S-curve, the L, the steelyard (a big mass near the fulcrum balances a small one far out), radiating lines and the triangle. They are drawn in the picture's own proportions, so a ring stays round on any format, and a line under the picker says what the chosen one is for.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'vignette', title: 'Vignette: where a study can end',
     text: "Over any picture in a session (Workspace > Composition, or Ctrl+K): where a watercolour study could stop and dissolve into bare paper, so the focus stays inside. The island is the smallest area that keeps most of the picture's edges, colour and darks - Tight, Medium or Loose - with a soft wet edge or a ragged dry-brush one. The note says what shape it is, which sides of the sheet it runs off, and whether the picture's darkest accent is kept, with how to paint it: the focus first, then thin the wash outward.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
