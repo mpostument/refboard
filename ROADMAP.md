@@ -137,8 +137,6 @@ Hands full of paint: ways to run a session without touching the screen.
   network: the session is run from the computer, and a phone or tablet by
   the paper shows the reference in sync. Needs the backend - not
   possible on GitHub Pages.
-- **Voice commands.** "Next", "pause", "flip", "grid" - speech
-  recognition in the browser, no server.
 - **A remote or a foot pedal.** Bluetooth page-turners and foot pedals to
   change pose and pause.
 
@@ -527,13 +525,9 @@ packs (below), and moving a picture to another folder by hand.
 - **Vignette.** A watercolour study often fades out before the edge of
   the paper: suggest the vignette's shape - where the picture should end
   and dissolve so the focus stays inside.
-- **Layer drying timer.** For wet-in-wet, cues through the stages: shine,
-  sheen gone, damp, dry - when the next layer can go on. Tuned to the
-  paper and the room's humidity.
-
 - **Weather for watercolour.** Humidity and temperature for the plein air
   spot from Open-Meteo (free, no key). They set how fast watercolour
-  dries, so the layer drying timer tunes itself.
+  dries.
 
 - **Preview as watercolour, the rest.** In place (`js/watercolour.js`,
   Workspace > Colour and Onto paper, a layer, Ctrl+K "watercolour"): the
