@@ -14,6 +14,35 @@ function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* A page for the printer: `html` is shown to the browser's print dialog
+   through a hidden frame, so what it carries (an @page of the paper's size,
+   an SVG in millimetres) is what prints, and nothing of the app does. The
+   frame goes when printing is over - or after two minutes, for a browser
+   that never says so. Used by the perspective grid and the mixing chart. */
+function printHtml(html) {
+  const f = document.createElement('iframe');
+  f.setAttribute('aria-hidden', 'true');
+  f.tabIndex = -1;
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  f.srcdoc = html;
+  f.onload = () => {
+    const w = f.contentWindow;
+    w.addEventListener('afterprint', () => f.remove());
+    w.focus(); w.print();
+    setTimeout(() => f.remove(), 120000);
+  };
+  document.body.appendChild(f);
+}
+
+// `blob` as a file the browser saves under `name`.
+function saveBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 /* ------------------------------------------------------------------ input */
 
 el('btnPause').addEventListener('click', togglePause);

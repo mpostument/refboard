@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'mixing-chart', title: 'Mixing chart: every paint with every other',
+    text: "Colour studio > Mixing (or Ctrl+K): your palette's paints mixed in pairs, at a light, medium or strong wash (in oil, parts of white) - in equal parts, as one triangle, or two to one, the whole square, so each pair is seen both ways round. Click a square to see the colour and what the pair does: whether the two take each other's colour away (the way to a grey or a brown), whether both granulate, whether one stains. Print the sheet at its real size - A4, A3 or Letter, the paints numbered, the squares empty to paint - and paint it once, with the same water in every square, and you know your tubes. The Colour studio's tabs now wrap onto a second row instead of hiding the last one.",
+    act: 'Open it', run: () => openColour('mixing') },
   { id: 'perspective-grid', title: 'Perspective grid: a sheet to print',
     text: "Prepare > Perspective grid: one, two or three vanishing points on a horizon, on the paper you will really draw on - A5 to A3, Letter, square, a tablet's shape or your own size in millimetres - printed at its real size. Lines fan from each point in its own colour (or one grey for a photocopier), with plumb lines, and the third point above or below for a building seen from the ground or from a roof. The note says what the sheet shows: how wide a view the two points give (past 60 degrees boxes stretch at the edges), whether the eye is high or low, and how far a point lies beyond the paper, to tape a strip on and mark it.",
     act: 'Open it', run: () => setView({ kind: 'perspective' }) },

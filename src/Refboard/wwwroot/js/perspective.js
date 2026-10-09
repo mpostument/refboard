@@ -19,7 +19,8 @@
    Everything is worked out in millimetres on the paper (pgGeometry(), plain
    data), and drawn as one SVG (pgSvg()) that is the preview, the print and
    the file. Printing goes through a hidden frame with an @page of the
-   paper's size, so the browser's dialog starts at the right paper.
+   paper's size (printHtml(), tools.js), so the browser's dialog starts at
+   the right paper.
 
    Loaded the first time the view opens (loadSection('perspective')). */
 "use strict";
@@ -222,29 +223,12 @@ function pgPrintHtml(s) {
     `<style>@page{size:${g.W}mm ${g.H}mm;margin:0}html,body{margin:0;background:#fff}svg{display:block}</style>${pgSvg(s, g, true)}`;
 }
 
-function pgPrint() {
-  const f = document.createElement('iframe');
-  f.setAttribute('aria-hidden', 'true');
-  f.tabIndex = -1;
-  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
-  f.srcdoc = pgPrintHtml(persp);
-  f.onload = () => {
-    const w = f.contentWindow;
-    w.addEventListener('afterprint', () => f.remove());
-    w.focus(); w.print();
-    setTimeout(() => f.remove(), 120000); // a browser that never says it is done
-  };
-  document.body.appendChild(f);
-}
+const pgPrint = () => printHtml(pgPrintHtml(persp));
 
 function pgDownload() {
-  const g = pgGeometry(persp), [W, H] = [g.W, g.H];
-  const blob = new Blob([pgSvg(persp, g, true)], { type: 'image/svg+xml' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `perspective-${persp.points}-point-${Math.round(W)}x${Math.round(H)}mm.svg`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  const g = pgGeometry(persp);
+  saveBlob(new Blob([pgSvg(persp, g, true)], { type: 'image/svg+xml' }),
+    `perspective-${persp.points}-point-${Math.round(g.W)}x${Math.round(g.H)}mm.svg`);
 }
 
 // Which controls make sense for this many points.

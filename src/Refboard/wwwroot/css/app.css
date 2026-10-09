@@ -1320,16 +1320,17 @@ section { margin-bottom: 20px; }
 .col-sw { cursor: pointer; border-radius: 6px; padding-left: 4px; margin-left: -4px; }
 .col-sw:hover { background: var(--hover); }
 .col-sw.pinned { background: color-mix(in srgb, var(--accent) 16%, transparent); }
-/* The right column: the paints over seven tabs - the picture's colours, a
+/* The right column: the paints over eight tabs - the picture's colours, a
    colour wheel (js/wheel.js), a character's sheet (js/character.js), the
-   greys (js/greys.js), glazes (js/glazing.js), light and shadow
-   (js/light.js) and the pigments. The column is wide enough for all seven at
-   full size; tighter padding fits them in a narrower one, and past that the
-   row scrolls rather than wraps under itself. */
+   greys (js/greys.js), the mixing chart (js/mixing.js), glazes
+   (js/glazing.js), light and shadow (js/light.js) and the pigments. Eight do
+   not fit one row of the column, and a row that scrolled hid the last one
+   ("Pi" at the edge): they wrap onto a second row instead, each row with its
+   own underline for the open one. */
 .col-right h4.col-first { margin-top: 0; }
-.col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; overflow-x: auto; scrollbar-width: none; }
+.col-tabs { border-bottom: 1px solid var(--line); margin: 12px 0 10px; flex-wrap: wrap; row-gap: 2px; }
 .col-tabs button { padding-left: 5px; padding-right: 5px; white-space: nowrap; }
-/* Seven tabs in a phone's column: tighter, so none scrolls out of sight. */
+/* Tighter in a phone's column, so they take fewer rows. */
 @media (max-width: 480px) { .col-tabs button { padding-left: 4px; padding-right: 4px; font-size: 12px; } }
 .col-tab { display: none; }
 .col-tab.on { display: block; }
@@ -1415,6 +1416,11 @@ section { margin-bottom: 20px; }
 .gz-title b { font-weight: 600; }
 .gz-swatches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .gz-swatches figure { margin: 0; }
+/* The mixing chart (js/mixing.js) borrows the glazing chart's grid and swatches; two or three swatches, not five. */
+.mc-swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mc-sheet { flex-wrap: wrap; margin-top: 8px; }
+.mc-sheet select { max-width: 110px; }
+.mc-sheet .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
 .gz-swatches i { display: block; height: 34px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
 /* Light and shadow: the light's two sliders, then one row per colour - its
    own, in the light, in shadow - and the chosen one as a lit ball. */

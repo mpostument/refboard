@@ -361,6 +361,23 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   related instead of going muddy. Where your paints make no warmer or
   cooler grey than the neutral, the column says so; with a picture open,
   its own greys are marked on the ladder.
+- **Mixing chart** - the Colour studio's Mixing tab (Ctrl+K "mixing"): every
+  paint of your palette with every other, at a light, medium or strong wash
+  (in oil, one, three or no parts of white to each part of colour) - as the
+  model says it will look, and as a sheet to print and paint. *Equal parts* is
+  one triangle (A with B is B with A); *Two to one* is the whole square, the
+  row's paint twice the column's, so each pair is seen both ways round; the
+  diagonal is each paint on its own, the reference every mix in its row is
+  read against. A square, clicked, says what the pair does: that the two take
+  each other's colour away (the way to a grey or a brown), or stay bright;
+  that both granulate, or that one stains and will not lift. *Print* sends
+  the sheet at its real size - A4, A3 or Letter, turned whichever way gives
+  the bigger squares (up to 16 mm), the paints numbered down the side, the
+  squares empty unless *Predicted colours* is ticked, since a printed colour
+  under real paint would lie about it. It says when the squares come out
+  under 7 mm - a box of 27 tubes wants A3. *Save SVG* is the same sheet as a
+  file. Corner marks are there for the day a photo of the painted sheet
+  calibrates the paints (see the ROADMAP).
 - **Glazing chart** - the Colour studio's Glazing tab: every paint of your
   palette glazed over every other, first washes down and glazes across, at
   a light, medium or strong wash. A crossing is set beside the other order

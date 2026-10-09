@@ -63,6 +63,8 @@ test('the Greys tab: cells with water, a recipe per column, the picture\'s greys
   await expect(page.locator('#colTabs [data-tab="greys"]')).toHaveAttribute('aria-selected', 'true');
   await page.focus('#colTabs [data-tab="greys"]');
   await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#colTabs [data-tab="mixing"]')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('ArrowRight');
   await expect(page.locator('#colTabs [data-tab="glazing"]')).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#colTabs [data-tab="light"]')).toHaveAttribute('aria-selected', 'true');

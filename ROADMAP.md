@@ -420,10 +420,21 @@ packs (below), and moving a picture to another folder by hand.
   wash, the mid-tones, the last darks - each step as its own picture with
   its mixing recipe (paint.js). A watercolour counterpart to the session's
   build-up stages.
-- **Mixing chart.** A printable grid of the palette's pigments mixed in
-  pairs, at a few dilutions. Paint it with real paint, photograph it, and
-  the photo calibrates the pigments' colours in PIGMENTS - so the recipes
-  become accurate for the painter's own tubes and paper.
+- **Mixing chart, the rest.** In place (`js/mixing.js`, Colour studio >
+  Mixing, Ctrl+K "mixing"): the palette's paints with each other, at a light,
+  medium or strong wash (in oil, three, one or no parts of white), in equal
+  parts - one triangle, since A with B is B with A - or two to one, the whole
+  square; the model's colours on screen with what a pair does (dulls, stays
+  bright, granulates, stains), and a sheet to print and paint at the paper's
+  real size (A4, A3, Letter, turned for the bigger squares, up to 16 mm), the
+  squares empty unless asked, the paints numbered, a warning under 7 mm,
+  corner marks outside the grid. Still to come: **the photo that calibrates
+  the pigments** - the painted sheet photographed, lined up by the corner
+  marks, each square's colour read and put in PIGMENTS against the model's,
+  so the recipes become accurate for the painter's own tubes and paper (with
+  Calibration from a swatch photo, below); a third ratio and the dilutions as
+  a second sheet; choosing which paints go on the sheet from a large box;
+  and the chart for pencils and markers, which cannot be mixed freely.
 - **Glazing, the rest.** In place (`js/glazing.js`, Colour studio >
   Glazing, Ctrl+K "glazing"): the palette's glazing chart, each paint over
   each at a light, medium or strong wash, and a crossing set beside the
@@ -563,7 +574,7 @@ packs (below), and moving a picture to another folder by hand.
   Greys, Ctrl+K "grey"): a warm, a neutral and a cool grey from the chosen
   paints, each one mixture taken over seven values with water or white, and
   the picture's own greys marked on it. Still to come: a ladder printed to
-  paint and photograph, calibrating the mixes (with the Mixing chart), and
+  paint and photograph, calibrating the mixes (with the Mixing chart's photo), and
   greys chosen for a picture - its shadows' temperature deciding the column.
 
 ## Materials

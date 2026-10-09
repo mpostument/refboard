@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=a703c74a">
+<link rel="stylesheet" href="css/app.css?v=6897b657">
 </head>
 <body>
 <div id="setup">
@@ -375,6 +375,7 @@
               <button type="button" role="tab" data-tab="wheel" aria-selected="false" title="A colour wheel: pick a colour and a harmony, and mix the colours that go with it from your paints">Wheel</button>
               <button type="button" role="tab" data-tab="character" aria-selected="false" title="A character's colours - hair, skin, eyes, clothes - with shadow, light and how to mix them">Character</button>
               <button type="button" role="tab" data-tab="greys" aria-selected="false" title="Warm, neutral and cool greys from these paints, light to dark">Greys</button>
+              <button type="button" role="tab" data-tab="mixing" aria-selected="false" title="Every paint mixed with every other, on a sheet to print and paint">Mixing</button>
               <button type="button" role="tab" data-tab="glazing" aria-selected="false" title="One paint glazed over another, against mixing them on the palette">Glazing</button>
               <button type="button" role="tab" data-tab="light" aria-selected="false" title="A colour in the light and in its shadow, under the sun, a window, a lamp - and how to mix both">Light</button>
               <button type="button" role="tab" data-tab="pigments" aria-selected="false" title="Your paints: which glaze cleanly, lift off, granulate or fade">Pigments</button>
@@ -434,6 +435,26 @@
               <div class="count" id="glReadout"></div>
               <div id="glMixes"></div>
               <div class="count" id="glNote"></div>
+            </div>
+            <!-- js/mixing.js: every paint with every other, on a sheet to print. -->
+            <div class="col-tab" data-tab="mixing" role="tabpanel">
+              <h4>Mixing chart - every paint with every other</h4>
+              <div class="chips" id="mcLevel" role="group" aria-label="How much water"></div>
+              <div class="chips" id="mcRatio" role="group" aria-label="Proportions"></div>
+              <div class="count" id="mcRatioNote"></div>
+              <div id="mcChart" class="gz-chart" role="group" aria-label="Mixing chart"></div>
+              <div class="count" id="mcReadout">Point at a square to see what it is; click it for the colour and what the mix does.</div>
+              <div id="mcPair"></div>
+              <h4>The sheet to paint</h4>
+              <div class="row mc-sheet">
+                <label for="mcPaper">Paper</label><select id="mcPaper" title="The paper the chart is laid out for - printed at its real size"></select>
+                <label class="opt" title="Fill each square with the colour the model expects. Leave off to print empty squares to paint"><input type="checkbox" id="mcColours"> Predicted colours</label>
+              </div>
+              <div class="row mc-sheet">
+                <button type="button" id="mcPrint" class="primary" title="Print the sheet at its real size - empty squares to paint, the paints numbered">Print</button>
+                <button type="button" id="mcSave" class="ghost" title="The same sheet as an SVG at the paper's real size">Save SVG</button>
+              </div>
+              <div class="count" id="mcSheetNote"></div>
             </div>
             <!-- js/glazing.js: each paint over each, and one crossing explained. -->
             <div class="col-tab" data-tab="glazing" role="tabpanel">
@@ -1890,7 +1911,7 @@
 <script src="js/session.js?v=d3c2a536"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
-<script src="js/tools.js?v=101eea54"></script>
+<script src="js/tools.js?v=da91f60d"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
 <script src="js/vision.js?v=483a5b64"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
@@ -1901,9 +1922,9 @@
 <script src="js/workspace.js?v=ee1d5d03"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=d1115091"></script>
+<script src="js/command.js?v=e89c8cb0"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=24468d78"></script>
+<script src="js/whatsnew.js?v=bdc0902d"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1938,17 +1959,18 @@
 <script src="js/museum.js?v=029edce5"></script>
 </template>
 <template id="lazy-perspective">
-<script src="js/perspective.js?v=de720426"></script>
+<script src="js/perspective.js?v=44d5bc98"></script>
 </template>
 <template id="lazy-palette">
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=535cc842"></script>
+<script src="js/colour.js?v=fae53b1d"></script>
 <script src="js/wheel.js?v=4f33cec4"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=eb123ff3"></script>
 <script src="js/glazing.js?v=e54dd6ce"></script>
+<script src="js/mixing.js?v=0d50a6f6"></script>
 <script src="js/light.js?v=b67afe9c"></script>
 <script src="js/pigments.js?v=55a1f5c1"></script>
 </template>
