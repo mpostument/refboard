@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'perspective-grid', title: 'Perspective grid: a sheet to print',
+    text: "Prepare > Perspective grid: one, two or three vanishing points on a horizon, on the paper you will really draw on - A5 to A3, Letter, square, a tablet's shape or your own size in millimetres - printed at its real size. Lines fan from each point in its own colour (or one grey for a photocopier), with plumb lines, and the third point above or below for a building seen from the ground or from a roof. The note says what the sheet shows: how wide a view the two points give (past 60 degrees boxes stretch at the edges), whether the eye is high or low, and how far a point lies beyond the paper, to tape a strip on and mark it.",
+    act: 'Open it', run: () => setView({ kind: 'perspective' }) },
   { id: 'composition-schemes', title: 'Composition schemes: S, L, steelyard, triangle',
     text: "Beside the thirds, in the Grid overlay's picker (Display): Carlson's and Loomis's shapes to arrange a picture's masses along - the S-curve, the L, the steelyard (a big mass near the fulcrum balances a small one far out), radiating lines and the triangle. They are drawn in the picture's own proportions, so a ring stays round on any format, and a line under the picker says what the chosen one is for.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

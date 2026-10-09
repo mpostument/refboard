@@ -932,9 +932,24 @@ the wash.
   not know. Needs testing against a real PureRef 2.x. The fallbacks always
   work: a zip of the images (PureRef takes them by drag and drop) and the
   board as one image.
-- **Perspective grid.** One, two or three vanishing points, a horizon and
-  the paper's format, to print and draw over - the other half of the
-  perspective check.
+- **Perspective grid, the rest.** In place (`js/perspective.js`, Prepare >
+  Perspective grid, Ctrl+K "vanishing"): one, two or three points on a
+  horizon, on paper in millimetres (A5 to A3, Letter, square, 4:3, 16:9 or
+  your own size, either way round) printed at its real size through a hidden
+  frame with an `@page` of the sheet, or saved as an SVG; lines fanned from
+  each point over the angles at which the sheet is seen from it, so a point
+  far off the sheet still fills it; plumb lines, and in one point level ones
+  as squares counted from the horizon; the third point above or below. The
+  note works out the view the two points give from the station point (the
+  eye as far from the sheet as the geometric mean of the two distances from
+  the centre line - a right angle between the points) and warns past 60
+  degrees, says whether the horizon makes the viewpoint high or low, and how
+  far each point is beyond the paper. Still to come: the grid laid over a
+  picture (to check a photo's perspective against it, joining the Perspective
+  check in a session), a station point you place by hand (a tilted centre
+  line, points not symmetric), a measured scale along the horizon and the
+  depth of a floor in squares, and the sheet in a project's kit once Projects
+  are in.
 
 ## From photo to 3D
 

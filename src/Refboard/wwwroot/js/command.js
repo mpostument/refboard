@@ -54,6 +54,7 @@ const COMMAND_WORDS = {
   'view-drop': 'open file upload photo check own image video',
   'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading hair',
   'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
+  'view-perspective': 'perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex',
   'view-train': 'drill practice exercise test',
   btnLibrary: 'folders packs',
@@ -201,7 +202,7 @@ function collectCommands() {
 
 /* Best first: the name starting with what was typed, then a word in the
    name starting with it, then anywhere in the name, then only in the extra
-   words. Every typed word has to be found somewhere. With nothing typed,
+   words; the shorter name first among equals. Every typed word has to be found somewhere. With nothing typed,
    the ones used last come first. */
 function rankCommands(all, query) {
   const recent = commandRecent();
@@ -217,7 +218,9 @@ function rankCommands(all, query) {
     const score = label.startsWith(q) ? 0 : label.split(/[^a-z0-9]+/).some(w => w.startsWith(words[0])) ? 1 : label.includes(q) ? 2 : 3;
     scored.push([score, c]);
   }
-  return scored.sort((a, b) => a[0] - b[0]).map(s => s[1]);
+  // The same score: the shorter name is the closer to what was typed ("Perspective
+  // trainer" before "Perspective grid - one, two or three vanishing points...").
+  return scored.sort((a, b) => a[0] - b[0] || a[1].label.length - b[1].label.length).map(s => s[1]);
 }
 
 function renderCommands() {

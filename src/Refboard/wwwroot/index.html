@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=09017db1">
+<link rel="stylesheet" href="css/app.css?v=a703c74a">
 </head>
 <body>
 <div id="setup">
@@ -64,8 +64,9 @@
       <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
       <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images - browse and search" aria-label="All images"></button>
       <button class="nav-item" type="button" data-view="museum" data-icon="museum" data-tip="Museums - search the Met and the Rijksmuseum, open a painting in the workspace" aria-label="Museums"></button>
-      <button class="nav-item" type="button" data-view="colour" data-icon="palette"data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
+      <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
       <button class="nav-item" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
+      <button class="nav-item" type="button" data-view="perspective" data-icon="perspective" data-tip="Perspective grid - one, two or three vanishing points on your paper, to print and draw over" aria-label="Perspective grid"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
       <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
     </div>
@@ -507,6 +508,56 @@
           </aside>
         </div>
         <div class="row mu-foot"><button type="button" id="muMore" class="ghost hidden" title="The next pictures for these words">More</button></div>
+      </div>
+
+      <!-- Perspective grid - see showPerspective() in js/perspective.js, which
+           loads the first time this opens. Nothing here needs a library. -->
+      <div id="viewPerspective" class="hidden">
+        <div class="pg-body">
+          <div class="pg-controls" role="group" aria-label="The perspective sheet">
+            <div class="pg-row"><span class="pg-label">Vanishing points</span>
+              <div class="chips" id="pgPoints" role="group" aria-label="Vanishing points">
+                <button type="button" class="chip" data-points="1" title="One point: a corridor or a street seen square on">1</button>
+                <button type="button" class="chip" data-points="2" title="Two points: a box seen at a corner - the usual one">2</button>
+                <button type="button" class="chip" data-points="3" title="Three points: a tall building seen from above or below">3</button>
+              </div></div>
+            <div class="pg-row"><label class="pg-label" for="pgFormat">Paper</label>
+              <select id="pgFormat" title="The paper you will draw on - the print is its real size"></select>
+              <div class="chips" id="pgOrient" role="group" aria-label="Which way round">
+                <button type="button" class="chip" data-orient="landscape">Landscape</button>
+                <button type="button" class="chip" data-orient="portrait">Portrait</button>
+              </div></div>
+            <div class="pg-row hidden" id="pgCustom"><span class="pg-label">Size, mm</span>
+              <input type="number" id="pgCustomW" min="50" max="1200" step="1" aria-label="Width in millimetres">
+              <span aria-hidden="true">&times;</span>
+              <input type="number" id="pgCustomH" min="50" max="1200" step="1" aria-label="Height in millimetres"></div>
+            <label class="pg-slide"><span>Horizon</span><input type="range" id="pgHorizon" min="5" max="95" step="1" title="Eye level, from the top of the sheet. Near the top: you look down on things; near the bottom: up at them"><output id="pgHorizonOut" for="pgHorizon"></output></label>
+            <label class="pg-slide" data-pts="1"><span>The point</span><input type="range" id="pgVp1x" min="0" max="100" step="1" title="Where the point is across the sheet - where the eye should go"><output id="pgVp1xOut" for="pgVp1x"></output></label>
+            <label class="pg-slide" data-pts="2 3"><span>Points apart</span><input type="range" id="pgSpread" min="30" max="250" step="5" title="How far each point is from the middle. Far apart: boxes look right. Close: they stretch at the edges. The note says how wide the view is"><output id="pgSpreadOut" for="pgSpread"></output></label>
+            <div class="pg-row" data-pts="3"><span class="pg-label">Third point</span>
+              <div class="chips" id="pgThird" role="group" aria-label="Where the third point is">
+                <button type="button" class="chip" data-third="down" title="Looking down: verticals draw together toward the ground">Below</button>
+                <button type="button" class="chip" data-third="up" title="Looking up: verticals draw together toward the sky">Above</button>
+              </div></div>
+            <label class="pg-slide" data-pts="3"><span>How far</span><input type="range" id="pgThirdDist" min="40" max="400" step="10" title="The third point's distance from the horizon. Near: a steep view. Far: nearly upright verticals"><output id="pgThirdDistOut" for="pgThirdDist"></output></label>
+            <label class="pg-slide"><span>Lines</span><input type="range" id="pgLines" min="6" max="48" step="1" title="How many lines run from each point"><output id="pgLinesOut" for="pgLines"></output></label>
+            <label class="opt" data-pts="1 2" title="Plumb lines - and, in one point, level ones as squares - to build the box on"><input type="checkbox" id="pgUpright"> Plumb and level lines</label>
+            <div class="pg-row"><label class="pg-label" for="pgInk">Ink</label>
+              <select id="pgInk" title="A colour for each point, or one grey - for a photocopier"><option value="colour">Colour per point</option><option value="one">One grey</option></select>
+              <label class="pg-label" for="pgMargin">Margin</label>
+              <select id="pgMargin" title="Where the lines stop, inside the paper's edge - a printer cannot reach the very edge"><option value="0">None</option><option value="5">5 mm</option><option value="10">10 mm</option></select>
+              <button type="button" class="ghost" id="pgReset" title="Put the sliders back, keeping the paper and the number of points">Reset</button></div>
+          </div>
+          <div class="pg-stage">
+            <div id="pgSheet" class="pg-sheet" role="img"></div>
+            <div class="pg-foot">
+              <span class="count" id="pgSize"></span>
+              <button type="button" id="pgPrint" class="primary" title="Print it on the paper chosen, at its real size">Print</button>
+              <button type="button" id="pgSavefile" class="ghost" title="An SVG at the paper's real size - to print elsewhere or draw over on a tablet">Save SVG</button>
+            </div>
+            <div class="count pg-note" id="pgNote" aria-live="polite"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Palette generator - see showPalette() in js/palette.js, which
@@ -1831,8 +1882,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=48a944f9"></script>
-<script src="js/setup.js?v=f046b72b"></script>
+<script src="js/core.js?v=d2f16ca7"></script>
+<script src="js/setup.js?v=9d314563"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
@@ -1850,9 +1901,9 @@
 <script src="js/workspace.js?v=ee1d5d03"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=5c9f51b0"></script>
+<script src="js/command.js?v=d1115091"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=15026e25"></script>
+<script src="js/whatsnew.js?v=24468d78"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1885,6 +1936,9 @@
 </template>
 <template id="lazy-museum">
 <script src="js/museum.js?v=029edce5"></script>
+</template>
+<template id="lazy-perspective">
+<script src="js/perspective.js?v=de720426"></script>
 </template>
 <template id="lazy-palette">
 <script src="js/palette.js?v=3af4eb0c"></script>

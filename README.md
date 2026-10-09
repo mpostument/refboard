@@ -127,6 +127,23 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 
 ## Features
 
+- **Perspective grid** - a sheet to print and draw over (Prepare > Perspective
+  grid, Ctrl+K "vanishing"): one, two or three vanishing points on a horizon,
+  on the paper you will really draw on - A5, A4, A3, Letter, a square, a
+  tablet's 4:3 or 16:9, or any size in millimetres, either way round. Lines
+  fan from each point in its own colour (or one grey, for a photocopier), with
+  plumb lines (and, in one point, level ones as squares counted from the
+  horizon); in three points the third point is below (looking down) or above
+  (looking up) and its lines are the converging verticals. A point may lie off
+  the sheet - the real ones usually do - and the lines still run to it. The
+  note says what the sheet shows: the angle of view the two points give, from
+  where the eye would have to stand for them to be a right angle apart (past
+  60 degrees boxes stretch at the edges: move the points apart), whether the
+  eye is high or low, and how far each point is beyond the paper, so a strip
+  can be taped on to mark it. *Print* sends it at its real size, the browser's
+  dialog already on the paper's size; *Save SVG* is the same sheet as a file.
+  It is the other half of the Perspective check in a session, which finds the
+  points in a picture; this makes the sheet to build on. Kept as you left it.
 - **Museums** - public-domain pictures from open collections, searched from
   the app (Prepare > Museums): the Met and the Rijksmuseum, both or either,
   with "Sargent watercolour" or "Hokusai" or "storm clouds". Each picture
@@ -765,7 +782,7 @@ src/Refboard/
                               a file may use at load time only what earlier files
                               define). Opens straight from disk too - classic
                               scripts, unlike modules, load over file://. The
-                              3D view, the Colour studio, Palettes, Museums and the backup load
+                              3D view, the Colour studio, Palettes, Museums, the Perspective grid and the backup load
                               when first opened: see loadSection() in core.js.
 docs/
   index.html               - GitHub Pages source (Settings > Pages > main /docs).
