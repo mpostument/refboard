@@ -535,9 +535,26 @@ packs (below), and moving a picture to another folder by hand.
   spot from Open-Meteo (free, no key). They set how fast watercolour
   dries, so the layer drying timer tunes itself.
 
-- **Preview as watercolour.** The photo rendered as a watercolour: flat
-  washes, soft edges, granulation, white paper - how the reference could
-  look painted, before the first stroke. The ink one is under Materials.
+- **Preview as watercolour, the rest.** In place (`js/watercolour.js`,
+  Workspace > Colour and Onto paper, a layer, Ctrl+K "watercolour"): the
+  picture as washes - a Kuwahara filter (`wcKuwahara()`, the means and
+  spreads of four squares round each pixel from summed-area tables) so flat
+  areas come out flat and edges stay where they were; the edge map decides
+  the rest - along a hard edge the pigment pools in a rim on its darker side,
+  near a soft one the washes are blurred together, wet-in-wet; a wash
+  worked out as an absorbance against the paper and let down to 85% (paler
+  than the photo, its darks layers rather than black); grain in the paper's
+  tooth that thickens the wash in the darks (Smooth, Light, Granulating);
+  and what is near-white and colourless left as the paper, with the share
+  said. Detail (Loose, Medium, Tight) and Colours - kept to what the chosen
+  palette mixes (`paintReach()`, a colour outside pulled in along its own hue,
+  lightness kept) - sit in the note, with a button into How to draw it. About
+  150 ms at 560 px. Still to come: the wash worked out from the paints'
+  own spectra rather than from the photo's sRGB (so a glaze really is one),
+  blooms, backruns and the cauliflower edge where a wet wash meets a damp
+  one, granulation by each pigment's own rating (Pigment guide), the whites
+  ringed for masking fluid, and the same look for ink and for pencil
+  (the ink one is under Materials).
 - **Grey ladder, the rest.** In place (`js/greys.js`, Colour studio >
   Greys, Ctrl+K "grey"): a warm, a neutral and a cool grey from the chosen
   paints, each one mixture taken over seven values with water or white, and
@@ -972,8 +989,20 @@ Anime > Body, above).
 - **Skull.** A 3D skull, anatomical and in planes like the Asaro head,
   that can be shown inside the head scan - where the bone comes to the
   surface.
-- **Foot.** A posable 3D foot, jointed like the hand. Feet in
-  foreshortening are among the hardest things to draw.
+- **Foot, the rest.** In place (`FORM_FOOT_*` and `FORM_RIGS.foot` in
+  `js/forms-models.js`; 3D forms > Figure and head > Foot): a right foot on
+  the same rig machinery as the hand - the heel a ball, the instep a wedge
+  rising to the ankle, the forefoot a block with the pad of the ball, the
+  big toe of two joints and the other four of three, shortening and thinning
+  toward the little one. A toe runs along +z, which a limb (down its own y)
+  cannot, so each toe's pivot holds a rest turn of 90 degrees about x, and
+  the outer toes' small outward turn with it. Joints: the ankle, the middle
+  of the foot and every toe; poses Relaxed, Pointed, Flexed, On the toes,
+  Curled and Spread; random forms deal it a new pose. Still to come: a left
+  foot (this one mirrored), this foot in place of the figure's single-box
+  foot, the foot's own anatomy (the arches, the tendons, the ankle's
+  bones; see Anatomy on the mannequin) and a sole that rests flat on the
+  floor under load.
 - **Animal mannequins.** A cat, a dog and a horse built from basic
   volumes, jointed like the figure.
 - **Anatomy on the mannequin, the rest.** In place (`FORM_ANATOMY_*` in

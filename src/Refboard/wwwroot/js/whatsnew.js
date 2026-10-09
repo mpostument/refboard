@@ -15,6 +15,12 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'watercolour-preview', title: 'Preview as watercolour',
+    text: "Over any picture in a session (Workspace > Colour, or Ctrl+K): the picture painted as it could be in watercolour, before the first stroke - flat washes, a darker rim where a hard edge stops a wash, soft edges that run together, grain in the paper's tooth, and the whites left as bare paper (the note says how much is). Detail runs from a few big washes to most of the detail; Grain from smooth to a granulating pigment; Colours can be kept to what your own palette mixes. How to paint it opens the steps in order.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'foot-3d', title: 'A mannequin foot',
+    text: "3D forms > Figure and head > Foot: a right foot built the drawing-book way - the heel, the instep rising to the ankle, the forefoot with the pad of the ball, and five toes - posed joint by joint like the hand: the ankle, the middle of the foot and every toe. Poses: relaxed, pointed, flexed, on the toes, curled and spread. Feet in foreshortening are among the hardest things to draw: turn it, light it, draw it.",
+    act: 'Open 3D forms', run: () => openForms() },
   { id: 'anatomy-3d', title: 'Anatomy on the 3D figure',
     text: "3D forms > a figure > Body: Bony landmarks and Muscle groups. The collarbone, the notch of the neck, the hip crest, the kneecap, the ankle knobs, the cheekbone and a dozen more are labelled dots on the figure; the pectoralis, deltoid, biceps, abdominals, quadriceps and calf are patches on it. They move with the pose and the build, and only what faces you is drawn - turn it round and the back's landmarks (C7, the dimples of the pelvis) come up instead. Over the view only: never in an export.",
     act: 'Open 3D forms', run: () => openForms() },

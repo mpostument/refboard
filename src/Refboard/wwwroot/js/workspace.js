@@ -27,6 +27,7 @@ const WS_TABS = [
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [
     { hud: 'eyedropper', about: 'one spot: its colour, its value step, a recipe in your medium' },
+    { hud: 'watercolour', about: 'the picture painted as watercolour: flat washes, hard and soft edges, grain, the whites left as paper - and in your own paints' },
     { hud: 'temp', about: 'warm and cool areas, and where the temperature turns - is the shadow cooler than the light?' },
     { hud: 'info', about: 'the main colours of the picture' },
     { hud: 'gray', about: 'is it the colour that is off, or the value?' },
@@ -69,6 +70,7 @@ const WS_TABS = [
   { id: 'learn', label: 'Onto paper', q: 'How do I get it onto the paper?', tools: [
     { action: 'steps', label: 'How to draw it', icon: 'pen', about: 'the order to draw it in, step by step, for your medium',
       run: () => openSteps(state.current) },
+    { hud: 'watercolour', about: 'how it could look painted, before the first stroke - then How to draw it for the order' },
     { action: 'lightbox', label: 'Lightbox', icon: 'lightbox', about: 'trace it: good paper over the screen, the picture lit through it - as big as you want it',
       run: () => openLightbox(state.current) },
     { layer: 'grid', label: 'Grid', key: 'r', about: 'or copy it freehand, a square at a time' },

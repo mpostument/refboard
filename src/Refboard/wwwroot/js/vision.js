@@ -107,7 +107,7 @@ function loadVision(kind) {
 // off - with three maps on, the note is how you find what to close. The
 // keys are LAYERS' ids (js/layers.js), or for a tool that only speaks -
 // no overlay - its HUD_TOOLS id (js/pins.js), whose button the x presses.
-const overlayNotes = { head: '', pose: '', edges: '', range: '', temp: '', amounts: '', tangents: '', lineweight: '', linewash: '', tone: '', symmetry: '', rhythms: '', markers: '', grades: '' };
+const overlayNotes = { head: '', pose: '', edges: '', range: '', temp: '', amounts: '', tangents: '', lineweight: '', linewash: '', tone: '', symmetry: '', rhythms: '', markers: '', grades: '', watercolour: '' };
 const noteOwner = k => (typeof LAYERS !== 'undefined' && LAYERS.find(l => l.id === k))
   || (typeof HUD_TOOLS !== 'undefined' && HUD_TOOLS.find(t => t.id === k));
 function overlayNote(key, html) {

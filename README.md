@@ -296,6 +296,19 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   grade to the softest, and when the picture's darks are darker than any
   graphite goes. A grade's lightness is the darkest it lays comfortably, an
   estimate; the grey markers and the pencils are never shown together.
+- **Preview as watercolour** - in a session (Workspace > Colour, Layers,
+  Ctrl+K): the picture painted as it could be in watercolour, before the
+  first stroke. Flat washes (a Kuwahara filter: flat areas stay flat, edges
+  stay put); hard edges stopped with a darker rim where the pigment pools,
+  soft ones let run into each other, wet-in-wet - read from the edge map; a
+  wash paler than the photo, its darks layers rather than black; grain that
+  settles into the paper's tooth, more in the dark; and what is near-white
+  and colourless left as bare paper (the note says how much). Detail (loose,
+  medium, tight) and Grain (smooth, light, granulating) are chips in the
+  note, and Colours can be kept to what the chosen palette mixes - what it
+  cannot is pulled toward grey along its own hue, lightness kept. A button
+  opens How to draw it for the order to paint it in. A look, not a recipe: a
+  simple wash model, not the spectral mixing the recipes use.
 - **Colour wheel** - the Colour studio's Wheel tab: click or drag a colour
   on the wheel (or press the arrow keys) and pick a harmony - complementary,
   split, analogous, triad, tetrad, square, or one hue from pale to deep -
@@ -636,6 +649,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   setting suggests a sky, a ground and a standing-back distance, but only
   into values still at their defaults. Shadows are a little coarser in a
   setting: the same shadow map covers more floor.
+- **A mannequin foot** - in 3D forms (Figure and head > Foot): a right foot,
+  sole down, built as a drawing book does - the heel a ball, the instep a
+  wedge rising to the ankle, the forefoot a block with the pad of the ball
+  under it, and five toes shortening and thinning to the little one (the big
+  toe two joints, the others three). Joints at the ankle (bend points the
+  foot), the middle of the foot and every toe; poses Relaxed, Pointed,
+  Flexed, On the toes, Curled and Spread, and Draw random forms deals it a
+  new one. The same rig machinery as the hand.
 - **Body types for the mannequin** - in 3D forms, the figure's Body row:
   *Child* (five and a half heads, the head near full size already), *Older*
   (a little shorter and narrower in the shoulders), *Heavier* and *Muscular*

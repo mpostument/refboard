@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=14b4e3c8">
+<link rel="stylesheet" href="css/app.css?v=d4ee9128">
 </head>
 <body>
 <div id="setup">
@@ -761,7 +761,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><canvas id="watercolourOverlay" class="hidden"></canvas><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -898,6 +898,7 @@
     <button id="btnTone" data-icon="tone" title="Toned paper (j): on grey, tan or black paper the paper is the middle tone - what to leave bare, where the white pencil or gel pen goes, where the darks go" aria-label="Toned paper" aria-pressed="false"></button>
     <button id="btnSymmetry" data-icon="symmetry" title="Symmetry check (y): the picture folded on a vertical line - pink where the two halves part. The fold is found for you, and can be moved" aria-label="Symmetry check" aria-pressed="false"></button>
     <button id="btnRhythms" data-icon="rhythms" title="Reilly rhythms (z): the long curves through a figure - each shoulder across the chest to the foot opposite, the spine, the arms - to draw before any contour" aria-label="Reilly rhythms" aria-pressed="false"></button>
+    <button id="btnWatercolour" data-icon="watercolour" title="Preview as watercolour: the picture painted as washes - hard edges with a darker rim, soft ones run together, grain, the whites left as the paper - before the first stroke" aria-label="Preview as watercolour" aria-pressed="false"></button>
     <button id="btnGrades" data-icon="grades" title="Pencil grades: for graphite, which grade of pencil each area of the picture wants - 2H for the palest tone to 8B for the darkest - with the grade written on it" aria-label="Pencil grades" aria-pressed="false"></button>
     <button id="btnMarkers" data-icon="markers" title="Grey markers: the picture split into the greys of a marker set - Tombow N-series - with each marker's number on its area" aria-label="Grey markers" aria-pressed="false"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
@@ -1578,9 +1579,12 @@
         (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>),
         via the three.js examples. <b>Hand</b> poses like the figure, joint by joint - the wrist,
         three joints on each finger and the thumb - with its own poses:
-        relaxed, spread, fist, pointing, pinching, gripping. In <b>Draw random
-        forms</b> a head nods, tilts and turns and a hand takes a new pose,
-        instead of being swapped for a random shape.</p>
+        relaxed, spread, fist, pointing, pinching, gripping. <b>Foot</b> is
+        the same for a right foot - the ankle, the middle of the foot and every
+        toe - with relaxed, pointed, flexed, on-the-toes, curled and spread
+        poses. In <b>Draw random forms</b> a head nods, tilts and turns and a
+        hand or a foot takes a new pose, instead of being swapped for a random
+        shape.</p>
       <p><b>Anime head</b> is built the anime way - the same proportions as
         the Anime style of Head construction on a photo: a big round cranium,
         the jaw almost straight to a pointed chin, a nose that is barely there,
@@ -1816,28 +1820,28 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=8cc6b544"></script>
+<script src="js/core.js?v=e2a33131"></script>
 <script src="js/setup.js?v=f4624429"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
-<script src="js/session.js?v=0c6e7968"></script>
+<script src="js/session.js?v=f6098546"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
 <script src="js/tools.js?v=101eea54"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
-<script src="js/vision.js?v=ded51f5a"></script>
+<script src="js/vision.js?v=e4fd0025"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
 <script src="js/study.js?v=fc69529c"></script>
-<script src="js/layers.js?v=03a1a04c"></script>
+<script src="js/layers.js?v=e0353cd0"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=9aa7cc1f"></script>
-<script src="js/workspace.js?v=10307d08"></script>
+<script src="js/pins.js?v=e13229ec"></script>
+<script src="js/workspace.js?v=c8ab3337"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=bbba5e41"></script>
+<script src="js/command.js?v=02ab935e"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=cada7b9e"></script>
+<script src="js/whatsnew.js?v=1cd4296f"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1849,6 +1853,7 @@
 <script src="js/symmetry.js?v=5488c74f"></script>
 <script src="js/rhythms.js?v=e8a373cc"></script>
 <script src="js/markers.js?v=a6cedb10"></script>
+<script src="js/watercolour.js?v=83b4415a"></script>
 <script src="js/grades.js?v=05c09ec4"></script>
 <script src="js/tangents.js?v=67a34d15"></script>
 <script src="js/lightbox.js?v=558bc8d9"></script>
@@ -1857,9 +1862,9 @@
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
-<script src="js/forms-models.js?v=5888c726"></script>
+<script src="js/forms-models.js?v=e99aefb1"></script>
 <script src="js/forms-settings.js?v=47a50035"></script>
-<script src="js/forms.js?v=d427110c"></script>
+<script src="js/forms.js?v=fced3f57"></script>
 <script src="js/forms-api.js?v=26a7a46c"></script>
 </template>
 <template id="lazy-backup">

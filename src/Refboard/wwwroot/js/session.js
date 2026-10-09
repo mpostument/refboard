@@ -514,6 +514,7 @@ function show(src) {
     if (state.rhythmsOn) runRhythms();
     if (state.markersOn) runMarkers();
     if (state.gradesOn) runGrades();
+    if (state.watercolourOn) runWatercolour();
     refreshValueTools();
   };
   img.onerror = () => {
