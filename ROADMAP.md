@@ -46,8 +46,8 @@ under More with their keys and in Ctrl+K (`js/pins.js`); and My materials
 (`js/materials.js`) - see Materials; and navigation by the stage of work -
 the rail grouped as Prepare, Practise, Paint and Check, with the same four
 as cards on the dashboard, built from the rail's groups (`js/stages.js`).
-Each new section joins the stage it is for: the board, simplify, layer plan
-and transfer under Prepare; the camera eyedropper under Paint; critique
+Each new section joins the stage it is for: the board, simplify and layer
+plan under Prepare; the camera eyedropper under Paint; critique
 and the framed view under Check. And hiding what you do not use - "Sections you use" under the
 dashboard's cards: a section unticked leaves the rail and its card (a stage
 with nothing left goes too), and is still in Ctrl+K. Each new section (oil
@@ -893,9 +893,6 @@ the wash.
 - **Simplify into shapes.** The reference reduced to 5-12 flat shapes of
   colour and value, the way a painter plans a study; a slider for how much
   small detail survives.
-- **Transfer grid.** The reference with a grid, scaled to the paper
-  (A4, A3, 30x40 cm...), to print or to transfer the drawing square by
-  square.
 - **Reference board.** A PureRef-style free canvas: drop several
   references for one painting, move, scale, turn and label them. Boards
   are kept - several of them, one per painting - by the backend in the
