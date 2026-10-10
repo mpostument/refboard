@@ -311,6 +311,8 @@ const FORM_SHAPES = {
   curtain:  { label: 'Curtain', lines: [14, 14], cloth: true, build: T => formClothGeometry(T, 'curtain') },
   // A mannequin hand, posable finger by finger - FORM_HAND_JOINTS.
   hand:     { label: 'Hand',     lines: [8, 6], rig: 'hand', build: T => new T.SphereGeometry(0.04, 8, 6) },
+  // A mannequin foot, posable toe by toe - FORM_FOOT_JOINTS.
+  foot:     { label: 'Foot',     lines: [8, 6], rig: 'foot', build: T => new T.SphereGeometry(0.04, 8, 6) },
 };
 
 /* ---- drapery. Folds are what cloth does under gravity against whatever
@@ -1297,6 +1299,77 @@ const FORM_HAND_POSES = {
     [[30, 0, 20], [15, 0, 0], [10, 0, 0]]) },
 };
 
+/* ---- the foot. A right foot, sole down, toes toward +z, the big toe on the
+   +x side (a right foot seen from the front has its inside to the right of
+   the picture). Built the way the hand is, from what a drawing book teaches:
+   the heel a ball, the instep a wedge that rises to the ankle, the forefoot
+   a block with the pad of the ball under it, and the toes cylinders that
+   shorten and thin toward the little one - the big toe two, the others
+   three. The foot is 1 long, heel to the big toe's tip; the ankle is where
+   the stub of the shin ends, and the origin.
+
+   Joints: the ankle turns the whole foot (bend points it, the toes down);
+   the forefoot bends at the middle of the foot, which is how an arch flexes
+   and a ball of the foot lifts; the toes hang from the forefoot.
+
+   A toe lies along +z, which the model's joints cannot (a limb runs down its
+   own y), so each toe's pivot holds a rest turn of 90 degrees about x: its y
+   points forward and its z down. Bend then curls a toe under, and lean
+   spreads it - and the small outward turns of the outer toes are in that
+   rest too, so a zero pose is a foot at ease, not a ruler. */
+const FORM_FOOT_ROOT = [rigBall([0, 0, 0], 0.125), rigLimb(0.7, 0.125, 1)]; // the shin's end
+const FORM_FOOT_TOES = [
+  // key, label, x across the forefoot, radius, segment lengths, turn outward
+  // A segment shorter than two radii is a ball, not a capsule: the toes are
+  // thin enough for each to read as a joint of its own.
+  ['big', 'Big toe', 0.13, 0.055, [0.15, 0.13], -2],
+  ['second', 'Second toe', 0.035, 0.034, [0.085, 0.07, 0.06], 0],
+  ['third', 'Third toe', -0.03, 0.032, [0.075, 0.065, 0.055], 3],
+  ['fourth', 'Fourth toe', -0.088, 0.03, [0.07, 0.06, 0.05], 6],
+  ['little', 'Little toe', -0.14, 0.027, [0.06, 0.05, 0.045], 10],
+];
+const FORM_FOOT_JOINTS = [
+  ['ankle', null, [0, 0, 0], 'Ankle', [
+    rigEll([0, -0.2, -0.12], [0.115, 0.12, 0.14]),     // the heel
+    rigBox([0, -0.2, 0.06], [0.22, 0.2, 0.3]),         // the middle of the foot
+    rigEll([0, -0.1, 0.06], [0.1, 0.09, 0.2])]],       // the instep, rising to the ankle
+  ['fore', 'ankle', [0, -0.2, 0.14], 'Forefoot', [
+    rigBox([0, -0.06, 0.19], [0.36, 0.12, 0.38]),
+    rigEll([0.02, -0.1, 0.33], [0.2, 0.05, 0.1])]],    // the pad of the ball
+  ...FORM_FOOT_TOES.flatMap(([k, n, x, r, [a, b, c], out]) => [
+    [`${k}1`, 'fore', [x, -0.12 + r, 0.38], `${n} base`, [rigBall([0, 0, 0], r * 1.1), rigLimb(a, r, 1)], [90, 0, out]],
+    [`${k}2`, `${k}1`, [0, a, 0], `${n} ${c === undefined ? 'tip' : 'middle'}`, [rigLimb(b, r * 0.92, 1)]],
+    ...(c === undefined ? [] : [[`${k}3`, `${k}2`, [0, b, 0], `${n} tip`, [rigLimb(c, r * 0.84, 1)]]]),
+  ]),
+];
+const FORM_FOOT_LIMITS = {
+  ankle: [[-25, 55], [-30, 30], [-22, 22]],
+  fore: [[-15, 25], [-8, 8], [-8, 8]],
+  toe1: [[-70, 45], [0, 0], [-14, 14]], toe2: [[-5, 75], [0, 0], [0, 0]], toe3: [[-5, 60], [0, 0], [0, 0]],
+};
+// { toe: [base, middle, tip, spread] }, and the ankle and the forefoot.
+function footPose(toes, ankle, fore) {
+  const p = {};
+  for (const [k, [a, b, c, s = 0]] of Object.entries(toes)) {
+    p[k + '1'] = [a, 0, s]; p[k + '2'] = [b, 0, 0];
+    if (c !== undefined) p[k + '3'] = [c, 0, 0];
+  }
+  if (ankle) p.ankle = ankle;
+  if (fore) p.fore = fore;
+  return p;
+}
+// All five toes the same: [base, middle, tip] of the three-jointed ones,
+// the big toe taking the first two.
+const footToes = (a, b, c, s = 0) => ({ big: [a, b, undefined, s * 1.2], second: [a, b, c, s * 0.5], third: [a, b, c], fourth: [a, b, c, -s * 0.5], little: [a, b, c, -s] });
+const FORM_FOOT_POSES = {
+  relaxed: { label: 'Relaxed', pose: footPose(footToes(6, 8, 6), [14, 0, 0]) },
+  point: { label: 'Pointed', pose: footPose(footToes(10, 12, 8), [52, 0, 0], [14, 0, 0]) },
+  flex: { label: 'Flexed', pose: footPose(footToes(-20, 0, 0), [-22, 0, 0]) },
+  tiptoe: { label: 'On the toes', pose: footPose(footToes(-55, 0, 0), [52, 0, 0], [6, 0, 0]) },
+  curl: { label: 'Curled', pose: footPose(footToes(40, 55, 40), [8, 0, 0], [8, 0, 0]) },
+  spread: { label: 'Spread', pose: footPose(footToes(-18, 0, 0, 10)) },
+};
+
 /* Every posable form, by the key its FORM_SHAPES entry names in `rig`.
    root: the parts on the form itself; joints: FORM_RIG-style rows; limits:
    a joint's [min, max] per axis, for random poses; random: the poses those
@@ -1306,11 +1379,15 @@ const FORM_HAND_POSES = {
 const FORM_RIGS = {
   figure: { root: FORM_RIG_PELVIS, joints: FORM_RIG, limits: formFigureLimits, poses: FORM_POSES,
             random: ['stand', 'contra', 'walk', 'kneel', 'reach'], shake: [14, 10, 14],
-            whole: 'Whole figure', mirror: true, reset: 'Standing straight, arms down' },
+            whole: 'Whole figure', noun: 'figure', mirror: true, reset: 'Standing straight, arms down' },
   hand:   { root: FORM_HAND_ROOT, joints: FORM_HAND_JOINTS, poses: FORM_HAND_POSES,
             limits: j => FORM_HAND_LIMITS[j.replace(/^(index|middle|ring|little)(\d)$/, 'finger$2')],
             random: Object.keys(FORM_HAND_POSES), shake: [14, 4, 5],
-            whole: 'Whole hand', mirror: false, reset: 'Open and flat' },
+            whole: 'Whole hand', noun: 'hand', mirror: false, reset: 'Open and flat' },
+  foot:   { root: FORM_FOOT_ROOT, joints: FORM_FOOT_JOINTS, poses: FORM_FOOT_POSES,
+            limits: j => FORM_FOOT_LIMITS[j.replace(/^(big|second|third|fourth|little)(\d)$/, 'toe$2')],
+            random: Object.keys(FORM_FOOT_POSES), shake: [12, 4, 5],
+            whole: 'Whole foot', noun: 'foot', mirror: false, reset: 'Flat, toes at ease' },
 };
 for (const r of Object.values(FORM_RIGS)) r.jointMap = new Map(r.joints.map(j => [j[0], j]));
 const formRigOf = shape => FORM_RIGS[formShapeDef(shape).rig] || null;

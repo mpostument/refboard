@@ -2788,10 +2788,12 @@ function randomFormScene(base, anyShape) {
     const def = FORM_SHAPES[o.shape];
     if (def && def.rig) {
       // A figure gets a new pose and faces a new way, but stays upright:
-      // tipped over, it is not a pose any more. A hand turns every way.
+      // tipped over, it is not a pose any more. A hand turns every way, a
+      // foot a little (it is placed on its lowest toe or heel).
       o.pose = randomFormPose(FORM_RIGS[def.rig]);
-      o.rx = def.rig === 'hand' ? Math.round(r(-60, 60)) : 0;
-      o.rz = def.rig === 'hand' ? Math.round(r(-40, 40)) : 0;
+      const [tx, tz] = { hand: [60, 40], foot: [25, 20] }[def.rig] || [0, 0];
+      o.rx = Math.round(r(-tx, tx));
+      o.rz = Math.round(r(-tz, tz));
       o.ry = Math.round(r(-180, 180));
       continue;
     }
@@ -3271,7 +3273,7 @@ function syncFormsPanel() {
     js.value = joint || '';
     el('formJointHint').textContent = joint
       ? 'R or the rings in the view bend it; Alt+R straightens it.'
-      : `Click a dot on a joint, or a part of the ${rig === FORM_RIGS.hand ? 'hand' : 'figure'}, to bend it.`;
+      : `Click a dot on a joint, or a part of the ${rig.noun}, to bend it.`;
     // The class poses are the rig's own - a figure's and a hand's differ.
     const poses = Object.entries(rig.poses).map(([k, p]) =>
       `<button class="chip" type="button" data-pose-preset="${k}">${esc(p.label)}</button>`).join('');
