@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'handbook', title: 'Handbook: lessons with a demonstration to move',
+    text: "Practise > Handbook (or Ctrl+K): four short lessons, each a few sentences of theory beside a demonstration you can move. Light on a form: a lit ball whose light you turn, with the values of the light, halftone, core shadow and reflected light read off it - push the reflected light up until the form goes flat. Aerial perspective: five ridges and the air between, in colour and in grey. Mixing paint: two of your paints slid into each other beside what averaging their colours would give, and recipes for a colour. Value against colour: a red and another hue slid to the same value until they are one patch in grey. Each ends with things to try, and what you should have seen.",
+    act: 'Open it', run: () => setView({ kind: 'handbook' }) },
   { id: 'form-hatching', title: 'Hatching that follows the form',
     text: "3D forms > View > Guides > Hatching along the form: the forms as a pen drawing. Strokes run round each surface - rings round a cylinder, parallels on a ball, down a limb - and ink goes where the light leaves it dark: thin strokes in the half-tones, thicker as it darkens, and a second set crossing them in the deep shadow. A cast shadow on a form is hatched too. Turn the light and watch the strokes come and go; it is how to lead a stroke round a form. The zones view takes over while it is on.",
     act: 'Open 3D forms', run: () => openForms() },

@@ -361,6 +361,16 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   related instead of going muddy. Where your paints make no warmer or
   cooler grey than the neutral, the column says so; with a picture open,
   its own greys are marked on the ladder.
+- **Handbook** - Practise > Handbook (Ctrl+K "handbook"): four short lessons, each
+  with a demonstration you can move rather than a picture to read. *Light on a
+  form* - a lit ball, the light turned by hand, the values of its light,
+  halftone, core shadow and reflected light read off it in L*; *Aerial
+  perspective* - five ridges and the air between them, in colour and in grey;
+  *Mixing paint* - two of your paints slid into each other beside what averaging
+  their colours would give, and recipes for a target; *Value against colour* -
+  a red and another hue slid to the same value until grey makes them one patch.
+  Each ends with things to try and what you should have seen; done lessons are
+  remembered.
 - **Mix this colour** - the Colour studio's Match tab (Ctrl+K "mix this colour"):
   a colour to hit, one your palette can make or one of your own, and up to three
   of your paints with their parts and, in watercolour, the water. Your mix is

@@ -1420,6 +1420,38 @@ section { margin-bottom: 20px; }
 .mc-swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .mc-sheet { flex-wrap: wrap; margin-top: 8px; }
 .mc-sheet select { max-width: 110px; }
+/* The handbook (js/handbook.js): the lessons down the side, one lesson beside them - theory, a demonstration to move, something to try. */
+.hb-body { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; max-width: 1100px; }
+.hb-list { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; }
+.hb-item { display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 10px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--ink); font-size: 13px; cursor: pointer; }
+.hb-item:hover { background: var(--hover); }
+.hb-item[aria-current="true"] { border-color: var(--accent); background: var(--panel); }
+.hb-n { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); font-size: 11px; color: var(--dim); }
+.hb-lesson { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-sizing: border-box; min-width: 0; }
+.hb-lesson h3 { margin: 0 0 6px; font-size: 17px; }
+.hb-lesson h4 { margin: 14px 0 6px; }
+.hb-theory { margin: 0 0 12px; line-height: 1.55; color: var(--ink); max-width: 68ch; }
+.hb-demo { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+.hb-canvas { width: 100%; max-width: 480px; height: auto; aspect-ratio: 320 / 210; border-radius: 8px; border: 1px solid var(--line); background: #08080c; }
+.hb-slider { display: grid; grid-template-columns: 120px minmax(0, 1fr) 46px; gap: 8px; align-items: center; font-size: 12px; color: var(--dim); }
+.hb-slider input { width: 100%; min-width: 0; }
+.hb-slider output { font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+.hb-toggles { flex-wrap: wrap; gap: 14px; }
+.hb-pair { gap: 8px; align-items: center; flex-wrap: wrap; color: var(--dim); font-size: 12px; }
+.hb-pair select { min-width: 0; max-width: 170px; }
+.hb-strip { display: grid; grid-template-columns: repeat(11, 1fr); height: 34px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.hb-strip i { display: block; }
+.hb-patches { display: grid; grid-template-columns: 1fr 1fr; height: 120px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.hb-patches i { display: block; }
+.hb-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; border: 1px solid var(--line); }
+.hb-want { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); margin: 4px 0; }
+.hb-want i { width: 26px; height: 18px; border-radius: 4px; border: 1px solid var(--line); }
+.hb-try { margin: 0; padding-left: 20px; line-height: 1.5; font-size: 13px; }
+.hb-see { margin-top: 10px; font-size: 13px; }
+.hb-see summary { cursor: pointer; color: var(--accent); }
+.hb-see p { max-width: 68ch; line-height: 1.55; }
+.hb-foot { margin-top: 14px; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 860px) { .hb-body { grid-template-columns: 1fr; } .hb-list { position: static; flex-direction: row; flex-wrap: wrap; } }
 /* Mix this colour (js/match.js): the target and your mix on a hard edge, three paints with their parts, the water. */
 .mt-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 6px 0; }
 .mt-pair figure { margin: 0; }

@@ -48,6 +48,7 @@ test('a section you never open can be hidden - off the rail and its card, not ou
   await expect(card(page, 'Practise').getByRole('button', { name: /3D forms/ })).toHaveCount(0);
 
   // A stage with nothing left goes, name and card.
+  await page.locator('#sectionsList').getByLabel('Handbook', { exact: true }).uncheck();
   await page.locator('#sectionsList').getByLabel('Train', { exact: true }).uncheck();
   await expect(page.locator('#rail .rail-stage[data-stage="Practise"]')).toBeHidden();
   await expect(card(page, 'Practise')).toHaveCount(0);

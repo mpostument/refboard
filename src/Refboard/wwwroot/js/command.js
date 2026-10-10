@@ -57,6 +57,7 @@ const COMMAND_WORDS = {
   'view-perspective': 'perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex',
   'view-train': 'drill practice exercise test',
+  'view-handbook': 'handbook lessons learn theory demonstration light form aerial perspective mixing value colour course tutorial book',
   btnLibrary: 'folders packs',
   btnPaint: 'session timed timer draw go begin',
   btnLightbox: 'lightbox light box trace tracing transfer copy sketch final watercolour paper tablet screen real size mirror',

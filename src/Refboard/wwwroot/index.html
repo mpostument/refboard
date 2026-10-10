@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=29beedee">
+<link rel="stylesheet" href="css/app.css?v=95c37cbd">
 </head>
 <body>
 <div id="setup">
@@ -75,6 +75,7 @@
       <span class="rail-stage-name" aria-hidden="true">Practise</span>
       <button class="nav-item" type="button" data-view="train" data-icon="target" data-tip="Train - value, colour, anatomy, lines, perspective" aria-label="Train"></button>
       <button class="nav-item" type="button" data-view="forms" data-icon="cube" data-tip="3D forms - light on simple forms and heads" aria-label="3D forms"></button>
+      <button class="nav-item" type="button" data-view="handbook" data-icon="book" data-tip="Handbook - short lessons, each with a demonstration you can move" aria-label="Handbook"></button>
     </div>
     <div class="rail-stage" role="group" aria-label="Paint" data-stage="Paint"
          data-blurb="Draw from the references, in your own medium.">
@@ -607,6 +608,15 @@
 
       <!-- Palette generator - see showPalette() in js/palette.js, which
            loads the first time this opens. Nothing here needs a library. -->
+      <!-- The handbook - see showHandbook() in js/handbook.js, which loads the
+           first time this opens. The lessons are built there. -->
+      <div id="viewHandbook" class="hidden">
+        <div class="hb-body">
+          <nav class="hb-list" id="hbList" aria-label="Lessons"></nav>
+          <article class="hb-lesson" id="hbLesson"></article>
+        </div>
+      </div>
+
       <div id="viewPalette" class="hidden">
         <div class="row pg-bar">
           <button type="button" id="pgGenerate" class="primary" title="A new palette - or press Space">New palette</button>
@@ -1927,8 +1937,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=22c8ce74"></script>
-<script src="js/setup.js?v=9d314563"></script>
+<script src="js/core.js?v=94546ed4"></script>
+<script src="js/setup.js?v=a6abf9a4"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
@@ -1946,9 +1956,9 @@
 <script src="js/workspace.js?v=ee1d5d03"></script>
 <script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=605f63a8"></script>
+<script src="js/command.js?v=82341319"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=337c0f48"></script>
+<script src="js/whatsnew.js?v=6bad5022"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1984,6 +1994,9 @@
 </template>
 <template id="lazy-perspective">
 <script src="js/perspective.js?v=44d5bc98"></script>
+</template>
+<template id="lazy-handbook">
+<script src="js/handbook.js?v=8c9251dd"></script>
 </template>
 <template id="lazy-palette">
 <script src="js/palette.js?v=3af4eb0c"></script>

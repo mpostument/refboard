@@ -811,10 +811,13 @@ the wash.
 
 ## Learning
 
-- **Interactive handbook.** Short lessons with live demonstrations on the
-  models already in the app: light on form (3D with sliders), aerial
-  perspective, mixing (recipes), value against colour - theory and
-  practice in one place.
+- **Handbook, the rest.** In place (Practise > Handbook, `js/handbook.js`):
+  four lessons - light on a form, aerial perspective, mixing, value against
+  colour - each with theory, a demonstration to move, things to try and what
+  you should have seen. Still to come: lessons on edges, on composition
+  (with the schemes), on perspective (with the grid), on temperature; the
+  light lesson on the real 3D forms rather than a small ray tracer; and a
+  quiz at the end of each, kept with the trainer's scores.
 
 - **Free learning resources.** For each topic, links to good free lessons
   (Proko, drawabox and others): the app gives the practice, they give the
