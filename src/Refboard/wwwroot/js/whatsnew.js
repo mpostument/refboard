@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'form-hatching', title: 'Hatching that follows the form',
+    text: "3D forms > View > Guides > Hatching along the form: the forms as a pen drawing. Strokes run round each surface - rings round a cylinder, parallels on a ball, down a limb - and ink goes where the light leaves it dark: thin strokes in the half-tones, thicker as it darkens, and a second set crossing them in the deep shadow. A cast shadow on a form is hatched too. Turn the light and watch the strokes come and go; it is how to lead a stroke round a form. The zones view takes over while it is on.",
+    act: 'Open 3D forms', run: () => openForms() },
   { id: 'match-colour', title: 'Mix this colour: hit a target with your own mix',
     text: "Colour studio > Match (or Ctrl+K): a colour to hit - one your palette can make, or one of your own - and up to three of your paints, how many parts of each and, in watercolour, how much water. Your mix sits against the target on a hard edge, scored the way the recipes are, and told in words: lighter or darker, duller or stronger, which way the hue must go. Stuck, ask for the best recipe; a mix within 4 of the target can be remembered, and the list stays, a click puts a recipe back on the bench.",
     act: 'Open it', run: () => openColour('match') },

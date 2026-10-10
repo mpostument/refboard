@@ -993,9 +993,12 @@ the wash.
   folds at elbows, knees and waist. Drapery exists; on a body it does not.
 - **Features.** The eye, nose, mouth and ear close up from the head scan,
   in the planes view - how light sits on each form alone.
-- **Hatching that follows the form.** The 3D forms rendered in hatching
-  that runs round their surface - how to lead a stroke round a ball, a
-  cylinder, a head.
+- **Hatching, the rest.** In place (3D forms > Guides > Hatching along the
+  form, a branch of the form shader in `js/forms.js`): ink by the tone the
+  light has made, strokes along the surface's contour lines, crossed in the
+  deep shadow. Still to come: the floor's cast shadow hatched, a pen and a
+  paper of your own, and strokes at an angle a hand would take instead of
+  the contour lines' exact ones.
 - **Character turnaround.** The 3D figure in one pose, front, side, back
   and three-quarter, on one sheet - a reference for illustrators.
 In place: body types for the mannequin - Child, Older, Heavier, Muscular,

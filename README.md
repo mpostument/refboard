@@ -638,7 +638,11 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
     a Dutch angle (a Roll slider), telephoto and a fisheye (rendered all
     round the camera and bent stereographically), sent to Generate's Lens row;
     vanishing points of the box around a form, cross-section ellipses and their
-    axis, cross-contour lines, a floor grid and an eye-level line.
+    axis, cross-contour lines, a floor grid and an eye-level line;
+    **Hatching along the form** (Light and shadow Guides): the forms as a pen
+    drawing, strokes running round each surface - rings round a cylinder,
+    parallels on a ball - thicker as the light leaves it, crossed in the deep
+    shadow, and a cast shadow on a form hatched too.
   - *Using it:* **Open in viewer** puts the render in the same full-screen
     viewer as everything else (tonal split, grid, angle tool, eyedropper),
     **Save PNG**, **Draw random forms** starts a timed session of random
