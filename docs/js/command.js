@@ -57,6 +57,7 @@ const COMMAND_WORDS = {
   'view-perspective': 'perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex',
   'view-train': 'drill practice exercise test',
+  'view-handbook': 'handbook lessons learn theory demonstration light form aerial perspective mixing value colour course tutorial book',
   btnLibrary: 'folders packs',
   btnPaint: 'session timed timer draw go begin',
   btnLightbox: 'lightbox light box trace tracing transfer copy sketch final watercolour paper tablet screen real size mirror',
@@ -169,6 +170,8 @@ function collectCommands() {
     run: () => openColour('greys') });
   if (!inSession) out.push({ id: 'mixing', label: 'Mixing chart', hint: 'Colour studio', words: 'mix mixing chart grid pairs every paint with every other swatch test print paint palette learn tubes dilution water wash equal parts watercolour oil',
     run: () => openColour('mixing') });
+  if (!inSession) out.push({ id: 'match', label: 'Mix this colour', hint: 'Colour studio', words: 'match mix colour color target hit practice recipe parts water paints memory exercise train',
+    run: () => openColour('match') });
   if (!inSession) out.push({ id: 'glazing', label: 'Glazing chart', hint: 'Colour studio', words: 'glaze glazing layer layers wash over transparent opaque veil order mix watercolour underpainting',
     run: () => openColour('glazing') });
   if (!inSession) out.push({ id: 'light', label: 'Light and shadow colours', hint: 'Colour studio', words: 'light shadow shade sun sky warm cool temperature golden hour window lamp candle moon moonlight overcast cel shading kelvin',

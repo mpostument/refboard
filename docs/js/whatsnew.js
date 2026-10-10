@@ -15,6 +15,15 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'handbook', title: 'Handbook: lessons with a demonstration to move',
+    text: "Practise > Handbook (or Ctrl+K): four short lessons, each a few sentences of theory beside a demonstration you can move. Light on a form: a lit ball whose light you turn, with the values of the light, halftone, core shadow and reflected light read off it - push the reflected light up until the form goes flat. Aerial perspective: five ridges and the air between, in colour and in grey. Mixing paint: two of your paints slid into each other beside what averaging their colours would give, and recipes for a colour. Value against colour: a red and another hue slid to the same value until they are one patch in grey. Each ends with things to try, and what you should have seen.",
+    act: 'Open it', run: () => setView({ kind: 'handbook' }) },
+  { id: 'form-hatching', title: 'Hatching that follows the form',
+    text: "3D forms > View > Guides > Hatching along the form: the forms as a pen drawing. Strokes run round each surface - rings round a cylinder, parallels on a ball, down a limb - and ink goes where the light leaves it dark: thin strokes in the half-tones, thicker as it darkens, and a second set crossing them in the deep shadow. A cast shadow on a form is hatched too. Turn the light and watch the strokes come and go; it is how to lead a stroke round a form. The zones view takes over while it is on.",
+    act: 'Open 3D forms', run: () => openForms() },
+  { id: 'match-colour', title: 'Mix this colour: hit a target with your own mix',
+    text: "Colour studio > Match (or Ctrl+K): a colour to hit - one your palette can make, or one of your own - and up to three of your paints, how many parts of each and, in watercolour, how much water. Your mix sits against the target on a hard edge, scored the way the recipes are, and told in words: lighter or darker, duller or stronger, which way the hue must go. Stuck, ask for the best recipe; a mix within 4 of the target can be remembered, and the list stays, a click puts a recipe back on the bench.",
+    act: 'Open it', run: () => openColour('match') },
   { id: 'mixing-chart', title: 'Mixing chart: every paint with every other',
     text: "Colour studio > Mixing (or Ctrl+K): your palette's paints mixed in pairs, at a light, medium or strong wash (in oil, parts of white) - in equal parts, as one triangle, or two to one, the whole square, so each pair is seen both ways round. Click a square to see the colour and what the pair does: whether the two take each other's colour away (the way to a grey or a brown), whether both granulate, whether one stains. Print the sheet at its real size - A4, A3 or Letter, the paints numbered, the squares empty to paint - and paint it once, with the same water in every square, and you know your tubes. The Colour studio's tabs now wrap onto a second row instead of hiding the last one.",
     act: 'Open it', run: () => openColour('mixing') },

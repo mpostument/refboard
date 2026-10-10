@@ -198,7 +198,7 @@ async function formsInitThree() {
    the floor's included, since they all compile to the one program. */
 function formGuideUniforms(T, lines) {
   return {
-    uLineCount: { value: new T.Vector2(lines, lines) }, uLines: { value: 0 }, uZones: { value: 0 },
+    uLineCount: { value: new T.Vector2(lines, lines) }, uLines: { value: 0 }, uZones: { value: 0 }, uHatch: { value: 0 },
     // Cel shading: the tones from celTones(), the highlight's size (0 is
     // none), and the rim - its direction in view space and how strong.
     uCel: { value: 0 }, uCelBase: { value: new T.Color() }, uCelShade: { value: new T.Color() },
@@ -582,6 +582,7 @@ function injectFormGuides(sh) {
   sh.fragmentShader = `uniform vec2 uLineCount;
 uniform float uLines;
 uniform float uZones;
+uniform float uHatch;
 uniform float uCel;
 uniform vec3 uCelBase;
 uniform vec3 uCelShade;
@@ -730,6 +731,33 @@ void rbForm(vec2 uv, out float cov, out float hTop, out float hBot, out vec3 tin
       }
     }
     #include <opaque_fragment>`).replace('#include <dithering_fragment>', `#include <dithering_fragment>
+    // Hatching: the form as a pen drawing. Its tone is what the light has
+    // already made of it (shadows, cast shadows, bounce and all), so ink goes
+    // where it is dark. The strokes run along the surface's own contour
+    // lines (vUv, the same as the cross-contour lines) - round a ball, down
+    // a cylinder - which is the point: a stroke that follows the form
+    // tells the eye what shape it has. One family of strokes from the light
+    // half-tones down, thicker as it darkens; the second crosses it in the
+    // shadow. Where the strokes would be closer than a few pixels (a form far
+    // off) they become the flat tone they stand for, or they would shimmer.
+    if (uHatch > 0.5) {
+      float tone = dot(gl_FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+      float dark = clamp(1.0 - tone / 0.88, 0.0, 1.0);
+      vec2 hg = vUv * uLineCount * 2.0;
+      vec2 hw = max(fwidth(hg), vec2(1e-4));
+      vec2 hd = abs(fract(hg - 0.5) - 0.5) / hw;
+      // A stroke's width is a share of the space between strokes, so the
+      // ink grows with the dark whatever the size of the form on screen.
+      float w1 = 0.5 * smoothstep(0.08, 0.6, dark), w2 = 0.45 * smoothstep(0.45, 0.9, dark);
+      // The first strokes are the cross-contours - rings round a cylinder,
+      // parallels on a ball - which is what an artist draws to say what a
+      // form is; the lengthwise ones cross them only in the deep shadow.
+      float s1 = clamp(max(0.4, 0.5 * w1 / hw.y) - hd.y + 0.5, 0.0, 1.0) * smoothstep(0.0, 0.04, w1);
+      float s2 = clamp(max(0.4, 0.5 * w2 / hw.x) - hd.x + 0.5, 0.0, 1.0) * smoothstep(0.0, 0.04, w2);
+      float room = smoothstep(2.5, 6.0, 1.0 / max(hw.x, hw.y));
+      float ink = mix(dark * 0.8, max(s1, s2), room);
+      gl_FragColor.rgb = mix(vec3(0.94, 0.92, 0.86), vec3(0.09, 0.09, 0.13), ink);
+    }
     if (uZones > 0.5) {${FORM_KEY_LIGHT_GLSL}
       float ndl = dot(normalize(geometryNormal), kL);
       float spec = dot(reflectedLight.directSpecular, vec3(0.3333));
@@ -1066,6 +1094,8 @@ function formsRender(sc, w, h, clean = false) {
     const u = m.material.userData.u;
     u.uLines.value = sc.lines && !clean ? 1 : 0;
     u.uZones.value = sc.zones && !clean ? 1 : 0;
+    // Hatching is a look, so it stays in an export; the zones view, a diagram, takes its place.
+    u.uHatch.value = sc.hatch && !sc.zones ? 1 : 0;
     u.uLineCount.value.set(def.lines[0], def.lines[1]);
     m.position.set(0, 0, 0);
     m.userData.localBox = null;
@@ -1254,6 +1284,7 @@ function formsRender(sc, w, h, clean = false) {
     applyFormFinish(hair.material, { finish: cel ? 'anime' : 'satin', color: o.hairColor, gloss: 0.35 }, {});
     hu.uCel.value = cel ? 1 : 0;
     hu.uZones.value = u.uZones.value;
+    hu.uHatch.value = u.uHatch.value;
     const t = formCelUniforms(hu, o.hairColor, 0, sc, rimDir);
     // The ring's colour: the hair's own, lighter and a touch less strong -
     // never white, or the hair reads as wet.
@@ -3045,7 +3076,7 @@ const FORM_PANEL = [
     ['fillEl', 'Height', 3, 89, 1, '°'], ['fillStrength', 'Strength', 0, 1, 0.02], ['fillColor', 'Colour', 'color']]],
   ['Camera', 'camera', [['focal', 'Lens', 18, 200, 1, 'mm'], ['pitch', 'Eye height', -60, 88, 1, '°'], ['roll', 'Roll', -45, 45, 1, '°'],
     ['fisheye', 'Fisheye lens', 'check']]],
-  ['Guides', null, [['zones', 'Light and shadow zones', 'check'], ['lines', 'Cross-contour lines', 'check'],
+  ['Guides', null, [['zones', 'Light and shadow zones', 'check'], ['hatch', 'Hatching along the form', 'check'], ['lines', 'Cross-contour lines', 'check'],
     ['ellipses', 'Ellipses and axis', 'check'], ['vp', 'Vanishing points', 'check'],
     ['horizon', 'Eye-level line', 'check'], ['floorGrid', 'Floor grid', 'check'],
     ['lightMarker', 'Light handles', 'check']]],
@@ -3330,6 +3361,11 @@ function syncFormsPanel() {
   soft.closest('.frow').title = soft.disabled ? 'Cast shadows are hard-edged while a form is Anime'
     : 'How big the light looks - a bare bulb is small, a window or an overcast sky is big. A bigger light throws a softer shadow: still sharp where a form touches the floor, softer the further it is thrown.';
   panel.querySelector('[data-k="fillShadow"]').disabled = formSceneIsCel(formScene);
+  // The zones view takes the colours over, so hatching waits for it to go.
+  const hatch = panel.querySelector('[data-k="hatch"]');
+  hatch.disabled = formScene.zones;
+  hatch.closest('.opt').title = formScene.zones ? 'Hatching waits while the light and shadow zones are shown'
+    : 'The forms as a pen drawing: strokes that run round each surface, thicker and crossed where the light leaves it dark. Cast shadows are hatched too.';
   for (const [k, tip] of [
     ['bones', 'The bones you can feel under the skin - collarbone, ribs, hip crest, knee and ankle knobs, cheekbone - as labelled dots on the figure. They move with the pose; only those facing you are drawn.'],
     ['muscles', 'The muscle groups an artist draws - pectoralis, deltoid, biceps, abdominals, quadriceps, calf - as patches on the figure. Only those facing you are drawn.'],
