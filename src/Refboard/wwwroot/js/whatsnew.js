@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'match-colour', title: 'Mix this colour: hit a target with your own mix',
+    text: "Colour studio > Match (or Ctrl+K): a colour to hit - one your palette can make, or one of your own - and up to three of your paints, how many parts of each and, in watercolour, how much water. Your mix sits against the target on a hard edge, scored the way the recipes are, and told in words: lighter or darker, duller or stronger, which way the hue must go. Stuck, ask for the best recipe; a mix within 4 of the target can be remembered, and the list stays, a click puts a recipe back on the bench.",
+    act: 'Open it', run: () => openColour('match') },
   { id: 'mixing-chart', title: 'Mixing chart: every paint with every other',
     text: "Colour studio > Mixing (or Ctrl+K): your palette's paints mixed in pairs, at a light, medium or strong wash (in oil, parts of white) - in equal parts, as one triangle, or two to one, the whole square, so each pair is seen both ways round. Click a square to see the colour and what the pair does: whether the two take each other's colour away (the way to a grey or a brown), whether both granulate, whether one stains. Print the sheet at its real size - A4, A3 or Letter, the paints numbered, the squares empty to paint - and paint it once, with the same water in every square, and you know your tubes. The Colour studio's tabs now wrap onto a second row instead of hiding the last one.",
     act: 'Open it', run: () => openColour('mixing') },

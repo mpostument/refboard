@@ -169,6 +169,8 @@ function collectCommands() {
     run: () => openColour('greys') });
   if (!inSession) out.push({ id: 'mixing', label: 'Mixing chart', hint: 'Colour studio', words: 'mix mixing chart grid pairs every paint with every other swatch test print paint palette learn tubes dilution water wash equal parts watercolour oil',
     run: () => openColour('mixing') });
+  if (!inSession) out.push({ id: 'match', label: 'Mix this colour', hint: 'Colour studio', words: 'match mix colour color target hit practice recipe parts water paints memory exercise train',
+    run: () => openColour('match') });
   if (!inSession) out.push({ id: 'glazing', label: 'Glazing chart', hint: 'Colour studio', words: 'glaze glazing layer layers wash over transparent opaque veil order mix watercolour underpainting',
     run: () => openColour('glazing') });
   if (!inSession) out.push({ id: 'light', label: 'Light and shadow colours', hint: 'Colour studio', words: 'light shadow shade sun sky warm cool temperature golden hour window lamp candle moon moonlight overcast cel shading kelvin',

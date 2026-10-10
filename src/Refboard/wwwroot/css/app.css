@@ -1420,6 +1420,31 @@ section { margin-bottom: 20px; }
 .mc-swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .mc-sheet { flex-wrap: wrap; margin-top: 8px; }
 .mc-sheet select { max-width: 110px; }
+/* Mix this colour (js/match.js): the target and your mix on a hard edge, three paints with their parts, the water. */
+.mt-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 6px 0; }
+.mt-pair figure { margin: 0; }
+.mt-pair i { display: block; height: 64px; border: 1px solid rgba(255,255,255,.12); }
+.mt-pair figure:first-child i { border-radius: 7px 0 0 7px; border-right: 0; }
+.mt-pair figure:last-child i { border-radius: 0 7px 7px 0; }
+.mt-pair figcaption { font-size: 11px; color: var(--dim); margin-top: 3px; }
+.mt-pair figcaption span { font-variant-numeric: tabular-nums; color: var(--ink); }
+.mt-bar { flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+.mt-slots { display: grid; gap: 6px; margin: 8px 0 4px; }
+.mt-slot { display: grid; grid-template-columns: 18px minmax(0, 1.3fr) minmax(0, 1fr) 54px; gap: 6px; align-items: center; font-size: 12px; }
+.mt-slot select { min-width: 0; }
+.mt-slot input[type=range], .mt-water input[type=range] { width: 100%; min-width: 0; }
+.mt-slot output, .mt-water output { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.mt-sw { display: block; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); }
+.mt-water { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 2px 6px; align-items: center; font-size: 12px; color: var(--dim); }
+.mt-water output { grid-column: 2; }
+.mt-water[hidden] { display: none; }
+.mt-mem { display: flex; align-items: center; gap: 4px; }
+.mt-mem-pick { flex: 1; min-width: 0; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 0 8px; align-items: center; text-align: left; padding: 4px; margin: 2px 0; border: 0; border-radius: 7px; background: none; color: var(--ink); font-size: 12px; cursor: pointer; }
+.mt-mem-pick:hover { background: var(--hover); }
+.mt-mem-pick i { grid-row: span 2; height: 26px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
+.mt-mem-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-mem-pick em { font-style: normal; font-size: 10.5px; color: var(--dim); }
+.mt-mem-del { padding: 2px 8px; }
 .mc-sheet .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
 .gz-swatches i { display: block; height: 34px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
 /* Light and shadow: the light's two sliders, then one row per colour - its

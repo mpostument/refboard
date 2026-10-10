@@ -852,9 +852,6 @@ the wash.
 
 ## Watercolour practice
 
-- **Mix this colour.** A colour to hit: choose pigments, proportions and
-  how much water; see what your mix would give and how close it is. Builds
-  a memory for recipes (paint.js).
 - **Skies.** Procedural skies and clouds at different times of day, as
   references for sky studies.
 - **Techniques guide.** Salt, spatter, dry brush, lifting, masking fluid:

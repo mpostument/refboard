@@ -361,6 +361,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   related instead of going muddy. Where your paints make no warmer or
   cooler grey than the neutral, the column says so; with a picture open,
   its own greys are marked on the ladder.
+- **Mix this colour** - the Colour studio's Match tab (Ctrl+K "mix this colour"):
+  a colour to hit, one your palette can make or one of your own, and up to three
+  of your paints with their parts and, in watercolour, the water. Your mix is
+  shown against the target on a hard edge, scored by the same distance the
+  recipes use, and described in a painter's words (lighter, duller, toward
+  green); *Show a recipe* gives the palette's best, and a mix within 4 of the
+  target can be remembered in a list that stays.
 - **Mixing chart** - the Colour studio's Mixing tab (Ctrl+K "mixing"): every
   paint of your palette with every other, at a light, medium or strong wash
   (in oil, one, three or no parts of white to each part of colour) - as the

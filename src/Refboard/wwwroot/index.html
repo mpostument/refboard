@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=6897b657">
+<link rel="stylesheet" href="css/app.css?v=29beedee">
 </head>
 <body>
 <div id="setup">
@@ -376,6 +376,7 @@
               <button type="button" role="tab" data-tab="character" aria-selected="false" title="A character's colours - hair, skin, eyes, clothes - with shadow, light and how to mix them">Character</button>
               <button type="button" role="tab" data-tab="greys" aria-selected="false" title="Warm, neutral and cool greys from these paints, light to dark">Greys</button>
               <button type="button" role="tab" data-tab="mixing" aria-selected="false" title="Every paint mixed with every other, on a sheet to print and paint">Mixing</button>
+              <button type="button" role="tab" data-tab="match" aria-selected="false" title="A colour to hit: choose the paints, the parts and the water, and see how close you land">Match</button>
               <button type="button" role="tab" data-tab="glazing" aria-selected="false" title="One paint glazed over another, against mixing them on the palette">Glazing</button>
               <button type="button" role="tab" data-tab="light" aria-selected="false" title="A colour in the light and in its shadow, under the sun, a window, a lamp - and how to mix both">Light</button>
               <button type="button" role="tab" data-tab="pigments" aria-selected="false" title="Your paints: which glaze cleanly, lift off, granulate or fade">Pigments</button>
@@ -455,6 +456,29 @@
                 <button type="button" id="mcSave" class="ghost" title="The same sheet as an SVG at the paper's real size">Save SVG</button>
               </div>
               <div class="count" id="mcSheetNote"></div>
+            </div>
+            <!-- js/match.js: a colour to hit with your own mix. -->
+            <div class="col-tab" data-tab="match" role="tabpanel">
+              <h4>Mix this colour</h4>
+              <div class="mt-pair" role="group" aria-label="The target and your mix">
+                <figure><i id="mtTarget"></i><figcaption>Target <span id="mtTargetHex"></span></figcaption></figure>
+                <figure><i id="mtMine"></i><figcaption>Yours <span id="mtMineHex"></span></figcaption></figure>
+              </div>
+              <div class="row mt-bar">
+                <button type="button" id="mtNew" class="ghost" title="A new colour your palette can make">New colour</button>
+                <label class="lt-own" title="Aim at a colour of your own">or your own <input type="color" id="mtOwn" aria-label="Target colour" value="#c86a4a"></label>
+              </div>
+              <div id="mtSlots" class="mt-slots"></div>
+              <div class="mt-water" id="mtWaterRow"><label for="mtWater">Water</label><input type="range" id="mtWater" min="5" max="100" step="5" value="50"><output id="mtWaterOut"></output></div>
+              <div class="count" id="mtVerdict" role="status"></div>
+              <div class="row mt-bar">
+                <button type="button" id="mtKeep" class="primary" disabled>Remember it</button>
+                <button type="button" id="mtShow" class="ghost" title="The best recipe this palette has for the colour">Show a recipe</button>
+              </div>
+              <div id="mtAnswer"></div>
+              <h4>Recipes you have hit</h4>
+              <div id="mtMemory"></div>
+              <div class="count" id="mtNote"></div>
             </div>
             <!-- js/glazing.js: each paint over each, and one crossing explained. -->
             <div class="col-tab" data-tab="glazing" role="tabpanel">
@@ -1922,9 +1946,9 @@
 <script src="js/workspace.js?v=ee1d5d03"></script>
 <script src="js/train.js?v=e27f8e07"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=e89c8cb0"></script>
+<script src="js/command.js?v=605f63a8"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=bdc0902d"></script>
+<script src="js/whatsnew.js?v=8e87cc69"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1965,12 +1989,13 @@
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=fae53b1d"></script>
+<script src="js/colour.js?v=68e116fa"></script>
 <script src="js/wheel.js?v=4f33cec4"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=eb123ff3"></script>
 <script src="js/glazing.js?v=e54dd6ce"></script>
 <script src="js/mixing.js?v=0d50a6f6"></script>
+<script src="js/match.js?v=6c1c129f"></script>
 <script src="js/light.js?v=b67afe9c"></script>
 <script src="js/pigments.js?v=55a1f5c1"></script>
 </template>
