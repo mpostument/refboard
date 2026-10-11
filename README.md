@@ -142,6 +142,19 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   eye is high or low, and how far each point is beyond the paper, so a strip
   can be taped on to mark it. *Print* sends it at its real size, the browser's
   dialog already on the paper's size; *Save SVG* is the same sheet as a file.
+- **People in perspective** - the other half of the same section (Prepare >
+  Perspective grid > People): how tall a person is anywhere in a picture. The
+  horizon is your eye level, so a person's height on the page is proportional
+  to how far their feet are below it. A white reference figure fixes the eye's
+  height - drag its feet and its head, say how tall it really is (1.7 m) - and
+  then a click on the ground stands an adult, a child or someone tall there,
+  the right size, with dashed lines through feet and through heads that meet on
+  the horizon. The note says where the horizon falls on each of them and
+  whether the view is high or low. On a street drawn to the horizon you set,
+  or a picture of your own (held in the page): put the white figure on someone
+  in a photo, and check whether a figure in the distance is the right size.
+  Sliders and a button that stands five people along the ground do all of it
+  without a pointer; two quick presses on a person take it off.
   It is the other half of the Perspective check in a session, which finds the
   points in a picture; this makes the sheet to build on. Kept as you left it.
 - **Museums** - public-domain pictures from open collections, searched from

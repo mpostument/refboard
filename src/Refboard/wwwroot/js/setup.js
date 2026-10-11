@@ -1196,7 +1196,7 @@ function updateViewMeta() {
     return;
   }
   if (view.kind === 'perspective') {
-    m.textContent = 'A sheet to print and draw over: one, two or three vanishing points on a horizon, on your own paper at its real size.';
+    m.textContent = 'A sheet to print and draw over - vanishing points on a horizon, on your own paper at its real size - or how tall a person is anywhere in a picture, from the horizon.';
     return;
   }
   if (view.kind === 'handbook') {

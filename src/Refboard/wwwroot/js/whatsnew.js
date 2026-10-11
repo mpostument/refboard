@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'people-perspective', title: 'People in perspective: how tall anyone is, anywhere',
+    text: "Prepare > Perspective grid > People: the horizon is your eye level, and it fixes how tall a person is at any distance. Set a white figure - on someone in a photo of your own, or as tall as you drew them - drag the eye level to where it is, and click the ground to stand an adult, a child or someone tall: each comes out the right size, with the dashed lines through feet and through heads meeting on the horizon. The note says where the horizon crosses an adult and a child, and whether the view is high or low.",
+    act: 'Open it', run: () => { try { localStorage.setItem('refboard.perspectiveMode.v1', 'people'); } catch { /* the sheet opens */ } setView({ kind: 'perspective' }); } },
   { id: 'reference-check', title: 'Reference check: is it a good picture to work from?',
     text: "Over any picture in a session (Workspace > Value, or Ctrl+K): the pixels read for what a poor reference hides - highlights that are pure white and shadows that are pure black (marked in pink and blue, with a plain white or black backdrop left out), flat light, focus and size - each as ok, with care or poor, and a line on what to do. The limits are estimates.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

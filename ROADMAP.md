@@ -1000,9 +1000,18 @@ the wash.
 - **Landscape forms.** Simple volumes for trees, clouds, rocks and hills:
   how light falls on a crown as on a ball, on a cloud as on a cluster of
   balls.
-- **People in perspective.** Draw the horizon, place one figure, and see
-  how tall a person is anywhere in the picture - the horizon runs through
-  everyone's eyes. For urban sketching.
+- **People in perspective, the rest.** In place (`js/people.js`, Prepare >
+  Perspective grid > People): the horizon dragged to where it is, a white
+  reference figure (feet, head, its real height) that fixes the eye's height
+  (`ppEye()`), and adults, children and tall people stood by a click at the
+  height the rule gives (`ppTall()`: proportional to the feet's distance below
+  the horizon), the dashed lines through feet and through heads meeting on the
+  horizon, on a street drawn to the horizon you set or a picture of your own.
+  Still to come: people on a slope or a stair (the rule holds only on level
+  ground), sitting and crouching figures, a figure's height read off the pose
+  model from a photo to set the white one, the horizon found from a photo's
+  vanishing points (the Perspective check in a session) and the picture's own
+  people compared with it, and a crowd - rows of people at once.
 - **A street of blocks.** A 3D street of simple building volumes, for
   perspective practice from any viewpoint.
 - **Reflections in water.** A 3D scene with still water showing the rules:
