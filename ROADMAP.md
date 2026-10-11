@@ -681,9 +681,14 @@ rather than the photo's own colour; and a slider for how much is left to
 the wash.
 - **Line art preview.** The photo shown as a line drawing, as hatching or
   as stippling - to plan a piece in liner, ballpoint or ink.
-- **Presets by medium.** "Liner sketch, 5 min", "watercolour study,
-  45 min with stages", "pencil value study, 20 min" - each with its timer,
-  its overlays and its advice.
+- **Presets by medium, the rest.** In place (`js/presets.js`, the Timing tab's
+  Kind of session): six kinds, each a secs, a schedule, stages, grayscale and a
+  list of layers to switch on at the start (`presetStart()` in `startSession()`),
+  recognised by the controls and not remembered. The lengths and the overlays are
+  my choice by feel, not what a teacher would set. Still to come: kinds of your own
+  (save the current controls and layers under a name), a kind for the medium you
+  have in My materials chosen for you, and a kind that changes with the weeks of a
+  course.
 - **Calibration from a swatch photo.** Swatch your own pencils or markers
   on your own paper, dry and wetted, photograph it, and the app takes the
   colours from your materials - the published charts are approximate. The

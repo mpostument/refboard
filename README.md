@@ -635,6 +635,15 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   that changes only when you press Next, endless or a structured
   warm-up/quick/long-study schedule, or build and save your own under
   Custom: any number of steps, each its own seconds-per-pose and pose count.
+- **Kind of session** - the top of the Timing tab: Gesture warm-up, Liner sketch
+  (5 min), Pencil value study (20), Hatching study (20), Ink wash study (30) and
+  Watercolour study (45, in stages). One press sets the interval or schedule, the
+  build-up stages and grayscale, says in a few lines what to do with the time, and
+  names the overlays that will be on when the session starts (line weight, the
+  pencil grades, the hatching map, the ink jars, the paper's range). A kind is not
+  a mode: it only moves the controls that were already there, so every one stays
+  editable, and which chip is on is read from the controls - a hand on any of them
+  moves it off, and putting them back moves it on again.
 - **Tone filtering** - high-contrast / low-key / high-key, computed from the
   actual measured distribution of your own library rather than fixed
   thresholds.

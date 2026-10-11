@@ -285,6 +285,7 @@ function startSession(pool, opts = {}) {
   }
   requestWakeLock();
   armHudIdle();
+  presetStart();   // the overlays of the kind of session chosen on the Timing tab (js/presets.js)
 
   if (state.browse) {
     // No interval timer at all, rather than one started and immediately

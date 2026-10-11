@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=1800b857">
+<link rel="stylesheet" href="css/app.css?v=5b4e6126">
 </head>
 <body>
 <div id="setup">
@@ -780,6 +780,13 @@
     </div>
     <div class="insp-body">
       <div class="insp-tab" data-tab="timing">
+    <!-- A kind of session in one press - see js/presets.js. It only moves the
+         controls below, and follows them. -->
+    <section>
+      <h2>Kind of session</h2>
+      <div class="chips" id="sessionPresets"></div>
+      <div class="count" id="presetHint" style="margin-top:9px"></div>
+    </section>
     <section>
       <h2>Interval</h2>
       <div class="chips" id="intervals"></div>
@@ -2048,7 +2055,7 @@
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
-<script src="js/session.js?v=35c77eec"></script>
+<script src="js/session.js?v=a539a2e3"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
 <script src="js/tools.js?v=cbd36a6d"></script>
@@ -2064,7 +2071,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=36b05019"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=ab1366a4"></script>
+<script src="js/whatsnew.js?v=ef9dbc9f"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -2083,6 +2090,7 @@
 <script src="js/flow.js?v=d94a98be"></script>
 <script src="js/hatch.js?v=cffcc412"></script>
 <script src="js/composition.js?v=ab1a5b98"></script>
+<script src="js/presets.js?v=ce742072"></script>
 <script src="js/simplify.js?v=5ca48fa0"></script>
 <script src="js/jars.js?v=64346719"></script>
 <script src="js/tangents.js?v=67a34d15"></script>
@@ -2133,6 +2141,6 @@
 <script src="js/skin.js?v=d96b4460"></script>
 <script src="js/pigments.js?v=55a1f5c1"></script>
 </template>
-<script src="js/main.js?v=108cddb7"></script>
+<script src="js/main.js?v=795d7605"></script>
 </body>
 </html>
