@@ -617,9 +617,15 @@ Ink (bottle ink, liners, ballpoint pen):
 - **Ink wash jars.** For bottle ink: the photo's values reduced to 3-5
   dilutions ("jar 1: a drop in ten of water"), and which jar goes where.
   The watercolour wash model (paint.js) with a single pigment.
-- **Hatching map.** How many layers of hatching each area wants - one,
-  crossed, three, four - with a preview of the picture done in strokes.
-  For liners and ballpoint, which build value only by line.
+- **Hatching map, the rest.** In place (`js/hatch.js`, Workspace > Line, a
+  layer, Ctrl+K "hatching map"): the lightness measured against the picture's
+  own 2nd to 98th percentile and cut at a darkness of 0.14, 0.34, 0.55 and 0.76
+  into five levels - bare paper, one layer, crossed, three, four; a numbered map
+  with each level's share, or the picture drawn in strokes at 45, 135, 0 and 90
+  degrees, open or close. The cuts are estimates, not checked against a drawing
+  made by hand. Still to come: strokes that follow the form (the Stroke
+  direction field) rather than straight parallels, a pen size per layer (see
+  below), ballpoint pressure in place of layers, and a printable plan.
 - **Pen sizes and ballpoint pressure.** For liners, which size where
   (0.05 to 0.8) - the line weight item, for pens. For ballpoint, a map of
   pressure and layers: it builds soft gradations like a pencil but cannot
@@ -903,9 +909,18 @@ the wash.
 
 ## Composition and references
 
-- **Composition analysis.** For a photo: where the eye goes (a saliency
-  map), the balance of visual weight, the leading lines - and a few
-  suggested crops, best first.
+- **Composition analysis, the rest.** In place (`js/composition.js`, Workspace >
+  Composition, a layer, Ctrl+K "composition"): interest from OKLab contrast (the
+  distance from the picture's mean colour, averaged with a centre-surround
+  difference), weight as the interest squared and its centre of mass against the
+  middle, the strongest straight lines by a Hough vote of the edges (diagonals
+  that pass near the centre of mass "lead"), and the three best crops among
+  eight shapes and four sizes scored on interest kept, nearness to a thirds
+  point, interest cut by the crop's own edges and density. All of it heuristic
+  and tuned by eye on a few pictures. Still to come: a real saliency model (faces
+  and text pull the eye far more than contrast does), weight from size and edge
+  as well as contrast, curved leading lines (a river, a road), a crop that can
+  be saved as a copy, and the scheme of Composition schemes that fits best.
 - **Tangents, the rest.** In place (`js/tangents.js`, `n`, Workspace >
   Composition and My work, a layer): value shapes that just touch or nearly
   do, and shapes that just touch the paper's edge or are cut by it by a
@@ -959,9 +974,14 @@ the wash.
 
 ## Before painting
 
-- **Simplify into shapes.** The reference reduced to 5-12 flat shapes of
-  colour and value, the way a painter plans a study; a slider for how much
-  small detail survives.
+- **Simplify into shapes, the rest.** In place (`js/simplify.js`, Workspace >
+  Value, a layer, Ctrl+K "simplify"): k-means in OKLab (lightness counted 1.8 times
+  hue), trained on a blurred sample and applied to the unblurred pixels, so a
+  blur's in-between colours do not become shapes of their own; 5, 8 or 12 shapes,
+  a majority vote and islands under a size merged into their neighbours (broad,
+  medium or fine); in colour or in value. Still to come: shapes outlined as
+  vectors to trace or print, merging that follows edges and not colour alone, and
+  painting the shapes only from the paints of the palette.
 - **Reference board.** A PureRef-style free canvas: drop several
   references for one painting, move, scale, turn and label them. Boards
   are kept - several of them, one per painting - by the backend in the

@@ -35,6 +35,9 @@ const ICONS = {
   watercolour: '<path d="M12 3.500C8.500 8 6 10.800 6 14.500a6 6 0 0 0 12 0C18 10.800 15.500 8 12 3.500z"/><path d="M9 15a3 3 0 0 0 3 3" opacity=".55"/>',
   quality: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8.500 12.500l2.500 2.500 4.500-5"/>',
   flow: '<path d="M4 8c5-3.500 11-3.500 16 0"/><path d="M4 12.500c5-3.500 11-3.500 16 0"/><path d="M4 17c5-3.500 11-3.500 16 0"/>',
+  hatch: '<path d="M5 17L17 5M9 19L19 9M5 11L11 5M13 19L19 13"/>',
+  composition: '<rect x="4" y="5" width="16" height="14" rx="1.500"/><path d="M9.300 5v14M14.700 5v14M4 9.700h16M4 14.300h16" opacity=".45"/><circle cx="14.700" cy="9.700" r="1.800" fill="currentColor"/>',
+  simplify: '<path d="M5 8l5-3 6 2 3 5-3 6-7 1-4-5z"/><path d="M10 5l1 6 5-4M11 11l-2 6" opacity=".5"/>',
   grades: '<path d="M15.500 5.500l3 3L8 19l-4 1 1-4z"/><path d="M13.500 7.500l3 3"/><path d="M5 16l3 3" opacity=".5"/>',
   markers: '<path d="M5 20l3-1 9.500-11.500-2-2L6 17z"/><path d="M14 8l2 2"/><path d="M5 20l.5-2.500" opacity=".5"/>',
   tangents: '<circle cx="8" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4"/><path d="M3 4h18" opacity=".45"/>',
@@ -557,6 +560,9 @@ const state = {
   gradesOn: false,            // pencil grades' areas shown - see toggleGrades()
   qualityOn: false,           // the reference check shown - see toggleQuality()
   flowOn: false,              // stroke directions shown - see toggleFlow()
+  hatchOn: false,             // the hatching map shown - see toggleHatch()
+  compositionOn: false,       // the composition analysis shown - see toggleComposition()
+  simplifyOn: false,          // the picture as flat shapes shown - see toggleSimplify()
   toneOn: false,              // toned paper's zones shown - see toggleTone()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,

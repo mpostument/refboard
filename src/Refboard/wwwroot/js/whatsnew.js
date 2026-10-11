@@ -15,6 +15,15 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'hatching-map', title: 'Hatching map: how many layers each area wants',
+    text: "Over any picture in a session (Workspace > Line, or Ctrl+K): the picture's values sorted into none, one, crossed, three and four layers of hatching - for a liner or a ballpoint, which build value only by line. A map with the layers numbered and their shares, or the picture drawn in strokes, a direction to each layer, so you can see the finished tone before the first line.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'composition-analysis', title: 'Composition analysis: where the eye goes',
+    text: "Over any picture in a session (Workspace > Composition, or Ctrl+K): a map of where contrast pulls the eye, where the picture's weight sits against its centre, the strongest straight lines, and the three best crops with how much of the interest each keeps. A guess from the pixels - it does not recognise faces or words.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'simplify-shapes', title: 'Simplify into shapes',
+    text: "Over any picture in a session (Workspace > Value, or Ctrl+K): the picture reduced to 5, 8 or 12 flat shapes of colour, as broad or as fine as you choose, or in value only - the plan a painter makes before the first wash. The note lists each shape's colour, value and share, the largest first.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'skies', title: 'Skies: a sky to study, made to order',
     text: "Prepare > Sky and weather: a sky painted on the spot - dawn, morning, noon, golden hour, dusk or night; clear, cumulus, a broken layer, overcast, cirrus wisps or a storm; how much of the sky the clouds cover; and what is under it, nothing, low hills or the sea. The clouds are lit from the sun and crowd toward the horizon as a real deck does. The note gives the sky's colours - the top, the horizon, a lit and a shaded cloud - and how to paint it in watercolour. A new one at a click; save it, or open it in the workspace and use the value and edge tools on it.",
     act: 'Open it', run: () => { try { localStorage.setItem('refboard.skyMode.v1', 'sky'); } catch { /* the sky opens */ } setView({ kind: 'sky' }); } },

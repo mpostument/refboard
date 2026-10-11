@@ -369,6 +369,32 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   picture has a direction to give - a flat wall gets none. Coarse, medium or
   fine; the note names the direction most strokes lean to and says whether
   it is one direction or the form turning.
+- **Hatching map** - in a session (Workspace > Line, Layers, Ctrl+K): how many
+  layers of hatching each area wants, for a liner or a ballpoint, which build
+  value only by line. The picture's lightness is measured against its own
+  darkest and lightest and cut into five levels: bare paper, one layer, crossed,
+  three and four. Shown as a map with the layers numbered on the large patches
+  and each level's share, or as the picture drawn in strokes - each layer at
+  its own angle (45, 135, 0 and 90 degrees), the pen lifted where fewer layers
+  are wanted - so the finished tone is seen before the first line. Open or
+  close lines. The cuts are estimates.
+- **Composition analysis** - in a session (Workspace > Composition, Layers,
+  Ctrl+K): where contrast and colour pull the eye (a heat map: a pixel unlike
+  the picture as a whole, or unlike what is round it), where the weight sits
+  against the middle and which side is heavy, the strongest straight lines
+  and whether a diagonal leads to the centre of the interest (a Hough vote of
+  the edges), and the three best crops - seven shapes and four sizes scored on
+  the interest they keep, how near a thirds point it falls, how much an edge
+  of the crop cuts, and how dense the interest is - each with the share kept.
+  A guess from the pixels: it does not know faces or words.
+- **Simplify into shapes** - in a session (Workspace > Value, Layers, Ctrl+K):
+  the picture reduced to 5, 8 or 12 flat shapes, the way a painter plans a
+  study. The colours are found by k-means in OKLab with lightness weighted
+  over hue, then every pixel takes the nearest, a majority vote clears the
+  speckle and islands smaller than the detail (broad, medium or fine) are
+  given to their neighbour. In colour or in value alone; the note lists each
+  shape's colour, share and L*, darkest first, and says which to block in
+  first.
 - **Vignette** - in a session (Workspace > Composition and Onto paper,
   Layers, Ctrl+K): where a watercolour study could end and dissolve into bare
   paper. Interest is worked out from edges, strong colour and darkness against

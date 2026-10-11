@@ -516,6 +516,9 @@ function show(src) {
     if (state.gradesOn) runGrades();
     if (state.qualityOn) runQuality();
     if (state.flowOn) runFlow();
+    if (state.hatchOn) runHatch();
+    if (state.compositionOn) runComposition();
+    if (state.simplifyOn) runSimplify();
     if (state.watercolourOn) runWatercolour();
     if (state.vignetteOn) runVignette();
     refreshValueTools();
@@ -586,6 +589,9 @@ function show(src) {
   clearGrades();
   clearQuality();
   clearFlow();
+  clearHatch();
+  clearComposition();
+  clearSimplify();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);
