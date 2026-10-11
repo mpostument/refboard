@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'ink-jars', title: 'Ink wash jars: which jar goes where',
+    text: "Over any picture in a session (Workspace > Value, or Ctrl+K): for bottle ink, the picture reduced to 3, 4 or 5 jars of thinned ink and the bare paper - black, sepia or indigo - with how to thin each (1 part ink : N of water) and the washes drawn as they would paint. The thinning is the paint model's estimate: try it on scrap paper.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'techniques-guide', title: 'Techniques guide: salt, spatter, dry brush, lifting, masking fluid',
     text: "Practise > Handbook (or Ctrl+K), a second chapter: five watercolour techniques, each with when to use it and a small demonstration to move. Salt works only in a window of wetness - slide the wash from dry to glossy and find it. Spatter: a wetter brush, a farther flick, a covered shape. Dry brush: the paint on the brush, the pressure and the roughness of the paper. Lifting, with your own paints: which come back to paper and which stain, and how the age of the wash changes it. Masking fluid: the whites under a wash, peeled, and softened on one side.",
     act: 'Open it', run: () => setView({ kind: 'handbook' }) },

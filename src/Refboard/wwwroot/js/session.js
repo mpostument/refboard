@@ -519,6 +519,7 @@ function show(src) {
     if (state.hatchOn) runHatch();
     if (state.compositionOn) runComposition();
     if (state.simplifyOn) runSimplify();
+    if (state.jarsOn) runJars();
     if (state.watercolourOn) runWatercolour();
     if (state.vignetteOn) runVignette();
     refreshValueTools();
@@ -592,6 +593,7 @@ function show(src) {
   clearHatch();
   clearComposition();
   clearSimplify();
+  clearJars();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);

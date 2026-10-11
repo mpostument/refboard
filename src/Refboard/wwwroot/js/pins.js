@@ -39,6 +39,7 @@ const HUD_TOOLS = [
   { id: 'hatch', label: 'Hatching map', els: ['btnHatch'], key: '', group: 'look' },
   { id: 'composition', label: 'Composition analysis', els: ['btnComposition'], key: '', group: 'look' },
   { id: 'simplify', label: 'Simplify into shapes', els: ['btnSimplify'], key: '', group: 'look' },
+  { id: 'jars', label: 'Ink wash jars', els: ['btnJars'], key: '', group: 'look' },
   { id: 'lineweight', label: 'Line weight', els: ['btnLineWeight'], key: 'k', group: 'look' },
   { id: 'linewash', label: 'Line and wash', els: ['btnLineWash'], key: '', group: 'look' },
   { id: 'tone', label: 'Toned paper', els: ['btnTone'], key: 'j', group: 'look' },

@@ -60,6 +60,8 @@ const LAYERS = [
     on: () => !!state.compositionOn, toggle: () => toggleComposition() },
   { id: 'simplify', label: 'Simplify into shapes', els: ['simplifyOverlay'], base: 1,
     on: () => !!state.simplifyOn, toggle: () => toggleSimplify() },
+  { id: 'jars', label: 'Ink wash jars', els: ['jarsOverlay'], base: 1,
+    on: () => !!state.jarsOn, toggle: () => toggleJars() },
   { id: 'lineweight', label: 'Line weight', els: ['lineOverlay'], base: 1,
     on: () => !!state.lineWeightOn, toggle: () => toggleLineWeight() },
   { id: 'linewash', label: 'Line and wash', els: ['lineWashOverlay'], base: 1,

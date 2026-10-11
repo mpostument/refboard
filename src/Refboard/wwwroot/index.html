@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=f6f2acf1">
+<link rel="stylesheet" href="css/app.css?v=a884a4f1">
 </head>
 <body>
 <div id="setup">
@@ -974,7 +974,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><canvas id="watercolourOverlay" class="hidden"></canvas><canvas id="vignetteOverlay" class="hidden"></canvas><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="qualityOverlay" class="hidden"></canvas><canvas id="flowOverlay" class="hidden"></canvas><canvas id="hatchOverlay" class="hidden"></canvas><canvas id="compositionOverlay" class="hidden"></canvas><canvas id="simplifyOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><canvas id="watercolourOverlay" class="hidden"></canvas><canvas id="vignetteOverlay" class="hidden"></canvas><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="qualityOverlay" class="hidden"></canvas><canvas id="flowOverlay" class="hidden"></canvas><canvas id="hatchOverlay" class="hidden"></canvas><canvas id="compositionOverlay" class="hidden"></canvas><canvas id="simplifyOverlay" class="hidden"></canvas><canvas id="jarsOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -1120,6 +1120,7 @@
     <button id="btnHatch" data-icon="hatch" title="Hatching map: how many layers of hatching each area wants - none, one, crossed, three, four - as a map, or the picture drawn in strokes" aria-label="Hatching map" aria-pressed="false"></button>
     <button id="btnComposition" data-icon="composition" title="Composition analysis: where the eye goes (a map of contrast), where the picture's weight sits, its strongest straight lines, and the best crops" aria-label="Composition analysis" aria-pressed="false"></button>
     <button id="btnSimplify" data-icon="simplify" title="Simplify into shapes: the picture reduced to 5 to 12 flat shapes of colour and value, the way a painter plans a study" aria-label="Simplify into shapes" aria-pressed="false"></button>
+    <button id="btnJars" data-icon="jars" title="Ink wash jars: for bottle ink, the picture in 3 to 5 jars of thinned ink - how to thin each, and which jar goes where" aria-label="Ink wash jars" aria-pressed="false"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <button id="btnWorkspace" data-icon="sliders" title="Workspace (w): the tools sorted by the question you ask of the picture - value, colour, construction, figure, your own work" aria-label="Workspace" aria-pressed="false"></button>
     <button id="btnLayers" data-icon="layers" title="Layers: every overlay in one list, each on or off and with its own opacity" aria-label="Layers" aria-pressed="false"></button>
@@ -2039,28 +2040,28 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=a60dc429"></script>
+<script src="js/core.js?v=7341f0f9"></script>
 <script src="js/setup.js?v=bc13a3bd"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
-<script src="js/session.js?v=7cfa7b21"></script>
+<script src="js/session.js?v=35c77eec"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
-<script src="js/tools.js?v=5e02a10d"></script>
+<script src="js/tools.js?v=cbd36a6d"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
-<script src="js/vision.js?v=12052a9b"></script>
+<script src="js/vision.js?v=5c0f8101"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
 <script src="js/study.js?v=fc69529c"></script>
-<script src="js/layers.js?v=fbc196a5"></script>
+<script src="js/layers.js?v=29c0c0af"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=44f9df1d"></script>
-<script src="js/workspace.js?v=76fa9463"></script>
+<script src="js/pins.js?v=b448b387"></script>
+<script src="js/workspace.js?v=db149ee0"></script>
 <script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=76242fa9"></script>
+<script src="js/command.js?v=47418321"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=73bf0bb5"></script>
+<script src="js/whatsnew.js?v=0f4d46b0"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -2080,6 +2081,7 @@
 <script src="js/hatch.js?v=a852d9cb"></script>
 <script src="js/composition.js?v=ab1a5b98"></script>
 <script src="js/simplify.js?v=5ca48fa0"></script>
+<script src="js/jars.js?v=64346719"></script>
 <script src="js/tangents.js?v=67a34d15"></script>
 <script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/generate.js?v=a202c557"></script>

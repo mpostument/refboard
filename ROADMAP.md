@@ -614,9 +614,13 @@ item below reads the same profile.
 
 Ink (bottle ink, liners, ballpoint pen):
 
-- **Ink wash jars.** For bottle ink: the photo's values reduced to 3-5
-  dilutions ("jar 1: a drop in ten of water"), and which jar goes where.
-  The watercolour wash model (paint.js) with a single pigment.
+- **Ink wash jars, the rest.** In place (`js/jars.js`, Workspace > Value, a
+  layer, Ctrl+K "jars"): 3, 4 or 5 jars of black, sepia or indigo, equal steps of
+  L* from the paper to neat ink, each thinned by bisection on the wash model of
+  one pigment (the darkest jar is the neat ink, taken as 4 times paint.js's wash
+  strength 1 - a guess at a bottle's density). Still to come: real inks (a
+  bottle's own colour and density from a swatch photo), mixing two inks in a
+  jar, and glazing - one jar over another - as an alternative to one jar per area.
 - **Hatching map, the rest.** In place (`js/hatch.js`, Workspace > Line, a
   layer, Ctrl+K "hatching map"): the lightness measured against the picture's
   own 2nd to 98th percentile and cut at a darkness of 0.14, 0.34, 0.55 and 0.76

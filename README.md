@@ -387,6 +387,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   the interest they keep, how near a thirds point it falls, how much an edge
   of the crop cuts, and how dense the interest is - each with the share kept.
   A guess from the pixels: it does not know faces or words.
+- **Ink wash jars** - in a session (Workspace > Value, Layers, Ctrl+K): for
+  bottle ink, the picture reduced to 3, 4 or 5 jars of thinned ink and the bare
+  paper, in black, sepia or indigo. The picture's own range is cut into equal
+  steps of L* between the paper and the neat ink, and each jar's thinning is
+  found with the paint model's wash of one pigment ("1 part ink : 9 of water");
+  the washes are drawn as they would paint, the large patches numbered. The
+  thinning is an estimate - the note says to try each jar on scrap paper.
 - **Simplify into shapes** - in a session (Workspace > Value, Layers, Ctrl+K):
   the picture reduced to 5, 8 or 12 flat shapes, the way a painter plans a
   study. The colours are found by k-means in OKLab with lightness weighted
