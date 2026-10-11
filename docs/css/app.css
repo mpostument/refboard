@@ -798,8 +798,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
    it only once its slider has been moved; until then the stylesheet's own
    value (the var() fallback) holds. */
-#watercolourOverlay, #vignetteOverlay, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #gradeOverlay, #amtOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
-#stage.overlays-off :is(#grid, #gridValue, #watercolourOverlay, #vignetteOverlay, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #gradeOverlay, #amtOverlay, #angleOverlay,
+#watercolourOverlay, #vignetteOverlay, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #gradeOverlay, #amtOverlay, #qualityOverlay, #flowOverlay, #hatchOverlay, #compositionOverlay, #simplifyOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #watercolourOverlay, #vignetteOverlay, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #gradeOverlay, #amtOverlay, #qualityOverlay, #flowOverlay, #hatchOverlay, #compositionOverlay, #simplifyOverlay, #angleOverlay,
   #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
 #peekBadge {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
@@ -968,6 +968,26 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Pencil grades - see js/grades.js. The same box and flip as the markers; its key reuses theirs. */
 #gradeOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #gradeOverlay { transform: scaleX(-1); }
+/* Reference check and stroke direction - see js/quality.js, js/flow.js. The same box and flip. */
+#qualityOverlay, #flowOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #qualityOverlay, #img.flip ~ #flowOverlay { transform: scaleX(-1); }
+#poseNote .qc-verdict { font-weight: 600; margin-bottom: 4px; }
+#poseNote .qc-rows { display: grid; gap: 2px; margin-bottom: 5px; font-size: 12px; }
+#poseNote .qc-row { display: flex; gap: 6px; align-items: baseline; }
+#poseNote .qc-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #5fd698; transform: translateY(1px); }
+#poseNote .qc-row.qc-warn .qc-dot { background: #ffc428; }
+#poseNote .qc-row.qc-bad .qc-dot { background: #ff5a4d; }
+#poseNote .qc-verdict.qc-ok { color: #5fd698; }
+#poseNote .qc-verdict.qc-warn { color: #ffc428; }
+#poseNote .qc-verdict.qc-bad { color: #ff5a4d; }
+#poseNote .qc-pink { color: #ff2d95; }
+#poseNote .qc-blue { color: #2d7bff; }
+/* Hatching map, composition analysis, simplify into shapes - see js/hatch.js, js/composition.js, js/simplify.js. The same box and flip. */
+#hatchOverlay, #compositionOverlay, #simplifyOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #hatchOverlay, #img.flip ~ #compositionOverlay, #img.flip ~ #simplifyOverlay { transform: scaleX(-1); }
+#poseNote .hm-key { display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 2px 0 5px; font-size: 12px; }
+#poseNote .hm-key span { display: inline-flex; align-items: center; gap: 5px; }
+#poseNote .hm-key i { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(255,255,255,.35); }
 /* The amounts' colour and shape maps - see js/amounts.js. */
 #amtOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 #img.flip ~ #amtOverlay { transform: scaleX(-1); }
@@ -1425,6 +1445,7 @@ section { margin-bottom: 20px; }
 .hb-list { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; }
 .hb-item { display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 10px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--ink); font-size: 13px; cursor: pointer; }
 .hb-item:hover { background: var(--hover); }
+.hb-group { margin: 10px 0 2px 10px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
 .hb-item[aria-current="true"] { border-color: var(--accent); background: var(--panel); }
 .hb-n { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); font-size: 11px; color: var(--dim); }
 .hb-lesson { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; box-sizing: border-box; min-width: 0; }
@@ -1496,6 +1517,14 @@ section { margin-bottom: 20px; }
 .lt-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lt-row i { display: block; height: 26px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
 .lt-one { display: grid; gap: 8px; margin-top: 10px; }
+/* Skin - see js/skin.js. The grid is the Light tab's rows with a fourth swatch. */
+.sk-grid .lt-head, .sk-grid .lt-row { grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)); }
+.sk-ball { width: 100%; max-width: 240px; height: auto; border-radius: 6px; display: block; margin: 10px 0 4px; }
+.sk-zones { display: grid; gap: 8px; margin: 6px 0; }
+.sk-zone { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; font-size: 12px; }
+.sk-zone > i { height: 34px; border-radius: 6px; border: 1px solid rgba(255,255,255,.12); }
+.sk-zone small { color: var(--dim); font-variant-numeric: tabular-nums; }
+.sk-mix:empty { display: none; }
 .lt-ball { width: 100%; max-width: 240px; height: auto; border-radius: 6px; display: block; }
 .lt-mix { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px; font-size: 12px; padding: 2px 0; }
 .lt-mix b { font-weight: 600; color: var(--ink); }
@@ -2079,4 +2108,35 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .pg-foot .count { margin-right: auto; }
 .pg-foot .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
 .pg-note { max-width: 780px; line-height: 1.5; }
+.pg-modes { max-width: 1300px; margin-bottom: 12px; }
+.pg-controls .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
+.pg-row input[type=search] { flex: 1; min-width: 0; }
+.sky-stage { background: #111; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.sky-stage canvas { display: block; width: 100%; height: auto; max-height: 72vh; }
+.sky-sws { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 6px; }
+.sky-sw { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; }
+.sky-sw i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.35); }
+.sky-sw code { font-size: 11px; color: var(--dim); }
+.wx-card { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 28px; padding: 14px 16px; margin-bottom: 12px;
+  background: var(--panel); border: 1px solid var(--line); border-left-width: 6px; border-radius: 10px; }
+.wx-big { display: flex; flex-direction: column; }
+.wx-big b { font-size: 26px; font-weight: 650; }
+.wx-big span { max-width: 260px; font-size: 12px; color: var(--dim); }
+.wx-level { margin-left: auto; font-weight: 600; }
+.wx-card.wx-fast { border-left-color: #ff5a4d; }
+.wx-card.wx-brisk { border-left-color: #ffc428; }
+.wx-card.wx-steady { border-left-color: #5fd698; }
+.wx-card.wx-slow { border-left-color: #38d6ff; }
+.wx-table { width: 100%; max-width: 780px; margin-bottom: 10px; border-collapse: collapse; font-size: 12px; }
+.wx-table caption { padding: 2px 0 6px; text-align: left; color: var(--dim); }
+.wx-table th, .wx-table td { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.wx-table thead th { font-weight: 500; color: var(--dim); }
+.wx-table td:last-child { position: relative; }
+.wx-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); opacity: .6; }
+.wx-table tr.wx-best th, .wx-table tr.wx-best td { background: rgba(95,214,152,.14); }
+.pp-stage { padding: 8px; }
+.pp-stage svg { display: block; width: 100%; height: auto; max-height: 72vh; box-shadow: 0 2px 10px rgba(0,0,0,.28); touch-action: none; user-select: none; cursor: crosshair; background: #fff; }
+.pp-stage .pp-handle { cursor: grab; }
+.pp-stage .pp-hor { cursor: ns-resize; }
+.pg-controls .te-note { margin: 0; line-height: 1.45; }
 @media (max-width: 860px) { .pg-body { grid-template-columns: 1fr; } }

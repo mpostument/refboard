@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=95c37cbd">
+<link rel="stylesheet" href="css/app.css?v=f6f2acf1">
 </head>
 <body>
 <div id="setup">
@@ -66,7 +66,8 @@
       <button class="nav-item" type="button" data-view="museum" data-icon="museum" data-tip="Museums - search the Met and the Rijksmuseum, open a painting in the workspace" aria-label="Museums"></button>
       <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
       <button class="nav-item" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
-      <button class="nav-item" type="button" data-view="perspective" data-icon="perspective" data-tip="Perspective grid - one, two or three vanishing points on your paper, to print and draw over" aria-label="Perspective grid"></button>
+      <button class="nav-item" type="button" data-view="perspective" data-icon="perspective" data-tip="Perspective grid - vanishing points on your paper to print and draw over, and how tall people are anywhere in a picture" aria-label="Perspective grid"></button>
+      <button class="nav-item" type="button" data-view="sky" data-icon="sky" data-tip="Sky and weather - a sky to study at any time of day, and how fast a wash will dry today" aria-label="Sky and weather"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
       <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
     </div>
@@ -380,6 +381,7 @@
               <button type="button" role="tab" data-tab="match" aria-selected="false" title="A colour to hit: choose the paints, the parts and the water, and see how close you land">Match</button>
               <button type="button" role="tab" data-tab="glazing" aria-selected="false" title="One paint glazed over another, against mixing them on the palette">Glazing</button>
               <button type="button" role="tab" data-tab="light" aria-selected="false" title="A colour in the light and in its shadow, under the sun, a window, a lamp - and how to mix both">Light</button>
+              <button type="button" role="tab" data-tab="skin" aria-selected="false" title="Skin across complexions and lights: the light, halftone, shadow and reflected light of each, with a recipe from your paints">Skin</button>
               <button type="button" role="tab" data-tab="pigments" aria-selected="false" title="Your paints: which glaze cleanly, lift off, granulate or fade">Pigments</button>
             </div>
             <div class="col-tab on" data-tab="picture" role="tabpanel">
@@ -508,6 +510,18 @@
               <div id="ltOne"></div>
               <div class="count" id="ltNote"></div>
             </div>
+            <!-- js/skin.js: a complexion in a light, in four zones, with recipes. -->
+            <div class="col-tab" data-tab="skin" role="tabpanel">
+              <h4>Skin - the four zones, in every light</h4>
+              <div class="chips" id="skLights" role="group" aria-label="The light"></div>
+              <div class="count" id="skLightHint"></div>
+              <div class="chips" id="skBounce" role="group" aria-label="Reflected light comes from"></div>
+              <div class="row lt-bar"><span class="count">The reflected light comes from the surface chosen above.</span><label class="lt-own" title="Try a skin colour of your own">or your own <input type="color" id="skOwn" aria-label="Your own skin colour" value="#d9a37e"></label></div>
+              <div id="skGrid" class="lt-rows sk-grid" role="group" aria-label="Complexions"></div>
+              <canvas id="skBall" class="sk-ball" width="240" height="150" role="img" aria-label="A ball in the chosen skin colour, lit from the upper left, shaded through the four zones"></canvas>
+              <div id="skZones" class="sk-zones"></div>
+              <div class="count" id="skNote"></div>
+            </div>
             <!-- js/pigments.js: each paint's test swatch, and what it does on the paper. -->
             <div class="col-tab" data-tab="pigments" role="tabpanel">
               <h4>Pigment guide - what each paint does on the paper</h4>
@@ -559,7 +573,11 @@
       <!-- Perspective grid - see showPerspective() in js/perspective.js, which
            loads the first time this opens. Nothing here needs a library. -->
       <div id="viewPerspective" class="hidden">
-        <div class="pg-body">
+        <div class="chips pg-modes" id="pgMode" role="group" aria-label="What to work on">
+          <button type="button" class="chip" data-mode="sheet" aria-pressed="true" title="A grid of vanishing points, to print on your paper and draw over">Grid sheet</button>
+          <button type="button" class="chip" data-mode="people" aria-pressed="false" title="How tall a person is anywhere in a picture, from the horizon - on a street or on a picture of your own">People</button>
+        </div>
+        <div class="pg-body" id="pgSheetMode">
           <div class="pg-controls" role="group" aria-label="The perspective sheet">
             <div class="pg-row"><span class="pg-label">Vanishing points</span>
               <div class="chips" id="pgPoints" role="group" aria-label="Vanishing points">
@@ -602,6 +620,85 @@
               <button type="button" id="pgSavefile" class="ghost" title="An SVG at the paper's real size - to print elsewhere or draw over on a tablet">Save SVG</button>
             </div>
             <div class="count pg-note" id="pgNote" aria-live="polite"></div>
+          </div>
+        </div>
+        <!-- People in perspective - see js/people.js, which loads with this view. -->
+        <div class="pg-body hidden" id="pgPeopleMode">
+          <div class="pg-controls" role="group" aria-label="People in perspective">
+            <p class="te-note">The horizon is your eye level, and it fixes how tall anyone is anywhere in the picture. Drag the horizon and the white figure (its feet and its head) until the figure fits - on someone in a photo, or as tall as you drew them - then click the ground to stand people there.</p>
+            <label class="pg-slide"><span>Eye level</span><input type="range" id="ppHor" min="5" max="90" step="1" title="The horizon, from the top of the picture. At the white figure's head: everyone as tall has their head on it"><output id="ppHorOut" for="ppHor"></output></label>
+            <label class="pg-slide"><span>Figure: feet</span><input type="range" id="ppFeet" min="8" max="98" step="1" title="Where the white figure stands, from the top"><output id="ppFeetOut" for="ppFeet"></output></label>
+            <label class="pg-slide"><span>Figure: height</span><input type="range" id="ppHigh" min="2" max="95" step="1" title="How tall the white figure is on the page"><output id="ppHighOut" for="ppHigh"></output></label>
+            <div class="pg-row"><label class="pg-label" for="ppRefM">It is really</label>
+              <input type="number" id="ppRefM" min="0.4" max="2.6" step="0.05" title="The white figure's real height in metres - 1.7 for an adult"><span>m tall</span></div>
+            <div class="pg-row"><span class="pg-label">Stand next</span>
+              <div class="chips" id="ppKind" role="group" aria-label="Who to stand next"></div></div>
+            <div class="pg-row">
+              <button type="button" class="ghost" id="ppAlong" title="Five people at different distances down the ground, no clicking needed">People along the ground</button>
+              <button type="button" class="ghost" id="ppClear" title="Take every person off the ground (double-click one to take only it)">Clear</button></div>
+            <div class="pg-row">
+              <button type="button" class="ghost" id="ppPick" title="Open a picture of your own - or drop one on the stage - to check its people">A picture of my own</button>
+              <button type="button" class="ghost" id="ppSample" title="Back to the street, whose lines run to the horizon you set">Street</button>
+              <button type="button" class="ghost" id="ppReset" title="Put the horizon and the figure back">Reset</button>
+              <input type="file" id="ppFile" accept="image/*" hidden aria-label="A picture of your own"></div>
+          </div>
+          <div class="pg-stage">
+            <div class="pg-sheet pp-stage" id="ppStage">
+              <svg id="ppSvg" role="img" viewBox="0 0 1000 640" aria-label="People in perspective"><g id="ppBase"></g><g id="ppTop"></g></svg>
+            </div>
+            <div class="count pg-note" id="ppNote" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sky and weather - see showSky() in js/sky.js, which loads with js/weather.js the first
+           time this opens. Two halves, the sky and the weather, and the switch between them. -->
+      <div id="viewSky" class="hidden">
+        <div class="chips pg-modes" id="skyMode" role="group" aria-label="What to work on">
+          <button type="button" class="chip" data-mode="sky" aria-pressed="true" title="A sky to study: a time of day, a kind of cloud, how much, what is under it">Skies</button>
+          <button type="button" class="chip" data-mode="weather" aria-pressed="false" title="How fast a wash will dry today, from the temperature, the humidity and the wind">Weather</button>
+        </div>
+        <div class="pg-body" id="skyPane">
+          <div class="pg-controls" role="group" aria-label="The sky">
+            <div class="pg-row"><span class="pg-label">Time of day</span><div class="chips" id="skyTime" role="group" aria-label="Time of day"></div></div>
+            <div class="pg-row"><span class="pg-label">Clouds</span><div class="chips" id="skyCloud" role="group" aria-label="Kind of cloud"></div></div>
+            <label class="pg-slide" id="skyCoverRow"><span>Cover</span><input type="range" id="skyCover" min="0" max="100" step="1" title="How much of the sky the clouds cover"><output id="skyCoverOut" for="skyCover"></output></label>
+            <div class="pg-row"><span class="pg-label">Under it</span><div class="chips" id="skyGround" role="group" aria-label="What is under the sky"></div></div>
+            <div class="pg-row">
+              <button type="button" class="primary" id="skyAnother" title="The same kind of sky, made again with different clouds">Another sky</button>
+              <button type="button" class="ghost" id="skySave" title="The sky as a PNG, to keep or to print">Save PNG</button>
+              <button type="button" class="ghost" id="skyOpen" title="Open it in the workspace, where the value, edge and marker tools work on it like on any reference">Open in workspace</button>
+            </div>
+          </div>
+          <div class="pg-stage">
+            <div class="sky-stage"><canvas id="skyCanvas" role="img" aria-label="A sky" width="960" height="540"></canvas></div>
+            <div class="count" id="skyStatus" aria-live="polite"></div>
+            <div class="count pg-note" id="skyNote"></div>
+          </div>
+        </div>
+        <div class="pg-body hidden" id="wxPane">
+          <div class="pg-controls" role="group" aria-label="The air">
+            <p class="te-note">How fast a wash dries depends on the air. Set what a thermometer and a hygrometer say - or ask Open-Meteo (free, no key) about a place: only the place's coordinates are sent, and only when you press a button.</p>
+            <div class="pg-row"><label class="pg-label" for="wxPlace">Place</label>
+              <input type="search" id="wxPlace" placeholder="A city or a village" autocomplete="off">
+              <button type="button" class="ghost" id="wxFind" title="Look the place up on Open-Meteo">Find</button></div>
+            <div class="chips" id="wxResults" role="group" aria-label="Places found"></div>
+            <div class="pg-row">
+              <button type="button" class="ghost" id="wxHere" title="Ask the browser where you are - it will ask your permission">Where I am</button>
+              <button type="button" class="ghost" id="wxRefresh" title="Ask Open-Meteo again about the chosen place">Refresh</button>
+              <span class="count" id="wxWhere"></span></div>
+            <label class="pg-slide"><span>Air</span><input type="range" id="wxT" min="-10" max="42" step="1" title="The temperature of the air"><output id="wxTOut" for="wxT"></output></label>
+            <label class="pg-slide"><span>Humidity</span><input type="range" id="wxRH" min="5" max="100" step="1" title="Relative humidity"><output id="wxRHOut" for="wxRH"></output></label>
+            <label class="pg-slide"><span>Wind</span><input type="range" id="wxWind" min="0" max="14" step="0.5" title="Wind speed in metres a second - a breeze you can feel is about 3"><output id="wxWindOut" for="wxWind"></output></label>
+            <div class="pg-row"><label class="pg-label" for="wxSpot">The paper is</label>
+              <select id="wxSpot" title="Where the sheet is: direct sun warms the paper and dries it faster, indoors the air is still">
+                <option value="shade">In the shade</option><option value="sun">In direct sun</option><option value="indoors">Indoors, still air</option></select></div>
+            <div class="count" id="wxStatus" aria-live="polite"></div>
+          </div>
+          <div class="pg-stage">
+            <div class="wx-card" id="wxCard" aria-live="polite"></div>
+            <div id="wxHours"></div>
+            <div class="count pg-note" id="wxNote"></div>
           </div>
         </div>
       </div>
@@ -877,7 +974,7 @@
            #angleOverlay or #constructOverlay: a measured angle is about the
            pose as currently framed on screen, while a composition grid is a
            statement about the image itself. -->
-      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><canvas id="watercolourOverlay" class="hidden"></canvas><canvas id="vignetteOverlay" class="hidden"></canvas><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><canvas id="watercolourOverlay" class="hidden"></canvas><canvas id="vignetteOverlay" class="hidden"></canvas><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="qualityOverlay" class="hidden"></canvas><canvas id="flowOverlay" class="hidden"></canvas><canvas id="hatchOverlay" class="hidden"></canvas><canvas id="compositionOverlay" class="hidden"></canvas><canvas id="simplifyOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
       <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
            comment. Hidden unless optGhost is checked. -->
       <img id="ghostImg" class="hidden" alt="" draggable="false">
@@ -1018,6 +1115,11 @@
     <button id="btnWatercolour" data-icon="watercolour" title="Preview as watercolour: the picture painted as washes - hard edges with a darker rim, soft ones run together, grain, the whites left as the paper - before the first stroke" aria-label="Preview as watercolour" aria-pressed="false"></button>
     <button id="btnGrades" data-icon="grades" title="Pencil grades: for graphite, which grade of pencil each area of the picture wants - 2H for the palest tone to 8B for the darkest - with the grade written on it" aria-label="Pencil grades" aria-pressed="false"></button>
     <button id="btnMarkers" data-icon="markers" title="Grey markers: the picture split into the greys of a marker set - Tombow N-series - with each marker's number on its area" aria-label="Grey markers" aria-pressed="false"></button>
+    <button id="btnQuality" data-icon="quality" title="Reference check: is this a good picture to work from - blown highlights and lost shadows marked in pink and blue, flat light, focus, size" aria-label="Reference check" aria-pressed="false"></button>
+    <button id="btnFlow" data-icon="flow" title="Stroke direction: short strokes laid the way the form goes - to hatch hair, folds and muscle along the form, not across it" aria-label="Stroke direction" aria-pressed="false"></button>
+    <button id="btnHatch" data-icon="hatch" title="Hatching map: how many layers of hatching each area wants - none, one, crossed, three, four - as a map, or the picture drawn in strokes" aria-label="Hatching map" aria-pressed="false"></button>
+    <button id="btnComposition" data-icon="composition" title="Composition analysis: where the eye goes (a map of contrast), where the picture's weight sits, its strongest straight lines, and the best crops" aria-label="Composition analysis" aria-pressed="false"></button>
+    <button id="btnSimplify" data-icon="simplify" title="Simplify into shapes: the picture reduced to 5 to 12 flat shapes of colour and value, the way a painter plans a study" aria-label="Simplify into shapes" aria-pressed="false"></button>
     <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
     <button id="btnWorkspace" data-icon="sliders" title="Workspace (w): the tools sorted by the question you ask of the picture - value, colour, construction, figure, your own work" aria-label="Workspace" aria-pressed="false"></button>
     <button id="btnLayers" data-icon="layers" title="Layers: every overlay in one list, each on or off and with its own opacity" aria-label="Layers" aria-pressed="false"></button>
@@ -1937,28 +2039,28 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=1f89a714"></script>
-<script src="js/setup.js?v=a6abf9a4"></script>
+<script src="js/core.js?v=a60dc429"></script>
+<script src="js/setup.js?v=bc13a3bd"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
-<script src="js/session.js?v=d3c2a536"></script>
+<script src="js/session.js?v=7cfa7b21"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
-<script src="js/tools.js?v=da91f60d"></script>
+<script src="js/tools.js?v=5e02a10d"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
-<script src="js/vision.js?v=483a5b64"></script>
+<script src="js/vision.js?v=12052a9b"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
 <script src="js/study.js?v=fc69529c"></script>
-<script src="js/layers.js?v=7624d9af"></script>
+<script src="js/layers.js?v=fbc196a5"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
-<script src="js/pins.js?v=4236ff1b"></script>
-<script src="js/workspace.js?v=ee1d5d03"></script>
+<script src="js/pins.js?v=44f9df1d"></script>
+<script src="js/workspace.js?v=76fa9463"></script>
 <script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=82341319"></script>
+<script src="js/command.js?v=76242fa9"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=6bad5022"></script>
+<script src="js/whatsnew.js?v=73bf0bb5"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1973,6 +2075,11 @@
 <script src="js/watercolour.js?v=83b4415a"></script>
 <script src="js/vignette.js?v=38944d49"></script>
 <script src="js/grades.js?v=05c09ec4"></script>
+<script src="js/quality.js?v=260494ce"></script>
+<script src="js/flow.js?v=d94a98be"></script>
+<script src="js/hatch.js?v=a852d9cb"></script>
+<script src="js/composition.js?v=ab1a5b98"></script>
+<script src="js/simplify.js?v=5ca48fa0"></script>
 <script src="js/tangents.js?v=67a34d15"></script>
 <script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/generate.js?v=a202c557"></script>
@@ -1993,16 +2100,22 @@
 <script src="js/museum.js?v=029edce5"></script>
 </template>
 <template id="lazy-perspective">
-<script src="js/perspective.js?v=44d5bc98"></script>
+<script src="js/perspective.js?v=f66c3085"></script>
+<script src="js/people.js?v=a28749f9"></script>
+</template>
+<template id="lazy-sky">
+<script src="js/sky.js?v=28ee2a34"></script>
+<script src="js/weather.js?v=1755c7f6"></script>
 </template>
 <template id="lazy-handbook">
-<script src="js/handbook.js?v=8c9251dd"></script>
+<script src="js/handbook.js?v=dd2c2e25"></script>
+<script src="js/techniques.js?v=c25efe88"></script>
 </template>
 <template id="lazy-palette">
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=68e116fa"></script>
+<script src="js/colour.js?v=f49f4215"></script>
 <script src="js/wheel.js?v=4f33cec4"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=eb123ff3"></script>
@@ -2010,6 +2123,7 @@
 <script src="js/mixing.js?v=0d50a6f6"></script>
 <script src="js/match.js?v=6c1c129f"></script>
 <script src="js/light.js?v=b67afe9c"></script>
+<script src="js/skin.js?v=d96b4460"></script>
 <script src="js/pigments.js?v=55a1f5c1"></script>
 </template>
 <script src="js/main.js?v=108cddb7"></script>

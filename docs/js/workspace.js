@@ -23,6 +23,8 @@ const WS_TABS = [
     { hud: 'amounts', about: 'how much light, middle and dark - one leads, or equal amounts that read as undecided' },
     { hud: 'markers', about: 'the picture in the greys of a marker set - each area with its marker number, lightest first' },
     { hud: 'grades', about: 'for graphite: which grade of pencil each area wants, 2H to 8B - the hardest first' },
+    { hud: 'quality', about: 'is it a good picture to work from: blown highlights, lost shadows, flat light, focus, size' },
+    { hud: 'simplify', about: 'the picture as 5 to 12 flat shapes of colour and value - the plan of a study' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [
@@ -34,6 +36,7 @@ const WS_TABS = [
   ] },
   { id: 'composition', label: 'Composition', q: 'Does the arrangement work?', tools: [
     { layer: 'focal', label: 'Focal point', key: '', about: 'where the eye goes first' },
+    { hud: 'composition', about: 'where the eye goes, where the weight sits, the strongest straight lines and the best crops' },
     { hud: 'vignette', about: 'where a watercolour study could end and dissolve into paper, so the focus stays inside' },
     { hud: 'tangents', about: 'shapes that just touch each other or the edge - where the depth goes flat' },
     { hud: 'amounts', about: 'does one value, one temperature, one colour strength, one size of shape, one kind of edge lead?' },
@@ -49,6 +52,8 @@ const WS_TABS = [
     { hud: 'lineweight', about: 'which lines heavy, which light - the shadow side, the big contours, tapered ends' },
     { hud: 'linewash', about: 'liner plus watercolour: which contours to ink, which to leave for the colour change alone' },
     { hud: 'edges', about: 'where the line can be lost: a soft edge wants a broken line, or none' },
+    { hud: 'flow', about: 'which way to hatch: strokes that go the way the form goes - hair, folds, muscle' },
+    { hud: 'hatch', about: 'how many layers of hatching each area wants - and the picture drawn in strokes' },
     { hud: 'angle', about: 'the angle of a line, and lengths against each other, before it is drawn' },
   ] },
   { id: 'figure', label: 'Figure', q: 'How is the body built?', tools: [

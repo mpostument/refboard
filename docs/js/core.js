@@ -33,6 +33,11 @@ const ICONS = {
   rhythms: '<path d="M6 4c1 5 8 6 6 11s-1 4 0 5"/><path d="M18 4c-1 5-8 6-6 11"/><circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="18" cy="4" r="1" fill="currentColor"/>',
   vignette: '<path d="M12 4c4.500 0 8 3 8 7.500S16 20 11 20 4 16.500 4 12 7.500 4 12 4z" stroke-dasharray="2.500 2"/><circle cx="12" cy="12" r="3"/>',
   watercolour: '<path d="M12 3.500C8.500 8 6 10.800 6 14.500a6 6 0 0 0 12 0C18 10.800 15.500 8 12 3.500z"/><path d="M9 15a3 3 0 0 0 3 3" opacity=".55"/>',
+  quality: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8.500 12.500l2.500 2.500 4.500-5"/>',
+  flow: '<path d="M4 8c5-3.500 11-3.500 16 0"/><path d="M4 12.500c5-3.500 11-3.500 16 0"/><path d="M4 17c5-3.500 11-3.500 16 0"/>',
+  hatch: '<path d="M5 17L17 5M9 19L19 9M5 11L11 5M13 19L19 13"/>',
+  composition: '<rect x="4" y="5" width="16" height="14" rx="1.500"/><path d="M9.300 5v14M14.700 5v14M4 9.700h16M4 14.300h16" opacity=".45"/><circle cx="14.700" cy="9.700" r="1.800" fill="currentColor"/>',
+  simplify: '<path d="M5 8l5-3 6 2 3 5-3 6-7 1-4-5z"/><path d="M10 5l1 6 5-4M11 11l-2 6" opacity=".5"/>',
   grades: '<path d="M15.500 5.500l3 3L8 19l-4 1 1-4z"/><path d="M13.500 7.500l3 3"/><path d="M5 16l3 3" opacity=".5"/>',
   markers: '<path d="M5 20l3-1 9.500-11.500-2-2L6 17z"/><path d="M14 8l2 2"/><path d="M5 20l.5-2.500" opacity=".5"/>',
   tangents: '<circle cx="8" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4"/><path d="M3 4h18" opacity=".45"/>',
@@ -74,6 +79,7 @@ const ICONS = {
   sparkle: '<path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15.5c.3 1.6 1 2.3 2.5 2.5-1.5.2-2.2.9-2.5 2.5-.3-1.6-1-2.3-2.5-2.5 1.5-.2 2.2-.9 2.5-2.5z"/>',
   lightbox: '<rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="M8 16c1.5-4 4.5-7 8-8.5"/><path d="M8 19h8" stroke-dasharray="1.5 2"/>',
   perspective: '<path d="M3 11h18"/><path d="M3 5l9 6 9-6"/><path d="M3 19l9-8 9 8"/><circle cx="12" cy="11" r="1.2"/>',
+  sky: '<path d="M7 18h10a3.500 3.500 0 0 0 .6-6.950A5 5 0 0 0 7.900 10.200 4 4 0 0 0 7 18z"/><path d="M5 6.500l1 1M12 4v1.500M19 6.500l-1 1" opacity=".55"/>',
   book: '<path d="M5 4.5h10a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>',
   museum: '<path d="M3 9.5 12 4l9 5.5"/><path d="M5.5 10.5v7M10 10.5v7M14 10.5v7M18.5 10.5v7"/><path d="M3.5 20h17"/>',
   clean:'<path d="m3 3 18 18"/><path d="M10.6 5.1Q11.3 5 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.1 3.8M6.6 6.6C3.6 8.5 2 12 2 12s3.5 7 10 7c1.8 0 3.3-.5 4.6-1.2"/>',
@@ -552,6 +558,11 @@ const state = {
   vignetteOn: false,          // the vignette's island shown - see toggleVignette()
   watercolourOn: false,       // the picture as watercolour shown - see toggleWatercolour()
   gradesOn: false,            // pencil grades' areas shown - see toggleGrades()
+  qualityOn: false,           // the reference check shown - see toggleQuality()
+  flowOn: false,              // stroke directions shown - see toggleFlow()
+  hatchOn: false,             // the hatching map shown - see toggleHatch()
+  compositionOn: false,       // the composition analysis shown - see toggleComposition()
+  simplifyOn: false,          // the picture as flat shapes shown - see toggleSimplify()
   toneOn: false,              // toned paper's zones shown - see toggleTone()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,

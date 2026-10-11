@@ -61,9 +61,9 @@ function saveColourPrefs() {
 // make (js/greys.js), every pair of them mixed (js/mixing.js), a colour to
 // hit with a mix of your own (js/match.js), their glazes
 // (js/glazing.js), what a light does to a
-// colour (js/light.js), or the paints themselves - what each does on the
+// colour (js/light.js), skin in each light (js/skin.js), or the paints themselves - what each does on the
 // paper (js/pigments.js).
-const COL_TABS = ['picture', 'wheel', 'character', 'greys', 'mixing', 'match', 'glazing', 'light', 'pigments'];
+const COL_TABS = ['picture', 'wheel', 'character', 'greys', 'mixing', 'match', 'glazing', 'light', 'skin', 'pigments'];
 function colourTab(name) {
   col.tab = COL_TABS.includes(name) ? name : 'picture';
   for (const b of el('colTabs').children) b.setAttribute('aria-selected', String(b.dataset.tab === col.tab));
@@ -382,6 +382,7 @@ function colourRender() {
   if (col.tab === 'match') matchRender();
   if (col.tab === 'glazing') glazingRender();
   if (col.tab === 'light') lightRender();
+  if (col.tab === 'skin') skinRender();
   if (col.tab === 'pigments') pigmentsRender();
 }
 
@@ -503,6 +504,7 @@ function initColour() {
   initMatch();
   initGlazing();
   initLight();
+  initSkin();
   initPigments();
   el('charToLight').addEventListener('click', lightForCharacter);
   colourTab(col.tab);
