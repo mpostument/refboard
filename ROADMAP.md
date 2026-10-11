@@ -627,13 +627,13 @@ Ink (bottle ink, liners, ballpoint pen):
   into five levels - bare paper, one layer, crossed, three, four; a numbered map
   with each level's share, or the picture drawn in strokes at 45, 135, 0 and 90
   degrees, open or close. The cuts are estimates, not checked against a drawing
-  made by hand. Still to come: strokes that follow the form (the Stroke
-  direction field) rather than straight parallels, a pen size per layer (see
-  below), ballpoint pressure in place of layers, and a printable plan.
-- **Pen sizes and ballpoint pressure.** For liners, which size where
-  (0.05 to 0.8) - the line weight item, for pens. For ballpoint, a map of
-  pressure and layers: it builds soft gradations like a pencil but cannot
-  be erased, so it also marks where the paper must stay white.
+  made by hand. A liner takes a size for each layer (HATCH_PEN_MM: 0.1, 0.1,
+  0.2, 0.3 mm), drawn at that width; a ballpoint is drawn by pressure instead,
+  with the whites that cannot be put back marked first - both starting rules, not
+  measured on paper. Still to come: strokes that follow the form (the Stroke
+  direction field) rather than straight parallels, a pen set of your own for the
+  layers, a ballpoint's pressure measured against your own sample strip, and a
+  printable plan.
 
 Watercolour pencils and watercolour markers - two states each: dry, the
 layers mix optically with the paper's tooth showing through; wetted, the
@@ -969,7 +969,11 @@ the wash.
   not taper there. Still to come: a whole strand of hair as one line
   rather than dashes, a heavier line where a form passes in front (not
   only where lines meet), and a photo of your own line drawing checked
-  against it.
+  against it. For a liner, three sizes for the three classes of line (a Fine,
+  Standard or Bold set, 0.05 to 0.8 mm), with each pen's share of the drawing
+  and the lines shown coloured by pen. Still to come: pens of your own (the
+  sizes and brands you have), and a drawing's line weights read back from a
+  photo of your own pen drawing.
 - **Museum search.** In place (`js/museum.js`, Prepare > Museums): the Met
   and the Rijksmuseum searched from the app ("Sargent watercolour"), a
   picture opened in the workspace at 1600 px or at the museum's original,

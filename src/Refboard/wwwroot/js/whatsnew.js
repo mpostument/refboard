@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'pens-ballpoint', title: 'Pen sizes for liners, pressure for a ballpoint',
+    text: "Two more answers for ink. Line weight (k) now says which liner goes where - a Fine, Standard or Bold set of three sizes, 0.05 to 0.8 mm, with each pen's share of the drawing, and the lines can be coloured by pen. The Hatching map has a pen of its own: a liner with a size for each layer, or a ballpoint, drawn by pressure instead of layers, with the whites you must not touch marked first because it cannot be erased.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'ink-jars', title: 'Ink wash jars: which jar goes where',
     text: "Over any picture in a session (Workspace > Value, or Ctrl+K): for bottle ink, the picture reduced to 3, 4 or 5 jars of thinned ink and the bare paper - black, sepia or indigo - with how to thin each (1 part ink : N of water) and the washes drawn as they would paint. The thinning is the paint model's estimate: try it on scrap paper.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

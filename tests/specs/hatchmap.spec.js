@@ -80,11 +80,64 @@ test('in a session: a layer and a workspace row; map or strokes and the line spa
   await part.locator('[data-hatch-v="strokes"]').click();
   await expect(part.locator('[data-hatch-v="strokes"]')).toHaveAttribute('aria-pressed', 'true');
   await part.locator('[data-hatch-l="close"]').click();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem(HATCH_KEY)))).toEqual({ view: 'strokes', lines: 'close' });
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem(HATCH_KEY)))).toEqual({ view: 'strokes', lines: 'close', pen: 'liner' });
 
   await page.click('#btnLayers');
   await expect(page.locator('#layersList [data-layer="hatch"]')).toBeVisible();
   await page.keyboard.press('Escape');
   await part.locator('.note-off').click();
   await expect(page.locator('#hatchOverlay')).toBeHidden();
+});
+
+test('a liner takes a finer pen for the first layers and a heavier one for the darks, said in the key', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => ({ mm: HATCH_PEN_MM, note: hatchNote({ w: 1, h: 1, level: new Uint8Array(1), flat: false, share: [20, 20, 20, 20, 20] }, { view: 'map', lines: 'open', pen: 'liner' }) }));
+  expect(r.mm).toHaveLength(4);
+  for (let i = 1; i < 4; i++) expect(r.mm[i]).toBeGreaterThanOrEqual(r.mm[i - 1]);
+  expect(r.note).toContain('0.1 mm');
+  expect(r.note).toContain('0.3 mm');
+});
+
+test('a ballpoint is drawn by pressure: the whites marked, darker and wider where the level is higher, one direction', async ({ page }) => {
+  await openApp(page);
+  const RAMP = `const r = g.createLinearGradient(0, 0, w, 0); r.addColorStop(0, '#fff'); r.addColorStop(1, '#000'); g.fillStyle = r; g.fillRect(0, 0, w, h);`;
+  const r = await page.evaluate(async src => {
+    const c = document.createElement('canvas'); c.width = 560; c.height = 400;
+    new Function('g', 'w', 'h', src)(c.getContext('2d'), 560, 400);
+    const img = new Image(); img.src = c.toDataURL(); await img.decode();
+    const f = hatchOf(stepsRead(img)), cfg = { view: 'strokes', lines: 'open', pen: 'ballpoint' };
+    const out = document.createElement('canvas'); hatchDraw(f, out, cfg);
+    const g = out.getContext('2d'), dark = x0 => {
+      const d = g.getImageData(x0, 0, 60, f.h).data; let n = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] < 235) n++;
+      return n / (60 * f.h);
+    };
+    const map = document.createElement('canvas'); hatchDraw(f, map, { ...cfg, view: 'map' });
+    const px = map.getContext('2d').getImageData(10, 200, 1, 1).data;
+    return { paper: dark(5), light: dark(130), mid: dark(280), black: dark(495), whiteAlpha: px[3], whiteRgb: [px[0], px[1], px[2]],
+      note: hatchNote(f, cfg), labels: hatchLabels(f, true).some(l => l.level === 0) };
+  }, RAMP);
+  expect(r.paper).toBe(0);
+  expect(r.light).toBeGreaterThan(0);
+  expect(r.mid).toBeGreaterThan(r.light);
+  expect(r.black).toBeGreaterThan(r.mid);
+  expect(r.whiteRgb).toEqual([255, 255, 255]);
+  expect(r.whiteAlpha).toBeGreaterThan(80);
+  expect(r.labels).toBe(true);
+  expect(r.note).toContain('must stay white');
+  expect(r.note).toContain('feather touch');
+  expect(r.note).not.toContain('0.1 mm');
+});
+
+test('the pen is chosen in the note and kept with the rest of the hatching settings', async ({ page }) => {
+  await openApp(page);
+  const png = makePng(240, 240, x => { const v = Math.round(255 - x * 255 / 239); return [v, v, v]; });
+  await page.setInputFiles('#dropInput', { name: 'ramp.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('#session')).toBeVisible();
+  await page.evaluate(() => toggleHatch());
+  const part = page.locator('#poseNote [data-note="hatch"]');
+  await part.locator('[data-hatch-p="ballpoint"]').click();
+  await expect(part.locator('[data-hatch-p="ballpoint"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(part).toContainText('keep white');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem(HATCH_KEY)).pen)).toBe('ballpoint');
 });

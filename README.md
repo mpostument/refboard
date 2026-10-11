@@ -306,8 +306,10 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   three lines meeting, a form passing behind a form - both swell, the way an
   inker presses at an overlap, and a line that ends against another is not
   tapered there. The note gives liner sizes (0.05 to 0.8), or how hard to press, for the line
-  medium you have. Line is its own Workspace tab: line weight, lost edges
-  and the angle tool.
+  medium you have. For liners it also names a pen for each class of line (a
+  Fine, Standard or Bold set of three) with each pen's share of the drawing,
+  and can colour the lines by pen. Line is its own Workspace tab: line weight,
+  lost edges and the angle tool.
 - **Line and wash** - in a session (Workspace > Line, Layers, or Ctrl+K):
   the urban sketcher's liner-plus-watercolour plan. Line weight's own
   contours, but kept or left out whole, by connected run rather than point
@@ -377,7 +379,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   and each level's share, or as the picture drawn in strokes - each layer at
   its own angle (45, 135, 0 and 90 degrees), the pen lifted where fewer layers
   are wanted - so the finished tone is seen before the first line. Open or
-  close lines. The cuts are estimates.
+  close lines. The pen can be a liner or a ballpoint: a liner takes a size for
+  each layer (0.1 mm for the first two, then 0.2 and 0.3 - fine first keeps the
+  crossings open), drawn at that width; a ballpoint builds the same ladder by
+  pressure (keep white, feather touch, light, medium, firm with a second pass),
+  marks the paper that must stay white - it cannot be erased - and draws one
+  direction of line, darker and wider as the pressure rises. The cuts and the
+  sizes are estimates.
 - **Composition analysis** - in a session (Workspace > Composition, Layers,
   Ctrl+K): where contrast and colour pull the eye (a heat map: a pixel unlike
   the picture as a whole, or unlike what is round it), where the weight sits

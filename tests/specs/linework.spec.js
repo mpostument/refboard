@@ -136,3 +136,33 @@ test('in a session: k draws the lines as a layer, with a liner size in the note;
   await expect(page.locator('#lineOverlay')).toBeHidden();
   await expect(page.locator('#poseNote [data-note="lineweight"]')).toHaveCount(0);
 });
+
+test('for liners: a pen set gives each class of line a size and its share; "By pen" colours the lines by the pen', async ({ page }) => {
+  await openApp(page);
+  await page.evaluate(() => localStorage.setItem('refboard.materials.v1', JSON.stringify({ have: ['watercolour', 'liner'], main: 'watercolour' })));
+  const png = makePng(200, 200, (x, y) => Math.hypot(x - 100, y - 100) < 60 ? [60, 60, 70] : [240, 240, 240]);
+  await page.setInputFiles('#dropInput', { name: 'ball.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('#session')).toBeVisible();
+  await page.click('#wsClose');
+  await page.keyboard.press('k');
+  const part = page.locator('#poseNote [data-note="lineweight"]');
+  await expect(part).toContainText('Heavy - 0.5 mm');
+  await part.locator('[data-lw-set="fine"]').click();
+  await expect(part).toContainText('Heavy - 0.3 mm');
+  await expect(part).toContainText('Light - 0.05 mm');
+  await part.locator('[data-lw-view="pens"]').click();
+  await expect(part.locator('[data-lw-view="pens"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem(LW_PENS_KEY)))).toEqual({ set: 'fine', view: 'pens' });
+  // Coloured by pen: some of the lines are the heavy pen's red or the light pen's blue, and none is the plain ink.
+  const colours = await page.evaluate(() => {
+    const c = el('lineOverlay'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let red = 0, blue = 0;
+    for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 250) continue; if (d[i] > 200 && d[i + 2] < 120) red++; if (d[i + 2] > 230 && d[i] < 110) blue++; }
+    return { red, blue };
+  });
+  expect(colours.red + colours.blue).toBeGreaterThan(50);
+  // Without a liner the pens are not offered.
+  await page.evaluate(() => localStorage.setItem('refboard.materials.v1', JSON.stringify({ have: ['watercolour'], main: 'watercolour' })));
+  await page.evaluate(() => document.dispatchEvent(new Event('refboard:materials')));
+  await expect(part).not.toContainText('Pens');
+});
