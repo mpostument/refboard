@@ -452,7 +452,16 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   their colours would give, and recipes for a target; *Value against colour* -
   a red and another hue slid to the same value until grey makes them one patch.
   Each ends with things to try and what you should have seen; done lessons are
-  remembered.
+  remembered. A second chapter, *Watercolour techniques* (the techniques
+  guide), has five more: *Salt* - stars only in a window of wetness, from a wash
+  slid between dry and glossy; *Spatter* - the load of water, the distance, the
+  number of flicks and a covered shape, with the big drops near the brush and
+  only fine ones far; *Dry brush* - the paint on the brush, the pressure and the
+  tooth of the paper, the stroke running out along its length; *Lifting* - one of
+  your own paints washed out and a band lifted from it, kept by how much the
+  paint stains and how old the wash is (the Pigments tab's numbers); *Masking
+  fluid* - the film over a wash, peeled to hard-edged whites, then softened on one
+  side.
 - **Mix this colour** - the Colour studio's Match tab (Ctrl+K "mix this colour"):
   a colour to hit, one your palette can make or one of your own, and up to three
   of your paints with their parts and, in watercolour, the water. Your mix is

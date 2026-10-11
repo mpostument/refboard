@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'techniques-guide', title: 'Techniques guide: salt, spatter, dry brush, lifting, masking fluid',
+    text: "Practise > Handbook (or Ctrl+K), a second chapter: five watercolour techniques, each with when to use it and a small demonstration to move. Salt works only in a window of wetness - slide the wash from dry to glossy and find it. Spatter: a wetter brush, a farther flick, a covered shape. Dry brush: the paint on the brush, the pressure and the roughness of the paper. Lifting, with your own paints: which come back to paper and which stain, and how the age of the wash changes it. Masking fluid: the whites under a wash, peeled, and softened on one side.",
+    act: 'Open it', run: () => setView({ kind: 'handbook' }) },
   { id: 'skin-tones', title: 'Skin tones: four zones, every complexion, every light',
     text: "Colour studio > Skin (or Ctrl+K): nine complexions, pale anime skin to very deep, each in the light you choose - midday sun, golden hour, overcast, a north window, a lamp, moonlight - as the four zones a painter names: the light, the halftone, the shadow and the reflected light (bounced off warm earth, white cloth, grass or blue cloth). Light goes into skin and comes back out red, so a skin shadow is not the light made darker. The one you click gets a lit ball and a recipe from your own paints for each zone, and in watercolour a glaze for the shadow. Your own skin colour too.",
     act: 'Open it', run: () => openColour('skin') },

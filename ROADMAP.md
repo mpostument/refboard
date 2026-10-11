@@ -912,8 +912,18 @@ the wash.
   cloud studies), the sky of a given place and time from the weather's own
   cloud cover and the sun's real position, trees and a skyline to put under it,
   and the picture at a larger size than 960 by 540.
-- **Techniques guide.** Salt, spatter, dry brush, lifting, masking fluid:
-  when to use each, with examples.
+- **Techniques guide, the rest.** In place (`js/techniques.js`, Practise >
+  Handbook, a second chapter after the four lessons; Ctrl+K "handbook"): salt,
+  spatter, dry brush, lifting and masking fluid, each as theory, a demonstration
+  drawn from a few numbers (a wetness window for salt, drops of lognormal size in a
+  gaussian cloud for spatter, a paper tooth of value noise and a brush that runs
+  out for dry brush, the Pigments tab's lifting numbers for lifting, shapes of bare
+  paper under a wash for masking), things to try and what to see. The models take
+  what decides each effect in practice and no more, and are not checked against
+  real paper. Still to come: wax resist, scraping and scratching, blotting, the
+  granulating glaze, wet-in-wet and back-runs (the weather model already knows
+  when a wash is damp enough), alcohol and plastic wrap, and a photo of the
+  real effect beside each demonstration.
 
 ## Composition and references
 
