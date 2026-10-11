@@ -695,9 +695,17 @@ the wash.
 - **Seasons and times of day.** Ready palettes for landscape - spring,
   summer, autumn, winter, morning, noon, dusk, fog - with recipes for
   your materials.
-- **Skin tones.** Palettes of skin across complexions and light (sun,
-  shade, evening, lamplight), with watercolour recipes for the light,
-  half-tone, shadow and reflected light.
+- **Skin tones, the rest.** In place (`js/skin.js`, Colour studio > Skin, Ctrl+K
+  "skin"): nine complexions under the Light tab's six lights, each as light,
+  halftone, shadow and reflected light (the shadow with the skin's red glow, the
+  halftone at least 8% more colour than the light, the reflected light the fill
+  plus a third of the light bounced off earth, white, grass or blue), a lit ball,
+  and a recipe from the palette for each zone plus a glaze for the shadow in
+  watercolour. The nine skin colours are estimates, not measured off anyone.
+  Still to come: skin from a photo (pick the light, halftone and shadow of a
+  face and see which complexion and light they match), blush, lips and ears
+  (where skin is redder), age, make-up, and a printable sheet of the four zones
+  as swatches to paint.
 - **Temperature map, the rest.** In place (`js/temperature.js`, `t`,
   Workspace > Colour, a layer): each area's colour on OKLab's orange-blue
   axis, against the picture's own middle, orange warmer and blue cooler,

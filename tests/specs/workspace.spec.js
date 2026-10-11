@@ -63,6 +63,8 @@ test('the Colour studio opens its picture in the workspace', async ({ page }) =>
   await openApp(page);
   await page.click('.nav-item[data-view="colour"]');
   await expect(page.locator('#colWorkspace')).toBeHidden();
+  // The studio's code loads on the click; its file input has no listener until initColour() has run (col is null till then).
+  await page.waitForFunction(() => typeof col !== 'undefined' && col !== null);
   await page.setInputFiles('#colInput', { name: 'q.png', mimeType: 'image/png', buffer: quadrantsPng() });
   await page.click('#colWorkspace');
   await expect(page.locator('#session')).toBeVisible();

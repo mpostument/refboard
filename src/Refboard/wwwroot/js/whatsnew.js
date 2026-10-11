@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'skin-tones', title: 'Skin tones: four zones, every complexion, every light',
+    text: "Colour studio > Skin (or Ctrl+K): nine complexions, pale anime skin to very deep, each in the light you choose - midday sun, golden hour, overcast, a north window, a lamp, moonlight - as the four zones a painter names: the light, the halftone, the shadow and the reflected light (bounced off warm earth, white cloth, grass or blue cloth). Light goes into skin and comes back out red, so a skin shadow is not the light made darker. The one you click gets a lit ball and a recipe from your own paints for each zone, and in watercolour a glaze for the shadow. Your own skin colour too.",
+    act: 'Open it', run: () => openColour('skin') },
   { id: 'hatching-map', title: 'Hatching map: how many layers each area wants',
     text: "Over any picture in a session (Workspace > Line, or Ctrl+K): the picture's values sorted into none, one, crossed, three and four layers of hatching - for a liner or a ballpoint, which build value only by line. A map with the layers numbered and their shares, or the picture drawn in strokes, a direction to each layer, so you can see the finished tone before the first line.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

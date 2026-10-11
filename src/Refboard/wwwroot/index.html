@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=586bc123">
+<link rel="stylesheet" href="css/app.css?v=49ecca08">
 </head>
 <body>
 <div id="setup">
@@ -381,6 +381,7 @@
               <button type="button" role="tab" data-tab="match" aria-selected="false" title="A colour to hit: choose the paints, the parts and the water, and see how close you land">Match</button>
               <button type="button" role="tab" data-tab="glazing" aria-selected="false" title="One paint glazed over another, against mixing them on the palette">Glazing</button>
               <button type="button" role="tab" data-tab="light" aria-selected="false" title="A colour in the light and in its shadow, under the sun, a window, a lamp - and how to mix both">Light</button>
+              <button type="button" role="tab" data-tab="skin" aria-selected="false" title="Skin across complexions and lights: the light, halftone, shadow and reflected light of each, with a recipe from your paints">Skin</button>
               <button type="button" role="tab" data-tab="pigments" aria-selected="false" title="Your paints: which glaze cleanly, lift off, granulate or fade">Pigments</button>
             </div>
             <div class="col-tab on" data-tab="picture" role="tabpanel">
@@ -508,6 +509,18 @@
               <div id="ltRows" class="lt-rows" role="group" aria-label="Colours in this light"></div>
               <div id="ltOne"></div>
               <div class="count" id="ltNote"></div>
+            </div>
+            <!-- js/skin.js: a complexion in a light, in four zones, with recipes. -->
+            <div class="col-tab" data-tab="skin" role="tabpanel">
+              <h4>Skin - the four zones, in every light</h4>
+              <div class="chips" id="skLights" role="group" aria-label="The light"></div>
+              <div class="count" id="skLightHint"></div>
+              <div class="chips" id="skBounce" role="group" aria-label="Reflected light comes from"></div>
+              <div class="row lt-bar"><span class="count">The reflected light comes from the surface chosen above.</span><label class="lt-own" title="Try a skin colour of your own">or your own <input type="color" id="skOwn" aria-label="Your own skin colour" value="#d9a37e"></label></div>
+              <div id="skGrid" class="lt-rows sk-grid" role="group" aria-label="Complexions"></div>
+              <canvas id="skBall" class="sk-ball" width="240" height="150" role="img" aria-label="A ball in the chosen skin colour, lit from the upper left, shaded through the four zones"></canvas>
+              <div id="skZones" class="sk-zones"></div>
+              <div class="count" id="skNote"></div>
             </div>
             <!-- js/pigments.js: each paint's test swatch, and what it does on the paper. -->
             <div class="col-tab" data-tab="pigments" role="tabpanel">
@@ -2045,9 +2058,9 @@
 <script src="js/workspace.js?v=76fa9463"></script>
 <script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=73ae12f2"></script>
+<script src="js/command.js?v=76242fa9"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=3afe58a9"></script>
+<script src="js/whatsnew.js?v=e212548a"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -2101,7 +2114,7 @@
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=68e116fa"></script>
+<script src="js/colour.js?v=f49f4215"></script>
 <script src="js/wheel.js?v=4f33cec4"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=eb123ff3"></script>
@@ -2109,6 +2122,7 @@
 <script src="js/mixing.js?v=0d50a6f6"></script>
 <script src="js/match.js?v=6c1c129f"></script>
 <script src="js/light.js?v=b67afe9c"></script>
+<script src="js/skin.js?v=d96b4460"></script>
 <script src="js/pigments.js?v=55a1f5c1"></script>
 </template>
 <script src="js/main.js?v=108cddb7"></script>

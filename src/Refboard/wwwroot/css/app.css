@@ -1516,6 +1516,14 @@ section { margin-bottom: 20px; }
 .lt-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lt-row i { display: block; height: 26px; border-radius: 5px; border: 1px solid rgba(255,255,255,.12); }
 .lt-one { display: grid; gap: 8px; margin-top: 10px; }
+/* Skin - see js/skin.js. The grid is the Light tab's rows with a fourth swatch. */
+.sk-grid .lt-head, .sk-grid .lt-row { grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)); }
+.sk-ball { width: 100%; max-width: 240px; height: auto; border-radius: 6px; display: block; margin: 10px 0 4px; }
+.sk-zones { display: grid; gap: 8px; margin: 6px 0; }
+.sk-zone { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; font-size: 12px; }
+.sk-zone > i { height: 34px; border-radius: 6px; border: 1px solid rgba(255,255,255,.12); }
+.sk-zone small { color: var(--dim); font-variant-numeric: tabular-nums; }
+.sk-mix:empty { display: none; }
 .lt-ball { width: 100%; max-width: 240px; height: auto; border-radius: 6px; display: block; }
 .lt-mix { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px; font-size: 12px; padding: 2px 0; }
 .lt-mix b { font-weight: 600; color: var(--ink); }

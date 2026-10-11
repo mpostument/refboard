@@ -494,6 +494,18 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   A colour clicked shows a lit ball and a recipe for each side, and in
   watercolour the one paint to glaze over the light colour for its shadow.
   Your own colour, or your character sheet's.
+- **Skin tones** - the Colour studio's Skin tab: nine complexions (pale anime
+  skin to very deep) in the light you choose - the six of the Light tab - each
+  as the four zones a painter names: the light, the halftone, the shadow and
+  the reflected light. The light and shadow are the Light tab's spectra, and
+  skin is not a cloth: light goes into it and comes back out red, so its
+  shadow keeps a warmth and is not the light made darker. The halftone, where
+  the form turns, carries the most colour; the reflected light is the fill
+  plus a third of the light bounced off warm earth, white cloth, grass or blue
+  cloth, and lands between the shadow and the halftone. The complexion
+  clicked gets a lit ball and a recipe from your own paints for each zone, and
+  in watercolour a glaze for the shadow; or try a colour of your own. The nine
+  skin colours are estimates.
 - **Pigment guide** - the Colour studio's Pigments tab: each of your paints
   as a test swatch (a wash from rich to pale, a band lifted while wet, the
   grain of a granulating paint) with what it does on the paper - whether
