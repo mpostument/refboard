@@ -14,6 +14,13 @@
    degrees: the second set crosses the first at a right angle, the others
    split the gaps) and lifts the pen wherever the area wants fewer layers than this one -
    a line is walked pixel by pixel, drawn where the level is above its layer.
+   Two pens. A liner builds the ladder in layers, and a pen size goes with each
+   layer (HATCH_PEN_MM: fine for the first, so the crossings stay open and the
+   tone even; heavier only where the dark must close up), drawn at that width.
+   A ballpoint builds the same ladder by pressure instead - it makes soft
+   gradations like a pencil, with one direction of line and a second pass only
+   in the firmest - and cannot be erased, so the paper that is to stay white
+   is marked as the first thing, not the last.
    One of the classic scripts index.html loads in order; see the note there. */
 "use strict";
 
@@ -24,13 +31,20 @@ const HATCH_ANGLES = [45, 135, 0, 90];      // degrees, y down: the first layer 
 const HATCH_LINES = { open: 48, close: 80 }; // lines across the long side of the picture
 const HATCH_COLOURS = ['transparent', '#6ec6ff', '#7be08a', '#ffd45c', '#ff6a5c'];
 const HATCH_WORDS = ['bare paper', 'one layer', 'crossed', 'three layers', 'four layers'];
+// The liner's size for each layer, mm: fine first, heavier only for the darks.
+const HATCH_PEN_MM = [0.1, 0.1, 0.2, 0.3];
+// The ballpoint's pressure for each level, with a ramp of one blue to show it.
+const HATCH_PRESSURE = ['keep white', 'feather touch', 'light', 'medium', 'firm, a second pass'];
+const HATCH_BLUES = ['transparent', '#bcd7ff', '#7eaef0', '#3f78d6', '#1b3f9c'];
+const HATCH_BALL_INK = '#1c2f6b';
+const HATCH_BALL_ALPHA = [0, 0.28, 0.5, 0.72, 0.92];
 
 function hatchLoad() {
   try {
     const v = JSON.parse(localStorage.getItem(HATCH_KEY));
-    if (v) return { view: v.view === 'strokes' ? 'strokes' : 'map', lines: HATCH_LINES[v.lines] ? v.lines : 'open' };
+    if (v) return { view: v.view === 'strokes' ? 'strokes' : 'map', lines: HATCH_LINES[v.lines] ? v.lines : 'open', pen: v.pen === 'ballpoint' ? 'ballpoint' : 'liner' };
   } catch { /* fall through */ }
-  return { view: 'map', lines: 'open' };
+  return { view: 'map', lines: 'open', pen: 'liner' };
 }
 function hatchSave(c) {
   try { localStorage.setItem(HATCH_KEY, JSON.stringify(c)); } catch { /* private mode */ }
@@ -62,7 +76,7 @@ function hatchOf(p) {
 /* Where to write a layer's number: one per large patch, at the patch's pixel
    nearest its middle (a ring's centre may be outside it). 4-connected flood
    fill over equal levels; patches under 1.2% of the picture get no number. */
-function hatchLabels(f) {
+function hatchLabels(f, withPaper = false) {
   const { w, h, level } = f, n = w * h, seen = new Uint8Array(n), out = [];
   for (let s = 0; s < n; s++) {
     if (seen[s]) continue;
@@ -77,7 +91,7 @@ function hatchLabels(f) {
       if (y > 0 && !seen[i - w] && level[i - w] === lv) { seen[i - w] = 1; stack.push(i - w); }
       if (y < h - 1 && !seen[i + w] && level[i + w] === lv) { seen[i + w] = 1; stack.push(i + w); }
     }
-    if (lv === 0 || cells.length < n * 0.012) continue;
+    if ((lv === 0 && !withPaper) || cells.length < n * 0.012) continue;
     const mx = sx / cells.length, my = sy / cells.length;
     let best = cells[0], bd = Infinity;
     for (const i of cells) {
@@ -90,22 +104,28 @@ function hatchLabels(f) {
 }
 
 // The map: each level tinted, the large patches numbered by their layers.
-function hatchMap(f, c) {
+function hatchMap(f, c, cfg = {}) {
+  const ball = cfg.pen === 'ballpoint';
   c.width = f.w; c.height = f.h;
   const g = c.getContext('2d'), img = g.createImageData(f.w, f.h), px = img.data;
-  const tints = HATCH_COLOURS.map(h => h === 'transparent' ? null : [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+  const tints = (ball ? HATCH_BLUES : HATCH_COLOURS).map(h => h === 'transparent' ? null : [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
   for (let i = 0; i < f.w * f.h; i++) {
     const t = tints[f.level[i]];
     if (!t) continue;
     px[4 * i] = t[0]; px[4 * i + 1] = t[1]; px[4 * i + 2] = t[2]; px[4 * i + 3] = 120;
   }
+  // The ballpoint's whites are drawn too - they are the part that cannot be put back.
+  if (ball) for (let i = 0; i < f.w * f.h; i++) if (!f.level[i]) { px[4 * i] = px[4 * i + 1] = px[4 * i + 2] = 255; px[4 * i + 3] = 105; }
   g.putImageData(img, 0, 0);
   g.font = `700 ${Math.round(Math.max(f.w, f.h) / 24)}px sans-serif`;
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.lineJoin = 'round'; g.lineWidth = 4;
-  for (const l of hatchLabels(f)) {
-    g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(String(l.level), l.x, l.y);
-    g.fillStyle = '#fff'; g.fillText(String(l.level), l.x, l.y);
+  for (const l of hatchLabels(f, ball).slice(0, ball ? 14 : 12)) {
+    const word = l.level ? String(l.level) : 'white';
+    if (!l.level) g.font = `700 ${Math.round(Math.max(f.w, f.h) / 34)}px sans-serif`;
+    g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(word, l.x, l.y);
+    g.fillStyle = '#fff'; g.fillText(word, l.x, l.y);
+    if (!l.level) g.font = `700 ${Math.round(Math.max(f.w, f.h) / 24)}px sans-serif`;
   }
 }
 
@@ -118,8 +138,10 @@ function hatchStrokes(f, c, cfg) {
   c.width = w; c.height = h;
   const g = c.getContext('2d');
   g.fillStyle = 'rgba(250,246,236,.96)'; g.fillRect(0, 0, w, h);
-  g.strokeStyle = '#1b1b24'; g.lineWidth = Math.max(0.9, sp / 7); g.lineCap = 'round';
+  g.strokeStyle = '#1b1b24'; g.lineCap = 'round';
+  const base = Math.max(0.9, sp / 7);
   for (let j = 0; j < 4; j++) {
+    g.lineWidth = Math.max(0.8, base * Math.sqrt(HATCH_PEN_MM[j] / 0.2));
     const th = HATCH_ANGLES[j] * Math.PI / 180, ux = Math.cos(th), uy = Math.sin(th), nx = -uy, ny = ux;
     const cs = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]].map(([x, y]) => x * nx + y * ny);
     const oMin = Math.min(...cs), oMax = Math.max(...cs);
@@ -145,24 +167,71 @@ function hatchStrokes(f, c, cfg) {
   }
 }
 
+/* The ballpoint's strokes: one direction, and the pressure is how dark and
+   how wide the line is where it crosses each level. Every level is a path of
+   its own (a line that passes from one level to another changes pen there);
+   the firmest level is gone over again across the first. */
+function hatchBallpoint(f, c, cfg) {
+  const { w, h, level } = f, S = Math.max(w, h), sp = S / HATCH_LINES[cfg.lines] * 0.75;
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(250,246,236,.96)'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = HATCH_BALL_INK; g.lineCap = 'round';
+  const base = Math.max(0.8, sp / 6);
+  for (const [angle, from, phase] of [[HATCH_ANGLES[0], 1, 0.5], [HATCH_ANGLES[1], 4, 0.77]]) {
+    const th = angle * Math.PI / 180, ux = Math.cos(th), uy = Math.sin(th), nx = -uy, ny = ux;
+    const cs = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]].map(([x, y]) => x * nx + y * ny);
+    const oMin = Math.min(...cs), oMax = Math.max(...cs), paths = [null, new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+    for (let o = oMin + sp * phase; o < oMax; o += sp) {
+      let t0 = -Infinity, t1 = Infinity, skip = false;
+      for (const [u, b0, hi] of [[ux, o * nx, w - 1], [uy, o * ny, h - 1]]) {
+        if (Math.abs(u) < 1e-9) { if (b0 < 0 || b0 > hi) skip = true; continue; }
+        const a = -b0 / u, b = (hi - b0) / u;
+        t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b));
+      }
+      if (skip || t1 <= t0) continue;
+      let prev = 0;
+      for (let t = Math.ceil(t0); t <= t1; t++) {
+        const x = o * nx + t * ux, y = o * ny + t * uy;
+        const xi = Math.min(w - 1, Math.max(0, Math.round(x))), yi = Math.min(h - 1, Math.max(0, Math.round(y)));
+        const lv = level[yi * w + xi] >= from ? level[yi * w + xi] : 0;
+        if (lv) { if (prev !== lv) paths[lv].moveTo(x, y); else paths[lv].lineTo(x, y); }
+        prev = lv;
+      }
+    }
+    for (let lv = 1; lv <= 4; lv++) {
+      g.globalAlpha = angle === HATCH_ANGLES[1] ? 0.6 : HATCH_BALL_ALPHA[lv];
+      g.lineWidth = base * (0.75 + 0.25 * lv);
+      g.stroke(paths[lv]);
+    }
+  }
+  g.globalAlpha = 1;
+}
+
 function hatchDraw(f, c, cfg) {
-  if (cfg.view === 'strokes') hatchStrokes(f, c, cfg); else hatchMap(f, c);
+  if (cfg.view === 'strokes') (cfg.pen === 'ballpoint' ? hatchBallpoint : hatchStrokes)(f, c, cfg); else hatchMap(f, c, cfg);
   return c;
 }
 
 function hatchNote(f, cfg) {
   const chip = (attr, k, label, on) => `<button type="button" class="chip" data-hatch-${attr}="${k}" aria-pressed="${on}">${label}</button>`;
-  const bar = `<div class="tone-bar"><span>Show</span>${chip('v', 'map', 'Map', cfg.view === 'map')}${chip('v', 'strokes', 'Strokes', cfg.view === 'strokes')}` +
+  const ball = cfg.pen === 'ballpoint';
+  const bar = `<div class="tone-bar"><span>Pen</span>${chip('p', 'liner', 'Liner', !ball)}${chip('p', 'ballpoint', 'Ballpoint', ball)}` +
+    `<span>Show</span>${chip('v', 'map', 'Map', cfg.view === 'map')}${chip('v', 'strokes', 'Strokes', cfg.view === 'strokes')}` +
     `<span>Lines</span>${chip('l', 'open', 'Open', cfg.lines === 'open')}${chip('l', 'close', 'Close', cfg.lines === 'close')}</div>`;
   if (f.flat) return bar + 'The values hardly differ in this picture: there is no ladder to build. One even layer, or none, says all it has.';
-  const key = '<div class="hm-key">' + f.share.map((s, k) =>
-    `<span><i style="background:${k ? HATCH_COLOURS[k] : 'transparent'}"></i>${k} ${HATCH_WORDS[k]} ${Math.round(s)}%</span>`).join('') + '</div>';
+  const key = '<div class="hm-key">' + f.share.map((s, k) => ball
+    ? `<span><i style="background:${k ? HATCH_BLUES[k] : '#fff'}"></i>${k ? k + ' ' : ''}${HATCH_PRESSURE[k]} ${Math.round(s)}%</span>`
+    : `<span><i style="background:${k ? HATCH_COLOURS[k] : 'transparent'}"></i>${k} ${HATCH_WORDS[k]}${k ? ', ' + HATCH_PEN_MM[k - 1] + ' mm' : ''} ${Math.round(s)}%</span>`).join('') + '</div>';
   const dark = f.share[3] + f.share[4], light = f.share[0] + f.share[1];
   let line;
-  if (dark > 25) line = `${Math.round(dark)}% wants three layers or four: a lot of ink. Build it from the top of the ladder down - the lightest layer over the whole area first, the crossing only where it is needed - or let a heavier pen fill the darkest.`;
+  if (ball) {
+    line = `${Math.round(f.share[0])}% must stay white: a ballpoint cannot be erased, so draw round those places first and never into them.` +
+      (f.share[4] > 12 ? ` ${Math.round(f.share[4])}% is firm: two light passes across each other beat one hard one, which digs the paper and skips.` : ' Build the tone in light passes and let the pressure, not more lines, make it darker.');
+  } else if (dark > 25) line = `${Math.round(dark)}% wants three layers or four: a lot of ink. Build it from the top of the ladder down - the lightest layer over the whole area first, the crossing only where the numbers rise. The pen grows with the layers: fine first keeps the crossings open.`;
   else if (light > 65) line = `${Math.round(light)}% needs one layer or none: keep the pen light and let the paper be the highlights - they cannot be put back.`;
   else line = 'A full ladder: lay the first direction over everything that is not bare paper, then cross it where the numbers rise.';
-  return bar + key + esc(line) + " <small>Measured against this picture's own darkest and lightest, not the sheet's.</small>";
+  return bar + key + esc(line) + " <small>Measured against this picture's own darkest and lightest, not the sheet's." + (ball ? '' : ' Pen sizes are a starting rule, not a measurement.') + '</small>';
 }
 
 /* ---- in a session: the map or the strokes over the picture, as a layer. */
@@ -198,11 +267,12 @@ function runHatch() {
 
 el('btnHatch').addEventListener('click', toggleHatch);
 el('poseNote').addEventListener('click', e => {
-  const v = e.target.closest('[data-hatch-v]'), l = e.target.closest('[data-hatch-l]');
-  if (!v && !l) return;
+  const v = e.target.closest('[data-hatch-v]'), l = e.target.closest('[data-hatch-l]'), p = e.target.closest('[data-hatch-p]');
+  if (!v && !l && !p) return;
   const cfg = hatchLoad();
   if (v) cfg.view = v.dataset.hatchV === 'strokes' ? 'strokes' : 'map';
   if (l && HATCH_LINES[l.dataset.hatchL]) cfg.lines = l.dataset.hatchL;
+  if (p) cfg.pen = p.dataset.hatchP === 'ballpoint' ? 'ballpoint' : 'liner';
   hatchSave(cfg);
   runHatch();
 });

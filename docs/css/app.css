@@ -798,8 +798,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 /* Layers - see js/layers.js. Each overlay's opacity is --layer-op, set on
    it only once its slider has been moved; until then the stylesheet's own
    value (the var() fallback) holds. */
-#watercolourOverlay, #vignetteOverlay, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #gradeOverlay, #amtOverlay, #qualityOverlay, #flowOverlay, #hatchOverlay, #compositionOverlay, #simplifyOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
-#stage.overlays-off :is(#grid, #gridValue, #watercolourOverlay, #vignetteOverlay, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #gradeOverlay, #amtOverlay, #qualityOverlay, #flowOverlay, #hatchOverlay, #compositionOverlay, #simplifyOverlay, #angleOverlay,
+#watercolourOverlay, #vignetteOverlay, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #gradeOverlay, #amtOverlay, #qualityOverlay, #flowOverlay, #hatchOverlay, #compositionOverlay, #simplifyOverlay, #jarsOverlay, #angleOverlay, #constructOverlay { opacity: var(--layer-op, 1); }
+#stage.overlays-off :is(#grid, #gridValue, #watercolourOverlay, #vignetteOverlay, #poseOverlay, #headOverlay, #edgeOverlay, #rangeOverlay, #tempOverlay, #tanOverlay, #lineOverlay, #lineWashOverlay, #toneOverlay, #symOverlay, #rhythmOverlay, #markerOverlay, #gradeOverlay, #amtOverlay, #qualityOverlay, #flowOverlay, #hatchOverlay, #compositionOverlay, #simplifyOverlay, #jarsOverlay, #angleOverlay,
   #constructOverlay, #drawWrap, #ghostImg, #focalMarker, #poseNote) { visibility: hidden; }
 #peekBadge {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4;
@@ -983,8 +983,8 @@ label.opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 #poseNote .qc-pink { color: #ff2d95; }
 #poseNote .qc-blue { color: #2d7bff; }
 /* Hatching map, composition analysis, simplify into shapes - see js/hatch.js, js/composition.js, js/simplify.js. The same box and flip. */
-#hatchOverlay, #compositionOverlay, #simplifyOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
-#img.flip ~ #hatchOverlay, #img.flip ~ #compositionOverlay, #img.flip ~ #simplifyOverlay { transform: scaleX(-1); }
+#hatchOverlay, #compositionOverlay, #simplifyOverlay, #jarsOverlay { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+#img.flip ~ #hatchOverlay, #img.flip ~ #compositionOverlay, #img.flip ~ #simplifyOverlay, #img.flip ~ #jarsOverlay { transform: scaleX(-1); }
 #poseNote .hm-key { display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 2px 0 5px; font-size: 12px; }
 #poseNote .hm-key span { display: inline-flex; align-items: center; gap: 5px; }
 #poseNote .hm-key i { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(255,255,255,.35); }
@@ -1626,6 +1626,14 @@ section { margin-bottom: 20px; }
 .pg-strip { flex: 1; display: flex; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: pointer; background: none; }
 .pg-strip i { flex: 1; }
 .pg-strip:hover { border-color: var(--line-hi); }
+/* Kind of session (js/presets.js): the length in a smaller, quieter word after the name. */
+#sessionPresets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#sessionPresets .chip { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; padding: 6px 10px; line-height: 1.25; }
+#sessionPresets .chip small { opacity: .65; font-size: 11px; }
+/* Seasons and times of day (js/seasons.js): a chip with its six colours as a strip. */
+.pg-season { display: inline-flex; align-items: center; gap: 7px; }
+.pg-dots { display: inline-flex; border-radius: 4px; overflow: hidden; }
+.pg-dots i { width: 7px; height: 14px; }
 .pg-saved-row .ghost { width: 30px; height: 28px; padding: 0; display: grid; place-items: center; }
 .pg-saved-row .ghost .icon { width: 15px; height: 15px; }
 /* A phone: the colours one under another, each a band. */
