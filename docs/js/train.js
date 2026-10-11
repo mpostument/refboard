@@ -569,7 +569,7 @@ async function trainFigureUrl({ plain = false } = {}) {
   const base = { ...structuredClone(formScene), active: 0, lightOn: 0 };
   base.objects = [{ ...FORM_OBJECT_DEFAULTS, shape: 'figure', color: plain ? '#6f6a64' : '#cfc7bb' }];
   const sc = randomFormScene(base, false);
-  Object.assign(sc, { lines: false, zones: false, floorGrid: false, zoom: 1, focal: 50, pitch: Math.round(rnd(0, 25)) });
+  Object.assign(sc, { lines: false, zones: false, hatch: false, floorGrid: false, zoom: 1, focal: 50, pitch: Math.round(rnd(0, 25)) });
   if (plain) {
     // Facing you, limbs away from the body - so there is space between
     // them to see. Side on, a figure has almost none.

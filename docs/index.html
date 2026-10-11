@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=6897b657">
+<link rel="stylesheet" href="css/app.css?v=95c37cbd">
 </head>
 <body>
 <div id="setup">
@@ -75,6 +75,7 @@
       <span class="rail-stage-name" aria-hidden="true">Practise</span>
       <button class="nav-item" type="button" data-view="train" data-icon="target" data-tip="Train - value, colour, anatomy, lines, perspective" aria-label="Train"></button>
       <button class="nav-item" type="button" data-view="forms" data-icon="cube" data-tip="3D forms - light on simple forms and heads" aria-label="3D forms"></button>
+      <button class="nav-item" type="button" data-view="handbook" data-icon="book" data-tip="Handbook - short lessons, each with a demonstration you can move" aria-label="Handbook"></button>
     </div>
     <div class="rail-stage" role="group" aria-label="Paint" data-stage="Paint"
          data-blurb="Draw from the references, in your own medium.">
@@ -376,6 +377,7 @@
               <button type="button" role="tab" data-tab="character" aria-selected="false" title="A character's colours - hair, skin, eyes, clothes - with shadow, light and how to mix them">Character</button>
               <button type="button" role="tab" data-tab="greys" aria-selected="false" title="Warm, neutral and cool greys from these paints, light to dark">Greys</button>
               <button type="button" role="tab" data-tab="mixing" aria-selected="false" title="Every paint mixed with every other, on a sheet to print and paint">Mixing</button>
+              <button type="button" role="tab" data-tab="match" aria-selected="false" title="A colour to hit: choose the paints, the parts and the water, and see how close you land">Match</button>
               <button type="button" role="tab" data-tab="glazing" aria-selected="false" title="One paint glazed over another, against mixing them on the palette">Glazing</button>
               <button type="button" role="tab" data-tab="light" aria-selected="false" title="A colour in the light and in its shadow, under the sun, a window, a lamp - and how to mix both">Light</button>
               <button type="button" role="tab" data-tab="pigments" aria-selected="false" title="Your paints: which glaze cleanly, lift off, granulate or fade">Pigments</button>
@@ -455,6 +457,29 @@
                 <button type="button" id="mcSave" class="ghost" title="The same sheet as an SVG at the paper's real size">Save SVG</button>
               </div>
               <div class="count" id="mcSheetNote"></div>
+            </div>
+            <!-- js/match.js: a colour to hit with your own mix. -->
+            <div class="col-tab" data-tab="match" role="tabpanel">
+              <h4>Mix this colour</h4>
+              <div class="mt-pair" role="group" aria-label="The target and your mix">
+                <figure><i id="mtTarget"></i><figcaption>Target <span id="mtTargetHex"></span></figcaption></figure>
+                <figure><i id="mtMine"></i><figcaption>Yours <span id="mtMineHex"></span></figcaption></figure>
+              </div>
+              <div class="row mt-bar">
+                <button type="button" id="mtNew" class="ghost" title="A new colour your palette can make">New colour</button>
+                <label class="lt-own" title="Aim at a colour of your own">or your own <input type="color" id="mtOwn" aria-label="Target colour" value="#c86a4a"></label>
+              </div>
+              <div id="mtSlots" class="mt-slots"></div>
+              <div class="mt-water" id="mtWaterRow"><label for="mtWater">Water</label><input type="range" id="mtWater" min="5" max="100" step="5" value="50"><output id="mtWaterOut"></output></div>
+              <div class="count" id="mtVerdict" role="status"></div>
+              <div class="row mt-bar">
+                <button type="button" id="mtKeep" class="primary" disabled>Remember it</button>
+                <button type="button" id="mtShow" class="ghost" title="The best recipe this palette has for the colour">Show a recipe</button>
+              </div>
+              <div id="mtAnswer"></div>
+              <h4>Recipes you have hit</h4>
+              <div id="mtMemory"></div>
+              <div class="count" id="mtNote"></div>
             </div>
             <!-- js/glazing.js: each paint over each, and one crossing explained. -->
             <div class="col-tab" data-tab="glazing" role="tabpanel">
@@ -583,6 +608,15 @@
 
       <!-- Palette generator - see showPalette() in js/palette.js, which
            loads the first time this opens. Nothing here needs a library. -->
+      <!-- The handbook - see showHandbook() in js/handbook.js, which loads the
+           first time this opens. The lessons are built there. -->
+      <div id="viewHandbook" class="hidden">
+        <div class="hb-body">
+          <nav class="hb-list" id="hbList" aria-label="Lessons"></nav>
+          <article class="hb-lesson" id="hbLesson"></article>
+        </div>
+      </div>
+
       <div id="viewPalette" class="hidden">
         <div class="row pg-bar">
           <button type="button" id="pgGenerate" class="primary" title="A new palette - or press Space">New palette</button>
@@ -1903,8 +1937,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=22c8ce74"></script>
-<script src="js/setup.js?v=9d314563"></script>
+<script src="js/core.js?v=1f89a714"></script>
+<script src="js/setup.js?v=a6abf9a4"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
@@ -1920,11 +1954,11 @@
 <script src="js/stages.js?v=c7fb5944"></script>
 <script src="js/pins.js?v=4236ff1b"></script>
 <script src="js/workspace.js?v=ee1d5d03"></script>
-<script src="js/train.js?v=e27f8e07"></script>
+<script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=e89c8cb0"></script>
+<script src="js/command.js?v=82341319"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=bdc0902d"></script>
+<script src="js/whatsnew.js?v=6bad5022"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -1946,9 +1980,9 @@
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
-<script src="js/forms-models.js?v=e99aefb1"></script>
+<script src="js/forms-models.js?v=f5e1042a"></script>
 <script src="js/forms-settings.js?v=47a50035"></script>
-<script src="js/forms.js?v=fced3f57"></script>
+<script src="js/forms.js?v=5353c764"></script>
 <script src="js/forms-api.js?v=26a7a46c"></script>
 </template>
 <template id="lazy-backup">
@@ -1961,16 +1995,20 @@
 <template id="lazy-perspective">
 <script src="js/perspective.js?v=44d5bc98"></script>
 </template>
+<template id="lazy-handbook">
+<script src="js/handbook.js?v=8c9251dd"></script>
+</template>
 <template id="lazy-palette">
 <script src="js/palette.js?v=3af4eb0c"></script>
 </template>
 <template id="lazy-colour">
-<script src="js/colour.js?v=fae53b1d"></script>
+<script src="js/colour.js?v=68e116fa"></script>
 <script src="js/wheel.js?v=4f33cec4"></script>
 <script src="js/character.js?v=bcdb859d"></script>
 <script src="js/greys.js?v=eb123ff3"></script>
 <script src="js/glazing.js?v=e54dd6ce"></script>
 <script src="js/mixing.js?v=0d50a6f6"></script>
+<script src="js/match.js?v=6c1c129f"></script>
 <script src="js/light.js?v=b67afe9c"></script>
 <script src="js/pigments.js?v=55a1f5c1"></script>
 </template>

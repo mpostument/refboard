@@ -95,7 +95,7 @@ const FORM_DEFAULTS = {
   // The camera's roll (a Dutch angle) in degrees, and the fisheye lens -
   // see ANIME_SHOTS and renderFisheye().
   roll: 0, fisheye: false,
-  lines: false, horizon: false, lightMarker: true, vp: false, ellipses: false, floorGrid: false, zones: false, bones: false, muscles: false,
+  lines: false, horizon: false, lightMarker: true, vp: false, ellipses: false, floorGrid: false, zones: false, hatch: false, bones: false, muscles: false,
   count: 10, anyShape: true, memorySecs: 15,
   // A figure's height in heads, drawn across it - see drawFormHeads().
   heads: false,
