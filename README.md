@@ -483,7 +483,17 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   your own paints washed out and a band lifted from it, kept by how much the
   paint stains and how old the wash is (the Pigments tab's numbers); *Masking
   fluid* - the film over a wash, peeled to hard-edged whites, then softened on one
-  side.
+  side. A third chapter, *Pen textures* (the texture library), has six more, each
+  a short rule for the hand in strokes, with a pen size from 0.05 to 0.8 mm and a
+  practice sheet to print (the example and six empty boxes): *Wood* - long lines
+  that part round a knot and never cross, the pen lifted now and then, and a
+  warning when the lines run into each other for the pen chosen; *Stone* - a block
+  of three planes hatched at their own angles, darker as they turn from the light;
+  *Foliage* - a scribble of small marks, denser on the shadow side with the lit
+  edge left ragged; *Fur* - tapered flicks that hang along the form; *Water* -
+  horizontal dashes with white gaps, closer toward the horizon, and a reflection
+  that is darker and broken by the ripple; *Brick* - a few bricks drawn well and
+  the rest hinted at.
 - **Mix this colour** - the Colour studio's Match tab (Ctrl+K "mix this colour"):
   a colour to hit, one your palette can make or one of your own, and up to three
   of your paints with their parts and, in watercolour, the water. Your mix is

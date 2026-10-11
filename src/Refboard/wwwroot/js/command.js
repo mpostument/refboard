@@ -64,7 +64,7 @@ const COMMAND_WORDS = {
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex seasons season spring summer autumn winter morning noon dusk fog landscape times of day',
   'view-train': 'drill practice exercise test',
   'view-sky': 'sky skies cloud clouds cumulus cirrus stratus storm sunset sunrise dawn dusk golden hour night stars moon weather wet drying dry humidity temperature wind plein air forecast rain study reference',
-  'view-handbook': 'handbook lessons learn theory demonstration light form aerial perspective mixing value colour course tutorial book',
+  'view-handbook': 'handbook lessons learn theory demonstration light form aerial perspective mixing value colour course tutorial book pen textures wood stone foliage fur water brick ink hatching practice sheet',
   btnLibrary: 'folders packs',
   btnPaint: 'session timed timer draw go begin',
   btnLightbox: 'lightbox light box trace tracing transfer copy sketch final watercolour paper tablet screen real size mirror',

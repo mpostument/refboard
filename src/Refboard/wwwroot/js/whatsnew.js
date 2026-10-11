@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'pen-textures', title: 'Pen textures: wood, stone, foliage, fur, water, brick',
+    text: "Practise > Handbook (or Ctrl+K), a third chapter: how to say six textures in ink strokes. Each is a short rule for the hand with a demonstration to move and a pen size from 0.05 to 0.8 mm, and each prints a practice sheet - the example and six empty boxes to try it in.",
+    act: 'Open it', run: () => setView({ kind: 'handbook' }) },
   { id: 'seasons-palettes', title: 'Seasons and times of day: ready palettes for a landscape',
     text: "Prepare > Palettes (or Ctrl+K), above Harmony: spring, summer, autumn, winter, morning, noon, dusk and fog - six colours each, with what makes the season or the hour and what to do with it. They replace the row (Undo brings yours back), come with recipes for your paints, and are pulled in to what your paints can reach when Only what my paints mix is on.",
     act: 'Open it', run: () => setView({ kind: 'palette' }) },

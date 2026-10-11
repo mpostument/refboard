@@ -681,8 +681,6 @@ rather than the photo's own colour; and a slider for how much is left to
 the wash.
 - **Line art preview.** The photo shown as a line drawing, as hatching or
   as stippling - to plan a piece in liner, ballpoint or ink.
-- **Texture library for pen.** How to say wood, stone, foliage, fur,
-  water, brick in strokes - examples and practice sheets.
 - **Presets by medium.** "Liner sketch, 5 min", "watercolour study,
   45 min with stages", "pencil value study, 20 min" - each with its timer,
   its overlays and its advice.
@@ -867,7 +865,14 @@ the wash.
   you should have seen. Still to come: lessons on edges, on composition
   (with the schemes), on perspective (with the grid), on temperature; the
   light lesson on the real 3D forms rather than a small ray tracer; and a
-  quiz at the end of each, kept with the trainer's scores.
+  quiz at the end of each, kept with the trainer's scores. A third chapter, Pen
+  textures (`js/pentextures.js`), is in: wood, stone, foliage, fur, water and brick
+  as rules for the hand, each drawn from a few numbers with a pen size from 0.05 to
+  0.8 mm, and a practice sheet to print. They are models of a hand's habit, drawn
+  by eye and not compared with a pen drawing by hand. Still to come: more textures
+  (hair, cloth, glass, metal, clouds, sand, skin and pores, feathers, scales), a
+  texture drawn onto a shape of your own, the practice sheet at the true scale of
+  the pen on your paper, and a photo of what you drew checked against the rule.
 
 - **Free learning resources.** For each topic, links to good free lessons
   (Proko, drawabox and others): the app gives the practice, they give the
