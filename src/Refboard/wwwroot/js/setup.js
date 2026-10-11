@@ -1199,6 +1199,10 @@ function updateViewMeta() {
     m.textContent = 'A sheet to print and draw over - vanishing points on a horizon, on your own paper at its real size - or how tall a person is anywhere in a picture, from the horizon.';
     return;
   }
+  if (view.kind === 'sky') {
+    m.textContent = 'A sky to study, at any time of day and in any weather - and how fast a wash will dry in the air you have today.';
+    return;
+  }
   if (view.kind === 'handbook') {
     m.textContent = 'Short lessons, each with a demonstration you can move - light on a form, aerial perspective, mixing, value against colour.';
     return;
@@ -1234,6 +1238,7 @@ function viewTitle() {
     case 'palette': return 'Palettes';
     case 'museum': return 'Museums';
     case 'perspective': return 'Perspective grid';
+    case 'sky': return 'Sky and weather';
     case 'handbook': return 'Handbook';
     default:      return 'Dashboard';
   }
@@ -1250,7 +1255,7 @@ function setView(next) {
 
   const forms = view.kind === 'forms', train = view.kind === 'train', colour = view.kind === 'colour';
   const generate = view.kind === 'generate', palette = view.kind === 'palette', museum = view.kind === 'museum';
-  const perspective = view.kind === 'perspective', handbook = view.kind === 'handbook';
+  const perspective = view.kind === 'perspective', handbook = view.kind === 'handbook', sky = view.kind === 'sky';
   el('viewBrowse').classList.toggle('hidden', !browsing);
   el('viewForms').classList.toggle('hidden', !forms);
   el('viewTrain').classList.toggle('hidden', !train);
@@ -1260,12 +1265,13 @@ function setView(next) {
   el('viewMuseum').classList.toggle('hidden', !museum);
   el('viewPerspective').classList.toggle('hidden', !perspective);
   el('viewHandbook').classList.toggle('hidden', !handbook);
+  el('viewSky').classList.toggle('hidden', !sky);
   el('mainBody').classList.toggle('forms-mode', forms);
   // The Session inspector is for drawing from the library. Here it only took
   // width from the stage; its one use in this view - the interval for Draw
   // random forms - has its own control in the 3D panel. The trainers have
   // no use for it at all.
-  const tool = forms || train || colour || generate || palette || museum || perspective || handbook;
+  const tool = forms || train || colour || generate || palette || museum || perspective || handbook || sky;
   el('setup').classList.toggle('forms-mode', tool);
   el('viewDashboard').classList.toggle('hidden', browsing || tool);
   el('searchbar').classList.toggle('hidden', !browsing);
@@ -1287,6 +1293,7 @@ function setView(next) {
   if (museum) openLazyView('museum', () => showMuseum());
   if (perspective) openLazyView('perspective', () => showPerspective());
   if (handbook) openLazyView('handbook', () => showHandbook());
+  if (sky) openLazyView('sky', () => showSky());
   if (generate) showGenerate();
   el('sidebar').classList.remove('peek');
   shellSync();

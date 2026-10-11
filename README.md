@@ -155,6 +155,31 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   in a photo, and check whether a figure in the distance is the right size.
   Sliders and a button that stands five people along the ground do all of it
   without a pointer; two quick presses on a person take it off.
+- **Sky and weather** - one section under Prepare, with two halves (Ctrl+K
+  "sky", "clouds" or "weather").
+  *Skies* paints a sky on the spot: dawn, morning, noon, golden hour, dusk or
+  night; clear, cumulus, a broken layer, overcast, cirrus wisps or a storm; how
+  much of the sky the clouds cover; and what is under it - nothing, low hills
+  or the sea with the sun's path on it. The clouds are fractal noise on a flat
+  deck seen in perspective, so they crowd and flatten toward the horizon; each
+  is lit by one more sample of the noise toward the sun (a face looking at it is
+  bright, one turned away dark, a thin edge near the sun glows). The note gives
+  the sky's colours - the top, the horizon, a lit and a shaded cloud, measured
+  off the picture - and how to paint that sky in watercolour. A new sky at a
+  click, kept as a PNG, or opened in the workspace where the value, edge and
+  marker tools work on it like on any reference.
+  *Weather* says how fast a wash will dry. Set the air's temperature, humidity
+  and wind - what a thermometer and a hygrometer say - or ask Open-Meteo (free,
+  no key) about a place, searched by name or by where the browser says you are;
+  only the place's coordinates are sent, and only when you press a button. The
+  model is the vapour pressure deficit (how far the air is from holding all the
+  water it could) times a wind factor, anchored on one reading - 22 C, 50%,
+  still air: a medium wash loses its shine in about five minutes - and it is a
+  rule of thumb, which the page says. It gives the time until the wash loses its
+  shine (the wet-in-wet window) and until it is dry to the touch, for paper in
+  the shade, in direct sun or indoors; advice for a fast, a steady or a slow day
+  and for frost, heat, wind and rain; the next twelve hours in a table with the
+  best hour for a wash marked; and the sunset with the golden hour.
   It is the other half of the Perspective check in a session, which finds the
   points in a picture; this makes the sheet to build on. Kept as you left it.
 - **Museums** - public-domain pictures from open collections, searched from

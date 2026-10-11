@@ -557,9 +557,21 @@ packs (below), and moving a picture to another folder by hand.
   sweep, a rectangle with one corner dissolved), and the picture's own
   focus point leading it when it has one.
 
-- **Weather for watercolour.** Humidity and temperature for the plein air
-  spot from Open-Meteo (free, no key). They set how fast watercolour
-  dries.
+- **Weather for watercolour, the rest.** In place (`js/weather.js`, Prepare >
+  Sky and weather > Weather, Ctrl+K "weather"): the air's temperature, humidity
+  and wind set by hand or fetched from Open-Meteo for a searched place or where
+  the browser says you are (coordinates only, only on a button), turned into
+  minutes until a wash loses its shine and until it is dry to the touch -
+  `wxDrying()`: the vapour pressure deficit times a wind factor, anchored on
+  22 C, 50%, still air = five minutes, sun on the paper half as fast again,
+  indoors still air - with advice for the day and for frost, heat, wind and
+  rain, the next twelve hours with the best one marked, and the sunset's golden
+  hour. The anchor is a rule of thumb, never checked against a stopwatch and a
+  real wash. Still to come: the model fitted to the painter's own timings (time
+  a wash, tell the app, and the anchor moves), different papers (hot-press,
+  rough, a sized sheet) and a thick wash against a thin one, a day's plan as
+  strips (when to do the big sky, when the detail), and ink, gouache and oil
+  - ink dries like a wash, oil by other rules.
 
 - **Preview as watercolour, the rest.** In place (`js/watercolour.js`,
   Workspace > Colour and Onto paper, a layer, Ctrl+K "watercolour"): the
@@ -873,8 +885,19 @@ the wash.
 
 ## Watercolour practice
 
-- **Skies.** Procedural skies and clouds at different times of day, as
-  references for sky studies.
+- **Skies, the rest.** In place (`js/sky.js`, Prepare > Sky and weather >
+  Skies, Ctrl+K "sky"): a sky from noise, `skyRender()` - six times of day, six
+  kinds of cloud (clear, cumulus, a broken layer, overcast, cirrus, storm), a
+  cover, and nothing, low hills or the sea beneath; the clouds' deck seen in
+  perspective, lit by a second sample of the noise toward the sun, their colours
+  measured off the picture and a note on how to paint that sky. The colours are
+  tuned by eye, an estimate of a sky's and not a measurement of one, and a
+  cloud's shape is noise rather than a model of the air. Still to come: sunrise
+  and sunset with the sun's light on the land (the hills lit from the side),
+  mist and rain, a moving sky (the same one an hour later, as a series for
+  cloud studies), the sky of a given place and time from the weather's own
+  cloud cover and the sun's real position, trees and a skyline to put under it,
+  and the picture at a larger size than 960 by 540.
 - **Techniques guide.** Salt, spatter, dry brush, lifting, masking fluid:
   when to use each, with examples.
 

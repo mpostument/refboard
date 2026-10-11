@@ -15,6 +15,12 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'skies', title: 'Skies: a sky to study, made to order',
+    text: "Prepare > Sky and weather: a sky painted on the spot - dawn, morning, noon, golden hour, dusk or night; clear, cumulus, a broken layer, overcast, cirrus wisps or a storm; how much of the sky the clouds cover; and what is under it, nothing, low hills or the sea. The clouds are lit from the sun and crowd toward the horizon as a real deck does. The note gives the sky's colours - the top, the horizon, a lit and a shaded cloud - and how to paint it in watercolour. A new one at a click; save it, or open it in the workspace and use the value and edge tools on it.",
+    act: 'Open it', run: () => { try { localStorage.setItem('refboard.skyMode.v1', 'sky'); } catch { /* the sky opens */ } setView({ kind: 'sky' }); } },
+  { id: 'weather', title: 'Weather for watercolour: how fast a wash dries today',
+    text: "Prepare > Sky and weather > Weather: set the air's temperature, humidity and wind - or ask Open-Meteo (free, no key) about a place - and see how long a wash lasts before it loses its shine, the time to work wet-in-wet, and when it is dry to the touch; in the shade, in the sun or indoors. A forecast for the next hours marks the best one to paint a wash in, and the sunset gives the golden hour. Only the place's coordinates are sent, and only when you press a button. It is a rule of thumb, and says so.",
+    act: 'Open it', run: () => { try { localStorage.setItem('refboard.skyMode.v1', 'weather'); } catch { /* the sky opens */ } setView({ kind: 'sky' }); } },
   { id: 'people-perspective', title: 'People in perspective: how tall anyone is, anywhere',
     text: "Prepare > Perspective grid > People: the horizon is your eye level, and it fixes how tall a person is at any distance. Set a white figure - on someone in a photo of your own, or as tall as you drew them - drag the eye level to where it is, and click the ground to stand an adult, a child or someone tall: each comes out the right size, with the dashed lines through feet and through heads meeting on the horizon. The note says where the horizon crosses an adult and a child, and whether the view is high or low.",
     act: 'Open it', run: () => { try { localStorage.setItem('refboard.perspectiveMode.v1', 'people'); } catch { /* the sheet opens */ } setView({ kind: 'perspective' }); } },

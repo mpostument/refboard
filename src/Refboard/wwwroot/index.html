@@ -41,7 +41,7 @@
 <!-- The one script in <head>: it sets the saved theme's colours before
      anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=b9366368">
+<link rel="stylesheet" href="css/app.css?v=83efc813">
 </head>
 <body>
 <div id="setup">
@@ -67,6 +67,7 @@
       <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
       <button class="nav-item" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
       <button class="nav-item" type="button" data-view="perspective" data-icon="perspective" data-tip="Perspective grid - vanishing points on your paper to print and draw over, and how tall people are anywhere in a picture" aria-label="Perspective grid"></button>
+      <button class="nav-item" type="button" data-view="sky" data-icon="sky" data-tip="Sky and weather - a sky to study at any time of day, and how fast a wash will dry today" aria-label="Sky and weather"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
       <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
     </div>
@@ -633,6 +634,58 @@
               <svg id="ppSvg" role="img" viewBox="0 0 1000 640" aria-label="People in perspective"><g id="ppBase"></g><g id="ppTop"></g></svg>
             </div>
             <div class="count pg-note" id="ppNote" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sky and weather - see showSky() in js/sky.js, which loads with js/weather.js the first
+           time this opens. Two halves, the sky and the weather, and the switch between them. -->
+      <div id="viewSky" class="hidden">
+        <div class="chips pg-modes" id="skyMode" role="group" aria-label="What to work on">
+          <button type="button" class="chip" data-mode="sky" aria-pressed="true" title="A sky to study: a time of day, a kind of cloud, how much, what is under it">Skies</button>
+          <button type="button" class="chip" data-mode="weather" aria-pressed="false" title="How fast a wash will dry today, from the temperature, the humidity and the wind">Weather</button>
+        </div>
+        <div class="pg-body" id="skyPane">
+          <div class="pg-controls" role="group" aria-label="The sky">
+            <div class="pg-row"><span class="pg-label">Time of day</span><div class="chips" id="skyTime" role="group" aria-label="Time of day"></div></div>
+            <div class="pg-row"><span class="pg-label">Clouds</span><div class="chips" id="skyCloud" role="group" aria-label="Kind of cloud"></div></div>
+            <label class="pg-slide" id="skyCoverRow"><span>Cover</span><input type="range" id="skyCover" min="0" max="100" step="1" title="How much of the sky the clouds cover"><output id="skyCoverOut" for="skyCover"></output></label>
+            <div class="pg-row"><span class="pg-label">Under it</span><div class="chips" id="skyGround" role="group" aria-label="What is under the sky"></div></div>
+            <div class="pg-row">
+              <button type="button" class="primary" id="skyAnother" title="The same kind of sky, made again with different clouds">Another sky</button>
+              <button type="button" class="ghost" id="skySave" title="The sky as a PNG, to keep or to print">Save PNG</button>
+              <button type="button" class="ghost" id="skyOpen" title="Open it in the workspace, where the value, edge and marker tools work on it like on any reference">Open in workspace</button>
+            </div>
+          </div>
+          <div class="pg-stage">
+            <div class="sky-stage"><canvas id="skyCanvas" role="img" aria-label="A sky" width="960" height="540"></canvas></div>
+            <div class="count" id="skyStatus" aria-live="polite"></div>
+            <div class="count pg-note" id="skyNote"></div>
+          </div>
+        </div>
+        <div class="pg-body hidden" id="wxPane">
+          <div class="pg-controls" role="group" aria-label="The air">
+            <p class="te-note">How fast a wash dries depends on the air. Set what a thermometer and a hygrometer say - or ask Open-Meteo (free, no key) about a place: only the place's coordinates are sent, and only when you press a button.</p>
+            <div class="pg-row"><label class="pg-label" for="wxPlace">Place</label>
+              <input type="search" id="wxPlace" placeholder="A city or a village" autocomplete="off">
+              <button type="button" class="ghost" id="wxFind" title="Look the place up on Open-Meteo">Find</button></div>
+            <div class="chips" id="wxResults" role="group" aria-label="Places found"></div>
+            <div class="pg-row">
+              <button type="button" class="ghost" id="wxHere" title="Ask the browser where you are - it will ask your permission">Where I am</button>
+              <button type="button" class="ghost" id="wxRefresh" title="Ask Open-Meteo again about the chosen place">Refresh</button>
+              <span class="count" id="wxWhere"></span></div>
+            <label class="pg-slide"><span>Air</span><input type="range" id="wxT" min="-10" max="42" step="1" title="The temperature of the air"><output id="wxTOut" for="wxT"></output></label>
+            <label class="pg-slide"><span>Humidity</span><input type="range" id="wxRH" min="5" max="100" step="1" title="Relative humidity"><output id="wxRHOut" for="wxRH"></output></label>
+            <label class="pg-slide"><span>Wind</span><input type="range" id="wxWind" min="0" max="14" step="0.5" title="Wind speed in metres a second - a breeze you can feel is about 3"><output id="wxWindOut" for="wxWind"></output></label>
+            <div class="pg-row"><label class="pg-label" for="wxSpot">The paper is</label>
+              <select id="wxSpot" title="Where the sheet is: direct sun warms the paper and dries it faster, indoors the air is still">
+                <option value="shade">In the shade</option><option value="sun">In direct sun</option><option value="indoors">Indoors, still air</option></select></div>
+            <div class="count" id="wxStatus" aria-live="polite"></div>
+          </div>
+          <div class="pg-stage">
+            <div class="wx-card" id="wxCard" aria-live="polite"></div>
+            <div id="wxHours"></div>
+            <div class="count pg-note" id="wxNote"></div>
           </div>
         </div>
       </div>
@@ -1970,8 +2023,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=a913eb25"></script>
-<script src="js/setup.js?v=a9579b0f"></script>
+<script src="js/core.js?v=568b547c"></script>
+<script src="js/setup.js?v=bc13a3bd"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=8f9197ee"></script>
 <script src="js/uploads.js?v=d63feedc"></script>
@@ -1989,9 +2042,9 @@
 <script src="js/workspace.js?v=07c3eecd"></script>
 <script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=755a1ae9"></script>
+<script src="js/command.js?v=3fe22dcd"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=68c1d81a"></script>
+<script src="js/whatsnew.js?v=307d6186"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -2030,6 +2083,10 @@
 <template id="lazy-perspective">
 <script src="js/perspective.js?v=f66c3085"></script>
 <script src="js/people.js?v=a28749f9"></script>
+</template>
+<template id="lazy-sky">
+<script src="js/sky.js?v=28ee2a34"></script>
+<script src="js/weather.js?v=1755c7f6"></script>
 </template>
 <template id="lazy-handbook">
 <script src="js/handbook.js?v=8c9251dd"></script>
