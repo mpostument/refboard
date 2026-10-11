@@ -23,6 +23,7 @@ const WS_TABS = [
     { hud: 'amounts', about: 'how much light, middle and dark - one leads, or equal amounts that read as undecided' },
     { hud: 'markers', about: 'the picture in the greys of a marker set - each area with its marker number, lightest first' },
     { hud: 'grades', about: 'for graphite: which grade of pencil each area wants, 2H to 8B - the hardest first' },
+    { hud: 'quality', about: 'is it a good picture to work from: blown highlights, lost shadows, flat light, focus, size' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [
@@ -49,6 +50,7 @@ const WS_TABS = [
     { hud: 'lineweight', about: 'which lines heavy, which light - the shadow side, the big contours, tapered ends' },
     { hud: 'linewash', about: 'liner plus watercolour: which contours to ink, which to leave for the colour change alone' },
     { hud: 'edges', about: 'where the line can be lost: a soft edge wants a broken line, or none' },
+    { hud: 'flow', about: 'which way to hatch: strokes that go the way the form goes - hair, folds, muscle' },
     { hud: 'angle', about: 'the angle of a line, and lengths against each other, before it is drawn' },
   ] },
   { id: 'figure', label: 'Figure', q: 'How is the body built?', tools: [

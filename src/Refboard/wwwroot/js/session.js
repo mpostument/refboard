@@ -514,6 +514,8 @@ function show(src) {
     if (state.rhythmsOn) runRhythms();
     if (state.markersOn) runMarkers();
     if (state.gradesOn) runGrades();
+    if (state.qualityOn) runQuality();
+    if (state.flowOn) runFlow();
     if (state.watercolourOn) runWatercolour();
     if (state.vignetteOn) runVignette();
     refreshValueTools();
@@ -582,6 +584,8 @@ function show(src) {
   clearRhythms();
   clearMarkers();
   clearGrades();
+  clearQuality();
+  clearFlow();
   // Previous, browsing and a new pose all start plainly visible; only
   // advance() - a fresh pose - opens a memory study, right after this.
   setMemoryPhase(null);

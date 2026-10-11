@@ -33,6 +33,8 @@ const ICONS = {
   rhythms: '<path d="M6 4c1 5 8 6 6 11s-1 4 0 5"/><path d="M18 4c-1 5-8 6-6 11"/><circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="18" cy="4" r="1" fill="currentColor"/>',
   vignette: '<path d="M12 4c4.500 0 8 3 8 7.500S16 20 11 20 4 16.500 4 12 7.500 4 12 4z" stroke-dasharray="2.500 2"/><circle cx="12" cy="12" r="3"/>',
   watercolour: '<path d="M12 3.500C8.500 8 6 10.800 6 14.500a6 6 0 0 0 12 0C18 10.800 15.500 8 12 3.500z"/><path d="M9 15a3 3 0 0 0 3 3" opacity=".55"/>',
+  quality: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8.500 12.500l2.500 2.500 4.500-5"/>',
+  flow: '<path d="M4 8c5-3.500 11-3.500 16 0"/><path d="M4 12.500c5-3.500 11-3.500 16 0"/><path d="M4 17c5-3.500 11-3.500 16 0"/>',
   grades: '<path d="M15.500 5.500l3 3L8 19l-4 1 1-4z"/><path d="M13.500 7.500l3 3"/><path d="M5 16l3 3" opacity=".5"/>',
   markers: '<path d="M5 20l3-1 9.500-11.500-2-2L6 17z"/><path d="M14 8l2 2"/><path d="M5 20l.5-2.500" opacity=".5"/>',
   tangents: '<circle cx="8" cy="12" r="4.5"/><circle cx="16.5" cy="12" r="4"/><path d="M3 4h18" opacity=".45"/>',
@@ -552,6 +554,8 @@ const state = {
   vignetteOn: false,          // the vignette's island shown - see toggleVignette()
   watercolourOn: false,       // the picture as watercolour shown - see toggleWatercolour()
   gradesOn: false,            // pencil grades' areas shown - see toggleGrades()
+  qualityOn: false,           // the reference check shown - see toggleQuality()
+  flowOn: false,              // stroke directions shown - see toggleFlow()
   toneOn: false,              // toned paper's zones shown - see toggleTone()
   // Build-up stages - an index into MASTER_STAGES, or null. See setStage().
   stage: null,

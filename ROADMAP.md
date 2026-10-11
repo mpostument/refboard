@@ -403,9 +403,20 @@ packs (below), and moving a picture to another folder by hand.
   light comes from, how many people - so the pool can be filtered ("seated
   poses lit from the side"). A job for the backend: the container can work
   the tags out ahead of time, the way it already works out tone features.
-- **Reference quality check.** A warning on a poor reference: flat flash
-  light, blown highlights, a wide-angle lens distorting a portrait (a
-  selfie's big nose and small ears - the face model can see it).
+- **Reference check, the rest.** In place (`js/quality.js`, Workspace >
+  Value, a layer, Ctrl+K "reference"): five checks on the pixels, each ok, with
+  care or poor - highlights that are pure white and shadows that are pure
+  black (pink and blue over the picture; clipped pixels that the picture's own
+  edge reaches are a backdrop and counted apart), the spread of lightness from
+  the 2nd to the 98th percentile (flat light), the steepest edge found (focus;
+  the top half-percent of the gradient, so one crisp eye passes a soft
+  portrait) and the file's long side. The limits are estimates tuned by eye on
+  a few pictures, not measured against a body of references; on a painting,
+  bare paper reads as lost white. Still to come: a wide-angle lens distorting a
+  portrait (a selfie's big nose and small ears - the face model can see it),
+  a flash's hard shadow edge and red eyes, a colour cast, JPEG blocking, and
+  the limits checked against a library of references people have called good
+  and bad.
 
 - **Search by colour.** Find references with a given palette - "warm
   dusk", "green with a red accent" - or close in colour to a chosen one.
@@ -772,9 +783,16 @@ the wash.
 - **A hand from a photo onto the 3D hand.** The hand model finds the
   joints; pose the mannequin hand to match, then turn and relight it.
 
-- **Stroke direction.** Over the photo, a field of directions along the
-  form (hair, folds, muscle) - to hatch with pencil or liner round the
-  form rather than across it.
+- **Stroke direction, the rest.** In place (`js/flow.js`, Workspace > Line, a
+  layer, Ctrl+K "stroke"): short strokes along the form where the picture has a
+  direction to give - the lightness gradient's structure tensor averaged over a
+  neighbourhood (a stroke runs at a right angle to its axis), kept where its
+  coherence and its trace are enough, so a flat patch gets none; coarse, medium
+  or fine; the note names the direction most strokes lean to and whether it is
+  one direction (a plait) or many (a face). Still to come: strokes joined into
+  curves that follow the field rather than short straight ticks, the field
+  turned into the Hatching map's strokes (see Ink) and a choice of across the
+  tone for grass and rain.
 - **Motion arcs from a video.** The pose model run over a video's frames,
   drawing the arcs traced by the hands, feet and head - how a movement
   makes a line, for dynamic gesture studies.

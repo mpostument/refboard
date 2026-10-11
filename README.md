@@ -313,6 +313,24 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   grade to the softest, and when the picture's darks are darker than any
   graphite goes. A grade's lightness is the darkest it lays comfortably, an
   estimate; the grey markers and the pencils are never shown together.
+- **Reference check** - in a session (Workspace > Value, Layers, Ctrl+K): is
+  this a good picture to work from? Five checks, each ok, with care or poor:
+  highlights that are pure white and shadows that are pure black (pink and
+  blue over the picture; a plain white or black backdrop that the picture's
+  own edge reaches is counted apart, not as lost), the spread of values (flat
+  light - a flash, an overcast haze - leaves the shadows saying nothing of the
+  form), focus (the steepest edge found, so a soft-focus portrait with one
+  crisp eye passes) and the size of the file. A line on each says what to do.
+  The limits are estimates; on a painting, bare paper is white by design.
+- **Stroke direction** - in a session (Workspace > Line, Layers, Ctrl+K):
+  short strokes laid over the picture the way the form goes - along a strand
+  of hair, a fold, a muscle - to hatch with pencil or liner round the form,
+  not across it. Worked out from the tone with a structure tensor (the
+  gradient's outer product averaged over a neighbourhood: its axis is the
+  direction, its coherence says whether there is one), drawn only where the
+  picture has a direction to give - a flat wall gets none. Coarse, medium or
+  fine; the note names the direction most strokes lean to and says whether
+  it is one direction or the form turning.
 - **Vignette** - in a session (Workspace > Composition and Onto paper,
   Layers, Ctrl+K): where a watercolour study could end and dissolve into bare
   paper. Interest is worked out from edges, strong colour and darkness against

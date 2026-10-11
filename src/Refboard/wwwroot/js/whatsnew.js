@@ -15,6 +15,12 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'reference-check', title: 'Reference check: is it a good picture to work from?',
+    text: "Over any picture in a session (Workspace > Value, or Ctrl+K): the pixels read for what a poor reference hides - highlights that are pure white and shadows that are pure black (marked in pink and blue, with a plain white or black backdrop left out), flat light, focus and size - each as ok, with care or poor, and a line on what to do. The limits are estimates.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'stroke-direction', title: 'Stroke direction: which way to hatch',
+    text: "Over any picture in a session (Workspace > Line, or Ctrl+K): short strokes laid the way the form goes - along a strand of hair, a fold, a muscle - found where the picture has a direction to give (a flat patch gets none). Coarse, medium or fine; the note names the direction most strokes lean to and says whether it is one direction or the form turning.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'handbook', title: 'Handbook: lessons with a demonstration to move',
     text: "Practise > Handbook (or Ctrl+K): four short lessons, each a few sentences of theory beside a demonstration you can move. Light on a form: a lit ball whose light you turn, with the values of the light, halftone, core shadow and reflected light read off it - push the reflected light up until the form goes flat. Aerial perspective: five ridges and the air between, in colour and in grey. Mixing paint: two of your paints slid into each other beside what averaging their colours would give, and recipes for a colour. Value against colour: a red and another hue slid to the same value until they are one patch in grey. Each ends with things to try, and what you should have seen.",
     act: 'Open it', run: () => setView({ kind: 'handbook' }) },
