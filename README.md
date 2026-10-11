@@ -209,6 +209,13 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   ComfyUI, *Use in Generate* makes it Generate's Colours - as the few tags
   the model knows for a palette as a whole (limited palette, its leading
   hue's theme, muted or pastel, dark or high contrast), not one per colour.
+  *Seasons and times of day* start a landscape from six ready colours - spring,
+  summer, autumn, winter, morning, noon, dusk or fog - each with what makes the
+  season or the hour (noon's widest range and bluest sky, fog's narrow range
+  and almost no colour, dusk's one warm band at the horizon) and what to do with
+  it; they replace the row (Undo brings yours back), come with recipes for your
+  paints, and are pulled in to what those paints can reach when *Only what my
+  paints mix* is on.
 - **Lightbox** - your tablet as a lightbox, to trace a sketch onto good
   paper (Paint > Lightbox, or Workspace > Onto paper for the picture open).
   A photo of the sketch is straightened from its four corners (found by

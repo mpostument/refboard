@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'seasons-palettes', title: 'Seasons and times of day: ready palettes for a landscape',
+    text: "Prepare > Palettes (or Ctrl+K), above Harmony: spring, summer, autumn, winter, morning, noon, dusk and fog - six colours each, with what makes the season or the hour and what to do with it. They replace the row (Undo brings yours back), come with recipes for your paints, and are pulled in to what your paints can reach when Only what my paints mix is on.",
+    act: 'Open it', run: () => setView({ kind: 'palette' }) },
   { id: 'pens-ballpoint', title: 'Pen sizes for liners, pressure for a ballpoint',
     text: "Two more answers for ink. Line weight (k) now says which liner goes where - a Fine, Standard or Bold set of three sizes, 0.05 to 0.8 mm, with each pen's share of the drawing, and the lines can be coloured by pen. The Hatching map has a pen of its own: a liner with a size for each layer, or a ballpoint, drawn by pressure instead of layers, with the whites you must not touch marked first because it cannot be erased.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

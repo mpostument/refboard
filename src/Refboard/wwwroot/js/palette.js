@@ -133,6 +133,7 @@ function palgenGenerate() {
 /* ---- changing the palette: every change goes through here, so Undo can
    step back through all of them. */
 function palgenSet(swatches, harmonyUsed) {
+  pg.scene = null;   // any change takes it out of a season's palette (js/seasons.js)
   if (pg.swatches) {
     pg.undo.push(pg.swatches);
     if (pg.undo.length > PALGEN_UNDO_MAX) pg.undo.shift();
@@ -146,7 +147,7 @@ function palgenSet(swatches, harmonyUsed) {
 function palgenUndo() {
   if (!pg.undo.length) return;
   pg.swatches = pg.undo.pop();
-  pg.lastHarmony = null; pg.shades = null;
+  pg.lastHarmony = null; pg.shades = null; pg.scene = null;
   palgenSave();
   palgenRender();
 }
@@ -238,6 +239,7 @@ function palgenRender() {
   el('pgPaintHint').textContent = `Recipes for ${PAINT_PALETTES[paintPaletteKey()].label.toLowerCase()} in ${PAINT_MEDIA[paintMedium()].toLowerCase()} - the same as the Colour studio's and the eyedropper's.` +
     (pg.fit ? ' Only what they mix is on: every new colour is pulled in to what these paints can reach, its value kept.' : '');
   palgenRenderSaved();
+  if (typeof seasonsSync === 'function') seasonsSync();
   palgenMixes();
 }
 

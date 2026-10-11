@@ -696,9 +696,6 @@ the wash.
 - **Master palettes.** Ready palettes taken from known paintings and
   watercolours (Sargent, Sorolla, Turner, Zorn), to lay over a reference
   with In gamut.
-- **Seasons and times of day.** Ready palettes for landscape - spring,
-  summer, autumn, winter, morning, noon, dusk, fog - with recipes for
-  your materials.
 - **Skin tones, the rest.** In place (`js/skin.js`, Colour studio > Skin, Ctrl+K
   "skin"): nine complexions under the Light tab's six lights, each as light,
   halftone, shadow and reflected light (the shadow with the skin's red glow, the
@@ -739,7 +736,12 @@ the wash.
   the theme tag is strong, the picture comes out nearly in one hue).
   Still to come: a palette kept to a project (once Projects are in), and
   recipes for pencils and markers by their own names once My materials
-  lists them.
+  lists them. Seasons and times of day are in (`js/seasons.js`, a row of
+  chips above Harmony): eight hand-chosen scenes of six colours each, what
+  makes each one and what to do with it; the colours are my choice by eye,
+  not sampled from paintings. Still to come: more scenes (rain, snow at dusk,
+  the golden hour, a desert, the sea), a scene's palette made from a picture's
+  own season, and a scene that suits the reference you are working from.
 
 - **The best limited palette for a reference.** Choose "3 paints" or
   "5 markers": from your own materials, the ones that cover the most of
