@@ -35,6 +35,11 @@ const COMMAND_WORDS = {
   btnMarkers: 'grey gray markers tombow n95 n15 value study greys brush pen numbers',
   btnVignette: 'vignette fade dissolve edge lost paper bare end border island focus shape watercolour study unpainted margin',
   btnWatercolour: 'watercolour preview painted wash washes render paint it as granulation grain paper white bare edges wet soft hard bloom transparent look before painting',
+  btnQuality: 'reference check quality good bad poor photo blown highlights clipped crushed shadows flat light flash hazy blurry blur soft focus sharp small resolution size worth drawing from',
+  btnHatch: 'hatching map hatch layers cross-hatch crosshatch ink pen liner ballpoint value density build up strokes lines shading darks how many layers',
+  btnComposition: 'composition analysis saliency eye goes attention balance weight centre of interest leading lines crop cropping thirds visual weight heavy side',
+  btnSimplify: 'simplify shapes flat posterize posterise big shapes masses blocks simplified colour value study plan reduce detail areas patches',
+  btnFlow: 'stroke direction flow hatching hatch which way direction lines follow the form hair folds muscle grain contour cross-contour pen liner pencil',
   btnGrades: 'pencil grades graphite 2h h hb b 2b 4b 6b 8b hardness lead soft hard value study greys which pencil',
   btnTone: 'toned paper tone grey tan black white pencil gel pen gouache chalk pastel mid tone middle value darks lights highlights leave the paper',
   btnRange: 'paper range darkest darks lights white clipped blown lost detail values limit medium contrast',
@@ -57,6 +62,7 @@ const COMMAND_WORDS = {
   'view-perspective': 'perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex',
   'view-train': 'drill practice exercise test',
+  'view-sky': 'sky skies cloud clouds cumulus cirrus stratus storm sunset sunrise dawn dusk golden hour night stars moon weather wet drying dry humidity temperature wind plein air forecast rain study reference',
   'view-handbook': 'handbook lessons learn theory demonstration light form aerial perspective mixing value colour course tutorial book',
   btnLibrary: 'folders packs',
   btnPaint: 'session timed timer draw go begin',
@@ -176,6 +182,8 @@ function collectCommands() {
     run: () => openColour('glazing') });
   if (!inSession) out.push({ id: 'light', label: 'Light and shadow colours', hint: 'Colour studio', words: 'light shadow shade sun sky warm cool temperature golden hour window lamp candle moon moonlight overcast cel shading kelvin',
     run: () => openColour('light') });
+  if (!inSession) out.push({ id: 'skin', label: 'Skin tones', hint: 'Colour studio', words: 'skin tones complexion flesh face portrait light halftone half-tone shadow reflected light bounce fair olive tan brown deep dark pale anime recipe mix watercolour oil',
+    run: () => openColour('skin') });
   if (!inSession) out.push({ id: 'pigments', label: 'Pigment guide', hint: 'Colour studio', words: 'pigment pigments paint paints tube guide transparent opaque staining stain lift lifting granulation granulating grainy lightfast lightfastness fade fading colour index watercolour',
     run: () => openColour('pigments') });
   if (!inSession) out.push({ id: 'anime-head-3d', label: 'Anime head in 3D', hint: '3D forms', words: 'face eyes iris lashes turn angle three-quarter manga model hair ring locks fringe bangs',

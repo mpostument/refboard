@@ -262,6 +262,7 @@ function pgChange(patch) {
 }
 
 function showPerspective() {
+  ppShowModes();                            // js/people.js: the switch between the sheet and People
   if (persp) { pgRender(); return; }
   persp = pgLoad();
   el('pgFormat').innerHTML = Object.entries(PG_FORMATS).map(([k, f]) => `<option value="${k}">${esc(f.label)}</option>`).join('');

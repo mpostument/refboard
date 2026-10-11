@@ -19,6 +19,10 @@
    needs WebGL and a shadow map): it is the same idea in 60 lines, so the
    lesson can read the tones back off the picture and say them in numbers.
 
+   A lesson may name a `group`, which heads the run of lessons that share it in
+   the list: the techniques guide (js/techniques.js, loaded after this file)
+   adds its own chapter to HB_LESSONS that way.
+
    Loaded the first time the view opens (loadSection('handbook')). */
 "use strict";
 
@@ -280,7 +284,8 @@ const HB_LESSONS = [
 function hbShow() {
   if (!hb) hbLoad();
   const list = el('hbList'), lesson = HB_LESSONS.find(l => l.id === hb.lesson), i = HB_LESSONS.indexOf(lesson);
-  list.innerHTML = HB_LESSONS.map((l, n) => `<button type="button" class="hb-item" data-hb-lesson="${l.id}" aria-current="${l.id === hb.lesson}">` +
+  const groupOf = l => l.group || 'The basics';
+  list.innerHTML = HB_LESSONS.map((l, n) => (n && groupOf(l) === groupOf(HB_LESSONS[n - 1]) ? '' : `<div class="hb-group">${esc(groupOf(l))}</div>`) + `<button type="button" class="hb-item" data-hb-lesson="${l.id}" aria-current="${l.id === hb.lesson}">` +
     `<span class="hb-n">${hb.done.includes(l.id) ? '&#10003;' : n + 1}</span><span>${esc(l.title)}</span></button>`).join('');
   const body = el('hbLesson'), done = hb.done.includes(lesson.id);
   body.innerHTML = `<h3>${esc(lesson.title)}</h3>
