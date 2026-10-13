@@ -179,7 +179,8 @@ async function restoreBackup() {
       }
     }
     for (const [k, v] of Object.entries(m.local)) {
-      if (k.startsWith('refboard.') && typeof v === 'string') localStorage.setItem(k, v);
+      // Which profile is in use is this device's, not the backup's.
+      if (k.startsWith('refboard.') && k !== PROFILES_KEY && k !== PROFILE_KEY && typeof v === 'string') localStorage.setItem(k, v);
     }
     // The backup's own keep switch must not turn off what was just filled.
     if (storeMode === 'browser') localStorage.setItem(KEEP_KEY, 'on');

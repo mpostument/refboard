@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'profiles', title: 'Profiles: one app, more than one painter',
+    text: "Your data > Profile (or Ctrl+K, \"paint as\"): if someone else at home paints too, give each person a name. Each profile has its own materials, themes, practice log, trainer scores, boards and list of uploads, and a backup is of the one you are in. No password - it only decides whose things are shown. What you have now becomes Main and is not touched. A picture uploaded by both is still kept once.",
+    act: 'Open Your data', run: () => openData() },
   { id: 'session-kinds', title: 'Kind of session: a liner sketch, a pencil study, a watercolour in stages',
     text: "The top of the Timing tab (before you start): six kinds of session - gesture warm-up, liner sketch, pencil value study, hatching study, ink wash study, watercolour study. One press sets the interval or schedule, the stages and grayscale, says what to do with the time, and turns on the overlays that kind of work wants when the session starts. It only moves the controls that were already there: change any of them and it lets go.",
     act: 'Open it', run: () => setView({ kind: 'drop' }) },

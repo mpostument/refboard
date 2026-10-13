@@ -110,8 +110,18 @@ refboard setting in localStorage, every document, every upload - as one
   on the container's disk: they want to go through `/api/items` too, so a
   second browser at home sees them.
 
-- **Several profiles.** If someone else at home paints too: each with
-  their own boards, materials, log and stats, on the one server.
+- **Several profiles, the rest.** In place (`js/profile.js`, Your data >
+  Profile, Ctrl+K "paint as"): a profile is a name; the main one keeps its
+  keys as they were, any other reads and writes the same localStorage keys
+  as `refboard.p.<id>.…` (the page's getItem/setItem are replaced, so no
+  caller changed) and its documents under the kind `u-<id>-<kind>`; the
+  device's own - which profile, the tour and news seen, keeping in the
+  browser - and the scene API's two channels are shared; uploaded files are
+  kept once for everyone. Still to come: the settings are in the browser's
+  localStorage, so a profile made on one device is empty on another until
+  *Settings on the server* is done; no password or PIN; pictures the
+  server's ComfyUI generates join the main profile's list, whoever asked;
+  a way to delete a profile's things (today it is only taken off the list).
 - **Backup to the cloud.** An automatic backup of the archive to Google
   Drive, OneDrive or another drive, so work and boards do not go with the
   computer's disk.

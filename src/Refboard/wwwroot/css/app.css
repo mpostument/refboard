@@ -1849,6 +1849,12 @@ section { margin-bottom: 20px; }
 .sheet-box h3 { margin: 6px 0 0; font-size: 13px; font-weight: 600; }
 #dataSheet .te-actions label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 #dataSheet .te-actions input[type=text] { flex: 1; min-width: 0; }
+#dataSheet .te-actions select {
+  flex: 1; min-width: 0; background: var(--panel-2); border: 1px solid var(--line-hi); border-radius: 6px;
+  padding: 5px 8px; font-size: 13px;
+}
+#profileMsg.bad { color: var(--bad); }
+#profileMsg:empty { display: none; }
 /* A button that reads as a link - the footer's What's new. */
 button.linkish { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
 .sheet-box .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 6px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }

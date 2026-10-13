@@ -36,12 +36,15 @@
 
   Settings are localStorage. What you upload is kept by js/store.js - on the
   container's disk when there is one, else in this browser if you ask. There
-  is one user and no account, so a server-side session would be pure overhead.
+  is no account: a profile (js/profile.js) is a choice of whose settings and
+  upload list are shown, so a server-side session would be pure overhead.
 -->
-<!-- The one script in <head>: it sets the saved theme's colours before
-     anything is drawn. Everything else loads at the end of <body>. -->
+<!-- Two scripts in <head>: profile.js, which says whose settings are read
+     (it must come first), and theme.js, which sets the saved theme's colours
+     before anything is drawn. Everything else loads at the end of <body>. -->
+<script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=5b4e6126">
+<link rel="stylesheet" href="css/app.css?v=b613dff2">
 </head>
 <body>
 <div id="setup">
@@ -1335,6 +1338,18 @@
       <h2 id="dataTitle" class="grow">Your data</h2>
       <button type="button" class="ghost" id="dataClose" title="Close (Esc)">Close</button>
     </div>
+    <h3>Profile</h3>
+    <p class="te-note" id="profileNote"></p>
+    <div class="row te-actions">
+      <label class="grow">Painting as <select id="profileSelect"></select></label>
+      <button type="button" class="ghost" id="profileForget" title="Takes the profile off this device's list; its things are kept, and adding the same name brings them back">Remove from list</button>
+    </div>
+    <div class="row te-actions">
+      <label class="grow">New profile <input type="text" id="profileName" maxlength="24" placeholder="A name"></label>
+      <button type="button" class="primary" id="profileAdd">Add and switch</button>
+    </div>
+    <p class="te-note" id="profileMsg" role="status"></p>
+    <h3>Where it is kept</h3>
     <p class="te-note" id="dataWhere"></p>
     <label class="opt hidden" id="dataKeepWrap"><input type="checkbox" id="dataKeep"> Keep in this browser</label>
     <p class="te-note" id="dataCounts"></p>
@@ -2053,8 +2068,8 @@
 <script src="js/core.js?v=c1aa437a"></script>
 <script src="js/setup.js?v=bc13a3bd"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
-<script src="js/store.js?v=8f9197ee"></script>
-<script src="js/uploads.js?v=d63feedc"></script>
+<script src="js/store.js?v=ea07afe9"></script>
+<script src="js/uploads.js?v=a59c8f0e"></script>
 <script src="js/session.js?v=a539a2e3"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
@@ -2069,9 +2084,9 @@
 <script src="js/workspace.js?v=db149ee0"></script>
 <script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=36b05019"></script>
+<script src="js/command.js?v=568392f3"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=ef9dbc9f"></script>
+<script src="js/whatsnew.js?v=2da1cd22"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -2107,7 +2122,7 @@
 </template>
 <template id="lazy-backup">
 <script src="js/portfolio.js?v=6dcc64d8"></script>
-<script src="js/backup.js?v=e7ec2fe2"></script>
+<script src="js/backup.js?v=3e0da4c8"></script>
 </template>
 <template id="lazy-museum">
 <script src="js/museum.js?v=029edce5"></script>

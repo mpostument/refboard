@@ -825,6 +825,14 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   Pages, with *Keep in this browser* ticked), or not at all. *Your data*
   downloads everything - settings, materials, themes, 3D scenes, practice
   log, trainer scores, uploads - as one .zip, and restores from one.
+- **Profiles** - *Your data > Profile* (or Ctrl+K, "paint as"): if someone
+  else at home paints too, each person gets a name of their own, and with it
+  their own settings, materials, themes, practice log, trainer scores, boards
+  and list of uploads - on this browser, and on the server for the uploads.
+  There is no password: a profile only decides whose things are shown. The
+  first one, *Main*, is what was always there, untouched. A profile taken off
+  the list keeps its things; adding the same name brings them back. A backup
+  is of the profile in use. A picture uploaded twice is still kept once.
 - **Portfolio site** - *Your data > Make a portfolio site*: the pictures kept
   as your own work (the photos Compare takes of your drawing, and anything
   sorted into My work), newest first, as one .zip - an index.html with its

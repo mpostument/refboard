@@ -23,11 +23,14 @@ public sealed class ReindexHostedService(RefboardOptions opts, UserStore store, 
     }
 
     // The tags each sorted upload was given, by its file name - from the
-    // "uploads" documents the page keeps (see js/store.js, js/sort.js).
+    // "uploads" documents the page keeps (see js/store.js, js/sort.js). Every
+    // profile keeps its own ("u-ann-uploads", see js/profile.js), but a file
+    // is kept once, so the library reads them all.
     private Func<string, List<string>?> UploadTags()
     {
         var byFile = new Dictionary<string, List<string>>();
-        foreach (var doc in store.ListItems("uploads").Values)
+        var kinds = store.ListKinds().Where(k => k == "uploads" || (k.StartsWith("u-") && k.EndsWith("-uploads")));
+        foreach (var doc in kinds.SelectMany(k => store.ListItems(k).Values))
         {
             if (doc.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
             if (!doc.TryGetProperty("file", out var f) || f.ValueKind != System.Text.Json.JsonValueKind.String) continue;

@@ -10,6 +10,9 @@
      memory  - otherwise: kept until the page is reloaded, as before.
    Every place that keeps something says which of the three it is -
    storeWhere() - rather than letting a reload be the way to find out.
+   A document's kind is the profile's own (profileKind(), js/profile.js):
+   the code below and its callers say "uploads", the place keeping it says
+   "u-ann-uploads" for Ann. Files are not: one picture is kept once.
    One of the classic scripts index.html loads in order; see the note there. */
 "use strict";
 
@@ -161,6 +164,7 @@ async function storeDeleteFile(id) {
 /* ---- documents: small JSON, by kind and id - both lower-case letters,
    digits, - and _ (the server refuses anything else). */
 async function storeItems(kind) {
+  kind = profileKind(kind);
   if (storeMode === 'server') return apiJson('api/items/' + kind);
   const out = {}, pre = kind + '/';
   const all = storeMode === 'browser' ? (await idbAll('items')).map(i => [i.key, i.doc]) : [...storeMem.items];
@@ -169,6 +173,7 @@ async function storeItems(kind) {
 }
 
 async function storeItem(kind, id) {
+  kind = profileKind(kind);
   if (storeMode === 'server') {
     const r = await fetch(`api/items/${kind}/${id}`);
     return r.ok ? r.json() : null;
@@ -178,12 +183,13 @@ async function storeItem(kind, id) {
 }
 
 async function storeKinds() {
-  if (storeMode === 'server') return apiJson('api/items');
+  if (storeMode === 'server') return profileKindsOf(await apiJson('api/items'));
   const keys = storeMode === 'browser' ? (await idbAll('items')).map(i => i.key) : [...storeMem.items.keys()];
-  return [...new Set(keys.map(k => k.split('/')[0]))];
+  return profileKindsOf([...new Set(keys.map(k => k.split('/')[0]))]);
 }
 
 async function storePutItem(kind, id, doc) {
+  kind = profileKind(kind);
   if (storeMode === 'server') {
     await apiJson(`api/items/${kind}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
   } else if (storeMode === 'browser') await idbPut('items', { key: `${kind}/${id}`, doc });
@@ -191,6 +197,7 @@ async function storePutItem(kind, id, doc) {
 }
 
 async function storeDeleteItem(kind, id) {
+  kind = profileKind(kind);
   if (storeMode === 'server') await fetch(`api/items/${kind}/${id}`, { method: 'DELETE' });
   else if (storeMode === 'browser') await idbDel('items', `${kind}/${id}`);
   else storeMem.items.delete(`${kind}/${id}`);
