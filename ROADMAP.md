@@ -178,6 +178,13 @@ shot, Light and time, The picture; `GEN_GROUPS`) in two columns, a group
 hidden with its rows, and More tags and Generate stay at the bottom of the
 view. Still to come on it: a setting for the 3D forms' scene, and eras
 (ancient, medieval, Victorian, Kyivan Rus) apart from places.
+In place too: a Character field (`genCharacterTags()` - name then series, lower
+case, after "1girl, solo") and Setting: Original, a character's own clothes: it
+owns Detail, since Simple and Beginner's "minimalist, simple drawing" drew a
+named character bare-shouldered (seen 2026-10-15, Animagine XL 4.0, bust); any
+other outfit adds "alternate costume". Still to come: a list of characters
+already drawn, to pick from; her own hair and eye colour kept when the Hair
+and Eyes rows say Any; and a picture of her as a reference to draw from.
 In place too: Modern, Steampunk and Post-apocalyptic Settings, each with a
 temple, and a Clothes row - Setting's (the default), Everyday, Festive,
 Uniform, Armour, Winter, each with tags per Setting (`wear(girl, boy)` for

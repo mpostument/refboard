@@ -20,8 +20,9 @@ test('a setting is clothes on a character, buildings on a street, what grows in 
   // which came from America much later.
   const all = await page.evaluate(() => JSON.stringify(GEN_CHOICES.find(c => c.id === 'setting').options.find(o => o.id === 'slavic').tags));
   for (const w of ['church', 'orthodox', 'onion dome', 'sunflower', 'cross']) expect(all).not.toContain(w);
-  // Every setting has tags for all three subjects it is asked for.
-  const missing = await page.evaluate(() => GEN_CHOICES.find(c => c.id === 'setting').options.filter(o => o.id !== 'any')
+  // Every setting has tags for all three subjects it is asked for - but Any,
+  // and Original (a character's own clothes: nothing added), which place nothing.
+  const missing = await page.evaluate(() => GEN_CHOICES.find(c => c.id === 'setting').options.filter(o => !['any', 'original'].includes(o.id))
     .flatMap(o => ['character', 'landscape', 'building'].filter(s => !o.tags[s]).map(s => o.id + ':' + s)));
   expect(missing).toEqual([]);
 });

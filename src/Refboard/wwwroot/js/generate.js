@@ -32,6 +32,7 @@ const BEGIN = '(minimalist:1.4), (simple drawing:1.3), flat color, simple colori
 // alone the model dressed her in a gown with a train - so, with no Setting
 // to dress her, a t-shirt and trousers.
 const BEGIN_FIGURE = '(minimalist:1.2), simple drawing, simple coloring, clean lineart, straight hair';
+
 const BEGIN_AVOID = '(detailed:1.3), intricate details, complex background, gradient, shiny skin, shiny hair';
 // Clothes that differ for a girl and a boy: a ball gown or a prince's cape.
 const wear = (girl, boy) => ch => ch.who === 'boy' ? boy : girl;
@@ -285,6 +286,13 @@ const GEN_CHOICES = [
   // its wooden houses. Nature and animals are much the same anywhere.
   { id: 'setting', label: 'Setting', for: ['character', 'landscape', 'building'], options: [
     ANY,
+    // A character named under Character, as she is drawn: nothing is added to
+    // her clothes, and Detail is left out (owns): Simple and Beginner's
+    // "minimalist, simple drawing" drew her bare-shouldered - the clothes
+    // nothing here names went with the detail (2026-10-15). Only a character
+    // has an own outfit, so only she is offered it.
+    { id: 'original', label: 'Original', words: 'original outfit', owns: 'detail', when: ch => ch.subject === 'character',
+      hint: "The character's own clothes and world - nothing is added, and Detail is ignored. Name her under Character." },
     { id: 'modern', label: 'Modern', words: 'modern', tags: {
       character: 'casual, hoodie, jeans, sneakers, contemporary',
       landscape: 'suburb, park, road, power lines, contemporary',
@@ -448,7 +456,7 @@ const GEN_GROUPS = [
   ['picture', 'The picture', ['medium', 'edges', 'colours', 'detail', 'ground']],
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', detail: 'simple',
   ground: 'plain' };
@@ -506,6 +514,19 @@ function genHueTag(L, h) {
    the picture is filed under, and its shape: tall for a figure, wide for a landscape or a
    street, square for a head or a close look at something. extra is what was
    typed under More tags, passed on as it is. */
+/* The Character field as the tags the model learnt: the name, then the series,
+   lower case as Danbooru writes them. "Frieren (Sousou no Frieren)" and
+   "frieren, sousou no frieren" are the same; "ayanami_rei" is "ayanami rei".
+   An empty field is no character. */
+function genCharacterTags(text) {
+  const t = String(text || '').trim().slice(0, 80);
+  if (!t) return '';
+  const m = t.match(/^([^()]+?)\s*\(([^()]+)\)\s*$/);
+  const parts = (m ? [m[1], m[2]] : t.split(','))
+    .map(x => x.replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()).filter(Boolean);
+  return [...new Set(parts)].join(', ');
+}
+
 function genPrompt(choices, extra = '') {
   const subjects = GEN_CHOICES.find(c => c.id === 'subject').options;
   const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
@@ -518,14 +539,26 @@ function genPrompt(choices, extra = '') {
     const x = v && typeof v === 'object' ? v[subject] ?? v[setting] ?? v._ ?? '' : v;
     return typeof x === 'function' ? x(ch) : x;
   };
-  const rows = GEN_CHOICES.filter(c => genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })).map(c =>
-    [c, c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id])]);
+  // An option with a `when` that does not hold (Original, for a landscape)
+  // is the row's default instead.
+  const rows = GEN_CHOICES.filter(c => genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })).map(c => {
+    const o = c.options.find(x => x.id === choices[c.id]);
+    return [c, o && (!o.when || o.when(ch)) ? o : c.options.find(x => x.id === GEN_DEFAULTS[c.id])];
+  });
+  // Her tags come right after "1girl, solo", as the model's own sheet orders
+  // them. When something other than her own clothes is asked for, "alternate
+  // costume" says the outfit is not hers: the Armour of a named character
+  // kept her mantle without it.
+  const who = genCharacterTags(choices.character);
+  const outfitAsked = (c, o) => (c.id === 'setting' && !['any', 'original'].includes(o.id)) || (c.id === 'clothes' && o.id !== 'setting');
+  const outfit = rows.some(([c, o]) => outfitAsked(c, o));
   // A row whose tags another choice has taken over (a temple, Setting's).
   const owned = new Set(rows.map(([, o]) => o.owns).filter(Boolean));
   const tags = [], words = [], avoid = [];
   for (const [c, o] of rows) {
     const t = owned.has(c.id) ? '' : pick(o.tags), a = owned.has(c.id) ? '' : pick(o.avoid);
     if (t) tags.push(t);
+    if (c.id === 'who' && who) tags.push(who, ...(outfit ? ['alternate costume'] : []));
     if (a) avoid.push(a);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
     if (w) words.push(w);
@@ -533,7 +566,7 @@ function genPrompt(choices, extra = '') {
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
   const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' || choices.framing === 'expressions' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
-  return { prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
+  return { prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...(who ? [who.split(', ')[0]] : []), ...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
 
 /* "watercolor (medium)" is the Danbooru tag, but to ComfyUI bare brackets
@@ -559,6 +592,7 @@ const genControlAvailable = () => genControl;
 
 function loadGenChoices() {
   try { Object.assign(genChoices, JSON.parse(localStorage.getItem(GEN_KEY)) || {}); } catch { /* defaults */ }
+  if (typeof genChoices.character !== 'string') genChoices.character = '';
   const p = genChoices.palette;
   if (!(Array.isArray(p) && p.length && p.every(c => Array.isArray(c) && c.length === 3 && c.every(n => Number.isInteger(n) && n >= 0 && n <= 255)))) {
     delete genChoices.palette;
@@ -713,8 +747,13 @@ function renderGenerate() {
       `aria-pressed="${genChoices[c.id] === o.id}"${off(o) || (o.hint ? ` title="${esc(o.hint)}"` : '')}>${label(o)}</button>`).join('') +
     (c.id === 'colours' ? `<button type="button" class="ghost" id="genToPalettes" title="Make or change a palette">Palettes</button>` : '') +
     '</div></div>';
+  // Who she is, in words - not a chip: any character there is. Hidden but
+  // for a character picture (syncGenRows).
+  const charRow = `<div class="gen-row gen-char" data-row="character"><label class="gen-extra" for="genCharacter">Character ` +
+    `<input type="text" id="genCharacter" maxlength="80" autocomplete="off" spellcheck="false" value="${esc(genChoices.character || '')}" ` +
+    `placeholder="e.g. Frieren, Sousou no Frieren"></label><p class="count" id="genCharHint" role="status"></p></div>`;
   el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
-    `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` +
+    `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` + (k === 'who' ? charRow : '') +
     ids.map(id => row(GEN_CHOICES.find(c => c.id === id))).join('') + '</section>').join('');
   syncGenRows();
   el('genWhere').textContent = 'Made by the ComfyUI your server is set up with, and kept in Uploads - ' +
@@ -724,11 +763,38 @@ function renderGenerate() {
 // Only the rows the choices ask: a landscape has no hair colour, ink no
 // wet-in-wet.
 function syncGenRows() {
-  for (const c of GEN_CHOICES)
-    el('genChoices').querySelector(`[data-row="${c.id}"]`).classList.toggle('hidden', !genApplies(c, genChoices));
+  const box = el('genChoices');
+  for (const c of GEN_CHOICES) {
+    box.querySelector(`[data-row="${c.id}"]`).classList.toggle('hidden', !genApplies(c, genChoices));
+    // An option offered only when() (Original: a character only): hidden
+    // when not, and a choice that was it goes back to the row's default.
+    for (const o of c.options) if (o.when)
+      box.querySelector(`[data-gen="${c.id}"][data-opt="${o.id}"]`)?.classList.toggle('hidden', !o.when(genChoices));
+    const cur = c.options.find(o => o.id === genChoices[c.id]);
+    if (cur?.when && !cur.when(genChoices)) {
+      genChoices[c.id] = GEN_DEFAULTS[c.id];
+      saveGenChoices();
+      for (const b of box.querySelectorAll(`[data-gen="${c.id}"]`)) b.setAttribute('aria-pressed', String(b.dataset.opt === genChoices[c.id]));
+    }
+  }
+  box.querySelector('[data-row="character"]')?.classList.toggle('hidden', genChoices.subject !== 'character');
+  syncGenCharHint();
   // A group with none of its rows asked (a landscape has no character) goes too.
   for (const g of el('genChoices').querySelectorAll('.gen-group'))
     g.classList.toggle('hidden', !g.querySelector('.gen-row:not(.hidden)'));
+}
+
+// What the Character field says to do next: the series (the model draws her
+// less like herself on a bare name), or Normal detail (Simple and Beginner
+// leave out clothes nothing names).
+function syncGenCharHint() {
+  const h = el('genCharHint'), who = genCharacterTags(genChoices.character);
+  if (!h) return;
+  h.textContent = !who ? '' : !who.includes(',')
+    ? 'Add her series after the name - without it she is drawn less like herself.'
+    : genChoices.detail === 'normal' ? ''
+    : genChoices.setting === 'original' ? 'Original draws her at Normal detail: Simple and Beginner would leave her clothes out.'
+    : 'Detail is not Normal: her clothes may be left out.';
 }
 
 const genMade = async () => (await listUploads()).filter(u => u.from === 'generate');
@@ -861,9 +927,17 @@ async function initGenerate() {
     saveGenChoices();
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
-    if (['subject', 'medium', 'framing'].includes(b.dataset.gen)) syncGenRows();
+    if (['subject', 'setting', 'medium', 'framing', 'detail'].includes(b.dataset.gen)) syncGenRows();
     renderGenPrompt();
   });
+  el('genChoices').addEventListener('input', e => {
+    if (e.target.id !== 'genCharacter') return;
+    genChoices.character = e.target.value.slice(0, 80);
+    saveGenChoices();
+    syncGenCharHint();
+    renderGenPrompt();
+  });
+  el('genChoices').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'genCharacter') runGenerate(); });
   try { Object.assign(genView, JSON.parse(localStorage.getItem(GEN_VIEW_KEY)) || {}); } catch { /* defaults */ }
   el('genPrompt').open = !!genView.open;
   el('genPrompt').addEventListener('toggle', () => {

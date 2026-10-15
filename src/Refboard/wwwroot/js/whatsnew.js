@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-character', title: 'Generate: any character, in her own clothes or another setting',
+    text: "The Character field, first under The character: type a name and its series - Frieren, Sousou no Frieren - and the model draws her; the name goes in the prompt right after 1girl, solo, and under it a note says to add the series if you left it out. Setting has Original: her own clothes and world, nothing added, drawn at Normal detail whatever Detail says (Simple and Beginner left her bare-shouldered). Any other Setting or Clothes dresses her in something else, and says \"alternate costume\" so her own does not leak back.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-pose-depth', title: 'Draw this pose: a depth map, and the light',
     text: "The 3D figure now goes to the ControlNet as a depth map - white where it is near, black behind, no floor - which is what a depth model reads a pose from; the shaded picture only told it where the light fell. The key light you set goes to Generate as its Light row (from behind: Backlit, from a side: From the side, low and across: Dramatic, from the camera's side: Soft), and From and the framing follow the camera. Draw this shot sets the light the same way.",
     act: 'Open the 3D view', run: () => openForms() },

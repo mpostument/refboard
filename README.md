@@ -588,6 +588,12 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   groups, two columns of them, with Generate kept at the bottom of the view;
   what was made can be deleted one at a time or all at once. *Prompt* shows
   the tags as sent and what the choices keep out, each a switch.
+  *Character* takes any character by name and series (*Frieren, Sousou no
+  Frieren*; *Frieren (Sousou no Frieren)* is read the same), placed in the
+  prompt after *1girl, solo*; *Setting: Original* draws her in her own
+  clothes, at Normal detail whatever *Detail* says (Simple and Beginner drop
+  clothes nothing names), and any other Setting or Clothes adds *alternate
+  costume* so her own does not come back.
 - **A studio layout** - dark throughout, an icon rail down the left for the
   sections, and the library and session controls as panels either side that
   fold away, so the image gets the screen. The session panel and the 3D

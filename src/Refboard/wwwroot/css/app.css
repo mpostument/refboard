@@ -1964,6 +1964,8 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #genAvoidReset { font-size: 11px; padding: 2px 8px; border: 0; background: transparent; color: var(--accent); cursor: pointer; }
 .gen-bar .gen-go { margin-top: 0; }
 .gen-extra { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+.gen-char .gen-extra { margin-top: 4px; }
+.gen-char .count { margin: 4px 0 0; min-height: 1.3em; }
 .gen-extra input { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
 .gen-go { gap: 12px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
 .gen-go label { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
