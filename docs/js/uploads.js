@@ -67,8 +67,32 @@ async function openUpload(u) {
   if (url) openInWorkspace(url, { label: u.name, tab: u.from === 'colour' ? 'colour' : 'value' });
 }
 
+/* ---- profiles (js/profile.js): whose settings and uploads are shown. */
+function renderProfiles() {
+  const list = profiles();
+  el('profileSelect').replaceChildren(...list.map(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name; o.selected = p.id === profileId;
+    return o;
+  }));
+  el('profileForget').disabled = profileId === PROFILE_DEFAULT;
+  el('profileNote').textContent = list.length === 1
+    ? 'Someone else paints here too? Give each person a profile: their own boards, materials, themes, practice log and uploads, on this server and this browser. No password - it only decides whose are shown.'
+    : `Painting as ${profileName()}. Each profile has its own boards, materials, themes, practice log and uploads; a picture uploaded twice is still kept once.`;
+  // Who is painting, on the button that opens the sheet - a profile is
+  // easy to forget you are in.
+  el('btnData').textContent = profileId === PROFILE_DEFAULT ? 'Your data...' : `Your data (${profileName()})...`;
+}
+
+function profileMessage(text, bad = false) {
+  el('profileMsg').textContent = text;
+  el('profileMsg').classList.toggle('bad', bad);
+}
+
 /* ---- the Your data sheet. */
 async function openData() {
+  renderProfiles();
+  profileMessage('');
   el('dataSheet').classList.remove('hidden');
   el('dataConfirm').classList.add('hidden');
   el('dataMsg').textContent = '';
@@ -91,13 +115,9 @@ function closeData() {
   dialogClosed(el('dataSheet'));
 }
 
-// This app's own keys in localStorage - what a backup takes from it.
-function localKeys() {
-  const out = [];
-  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('refboard.')) out.push(k); } }
-  catch { /* private mode */ }
-  return out.sort();
-}
+// This app's own keys in localStorage - what a backup takes from it. The
+// profile in use only (js/profile.js), by the names the code uses.
+const localKeys = () => profileLocalKeys().sort();
 
 function dataMessage(text, bad = false) {
   el('dataMsg').textContent = text;
@@ -119,6 +139,17 @@ function initUploads() {
   document.addEventListener('refboard:store', () => { renderUploads(); });
 
   el('btnData').addEventListener('click', openData);
+  el('profileSelect').addEventListener('change', e => profileSwitch(e.target.value));
+  const addProfile = () => {
+    const r = profileAdd(el('profileName').value);
+    if (r.error) return profileMessage(r.error, true);
+    if (!profileSwitch(r.id)) { renderProfiles(); profileMessage('That profile is already in use.'); }
+  };
+  el('profileAdd').addEventListener('click', addProfile);
+  el('profileName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addProfile(); } });
+  // The profile in use is the one the button removes; the page comes back as Main.
+  el('profileForget').addEventListener('click', () => { profileForget(profileId); location.reload(); });
+  renderProfiles();
   el('dataClose').addEventListener('click', closeData);
   initSheet(el('dataSheet'), closeData);
   const lazy = fn => () => loadSection('backup').then(fn, () => dataMessage('The backup could not load - check the connection.', true));

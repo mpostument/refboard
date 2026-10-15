@@ -2748,6 +2748,14 @@ function syncShotNote(panel) {
   note.classList.toggle('hidden', !html);
 }
 
+/* Generate's From row, from where the camera stands: below and above by its
+   height, else by how far round the subject it is. */
+function formViewChoice(sc, o) {
+  const turn = Math.abs(wrap180(sc.yaw - (o.ry || 0)));
+  return sc.pitch <= -8 ? 'below' : sc.pitch >= 40 ? 'above'
+    : turn < 22 ? 'front' : turn < 67 ? 'three' : turn < 125 ? 'profile' : 'back';
+}
+
 /* To Generate: the shot, by the names its rows use - From for the angle
    (below and above by the camera's height, else by how far round the
    subject it stands), Lens for the fisheye, the roll and the wide lens
@@ -2755,12 +2763,9 @@ function syncShotNote(panel) {
 function formShotToGenerate() {
   const o = formShotSubject();
   if (!o) return;
-  const sc = formScene, head = !!formShapeDef(o.shape).subject;
-  const turn = Math.abs(wrap180(sc.yaw - (o.ry || 0)));
-  const view = sc.pitch <= -8 ? 'below' : sc.pitch >= 40 ? 'above'
-    : turn < 22 ? 'front' : turn < 67 ? 'three' : turn < 125 ? 'profile' : 'back';
+  const sc = formScene, head = !!formShapeDef(o.shape).subject, view = formViewChoice(sc, o);
   const lens = sc.fisheye ? 'fisheye' : Math.abs(sc.roll) >= 8 ? 'dutch' : sc.focal <= 24 && sc.zoom <= 0.8 ? 'wide' : 'any';
-  Object.assign(genChoices, { subject: 'character', framing: head ? 'head' : 'full', view, lens });
+  Object.assign(genChoices, { subject: 'character', framing: head ? 'head' : 'full', view, lens, light: formLightChoice(sc) });
   saveGenChoices();
   renderGenerate();
   setView({ kind: 'generate' });
@@ -2883,6 +2888,72 @@ function formsSnapshot(sc) {
   // The canvas bitmap is captured when toBlob() is called, so the live view
   // redrawing over it afterwards cannot leak into the image.
   return new Promise(res => forms.renderer.domElement.toBlob(res, 'image/png')).finally(requestFormsRender);
+}
+
+/* The scene as a depth map: white where it is nearest the camera, black far
+   off and behind - what a depth ControlNet reads a pose and its volumes from.
+   A shaded render only tells it where the light fell. The forms alone: no
+   floor, grid, setting or light handles, or the floor's slope would be read
+   as part of the figure. The camera's near and far are closed in on the
+   forms for the render, so the figure spends the whole range of grey instead
+   of a few steps of it (a perspective depth buffer is spent mostly near the
+   camera). A fisheye is not a flat projection the depth material can draw:
+   that one falls back to the shaded render. */
+function formsDepthSnapshot(sc) {
+  if (sc.fisheye) return formsSnapshot(sc);
+  const F = forms, T = F.T, [ew, eh] = formExportSize();
+  formsRender(sc, ew, eh, true);
+  const cam = F.camera, { target, rad } = F.frame, d = cam.position.distanceTo(target);
+  const keep = new Set(F.meshes), hidden = [];
+  for (const o of F.scene.children)
+    if (!keep.has(o) && !o.isLight && o.visible) { o.visible = false; hidden.push(o); }
+  const was = { near: cam.near, far: cam.far, background: F.scene.background };
+  const mat = new T.MeshDepthMaterial();
+  try {
+    cam.near = Math.max(d * 0.01, d - rad * 1.05); cam.far = d + rad * 1.05;
+    cam.updateProjectionMatrix();
+    F.scene.overrideMaterial = mat;
+    F.scene.background = new T.Color(0x000000);
+    F.renderer.render(F.scene, cam);
+    // The depth the forms really span is thin beside the radius they were
+    // bracketed with (a standing figure is as deep as it is wide, not as
+    // tall), so the greys are stretched: the nearest bit to white, the
+    // farthest to a mid grey - the background stays black. Copied here, before
+    // the live view is drawn over the canvas again.
+    const src = F.renderer.domElement, out = document.createElement('canvas');
+    out.width = src.width; out.height = src.height;
+    const g = out.getContext('2d', { willReadFrequently: true });
+    g.drawImage(src, 0, 0);
+    const im = g.getImageData(0, 0, out.width, out.height), px = im.data;
+    let lo = 255, hi = 0;
+    for (let i = 0; i < px.length; i += 4) if (px[i] > 8) { if (px[i] < lo) lo = px[i]; if (px[i] > hi) hi = px[i]; }
+    if (hi > lo) for (let i = 0; i < px.length; i += 4) {
+      if (px[i] <= 8) { px[i] = px[i + 1] = px[i + 2] = 0; continue; }
+      px[i] = px[i + 1] = px[i + 2] = Math.round(60 + (px[i] - lo) / (hi - lo) * 195);
+    }
+    g.putImageData(im, 0, 0);
+    return new Promise(res => out.toBlob(res, 'image/png'));
+  } finally {
+    F.scene.overrideMaterial = null;
+    F.scene.background = was.background;
+    cam.near = was.near; cam.far = was.far; cam.updateProjectionMatrix();
+    for (const o of hidden) o.visible = true;
+    mat.dispose();
+    requestFormsRender();
+  }
+}
+
+/* Generate's Light row, from the 3D key light: its direction is measured
+   from the camera's side (0 = from behind the camera, 180 = from behind the
+   subject) and its height above the horizon. A depth map carries no light,
+   so this is the only way it reaches the picture. From behind the figure is
+   a backlight; from a side, a side light; low and across, a dramatic one;
+   and from the camera's side, soft. */
+function formLightChoice(sc) {
+  const az = Math.abs(wrap180(sc.lightAz)), el = sc.lightEl;
+  if (az >= 120) return 'back';
+  if (az >= 55) return el < 20 ? 'dramatic' : 'side';
+  return el < 15 ? 'dramatic' : 'soft';
 }
 
 function replaceFormUrls(blobs) {
@@ -3155,6 +3226,7 @@ function formsPanelHtml() {
         <button class="ghost" type="button" id="formPoseRandom" title="One of the poses above, every joint moved a little">Random pose</button>
         <button class="ghost" type="button" id="formPoseMirror" title="Left and right swapped, as in a mirror - the other half of a contrapposto">Mirror</button>
         <button class="ghost" type="button" id="formPoseReset" title="Back to the rest pose">Reset pose</button>
+        <button class="ghost hidden" type="button" id="formPoseGen" title="With your ComfyUI and a ControlNet: an anime character drawn in exactly this pose, from this camera">Draw this pose</button>
       </div>`,
     // The face, top down: hair, eyes, expression - the first two alike (a
     // style, the named colours, any other) under your characters, which set
@@ -3638,6 +3710,22 @@ function bindFormsPanel() {
   el('formPoseRandom').addEventListener('click', poseEdit(o => { o.pose = randomFormPose(formRigOf(o.shape)); }));
   el('formPoseMirror').addEventListener('click', poseEdit(mirrorFormPose));
   el('formPoseReset').addEventListener('click', poseEdit(o => { o.pose = {}; }));
+  // Only where a ControlNet can hold the picture to the figure.
+  el('formPoseGen').classList.toggle('hidden', !genControlAvailable());
+  el('formPoseGen').addEventListener('click', async () => {
+    const b = el('formPoseGen');
+    b.disabled = true;
+    try {
+      // The depth map holds the pose and the camera; the choices that would
+      // argue with it (From, the framing) follow the scene, and the key
+      // light - which a depth map cannot carry - goes in as Light.
+      const o = formShotSubject(), head = !!o && !!formShapeDef(o.shape).subject;
+      Object.assign(genChoices, { subject: 'character', framing: head ? 'head' : 'full', view: o ? formViewChoice(formScene, o) : 'front', lens: 'any', light: formLightChoice(formScene) });
+      saveGenChoices();
+      renderGenerate();
+      await genSetSource(await formsDepthSnapshot(formScene), 'pose');
+    } finally { b.disabled = false; }
+  });
   // The same form four times, near to far along a diagonal - the size change
   // and the air change can only be compared like with like. Placed by where
   // they land on screen (x over distance to the camera), so no far one hides
