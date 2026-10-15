@@ -92,3 +92,27 @@ test('the field, its hint, and Original in the page: typed, kept, hidden for a l
   await expect(page.locator('[data-gen="setting"][data-opt="original"]')).toBeHidden();
   await expect(page.locator('[data-gen="setting"][data-opt="any"]')).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('the characters drawn lately: newest first, the same one once, a click fills the field', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate**', r => r.fulfill({ json: { available: true, quality: 'masterpiece', negative: 'lowres' } }));
+  await openApp(page);
+  await page.evaluate(() => {
+    genCharsRemember('Frieren (Sousou no Frieren)');
+    genCharsRemember('Ayanami Rei (Evangelion)');
+    genCharsRemember('frieren, sousou no frieren');       // the first again, by its tags
+    genCharsRemember('   ');                                // nothing
+  });
+  await page.locator('.nav-item[data-view="generate"]').click();
+  const chips = page.locator('#genRecent .chip');
+  await expect(chips).toHaveText(['frieren, sousou no frieren', 'Ayanami Rei (Evangelion)']);
+  await page.locator('#genPrompt summary').click();
+  await chips.nth(1).click();
+  await expect(page.locator('#genCharacter')).toHaveValue('Ayanami Rei (Evangelion)');
+  await expect(page.locator('#genPromptBody')).toContainText('ayanami rei, evangelion');
+  await expect(chips.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(chips.nth(0)).toHaveAttribute('aria-pressed', 'false');
+  // Not offered for a landscape, with the field.
+  await page.click('[data-gen="subject"][data-opt="landscape"]');
+  await expect(page.locator('#genRecent')).toBeHidden();
+});

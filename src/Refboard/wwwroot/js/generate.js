@@ -527,6 +527,23 @@ function genCharacterTags(text) {
   return [...new Set(parts)].join(', ');
 }
 
+// The characters drawn lately, newest first, kept to pick from again: typing
+// "Frieren (Sousou no Frieren)" once is enough. The same one twice (by its
+// tags - "Frieren (Sousou no Frieren)" is "frieren, sousou no frieren") is one.
+const GEN_CHARS_KEY = 'refboard.generate.characters.v1', GEN_CHARS_MAX = 8;
+function genCharsLoad() {
+  try {
+    const v = JSON.parse(localStorage.getItem(GEN_CHARS_KEY));
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).slice(0, GEN_CHARS_MAX) : [];
+  } catch { return []; }
+}
+function genCharsRemember(text) {
+  const t = String(text || '').trim().slice(0, 80), key = genCharacterTags(t);
+  if (!key) return;
+  const list = [t, ...genCharsLoad().filter(x => genCharacterTags(x) !== key)].slice(0, GEN_CHARS_MAX);
+  try { localStorage.setItem(GEN_CHARS_KEY, JSON.stringify(list)); } catch { /* private mode */ }
+}
+
 function genPrompt(choices, extra = '') {
   const subjects = GEN_CHOICES.find(c => c.id === 'subject').options;
   const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
@@ -755,11 +772,13 @@ function renderGenerate() {
   // for a character picture (syncGenRows).
   const charRow = `<div class="gen-row gen-char" data-row="character"><label class="gen-extra" for="genCharacter">Character ` +
     `<input type="text" id="genCharacter" maxlength="80" autocomplete="off" spellcheck="false" value="${esc(genChoices.character || '')}" ` +
-    `placeholder="e.g. Frieren, Sousou no Frieren"></label><p class="count" id="genCharHint" role="status"></p></div>`;
+    `placeholder="e.g. Frieren, Sousou no Frieren"></label><p class="count" id="genCharHint" role="status"></p>` +
+    `<div class="chips gen-recent hidden" id="genRecent" role="group" aria-label="Characters drawn lately"></div></div>`;
   el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
     `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` + (k === 'who' ? charRow : '') +
     ids.map(id => row(GEN_CHOICES.find(c => c.id === id))).join('') + '</section>').join('');
   syncGenRows();
+  renderGenRecent();
   el('genWhere').textContent = 'Made by the ComfyUI your server is set up with, and kept in Uploads - ' +
     'the Generated group of the Uploads pack in the library, tagged with these choices.';
 }
@@ -786,6 +805,15 @@ function syncGenRows() {
   // A group with none of its rows asked (a landscape has no character) goes too.
   for (const g of el('genChoices').querySelectorAll('.gen-group'))
     g.classList.toggle('hidden', !g.querySelector('.gen-row:not(.hidden)'));
+}
+
+// The characters drawn lately as chips under the field; none, none shown.
+function renderGenRecent() {
+  const box = el('genRecent'), list = genCharsLoad(), now = genCharacterTags(genChoices.character);
+  if (!box) return;
+  box.classList.toggle('hidden', !list.length);
+  box.innerHTML = list.length ? `<span class="chips-group">Lately</span>` + list.map(t =>
+    `<button type="button" class="chip" data-char="${esc(t)}" aria-pressed="${genCharacterTags(t) === now}">${esc(t)}</button>`).join('') : '';
 }
 
 // What the Character field says to do next: the series (the model draws her
@@ -914,6 +942,7 @@ async function runGenerate() {
       await showGenerate(false);
     }
     status.textContent = n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
+    if (genChoices.subject === 'character') { genCharsRemember(genChoices.character); renderGenRecent(); }
   } catch (err) {
     status.textContent = err.message;
     genCheck();     // it may have stopped answering: say so, with a way to ask again
@@ -927,6 +956,16 @@ async function initGenerate() {
   loadGenChoices();
   el('genChoices').addEventListener('click', e => {
     if (e.target.closest('#genToPalettes')) { setView({ kind: 'palette' }); return; }
+    const who = e.target.closest('[data-char]');
+    if (who) {
+      genChoices.character = who.dataset.char;
+      el('genCharacter').value = genChoices.character;
+      saveGenChoices();
+      syncGenCharHint();
+      renderGenRecent();
+      renderGenPrompt();
+      return;
+    }
     const b = e.target.closest('[data-gen]');
     if (!b) return;
     genChoices[b.dataset.gen] = b.dataset.opt;
@@ -941,6 +980,7 @@ async function initGenerate() {
     genChoices.character = e.target.value.slice(0, 80);
     saveGenChoices();
     syncGenCharHint();
+    renderGenRecent();
     renderGenPrompt();
   });
   el('genChoices').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'genCharacter') runGenerate(); });

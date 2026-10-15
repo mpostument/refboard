@@ -182,8 +182,8 @@ In place too: a Character field (`genCharacterTags()` - name then series, lower
 case, after "1girl, solo") and Setting: Original, a character's own clothes: it
 owns Detail, since Simple and Beginner's "minimalist, simple drawing" drew a
 named character bare-shouldered (seen 2026-10-15, Animagine XL 4.0, bust); any
-other outfit adds "alternate costume". Still to come: a list of characters
-already drawn, to pick from; her own hair and eye colour kept when the Hair
+other outfit adds "alternate costume". The last eight drawn are chips under
+the field. Still to come: her own hair and eye colour kept when the Hair
 and Eyes rows say Any; and a picture of her as a reference to draw from.
 In place too: Modern, Steampunk and Post-apocalyptic Settings, each with a
 temple, and a Clothes row - Setting's (the default), Everyday, Festive,

@@ -593,7 +593,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   prompt after *1girl, solo*; *Setting: Original* draws her in her own
   clothes, at Normal detail whatever *Detail* says (Simple and Beginner drop
   clothes nothing names), and any other Setting or Clothes adds *alternate
-  costume* so her own does not come back.
+  costume* so her own does not come back. The last eight drawn wait as
+  chips under the field.
   When the ComfyUI is set up and not answering (a laptop asleep, a tunnel
   down), Generate stays and says so, with *Check again*, instead of vanishing.
 - **A studio layout** - dark throughout, an icon rail down the left for the
