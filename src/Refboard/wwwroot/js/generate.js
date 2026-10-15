@@ -58,6 +58,10 @@ const GEN_CHOICES = [
   { id: 'who', label: 'Who', for: PERSON, options: [
     { id: 'girl', label: 'Girl', tags: '1girl, solo' },
     { id: 'boy', label: 'Boy', tags: '1boy, solo' },
+    // A named character's own sex: "1girl" on Gojo Satoru drew a woman, so
+    // naming her hands it to the name (the Character field switches to this).
+    { id: 'her', label: 'Hers', tags: 'solo', words: '', when: ch => !!genCharacterTags(ch.character),
+      hint: 'Her own sex and look - nothing says girl or boy, the character does' },
   ] },
   { id: 'hair', label: 'Hair', for: PERSON, options: [
     ANY,
@@ -811,6 +815,25 @@ function syncGenRows() {
     g.classList.toggle('hidden', !g.querySelector('.gen-row:not(.hidden)'));
 }
 
+// Marks the chips of a row after its choice was changed in code.
+function genPressed(id) {
+  for (const b of el('genChoices').querySelectorAll(`[data-gen="${id}"]`)) b.setAttribute('aria-pressed', String(b.dataset.opt === genChoices[id]));
+}
+
+// The Character field's new text, from typing or a click on a recent one.
+// Naming her hands her sex to the name (Who: Hers, if it was still the
+// default Girl); clearing the name takes Who back to Girl (syncGenRows).
+function genSetCharacter(text) {
+  const was = !!genCharacterTags(genChoices.character);
+  genChoices.character = text.slice(0, 80);
+  if (!was && genCharacterTags(genChoices.character) && genChoices.who === 'girl') genChoices.who = 'her';
+  saveGenChoices();
+  syncGenRows();
+  genPressed('who');
+  renderGenRecent();
+  renderGenPrompt();
+}
+
 // The characters drawn lately as chips under the field; none, none shown.
 function renderGenRecent() {
   const box = el('genRecent'), list = genCharsLoad(), now = genCharacterTags(genChoices.character);
@@ -962,12 +985,8 @@ async function initGenerate() {
     if (e.target.closest('#genToPalettes')) { setView({ kind: 'palette' }); return; }
     const who = e.target.closest('[data-char]');
     if (who) {
-      genChoices.character = who.dataset.char;
-      el('genCharacter').value = genChoices.character;
-      saveGenChoices();
-      syncGenCharHint();
-      renderGenRecent();
-      renderGenPrompt();
+      el('genCharacter').value = who.dataset.char;
+      genSetCharacter(who.dataset.char);
       return;
     }
     const b = e.target.closest('[data-gen]');
@@ -980,12 +999,7 @@ async function initGenerate() {
     renderGenPrompt();
   });
   el('genChoices').addEventListener('input', e => {
-    if (e.target.id !== 'genCharacter') return;
-    genChoices.character = e.target.value.slice(0, 80);
-    saveGenChoices();
-    syncGenCharHint();
-    renderGenRecent();
-    renderGenPrompt();
+    if (e.target.id === 'genCharacter') genSetCharacter(e.target.value);
   });
   el('genChoices').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'genCharacter') runGenerate(); });
   try { Object.assign(genView, JSON.parse(localStorage.getItem(GEN_VIEW_KEY)) || {}); } catch { /* defaults */ }

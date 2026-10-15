@@ -19,6 +19,18 @@ test('the name becomes tags, name then series, right after 1girl, solo', async (
   expect((await prompt(page, { character: '' })).prompt).not.toContain('frieren');
 });
 
+test('Who: Hers leaves her sex to the name; with no name it is Girl again', async ({ page }) => {
+  await openApp(page);
+  const her = await prompt(page, { who: 'her', character: 'Gojo Satoru (Jujutsu Kaisen)', setting: 'original', detail: 'normal' });
+  expect(her.prompt.startsWith('solo, (gojo satoru, jujutsu kaisen:1.2), ')).toBe(true);
+  expect(her.prompt).not.toContain('1girl');
+  expect(her.prompt).not.toContain('1boy');
+  // Hers is for a named character: with none, it is the row's default.
+  expect((await prompt(page, { who: 'her', character: '' })).prompt.startsWith('1girl, solo')).toBe(true);
+  // Girl and Boy still say so, named or not.
+  expect((await prompt(page, { who: 'boy', character: 'Gojo Satoru (Jujutsu Kaisen)' })).prompt.startsWith('1boy, solo, (gojo')).toBe(true);
+});
+
 test('Original draws her at Normal detail whatever Detail says: her clothes are not left out', async ({ page }) => {
   await openApp(page);
   const normal = await prompt(page, { character: 'frieren', setting: 'original', detail: 'normal' });
@@ -70,7 +82,14 @@ test('the field, its hint, and Original in the page: typed, kept, hidden for a l
   await page.locator('#genPrompt summary').click();
   await field.fill('Frieren');
   await expect(hint).toContainText('Add her series');
+  await expect(page.locator('#genPromptBody')).toContainText('solo, (frieren:1.2),');
+  await expect(page.locator('#genPromptBody')).not.toContainText('1girl');
+  // Naming her handed her sex to her; Girl is one click back, and kept.
+  await expect(page.locator('[data-gen="who"][data-opt="her"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.click('[data-gen="who"][data-opt="girl"]');
   await expect(page.locator('#genPromptBody')).toContainText('1girl, solo, (frieren:1.2),');
+  await field.fill('Frieren (Sousou no Frieren)');
+  await expect(page.locator('[data-gen="who"][data-opt="girl"]')).toHaveAttribute('aria-pressed', 'true');
   await field.fill('Frieren (Sousou no Frieren)');
   await expect(page.locator('#genPromptBody')).toContainText('(frieren, sousou no frieren:1.2)');
   // The series is there; Detail's default (Simple) is the next thing to say.
@@ -115,4 +134,19 @@ test('the characters drawn lately: newest first, the same one once, a click fill
   // Not offered for a landscape, with the field.
   await page.click('[data-gen="subject"][data-opt="landscape"]');
   await expect(page.locator('#genRecent')).toBeHidden();
+});
+
+test('clearing the name takes Hers away and Who back to Girl', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate**', r => r.fulfill({ json: { available: true, quality: 'masterpiece', negative: 'lowres' } }));
+  await openApp(page);
+  await page.locator('.nav-item[data-view="generate"]').click();
+  const hers = page.locator('[data-gen="who"][data-opt="her"]');
+  await expect(hers).toBeHidden();                      // no name: not offered
+  await page.locator('#genCharacter').fill('Gojo Satoru (Jujutsu Kaisen)');
+  await expect(hers).toBeVisible();
+  await expect(hers).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#genCharacter').fill('');
+  await expect(hers).toBeHidden();
+  await expect(page.locator('[data-gen="who"][data-opt="girl"]')).toHaveAttribute('aria-pressed', 'true');
 });
