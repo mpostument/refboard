@@ -346,8 +346,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   the one with most swing and any that are nearly straight - a stiff pose, or
   a figure drawn from sticks.
 - **Grey markers** - in a session (Workspace > Value, Layers, Ctrl+K): the
-  picture split into the greys of a marker set - Tombow's N-series, ten or
-  the twelve of the ABT set - each area with its marker's number on it,
+  picture split into the greys of a marker set - Copic Sketch's neutral,
+  cool or warm greys, eleven each, N0 to N10 - each area with its marker's number on it,
   lightest first, the paper left white. Three, five, seven or every grey,
   spread between the picture's own darkest and lightest and matched each to
   its nearest marker; the key says how much of the picture each takes. The
@@ -569,7 +569,7 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   character (who, the hair, the eyes and their shape, how much of them, from where, the pose), a
   landscape (where, the time of day, the weather, the season), buildings,
   nature or an animal, in the light and medium you pick (watercolour, ink
-  and hatching, flat colour, pencil and hatching, watercolour markers,
+  and hatching, flat colour, pencil and hatching, Copic markers,
   watercolour pencils) - simple by default, a few big shapes to copy rather
   than a finished illustration, or *Beginner*: the fewest shapes, straight
   hair, flat colour, one building on white - kept in the

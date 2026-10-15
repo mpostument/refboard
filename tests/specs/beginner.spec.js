@@ -58,13 +58,16 @@ test('a temple is the Setting\'s own, never a torii by default', async ({ page }
   expect(street.prompt).toContain('thatched roof');
 });
 
-test('watercolour markers and pencils: in colour, with no tool drawn in', async ({ page }) => {
+test('Copic markers and watercolour pencils: in colour, with no tool drawn in', async ({ page }) => {
   await openApp(page);
-  const [m, p] = await page.evaluate(() => ['wmarker', 'wpencil'].map(medium => genPrompt({ ...GEN_DEFAULTS, medium })));
+  const [m, p] = await page.evaluate(() => ['copic', 'wpencil'].map(medium => genPrompt({ ...GEN_DEFAULTS, medium })));
   expect(m.prompt).toContain('marker \\(medium\\)');
   expect(m.avoid).toContain('monochrome');
   expect(m.avoid).toContain('holding marker');
-  expect(m.tags).toContain('watercolour markers');
+  expect(m.tags).toContain('copic markers');
+  // Alcohol, not water: no watercolour in the prompt, and none of its wetness.
+  expect(m.avoid).toContain('wet-on-wet');
+  expect(m.prompt).not.toContain('watercolor');
   expect(p.prompt).toContain('watercolor pencil \\(medium\\)');
   expect(p.avoid).toContain('holding pencil');
   // Wet-in-wet is plain watercolour's question.

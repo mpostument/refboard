@@ -8,20 +8,20 @@ const grey = v => [v, v, v];
 const BANDS = [250, 190, 130, 70, 15];
 const bands = () => makePng(300, 120, x => grey(BANDS[Math.floor(x / 60)]));
 
-test('five greys of a set of ten: spread over the picture, lightest first, never the same marker twice', async ({ page }) => {
+test('five greys of a set of eleven: spread over the picture, lightest first, never the same marker twice', async ({ page }) => {
   await openApp(page);
   const r = await page.evaluate(() => {
     const sets = Object.fromEntries(Object.entries(MARKER_SETS).map(([k, s]) => [k, s.markers.map(m => m.L)]));
-    return { sets, three: markersPick('tombow10', 3, 12, 90).map(m => m.code), all: markersPick('tombow10', 0, 12, 90).length,
-      seven: markersPick('tombow12', 7, 12, 90).map(m => m.code), hex: [markerHex(0), markerHex(100)] };
+    return { sets, three: markersPick('copicN', 3, 12, 90).map(m => m.code), all: markersPick('copicN', 0, 12, 90).length,
+      seven: markersPick('copicC', 7, 12, 90).map(m => m.code), hex: [markerHex(0), markerHex(100)] };
   });
   // Lightest first in every set.
   for (const ls of Object.values(r.sets)) expect([...ls].sort((a, b) => b - a)).toEqual(ls);
   // The two ends of the range, and one in the middle.
-  expect(r.three[0]).toBe('N95');
-  expect(r.three[2]).toBe('N15');
+  expect(r.three[0]).toBe('N1');
+  expect(r.three[2]).toBe('N10');
   expect(r.three).toHaveLength(3);
-  expect(r.all).toBe(10);
+  expect(r.all).toBe(11);
   expect(new Set(r.seven).size).toBe(7);
   expect(r.hex).toEqual(['#000000', '#ffffff']);
 });
@@ -30,7 +30,7 @@ test('a picture in five bands: each band its own marker, the lightest left as pa
   await openApp(page);
   const r = await page.evaluate(async src => {
     const img = new Image(); img.src = src; await img.decode();
-    const m = markersOf(stepsRead(img), { set: 'tombow10', n: 3 });
+    const m = markersOf(stepsRead(img), { set: 'copicN', n: 3 });
     const at = x => m.area[(m.h >> 1) * m.w + Math.round(x * m.w / 300)];
     return { picks: m.picks.map(k => k.code), bands: [30, 90, 150, 210, 270].map(at), share: m.share,
       spots: m.spots.map(s => m.picks[s.i].code).sort(), key: markersKey(m) };
@@ -46,7 +46,7 @@ test('a picture in five bands: each band its own marker, the lightest left as pa
   expect(r.share[0]).toBeLessThan(25);
   // Each marker used has its number on at least one area.
   expect(new Set(r.spots).size).toBe(3);
-  expect(r.key).toContain('N15');
+  expect(r.key).toContain('N10');
   expect(r.key).toContain('left white');
 });
 
@@ -66,15 +66,29 @@ test('in a session: a layer and a workspace row; the note changes the set and th
   await part.locator('[data-mk-n="3"]').click();
   await expect(part.locator('.mk-row')).toHaveCount(4);
   await part.locator('[data-mk-n="0"]').click();
-  await expect(part.locator('.mk-row')).toHaveCount(11);       // all ten and the paper
-  await part.locator('[data-mk-set="tombow12"]').click();
-  await expect(part.locator('.mk-row')).toHaveCount(12);       // all eleven of the ABT set and the paper
+  await expect(part.locator('.mk-row')).toHaveCount(12);       // all eleven and the paper
+  await expect(part.locator('.mk-row b').first()).toHaveText('N0');
+  await part.locator('[data-mk-set="copicC"]').click();
+  await expect(part.locator('.mk-row')).toHaveCount(12);       // the cool family has eleven too
+  await expect(part.locator('.mk-row b').first()).toHaveText('C0');
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem(MARKER_KEY)));
-  expect(kept).toEqual({ set: 'tombow12', n: 0 });
+  expect(kept).toEqual({ set: 'copicC', n: 0 });
 
   await page.click('#btnLayers');
   await expect(page.locator('#layersList [data-layer="markers"]')).toBeVisible();
   await page.keyboard.press('Escape');
   await part.locator('.note-off').click();
   await expect(page.locator('#markerOverlay')).toBeHidden();
+});
+
+test('a saved profile that still says wcMarker becomes Copic markers, and an old Tombow choice falls back to the default set', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    localStorage.setItem('refboard.materials.v1', JSON.stringify({ have: ['watercolour', 'wcMarker'], main: 'wcMarker' }));
+    localStorage.setItem(MARKER_KEY, JSON.stringify({ set: 'tombow10', n: 3 }));
+    return { profile: materialsProfile(), marker: markersLoad(), label: MATERIALS[materialsProfile().main].label };
+  });
+  expect(r.profile).toEqual({ have: ['watercolour', 'copic'], main: 'copic' });
+  expect(r.label).toBe('Copic markers');
+  expect(r.marker).toEqual({ set: 'copicN', n: 5 });
 });

@@ -379,11 +379,14 @@ const GEN_CHOICES = [
     { id: 'sketch', label: 'Pencil and hatching', words: 'pencil',
       tags: 'monochrome, greyscale, sketch, (hatching (texture):1.2), traditional media',
       avoid: 'color, digital, sepia, pencil, holding pencil, art tools' },
-    // Watercolour's two cousins: the marker's even strokes side by side, the
-    // pencil's grain with a wash over it.
-    { id: 'wmarker', label: 'Watercolour markers', words: 'watercolour markers',
-      tags: 'watercolor (medium), marker (medium), traditional media, lineart, visible strokes, colored',
-      avoid: 'marker, holding marker, pen, art tools, digital, paint splatter, splashes, monochrome, greyscale' },
+    // Watercolour's two cousins: the alcohol marker's even strokes side by
+    // side (Copic's, though the model knows only "marker (medium)"), the
+    // pencil's grain with a wash over it. Not watercolour: no wet-on-wet.
+    // No "visible strokes" or "vibrant colors": alcohol blends smooth, and with
+    // those two the model drew red and blue streaks (2026-10-15).
+    { id: 'copic', label: 'Copic markers', words: 'copic markers',
+      tags: 'marker (medium), traditional media, lineart, colored',
+      avoid: 'marker, holding marker, pen, art tools, digital, paint splatter, splashes, monochrome, greyscale, watercolor (medium), wet-on-wet, color bleeding' },
     { id: 'wpencil', label: 'Watercolour pencils', words: 'watercolour pencils',
       tags: 'watercolor pencil (medium), colored pencil (medium), watercolor (medium), traditional media, sketch, visible strokes',
       avoid: 'pencil, holding pencil, art tools, digital' },

@@ -32,7 +32,7 @@ const COMMAND_WORDS = {
   btnTemp: 'temperature warm cool colour color shadow light turn hue cel shading',
   btnSymmetry: 'symmetry symmetrical mirror fold halves axis centre center face vase building lopsided crooked drawing check',
   btnRhythms: 'reilly rhythm rhythms figure flow line of action gesture diagonal curve shoulder hip leg arm abstract',
-  btnMarkers: 'grey gray markers tombow n95 n15 value study greys brush pen numbers',
+  btnMarkers: 'grey gray markers copic neutral cool warm n0 n10 c0 w0 value study greys numbers',
   btnVignette: 'vignette fade dissolve edge lost paper bare end border island focus shape watercolour study unpainted margin',
   btnWatercolour: 'watercolour preview painted wash washes render paint it as granulation grain paper white bare edges wet soft hard bloom transparent look before painting',
   btnQuality: 'reference check quality good bad poor photo blown highlights clipped crushed shadows flat light flash hazy blurry blur soft focus sharp small resolution size worth drawing from',

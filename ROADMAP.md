@@ -197,7 +197,7 @@ model drew gowns with trains. A Temple per Setting (`owns`: its
 tags stand in for the Setting's, whose log houses drew a Slavic hut, not
 idols). Tags escaped for ComfyUI (`comfyTags()`): bare brackets are its
 emphasis, so "pen (medium)" drew a pen into ink pictures; ink avoids sepia,
-which had made its lines reddish. Watercolour markers and pencils, and
+which had made its lines reddish. Copic markers and watercolour pencils, and
 deleting generated pictures, one or all.
 In place too: the Prompt box (`renderGenPrompt()`) - closed by default,
 the tags as sent, the choices' negative tags as switches kept in
@@ -660,9 +660,9 @@ Ink (bottle ink, liners, ballpoint pen):
   layers, a ballpoint's pressure measured against your own sample strip, and a
   printable plan.
 
-Watercolour pencils and watercolour markers - two states each: dry, the
-layers mix optically with the paper's tooth showing through; wetted, the
-pigment dissolves and it is watercolour, so the wash model applies:
+Watercolour pencils - two states: dry, the layers mix optically with the
+paper's tooth showing through; wetted, the pigment dissolves and it is
+watercolour, so the wash model applies:
 
 - **My pencil set.** Colour charts of common watercolour pencil sets
   (Faber-Castell Albrecht Dürer, Derwent Inktense and Watercolour,
@@ -671,22 +671,22 @@ pigment dissolves and it is watercolour, so the wash model applies:
 - **Layer recipes.** For a colour: the order of layers, the pressure, and
   whether to wet it - "183 light -> 187 over it -> go over with a damp
   brush". Order matters.
-- **My marker set.** Watercolour brush markers with their codes (Tombow
-  Dual Brush, Karin, ZIG Clean Color...): the nearest marker to a colour,
-  and a pair to blend it from; also "pick up from the marker onto the
-  palette and dilute".
+- **My marker set.** Copic markers (alcohol, not water) with their codes
+  (Sketch, Ciao, Classic...): the nearest marker to a colour, and a pair to
+  blend it from. Copic's own codes carry the blending: markers of one family
+  (the letters) blend into one another by their number.
 - **Blending groups.** Runs of markers in a set that blend smoothly into
   one another, suggested for a gradient in the photo, and how the set's
   codes are organised.
 - **Grey markers for value studies, the rest.** In place (`js/markers.js`,
   Workspace > Value, a layer): the photo split into areas for the greys of a
-  set (`MARKER_SETS`: Tombow Dual Brush's grayscale ten, N95 to N15, and the
-  ABT twelve), each area with its marker's number; three, five, seven or all,
+  set (`MARKER_SETS`: Copic Sketch's neutral, cool and warm greys, N0 to N10,
+  C0 to C10, W0 to W10), each area with its marker's number; three, five, seven or all,
   spread between the picture's own 2nd and 98th percentile and matched each to
   its nearest marker, the paper left white, a key with each grey's share. The
   codes are the maker's; each one's lightness (L*) is an estimate. Still to
   come: other makers' sets and your own (My marker set), warm and cool greys
-  told apart and not only by lightness, runs that blend for a gradient
+  tinted in the key and not only told apart by name, runs that blend for a gradient
   (Blending groups), and the lightness from a swatch photo (Calibration).
 
 Any medium:
