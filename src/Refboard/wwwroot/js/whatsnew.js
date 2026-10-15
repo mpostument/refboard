@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-offline', title: 'Generate: says why when ComfyUI is not answering',
+    text: "When a ComfyUI is set up and the machine it runs on is asleep, off, or out of reach, Generate used to vanish without a word. Now the button stays, the view says that ComfyUI is not answering, and Check again asks once more - it also asks each time you open the view, and after a picture that fails. Generate is off while it is down, and the other views do not offer their Generate buttons.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-character', title: 'Generate: any character, in her own clothes or another setting',
     text: "The Character field, first under The character: type a name and its series - Frieren, Sousou no Frieren - and the model draws her; the name goes in the prompt right after 1girl, solo, and under it a note says to add the series if you left it out. Setting has Original: her own clothes and world, nothing added, drawn at Normal detail whatever Detail says (Simple and Beginner left her bare-shouldered). Any other Setting or Clothes dresses her in something else, and says \"alternate costume\" so her own does not leak back.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

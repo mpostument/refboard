@@ -584,7 +584,11 @@ let genView = { open: false, off: [] }, genServer = { quality: '', negative: '' 
 const genSplit = s => [...new Set(s.split(/,\s*/).map(t => t.trim()).filter(Boolean))];
 // Whether this server has a ComfyUI to ask - its rail button shows once it
 // has (initGenerate()), so the other views offer a button for it or not.
-const genAvailable = () => !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
+// Why it cannot be used now, when a ComfyUI is set up and not answering (the
+// view shows it, with a way to ask again); '' when it can, or none is set up.
+// The other views offer their Generate buttons only when it can.
+let genOffline = '';
+const genAvailable = () => !genOffline && !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
 let genBusy = false;
 // Whether the server has a ControlNet for "Draw this pose" (forms.js).
 let genControl = false;
@@ -799,8 +803,9 @@ function syncGenCharHint() {
 
 const genMade = async () => (await listUploads()).filter(u => u.from === 'generate');
 
-async function showGenerate() {
+async function showGenerate(check = true) {
   if (!el('genChoices').children.length) renderGenerate();
+  if (check) genCheck();     // not awaited: the view does not wait on a slow answer
   const all = await genMade();
   renderGenResults(all.slice(0, 24), all.length);
 }
@@ -823,7 +828,7 @@ function renderGenResults(list, total = list.length) {
     li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-del').addEventListener('click', async () => {
       await forgetUpload(u);
-      await showGenerate();
+      await showGenerate(false);
       el('genResults').querySelector('.gen-open')?.focus();
     });
     li.querySelector('.gen-vary').addEventListener('click', async () => {
@@ -876,7 +881,7 @@ async function clearGenerated() {
   } finally {
     b.disabled = false;
     storeChanged();
-    await showGenerate();
+    await showGenerate(false);
     el('genStatus').textContent = `${all.length} deleted.`;
   }
 }
@@ -906,14 +911,15 @@ async function runGenerate() {
       status.textContent = n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
       await generateOne(req);
       storeChanged();
-      await showGenerate();
+      await showGenerate(false);
     }
     status.textContent = n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
   } catch (err) {
     status.textContent = err.message;
+    genCheck();     // it may have stopped answering: say so, with a way to ask again
   } finally {
     genBusy = false;
-    el('genGo').disabled = false;
+    el('genGo').disabled = !!genOffline;
   }
 }
 
@@ -975,17 +981,37 @@ async function initGenerate() {
   el('genClear').addEventListener('click', clearGenerated);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });
 
+  el('genRetry').addEventListener('click', async () => {
+    el('genRetry').disabled = true;
+    el('genOfflineText').textContent = 'Asking ComfyUI...';
+    try { await genCheck(); } finally { el('genRetry').disabled = false; }
+  });
+
   // Offered only where it can work: a server, with a ComfyUI it can reach.
   await initStore();
   if (storeMode !== 'server') return;
+  await genCheck();
+}
+
+/* Asks the server whether generating can work now, and shows what it says:
+   the rail button and the view when it can; when a ComfyUI is set up and not
+   answering (a laptop asleep, a tunnel down), the button and the view too, with
+   the reason and a button to ask again - a feature that vanishes without a word
+   looks like one that was never there. Nothing at all with no ComfyUI set up,
+   or on a server too old to say. */
+async function genCheck() {
   let info = null;
   try { info = await (await fetch('api/generate')).json(); } catch { /* an older server: no such route */ }
-  if (!info || !info.available) return;
-  genServer = { quality: info.quality || '', negative: info.negative || '' };
-  genControl = !!info.control;
+  if (!info) return;
+  genOffline = !info.available && info.configured === true ? (info.reason || 'ComfyUI is not answering.') : '';
+  if (info.available) genServer = { quality: info.quality || '', negative: info.negative || '' };
+  genControl = !!info.available && !!info.control;
   document.getElementById('formPoseGen')?.classList.toggle('hidden', !genControl);
+  document.querySelector('.nav-item[data-view="generate"]').classList.toggle('hidden', !info.available && !genOffline);
+  el('genOffline').classList.toggle('hidden', !genOffline);
+  el('genOfflineText').textContent = genOffline;
+  el('genGo').disabled = !!genOffline || genBusy;
   renderGenPrompt();
-  document.querySelector('.nav-item[data-view="generate"]').classList.remove('hidden');
   renderStages();
 }
 initGenerate();

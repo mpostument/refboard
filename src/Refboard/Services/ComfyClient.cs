@@ -57,10 +57,12 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
 
     /// <summary>Whether generating can work now: set up, ComfyUI answering,
     /// and the model in it. Asked quickly - a sleeping laptop must not hold
-    /// the page up.</summary>
+    /// the page up. <c>configured</c> tells "none is set up" (the page shows
+    /// nothing) from "set up, and not answering now" (it says why, and asks
+    /// again): a tunnel or a laptop that is down is not a missing feature.</summary>
     public async Task<object> StatusAsync(CancellationToken ct)
     {
-        if (!Configured) return new { available = false, reason = "No ComfyUI is set up (COMFY_URL)." };
+        if (!Configured) return new { available = false, configured = false, reason = "No ComfyUI is set up (COMFY_URL)." };
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -70,11 +72,11 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
                 // What it always adds, for the page's Prompt to show.
                 ? new { available = true, checkpoint = opts.ComfyCheckpoint, quality = Quality, negative = Negative,
                     control = ControlConfigured && await HasControlNetAsync(cts.Token) }
-                : new { available = false, reason = $"ComfyUI has no {opts.ComfyCheckpoint} in models/checkpoints." };
+                : new { available = false, configured = true, reason = $"ComfyUI has no {opts.ComfyCheckpoint} in models/checkpoints." };
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return new { available = false, reason = "ComfyUI is not answering - is the machine it runs on awake?" };
+            return new { available = false, configured = true, reason = "ComfyUI is not answering - is the machine it runs on awake, and reachable from this server?" };
         }
     }
 
