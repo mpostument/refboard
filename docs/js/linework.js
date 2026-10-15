@@ -18,6 +18,9 @@
    Weight is relative - a line is heavy against the lighter ones - so the
    classes are split by the picture's own lines: the lightest third thin,
    the heaviest third heavy.
+   For liners the three classes are also given a pen each (a set of three
+   sizes, 0.05 to 0.8 mm) and can be shown coloured by pen, with each pen's
+   share of the lines - which size goes where.
    One of the classic scripts index.html loads in order; see the note there. */
 "use strict";
 
@@ -39,6 +42,26 @@ const LW_WIDTH = [1.2, 2.2, 3.8];
 // picture's side.
 const LW_JOIN = 0.4, LW_JOIN_REACH = 1 / 40;
 const LW_INK = '#1d1a24', LW_PAPER = 'rgba(250, 248, 242, 0.86)';
+// Three liners to draw a picture with, light to heavy: sets that are sold or
+// easily made up from the usual sizes (0.05-0.8 mm).
+const LW_PENS_KEY = 'refboard.linePens.v1';
+const LW_PENS = {
+  fine: { label: 'Fine', mm: [0.05, 0.1, 0.3] },
+  standard: { label: 'Standard', mm: [0.1, 0.3, 0.5] },
+  bold: { label: 'Bold', mm: [0.3, 0.5, 0.8] },
+};
+const LW_PEN_COLOURS = ['#4ea1ff', '#f2b84b', '#ff6a5c'];
+const LW_CLASS_WORDS = ['Light', 'Middle', 'Heavy'];
+function lineWeightPens() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LW_PENS_KEY));
+    if (v) return { set: LW_PENS[v.set] ? v.set : 'standard', view: v.view === 'pens' ? 'pens' : 'weights' };
+  } catch { /* fall through */ }
+  return { set: 'standard', view: 'weights' };
+}
+function lineWeightPensSave(c) {
+  try { localStorage.setItem(LW_PENS_KEY, JSON.stringify(c)); } catch { /* private mode */ }
+}
 
 /* Every point of every contour, weighed. p: stepsRead(). pts: the pixel
    index of each point; weight 0..1; cls 0 thin, 1 middle, 2 heavy; taper
@@ -271,7 +294,7 @@ function lineWeightOf(p) {
 // it; at the read's own size a line is a row of blurred dots): paper over
 // the picture, most of the way, and the contours in ink - a dot at each
 // point, as wide as the line there.
-function lineWeightDraw(m, c) {
+function lineWeightDraw(m, c, view = 'weights') {
   c.width = 2 * m.w; c.height = 2 * m.h;
   const g = c.getContext('2d'), k = Math.max(m.w, m.h) / STEPS_SIDE;
   g.scale(2, 2);
@@ -280,6 +303,7 @@ function lineWeightDraw(m, c) {
   g.fillStyle = LW_INK;
   for (let a = 0; a < m.pts.length; a++) {
     const i = m.pts[a], x = i % m.w, y = (i - x) / m.w;
+    if (view === 'pens') g.fillStyle = LW_PEN_COLOURS[m.cls[a]];
     // Within a class, a little more or less by the weight itself.
     const r = LW_WIDTH[m.cls[a]] * (0.85 + 0.3 * Math.min(1, m.weight[a])) * m.taper[a] * k / 2;
     g.beginPath(); g.arc(x + 0.5, y + 0.5, Math.max(0.35, r), 0, 2 * Math.PI); g.fill();
@@ -300,10 +324,23 @@ function lineWeightTool() {
   return Object.keys(LW_TOOLS).find(k => have.includes(k)) || null;
 }
 
+/* For liners: which of three pens each class of line takes, and how much of
+   the drawing each pen will do. Light to heavy, as m.share is. */
+function lineWeightPenBar(m, tool, pens) {
+  if (tool !== 'liner') return '';
+  const chip = (attr, k, label, on) => `<button type="button" class="chip" data-lw-${attr}="${k}" aria-pressed="${on}">${label}</button>`;
+  const mm = LW_PENS[pens.set].mm;
+  const bar = `<div class="tone-bar"><span>Pens</span>${Object.entries(LW_PENS).map(([k, v]) => chip('set', k, v.label, pens.set === k)).join('')}` +
+    `<span>Show</span>${chip('view', 'weights', 'Weights', pens.view === 'weights')}${chip('view', 'pens', 'By pen', pens.view === 'pens')}</div>`;
+  const key = '<div class="hm-key">' + [2, 1, 0].map(k =>
+    `<span><i style="background:${LW_PEN_COLOURS[k]}"></i>${LW_CLASS_WORDS[k]} - ${mm[k]} mm, ${Math.round(m.share[k])}%</span>`).join('') + '</div>';
+  return bar + key;
+}
+
 /* What the lines say - two lines: the note sits over the picture. */
-function lineWeightVerdict(m, tool = lineWeightTool()) {
+function lineWeightVerdict(m, tool = lineWeightTool(), pens = lineWeightPens()) {
   if (!m.pts.length) return 'No clear contours here - nothing to weigh.';
-  return '<b>Heavy</b> - the shadow side, undersides, the big outer contours' + (m.joins ? ' and where one line meets another (the form in front)' : '') +
+  return lineWeightPenBar(m, tool, pens) + '<b>Heavy</b> - the shadow side, undersides, the big outer contours' + (m.joins ? ' and where one line meets another (the form in front)' : '') +
     '. <b>Light</b> - the lit side and small inner lines; ends taper.<br>' +
     (LW_TOOLS[tool] || 'Press into the heavy lines, lift toward the light ones and at the ends.');
 }
@@ -333,11 +370,21 @@ function runLineWeight() {
     let m;
     try { m = lineWeightOf(stepsRead(img)); }
     catch (err) { console.error('line weight:', err); overlayNote('lineweight', '<i>Could not weigh the lines of this picture.</i>'); return; }
-    lineWeightDraw(m, el('lineOverlay')).classList.remove('hidden');
-    overlayNote('lineweight', lineWeightVerdict(m));
+    const pens = lineWeightPens();
+    lineWeightDraw(m, el('lineOverlay'), pens.view).classList.remove('hidden');
+    overlayNote('lineweight', lineWeightVerdict(m, lineWeightTool(), pens));
   }, 30);
 }
 
 el('btnLineWeight').addEventListener('click', toggleLineWeight);
+el('poseNote').addEventListener('click', e => {
+  const s = e.target.closest('[data-lw-set]'), v = e.target.closest('[data-lw-view]');
+  if (!s && !v) return;
+  const pens = lineWeightPens();
+  if (s && LW_PENS[s.dataset.lwSet]) pens.set = s.dataset.lwSet;
+  if (v) pens.view = v.dataset.lwView === 'pens' ? 'pens' : 'weights';
+  lineWeightPensSave(pens);
+  runLineWeight();
+});
 // The advice is for the line medium you have.
 document.addEventListener('refboard:materials', () => { if (state.lineWeightOn) runLineWeight(); });

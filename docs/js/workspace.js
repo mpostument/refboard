@@ -25,6 +25,7 @@ const WS_TABS = [
     { hud: 'grades', about: 'for graphite: which grade of pencil each area wants, 2H to 8B - the hardest first' },
     { hud: 'quality', about: 'is it a good picture to work from: blown highlights, lost shadows, flat light, focus, size' },
     { hud: 'simplify', about: 'the picture as 5 to 12 flat shapes of colour and value - the plan of a study' },
+    { hud: 'jars', about: 'for bottle ink: the picture in 3 to 5 jars of thinned ink - how to thin each and which goes where' },
     { hud: 'info', about: 'the histogram: where the values are, the darkest and the lightest' },
   ] },
   { id: 'colour', label: 'Colour', q: 'What colour is it, and how do I mix it?', tools: [

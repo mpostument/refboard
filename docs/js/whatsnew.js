@@ -15,6 +15,21 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'session-kinds', title: 'Kind of session: a liner sketch, a pencil study, a watercolour in stages',
+    text: "The top of the Timing tab (before you start): six kinds of session - gesture warm-up, liner sketch, pencil value study, hatching study, ink wash study, watercolour study. One press sets the interval or schedule, the stages and grayscale, says what to do with the time, and turns on the overlays that kind of work wants when the session starts. It only moves the controls that were already there: change any of them and it lets go.",
+    act: 'Open it', run: () => setView({ kind: 'drop' }) },
+  { id: 'pen-textures', title: 'Pen textures: wood, stone, foliage, fur, water, brick',
+    text: "Practise > Handbook (or Ctrl+K), a third chapter: how to say six textures in ink strokes. Each is a short rule for the hand with a demonstration to move and a pen size from 0.05 to 0.8 mm, and each prints a practice sheet - the example and six empty boxes to try it in.",
+    act: 'Open it', run: () => setView({ kind: 'handbook' }) },
+  { id: 'seasons-palettes', title: 'Seasons and times of day: ready palettes for a landscape',
+    text: "Prepare > Palettes (or Ctrl+K), above Harmony: spring, summer, autumn, winter, morning, noon, dusk and fog - six colours each, with what makes the season or the hour and what to do with it. They replace the row (Undo brings yours back), come with recipes for your paints, and are pulled in to what your paints can reach when Only what my paints mix is on.",
+    act: 'Open it', run: () => setView({ kind: 'palette' }) },
+  { id: 'pens-ballpoint', title: 'Pen sizes for liners, pressure for a ballpoint',
+    text: "Two more answers for ink. Line weight (k) now says which liner goes where - a Fine, Standard or Bold set of three sizes, 0.05 to 0.8 mm, with each pen's share of the drawing, and the lines can be coloured by pen. The Hatching map has a pen of its own: a liner with a size for each layer, or a ballpoint, drawn by pressure instead of layers, with the whites you must not touch marked first because it cannot be erased.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
+  { id: 'ink-jars', title: 'Ink wash jars: which jar goes where',
+    text: "Over any picture in a session (Workspace > Value, or Ctrl+K): for bottle ink, the picture reduced to 3, 4 or 5 jars of thinned ink and the bare paper - black, sepia or indigo - with how to thin each (1 part ink : N of water) and the washes drawn as they would paint. The thinning is the paint model's estimate: try it on scrap paper.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'techniques-guide', title: 'Techniques guide: salt, spatter, dry brush, lifting, masking fluid',
     text: "Practise > Handbook (or Ctrl+K), a second chapter: five watercolour techniques, each with when to use it and a small demonstration to move. Salt works only in a window of wetness - slide the wash from dry to glossy and find it. Spatter: a wetter brush, a farther flick, a covered shape. Dry brush: the paint on the brush, the pressure and the roughness of the paper. Lifting, with your own paints: which come back to paper and which stain, and how the age of the wash changes it. Masking fluid: the whites under a wash, peeled, and softened on one side.",
     act: 'Open it', run: () => setView({ kind: 'handbook' }) },
