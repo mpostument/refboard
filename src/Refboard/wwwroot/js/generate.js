@@ -518,6 +518,10 @@ function genHueTag(L, h) {
    lower case as Danbooru writes them. "Frieren (Sousou no Frieren)" and
    "frieren, sousou no frieren" are the same; "ayanami_rei" is "ayanami rei".
    An empty field is no character. */
+// How hard the name pulls, as a ComfyUI weight. Unweighted, Frieren came out
+// without her pointed ears in 6 pictures of 8 (same seeds, Animagine XL 4.0,
+// bust, Original); at 1.2 in 2 of 8 - her clothes were there either way.
+const GEN_CHAR_WEIGHT = 1.2;
 function genCharacterTags(text) {
   const t = String(text || '').trim().slice(0, 80);
   if (!t) return '';
@@ -575,7 +579,7 @@ function genPrompt(choices, extra = '') {
   for (const [c, o] of rows) {
     const t = owned.has(c.id) ? '' : pick(o.tags), a = owned.has(c.id) ? '' : pick(o.avoid);
     if (t) tags.push(t);
-    if (c.id === 'who' && who) tags.push(who, ...(outfit ? ['alternate costume'] : []));
+    if (c.id === 'who' && who) tags.push(`(${who}:${GEN_CHAR_WEIGHT})`, ...(outfit ? ['alternate costume'] : []));
     if (a) avoid.push(a);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
     if (w) words.push(w);

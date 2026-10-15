@@ -12,7 +12,7 @@ test('the name becomes tags, name then series, right after 1girl, solo', async (
     .map(genCharacterTags));
   expect(tags).toEqual(['frieren', 'frieren, sousou no frieren', 'frieren, sousou no frieren', 'ayanami rei', '']);
   const r = await prompt(page, { character: 'Frieren (Sousou no Frieren)', setting: 'original', detail: 'normal' });
-  expect(r.prompt.startsWith('1girl, solo, frieren, sousou no frieren, ')).toBe(true);
+  expect(r.prompt.startsWith('1girl, solo, (frieren, sousou no frieren:1.2), ')).toBe(true);
   // Filed under her name, so the library's search finds her.
   expect(r.tags[0]).toBe('frieren');
   // No name: nothing added.
@@ -41,10 +41,10 @@ test('Original draws her at Normal detail whatever Detail says: her clothes are 
 test('another outfit says "alternate costume"; her own does not', async ({ page }) => {
   await openApp(page);
   const steam = await prompt(page, { character: 'frieren, sousou no frieren', setting: 'steampunk', detail: 'normal' });
-  expect(steam.prompt).toContain('frieren, sousou no frieren, alternate costume');
+  expect(steam.prompt).toContain('(frieren, sousou no frieren:1.2), alternate costume');
   expect(steam.prompt).toContain('goggles on head');
   const armour = await prompt(page, { character: 'frieren', setting: 'any', clothes: 'armour', detail: 'normal' });
-  expect(armour.prompt).toContain('frieren, alternate costume');
+  expect(armour.prompt).toContain('(frieren:1.2), alternate costume');
   for (const setting of ['original', 'any']) {
     const r = await prompt(page, { character: 'frieren', setting, detail: 'normal' });
     expect(r.prompt).not.toContain('alternate costume');
@@ -70,9 +70,9 @@ test('the field, its hint, and Original in the page: typed, kept, hidden for a l
   await page.locator('#genPrompt summary').click();
   await field.fill('Frieren');
   await expect(hint).toContainText('Add her series');
-  await expect(page.locator('#genPromptBody')).toContainText('1girl, solo, frieren,');
+  await expect(page.locator('#genPromptBody')).toContainText('1girl, solo, (frieren:1.2),');
   await field.fill('Frieren (Sousou no Frieren)');
-  await expect(page.locator('#genPromptBody')).toContainText('frieren, sousou no frieren');
+  await expect(page.locator('#genPromptBody')).toContainText('(frieren, sousou no frieren:1.2)');
   // The series is there; Detail's default (Simple) is the next thing to say.
   await expect(hint).toContainText('Detail is not Normal');
   // Under Original it says what Original does about it.
