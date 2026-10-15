@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-stop', title: 'Generate: Stop',
+    text: "While pictures are being made, Generate is Stop. It cancels the one in hand - ComfyUI is told, and drops it from its queue or interrupts it, whichever it is doing - and starts none of the rest of a batch of two or four. A slow picture, or one on a machine that has gone to sleep, no longer has to be waited out.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-vary-outfit', title: 'Generate: Vary takes a new outfit, and works behind nginx',
     text: "Vary, a study and Draw this pose sent the picture to start from as a PNG of 2 MB, which the nginx in front of the container refuses over 1 MB (HTTP 413) - they now send a JPEG under 700 kB, and work there. Vary also takes the Setting or Clothes you pick now, added to its own words and weighted, so a made picture can go from her own clothes to steampunk on the same face: set How different to Very.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

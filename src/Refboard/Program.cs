@@ -158,6 +158,7 @@ app.MapPost("/api/generate", (GenerateRequest req) =>
     return Results.Accepted(value: new { id = comfy.Start(req) });
 });
 static bool IsBase64(string s) => Convert.TryFromBase64String(s, new byte[(s.Length * 3 / 4) + 3], out _);
+app.MapPost("/api/generate/{id}/cancel", (string id) => comfy.Cancel(id) ? Results.Accepted() : Results.NotFound());
 app.MapGet("/api/generate/{id}", (string id) =>
     comfy.Get(id) is { } job ? Results.Ok(new { state = job.State, upload = job.Upload, error = job.Error }) : Results.NotFound());
 

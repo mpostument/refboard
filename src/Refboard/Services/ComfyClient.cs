@@ -53,6 +53,11 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
     }
     private readonly ConcurrentDictionary<string, Job> jobs = new();
 
+    /// <summary>What stops a job: its token, and the id ComfyUI gave it once
+    /// queued (so it can be taken out of ComfyUI's own queue, or interrupted).</summary>
+    private sealed class Control { public CancellationTokenSource Stop { get; } = new(); public volatile string? PromptId; }
+    private readonly ConcurrentDictionary<string, Control> controls = new();
+
     public bool Configured => opts.ComfyUrl.Length > 0;
 
     /// <summary>Whether generating can work now: set up, ComfyUI answering,
@@ -95,22 +100,59 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
             if (DateTime.UtcNow - old.Started > TimeSpan.FromHours(1)) jobs.TryRemove(key, out _);
         var id = Guid.NewGuid().ToString("N");
         jobs[id] = new Job("running");
+        var control = controls[id] = new Control();
         _ = Task.Run(async () =>
         {
-            try { jobs[id] = new Job("done", await RunAsync(req)); }
+            try { jobs[id] = new Job("done", await RunAsync(req, control)); }
+            catch (Exception ex) when (control.Stop.IsCancellationRequested)
+            {
+                // Asked for (Cancel), not a failure: say so, and say nothing of the exception.
+                log.LogInformation("generating stopped ({Kind})", ex.GetType().Name);
+                jobs[id] = new Job("cancelled", Error: "Stopped.");
+            }
             catch (Exception ex)
             {
                 log.LogWarning(ex, "generating failed");
                 jobs[id] = new Job("error", Error: ex is HttpRequestException or TaskCanceledException
                     ? "ComfyUI stopped answering." : ex.Message);
             }
+            finally { controls.TryRemove(id, out _); }
         });
         return id;
     }
 
+    /// <summary>Stops a job: the wait ends at once, and ComfyUI is told - the job
+    /// taken out of its queue, or, if it is the one running, interrupted. False
+    /// for an id that is not running (finished, or unknown).</summary>
+    public bool Cancel(string id)
+    {
+        if (!controls.TryGetValue(id, out var control)) return false;
+        control.Stop.Cancel();
+        if (control.PromptId is { } pid) _ = Task.Run(() => InterruptAsync(pid));
+        return true;
+    }
+
+    // ComfyUI's /interrupt stops whichever job is running, which may not be ours,
+    // so it is sent only when the queue says ours is the one; a job still waiting
+    // is deleted from the queue instead. Best effort: the page has stopped waiting
+    // either way, and ComfyUI may be gone.
+    private async Task InterruptAsync(string pid)
+    {
+        try
+        {
+            using var ask = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var q = await Http.GetFromJsonAsync<JsonElement>($"{opts.ComfyUrl}/queue", ask.Token);
+            var running = q.TryGetProperty("queue_running", out var r) && r.EnumerateArray()
+                .Any(e => e.ValueKind == JsonValueKind.Array && e.GetArrayLength() > 1 && e[1].GetString() == pid);
+            if (running) await Http.PostAsync($"{opts.ComfyUrl}/interrupt", new StringContent(""), ask.Token);
+            else await Http.PostAsJsonAsync($"{opts.ComfyUrl}/queue", new { delete = new[] { pid } }, ask.Token);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { /* gone, or slow: nothing more to do */ }
+    }
+
     public Job? Get(string id) => jobs.GetValueOrDefault(id);
 
-    private async Task<JsonElement> RunAsync(GenerateRequest req)
+    private async Task<JsonElement> RunAsync(GenerateRequest req, Control control)
     {
         var (w, h) = Shapes[req.Shape ?? "portrait"];
         var seed = req.Seed ?? Random.Shared.NextInt64(0, 1L << 48);
@@ -166,6 +208,9 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
         var body = await queued.Content.ReadFromJsonAsync<JsonElement>();
         if (!queued.IsSuccessStatusCode || !body.TryGetProperty("prompt_id", out var pid))
             throw new InvalidOperationException("ComfyUI refused the job: " + body.GetRawText());
+        control.PromptId = pid.GetString();
+        // Stopped between queueing and here: Cancel() found no id to interrupt.
+        if (control.Stop.IsCancellationRequested) { await InterruptAsync(control.PromptId!); control.Stop.Token.ThrowIfCancellationRequested(); }
 
         var until = DateTime.UtcNow.AddMinutes(10);
         JsonElement image;
@@ -177,15 +222,16 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
         for (;;)
         {
             if (DateTime.UtcNow > until) throw new TimeoutException("ComfyUI took longer than ten minutes.");
-            await Task.Delay(1000);
+            await Task.Delay(1000, control.Stop.Token);
             JsonElement hist;
             try
             {
-                using var ask = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                using var ask = CancellationTokenSource.CreateLinkedTokenSource(control.Stop.Token);
+                ask.CancelAfter(TimeSpan.FromSeconds(20));
                 hist = await Http.GetFromJsonAsync<JsonElement>($"{opts.ComfyUrl}/history/{pid.GetString()}", ask.Token);
                 misses = 0;
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !control.Stop.IsCancellationRequested)
             {
                 if (++misses >= 5) throw;
                 continue;

@@ -968,40 +968,68 @@ async function clearGenerated() {
   }
 }
 
+// What is being made, so Stop can say which: the job's id, and whether it was asked for.
+let genJob = '', genStopped = false;
+
 // One picture: start the job, then ask after it once a second.
 async function generateOne(req) {
   const r = await fetch('api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) });
   if (!r.ok) throw new Error(r.status === 404 ? 'This server has no ComfyUI set up.' : 'The server refused it (HTTP ' + r.status + ').');
   const { id } = await r.json();
+  genJob = id;
+  // Stop was clicked while the job was being started: it has an id now to stop.
+  if (genStopped) genCancel();
   for (;;) {
     await new Promise(res => setTimeout(res, 1000));
     const s = await (await fetch('api/generate/' + id)).json();
     if (s.state === 'done') return s.upload;
+    if (s.state === 'cancelled') throw new Error('Stopped.');
     if (s.state === 'error') throw new Error(s.error || 'ComfyUI could not make it.');
   }
+}
+
+// Stop: the picture in hand is cancelled (ComfyUI is told, and drops it from
+// its queue or interrupts it), and the ones still to come are not started.
+function genCancel() {
+  if (genJob) fetch(`api/generate/${genJob}/cancel`, { method: 'POST' }).catch(() => { /* gone: nothing to stop */ });
+}
+function genStop() {
+  genStopped = true;
+  el('genGo').disabled = true;
+  el('genStatus').textContent = 'Stopping...';
+  genCancel();
 }
 
 async function runGenerate() {
   if (genBusy) return;
   genBusy = true;
-  el('genGo').disabled = true;
+  genStopped = false;
+  // While it works the button is Stop.
+  el('genGo').textContent = 'Stop';
+  el('genGo').title = 'Stop making pictures - the one in hand is cancelled, the rest are not started';
   const n = Number(el('genCount').value) || 1;
   const req = genRequest();
   const status = el('genStatus');
   try {
     for (let i = 1; i <= n; i++) {
+      if (genStopped) break;
       status.textContent = n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
       await generateOne(req);
       storeChanged();
       await showGenerate(false);
     }
-    status.textContent = n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
+    status.textContent = genStopped ? 'Stopped.' : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
     if (genChoices.subject === 'character') { genCharsRemember(genChoices.character); renderGenRecent(); }
   } catch (err) {
     status.textContent = err.message;
-    genCheck();     // it may have stopped answering: say so, with a way to ask again
+    // It may have stopped answering: say so, with a way to ask again. Not
+    // after a Stop, which is no sign of that.
+    if (!genStopped) genCheck();
   } finally {
     genBusy = false;
+    genJob = '';
+    el('genGo').textContent = 'Generate';
+    el('genGo').removeAttribute('title');
     el('genGo').disabled = !!genOffline;
   }
 }
@@ -1048,7 +1076,7 @@ async function initGenerate() {
     el('genPromptBody').querySelector(t ? `[data-avoid="${CSS.escape(t.dataset.avoid)}"]` : '.gen-avoid button')?.focus();
   });
   el('genExtra').addEventListener('input', renderGenPrompt);
-  el('genGo').addEventListener('click', runGenerate);
+  el('genGo').addEventListener('click', () => genBusy ? genStop() : runGenerate());
   el('genPick').addEventListener('click', () => el('genPickInput').click());
   el('genPickInput').addEventListener('change', async e => { await genPicked(e.target.files[0]); e.target.value = ''; });
   el('genSource').addEventListener('click', e => {
@@ -1095,7 +1123,7 @@ async function genCheck() {
   document.querySelector('.nav-item[data-view="generate"]').classList.toggle('hidden', !info.available && !genOffline);
   el('genOffline').classList.toggle('hidden', !genOffline);
   el('genOfflineText').textContent = genOffline;
-  el('genGo').disabled = !!genOffline || genBusy;
+  el('genGo').disabled = !!genOffline;
   renderGenPrompt();
   renderStages();
 }

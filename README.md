@@ -602,6 +602,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   words (weighted: *Very* different puts her in steampunk on the same face);
   the picture to start from goes as a JPEG under 700 kB, since nginx refuses a
   request body over 1 MB.
+  While pictures are made the button is *Stop*: it cancels the one in hand
+  (ComfyUI is told) and starts none of the rest.
 - **A studio layout** - dark throughout, an icon rail down the left for the
   sections, and the library and session controls as panels either side that
   fold away, so the image gets the screen. The session panel and the 3D
