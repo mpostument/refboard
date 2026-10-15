@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=b613dff2">
+<link rel="stylesheet" href="css/app.css?v=cd63d98d">
 </head>
 <body>
 <div id="setup">
@@ -323,6 +323,12 @@
                 <summary>Prompt</summary>
                 <div id="genPromptBody"></div>
               </details>
+              <!-- Start from a picture instead of from nothing: js/generate.js genSetSource(). -->
+              <div class="gen-source" id="genSource">
+                <button type="button" class="ghost" id="genPick" title="Draw from a picture of your own: a photo simplified into a study, with the choices above as its style. Or drop one here.">Start from a picture...</button>
+                <input type="file" id="genPickInput" accept="image/*" class="hidden" aria-label="Picture to start from">
+                <div id="genSourceBody" class="hidden"></div>
+              </div>
               <label class="gen-extra">More tags <input type="text" id="genExtra" placeholder="e.g. hat, rain, holding umbrella" maxlength="200"></label>
               <div class="row gen-go">
                 <label>How many <select id="genCount"><option>1</option><option selected>2</option><option>4</option></select></label>
@@ -2073,7 +2079,7 @@
 <script src="js/session.js?v=a539a2e3"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=a36cd59d"></script>
-<script src="js/tools.js?v=cbd36a6d"></script>
+<script src="js/tools.js?v=7fd2172b"></script>
 <script src="js/materials.js?v=26ce83c4"></script>
 <script src="js/vision.js?v=5c0f8101"></script>
 <script src="js/sort.js?v=a54fa3a1"></script>
@@ -2086,7 +2092,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=568392f3"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=2da1cd22"></script>
+<script src="js/whatsnew.js?v=47b9ba5f"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=a1b8782b"></script>
@@ -2103,21 +2109,21 @@
 <script src="js/grades.js?v=05c09ec4"></script>
 <script src="js/quality.js?v=260494ce"></script>
 <script src="js/flow.js?v=d94a98be"></script>
-<script src="js/hatch.js?v=cffcc412"></script>
+<script src="js/hatch.js?v=f72a0533"></script>
 <script src="js/composition.js?v=ab1a5b98"></script>
 <script src="js/presets.js?v=ce742072"></script>
 <script src="js/simplify.js?v=5ca48fa0"></script>
 <script src="js/jars.js?v=64346719"></script>
 <script src="js/tangents.js?v=67a34d15"></script>
 <script src="js/lightbox.js?v=558bc8d9"></script>
-<script src="js/generate.js?v=a202c557"></script>
+<script src="js/generate.js?v=10ee2f3f"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
 <script src="js/forms-models.js?v=f5e1042a"></script>
 <script src="js/forms-settings.js?v=47a50035"></script>
-<script src="js/forms.js?v=5353c764"></script>
+<script src="js/forms.js?v=5f9fa820"></script>
 <script src="js/forms-api.js?v=26a7a46c"></script>
 </template>
 <template id="lazy-backup">

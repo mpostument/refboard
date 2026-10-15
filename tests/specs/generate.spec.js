@@ -165,3 +165,100 @@ test('a palette as a few tags for the whole of it', async ({ page }) => {
   expect((await t([[40, 40, 40], [128, 128, 128], [220, 220, 220]])).some(x => x.endsWith('theme'))).toBe(false);
   expect(await t([])).toEqual([]);
 });
+
+test('starting from a picture: a study, a variation, a pose', async ({ page }) => {
+  const server = await fakeServer(page);
+  const asked = [];
+  const id = 'c'.repeat(64);
+  await page.route('**/api/generate**', async r => {
+    const req = r.request();
+    if (req.method() === 'POST') { asked.push(JSON.parse(req.postData())); return r.fulfill({ status: 202, json: { id: 'job1' } }); }
+    if (req.url().endsWith('/api/generate')) return r.fulfill({ json: { available: true, control: true } });
+    const doc = { file: id + '.png', name: 'girl', type: 'image/png', from: 'generate', bytes: 100, t: Date.now(),
+      folder: 'generated', tags: ['anime', 'girl'], prompt: '1girl, solo, red hair', avoid: 'sepia', shape: 'square' };
+    server.items.set('uploads/' + id, doc);
+    return r.fulfill({ json: { state: 'done', upload: { doc, url: 'uploads/Generated/' + id + '.png' } } });
+  });
+  await openApp(page);
+  await page.locator('.nav-item[data-view="generate"]').click();
+  await page.selectOption('#genCount', '1');
+
+  // A picture of its own: sent at the size of the shape it suits, as base64,
+  // with the beginner's tags in front and a denoise below 1.
+  await page.setInputFiles('#genPickInput', { name: 'photo.png', mimeType: 'image/png', buffer: require('../helpers').quadrantsPng() });
+  await expect(page.locator('#genSourceBody')).toBeVisible();
+  await page.click('#genSourceBody [data-level="0.8"]');
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  expect(asked[0].image.length).toBeGreaterThan(100);
+  expect(asked[0].denoise).toBe(0.8);
+  expect(asked[0].control).toBeUndefined();
+  expect(asked[0].prompt.startsWith('(minimalist:1.4)')).toBe(true);
+  expect(asked[0].tags).toContain('study');
+
+  // Dropped, it is text-to-image again.
+  await page.click('#genSourceClear');
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  expect(asked[1].image).toBeUndefined();
+
+  // Vary: the original's own words and shape, not the choices'.
+  await page.locator('#genResults .gen-vary').first().click();
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  expect(asked[2].prompt).toBe('1girl, solo, red hair');
+  expect(asked[2].avoid).toBe('sepia');
+  expect(asked[2].shape).toBe('square');
+  expect(asked[2].tags).toContain('variation');
+  expect(asked[2].denoise).toBe(0.6);
+
+  // A pose is held by the ControlNet, not started from.
+  await page.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 300; c.height = 500;
+    c.getContext('2d').fillRect(0, 0, 300, 500);
+    await genSetSource(await new Promise(res => c.toBlob(res)), 'pose');
+  });
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  expect(asked[3].control).toBe(true);
+  expect(asked[3].strength).toBe(0.8);
+  expect(asked[3].denoise).toBeUndefined();
+  expect(asked[3].shape).toBe('portrait');
+});
+
+// A wide picture in a tall pane: every overlay must sit on the picture, not
+// on the pane round it (the watercolour preview, the vignette and the line
+// and wash were stretched to the pane's shape).
+test('overlays are the picture\'s own size, whatever the pane\'s shape', async ({ page }) => {
+  await openApp(page);
+  const png = require('../helpers').makePng(600, 300, (x, y) => [(x * 255 / 600) | 0, (y * 255 / 300) | 0, 120]);
+  await page.setInputFiles('#dropInput', { name: 'wide.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('#session')).toBeVisible();
+  for (const [btn, overlay] of [['btnWatercolour', 'watercolourOverlay'], ['btnVignette', 'vignetteOverlay'], ['btnLineWash', 'lineWashOverlay']]) {
+    await page.evaluate(id => document.getElementById(id).click(), btn);
+    await expect(page.locator('#' + overlay)).toBeVisible();
+    const [img, over] = await page.evaluate(id => ['img', id].map(i => {
+      const r = document.getElementById(i).getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)];
+    }), overlay);
+    expect(over, overlay).toEqual(img);
+    await page.evaluate(id => document.getElementById(id).click(), btn);
+  }
+});
+
+test('hatching strokes: the key shows lines, not the map\'s colours, and the picture shows through', async ({ page }) => {
+  await openApp(page);
+  const png = require('../helpers').makePng(300, 300, (x) => (x < 150 ? [20, 20, 20] : [240, 240, 240]));
+  await page.setInputFiles('#dropInput', { name: 'halves.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('#session')).toBeVisible();
+  await page.evaluate(() => document.getElementById('btnHatch').click());
+  const note = page.locator('#poseNote [data-note="hatch"]');
+  await expect(note).toContainText('bare paper');
+  await expect(note.locator('.hm-key i')).toHaveCount(5);           // the map: colour swatches
+  await note.locator('[data-hatch-v="strokes"]').click();
+  await expect(note.locator('.hm-key .hm-sw')).toHaveCount(5);      // strokes: line swatches
+  await expect(note.locator('.hm-key i')).toHaveCount(0);
+  await expect(note).toContainText('Every set of parallel lines is one layer');
+  // Not opaque paper: the picture's dark half shows faintly through.
+  const a = await page.evaluate(() => { const c = document.getElementById('hatchOverlay'); return c.getContext('2d').getImageData(2, 2, 1, 1).data[3]; });
+  expect(a).toBeLessThan(250);
+});

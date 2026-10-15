@@ -9,7 +9,13 @@ namespace Refboard.Services;
 /// server's own negative prompt (a simple picture avoids "intricate details",
 /// an ink one "solid black"), the tags to file it under, its shape, and a
 /// seed - none for a new picture each time.</summary>
-public sealed record GenerateRequest(string? Prompt, List<string>? Tags, string? Shape, long? Seed, string? Avoid = null);
+/// <remarks>Image is a PNG as base64, already the size of Shape. With Denoise
+/// (0.2 - 1; low keeps the picture, high only borrows its layout) it is the
+/// picture to start from - a photo drawn as a study, a favourite varied. With
+/// Control instead it is the figure the picture is held to, through the
+/// ControlNet (COMFY_CONTROLNET), at Strength.</remarks>
+public sealed record GenerateRequest(string? Prompt, List<string>? Tags, string? Shape, long? Seed, string? Avoid = null,
+    string? Image = null, double? Denoise = null, bool Control = false, double? Strength = null);
 
 /// <summary>
 /// Generates references with a ComfyUI (<see cref="RefboardOptions.ComfyUrl"/>)
@@ -62,7 +68,8 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
             var models = await Http.GetFromJsonAsync<List<string>>($"{opts.ComfyUrl}/models/checkpoints", cts.Token) ?? [];
             return models.Contains(opts.ComfyCheckpoint)
                 // What it always adds, for the page's Prompt to show.
-                ? new { available = true, checkpoint = opts.ComfyCheckpoint, quality = Quality, negative = Negative }
+                ? new { available = true, checkpoint = opts.ComfyCheckpoint, quality = Quality, negative = Negative,
+                    control = ControlConfigured && await HasControlNetAsync(cts.Token) }
                 : new { available = false, reason = $"ComfyUI has no {opts.ComfyCheckpoint} in models/checkpoints." };
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
@@ -70,6 +77,15 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
             return new { available = false, reason = "ComfyUI is not answering - is the machine it runs on awake?" };
         }
     }
+
+    private async Task<bool> HasControlNetAsync(CancellationToken ct)
+    {
+        try { return (await Http.GetFromJsonAsync<List<string>>($"{opts.ComfyUrl}/models/controlnet", ct) ?? []).Contains(opts.ComfyControlNet); }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException) { return false; }
+    }
+
+    /// <summary>Whether a ControlNet is named in the options.</summary>
+    public bool ControlConfigured => opts.ComfyControlNet.Length > 0;
 
     public string Start(GenerateRequest req)
     {
@@ -105,16 +121,45 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
             ["2"] = Node("CLIPTextEncode", new() { ["clip"] = Link("1", 1), ["text"] = $"{req.Prompt}, {Quality}" }),
             ["3"] = Node("CLIPTextEncode", new() { ["clip"] = Link("1", 1),
                 ["text"] = string.IsNullOrWhiteSpace(req.Avoid) ? Negative : $"{Negative}, {req.Avoid}" }),
-            ["4"] = Node("EmptyLatentImage", new() { ["width"] = w, ["height"] = h, ["batch_size"] = 1 }),
-            ["5"] = Node("KSampler", new()
-            {
-                ["model"] = Link("1", 0), ["positive"] = Link("2", 0), ["negative"] = Link("3", 0),
-                ["latent_image"] = Link("4", 0), ["seed"] = seed, ["steps"] = 28, ["cfg"] = 5.0,
-                ["sampler_name"] = "euler_ancestral", ["scheduler"] = "normal", ["denoise"] = 1.0,
-            }),
             ["6"] = Node("VAEDecode", new() { ["samples"] = Link("5", 0), ["vae"] = Link("1", 2) }),
             ["7"] = Node("PreviewImage", new() { ["images"] = Link("6", 0) }),
         };
+        // Where the sampler starts: an empty latent, or - img2img - the given
+        // picture encoded. The denoise is how far it may wander from it: 1.0
+        // ignores the picture, 0.3 only repaints it.
+        var denoise = 1.0;
+        var positive = Link("2", 0);
+        var negative = Link("3", 0);
+        var hasImage = req.Image is { Length: > 0 };
+        if (hasImage && !req.Control)
+        {
+            graph["8"] = Node("LoadImage", new() { ["image"] = await UploadAsync(req.Image!) });
+            graph["4"] = Node("VAEEncode", new() { ["pixels"] = Link("8", 0), ["vae"] = Link("1", 2) });
+            denoise = Math.Clamp(req.Denoise ?? 0.6, 0.2, 1.0);
+        }
+        else graph["4"] = Node("EmptyLatentImage", new() { ["width"] = w, ["height"] = h, ["batch_size"] = 1 });
+        // A figure to hold the picture to: the ControlNet reads it and bends
+        // both prompts toward it, so the sampler still starts from noise.
+        if (hasImage && req.Control)
+        {
+            if (!ControlConfigured) throw new InvalidOperationException("No ControlNet is set up (COMFY_CONTROLNET).");
+            graph["8"] = Node("LoadImage", new() { ["image"] = await UploadAsync(req.Image!) });
+            graph["9"] = Node("ControlNetLoader", new() { ["control_net_name"] = opts.ComfyControlNet });
+            graph["10"] = Node("ControlNetApplyAdvanced", new()
+            {
+                ["positive"] = positive, ["negative"] = negative, ["control_net"] = Link("9", 0), ["image"] = Link("8", 0),
+                ["strength"] = Math.Clamp(req.Strength ?? 0.8, 0.1, 1.5), ["start_percent"] = 0.0, ["end_percent"] = 0.8,
+                ["vae"] = Link("1", 2),
+            });
+            positive = Link("10", 0);
+            negative = Link("10", 1);
+        }
+        graph["5"] = Node("KSampler", new()
+        {
+            ["model"] = Link("1", 0), ["positive"] = positive, ["negative"] = negative,
+            ["latent_image"] = Link("4", 0), ["seed"] = seed, ["steps"] = 28, ["cfg"] = 5.0,
+            ["sampler_name"] = "euler_ancestral", ["scheduler"] = "normal", ["denoise"] = denoise,
+        });
         var queued = await Http.PostAsJsonAsync($"{opts.ComfyUrl}/prompt", new JsonObject { ["prompt"] = graph });
         var body = await queued.Content.ReadFromJsonAsync<JsonElement>();
         if (!queued.IsSuccessStatusCode || !body.TryGetProperty("prompt_id", out var pid))
@@ -148,12 +193,28 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
         {
             file = entry.Id, name = tags.Count > 0 ? string.Join(", ", tags.Take(3)) : "generated",
             type = "image/png", from = "generate", bytes = entry.Bytes,
-            t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), folder = "generated", tags, prompt = req.Prompt, seed,
+            t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), folder = "generated", tags, prompt = req.Prompt, avoid = req.Avoid, shape = req.Shape ?? "portrait", seed,
+            kind = req.Image is null ? "new" : req.Control ? "pose" : "img2img",
         });
         store.PutItem("uploads", entry.Id.Split('.')[0], doc);
         ReindexHostedService.ReindexRequested = true;
         ReindexHostedService.Wake();
         return JsonSerializer.SerializeToElement(new { doc, url = entry.Url });
+    }
+
+    /// <summary>The picture into ComfyUI's input folder, where its LoadImage
+    /// node reads from; returns the name it was given.</summary>
+    private async Task<string> UploadAsync(string base64)
+    {
+        var name = $"refboard-{Guid.NewGuid():N}.png";
+        using var form = new MultipartFormDataContent
+        {
+            { new ByteArrayContent(Convert.FromBase64String(base64)) { Headers = { ContentType = new("image/png") } }, "image", name },
+            { new StringContent("true"), "overwrite" },
+        };
+        var r = await Http.PostAsync($"{opts.ComfyUrl}/upload/image", form);
+        r.EnsureSuccessStatusCode();
+        return (await r.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("name").GetString()!;
     }
 
     private static JsonObject Node(string type, JsonObject inputs) => new() { ["class_type"] = type, ["inputs"] = inputs };

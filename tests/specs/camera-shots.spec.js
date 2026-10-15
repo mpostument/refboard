@@ -155,3 +155,65 @@ test('the floor under the figure is not lost in the fog', async ({ page }) => {
   // The ground's colour (#7a746a, lit) rather than the background's (#2a2a30).
   expect(floor[0]).toBeGreaterThan(70);
 });
+
+// "Draw this pose" for a depth ControlNet: the depth map, and the light as Generate's Light row.
+test('the key light becomes Generate\'s Light row', async ({ page }) => {
+  await openCamera(page);
+  const light = (az, el) => page.evaluate(([a, e]) => formLightChoice({ lightAz: a, lightEl: e }), [az, el]);
+  expect(await light(10, 45)).toBe('soft');       // from the camera's side
+  expect(await light(0, 8)).toBe('dramatic');     // ... but low
+  expect(await light(80, 45)).toBe('side');
+  expect(await light(-80, 45)).toBe('side');      // either side
+  expect(await light(-80, 10)).toBe('dramatic');  // low and across
+  expect(await light(150, 45)).toBe('back');      // from behind the subject
+  expect(await light(-170, 5)).toBe('back');
+});
+
+test('a depth map of the figure: white near, black behind, no floor', async ({ page }) => {
+  await openCamera(page);
+  const r = await page.evaluate(async () => {
+    formScene.fisheye = false;
+    const blob = await formsDepthSnapshot(formScene);
+    const img = new Image(); img.src = URL.createObjectURL(blob); await img.decode();
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let max = 0, lit = 0;
+    for (let i = 0; i < d.length; i += 4) { if (d[i] > max) max = d[i]; if (d[i] > 12) lit++; }
+    const px = (x, y) => g.getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data[0];
+    return { max, litShare: lit / (c.width * c.height), corner: px(0.02, 0.02), floorStrip: px(0.5, 0.98),
+      override: forms.scene.overrideMaterial, groundVisible: forms.ground.visible };
+  });
+  expect(r.corner).toBeLessThan(10);              // the background is black
+  expect(r.floorStrip).toBeLessThan(10);          // the floor is not drawn
+  expect(r.max).toBeGreaterThan(120);             // the figure is bright where it is near
+  expect(r.litShare).toBeGreaterThan(0.02);       // and there is a figure
+  expect(r.litShare).toBeLessThan(0.6);           // not a filled frame
+  expect(r.override).toBeNull();                  // the live view is put back as it was
+  expect(r.groundVisible).toBe(true);
+});
+
+test('with a ControlNet: Draw this pose sends the depth map, and the light as Light', async ({ page }) => {
+  await fakeServer(page);
+  const asked = [];
+  await page.route('**/api/generate**', r => {
+    if (r.request().method() === 'POST') { asked.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 202, json: { id: 'j' } }); }
+    if (r.request().url().endsWith('/api/generate')) return r.fulfill({ json: { available: true, control: true } });
+    return r.fulfill({ json: { state: 'error', error: 'not here' } });
+  });
+  await openCamera(page);
+  await page.click('[data-ftab="object"]');
+  await expect(page.locator('#formPoseGen')).toBeVisible();
+  await page.evaluate(() => { formScene.lightAz = 150; formScene.lightEl = 40; });
+  await page.click('#formPoseGen');
+  await expect(page.locator('#genStatus')).toContainText('This pose');
+  await expect(page.locator('[data-gen="light"][data-opt="back"]')).toHaveAttribute('aria-pressed', 'true');
+  // From follows the camera, not the default: a depth map from the side must not ask for looking at the viewer.
+  const view = await page.evaluate(() => formViewChoice(formScene, formShotSubject()));
+  await expect(page.locator('[data-gen="view"][data-opt="' + view + '"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('not here');
+  expect(asked[0].control).toBe(true);
+  expect(asked[0].image.length).toBeGreaterThan(1000);
+  expect(asked[0].prompt).toContain('backlighting');
+});

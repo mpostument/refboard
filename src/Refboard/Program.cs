@@ -151,10 +151,13 @@ app.MapPost("/api/generate", (GenerateRequest req) =>
     if (!comfy.Configured) return Results.NotFound();
     if (string.IsNullOrWhiteSpace(req.Prompt) || req.Prompt.Length > 800 || (req.Avoid?.Length ?? 0) > 400
         || (req.Tags ?? []).Count > 24 || (req.Tags ?? []).Any(t => t.Length > 40)
-        || (req.Shape is not null && !ComfyClient.Shapes.ContainsKey(req.Shape)))
+        || (req.Shape is not null && !ComfyClient.Shapes.ContainsKey(req.Shape))
+        || (req.Image is not null && (req.Image.Length > 8_000_000 || !IsBase64(req.Image)))
+        || (req.Control && (req.Image is null || !comfy.ControlConfigured)))
         return Results.BadRequest();
     return Results.Accepted(value: new { id = comfy.Start(req) });
 });
+static bool IsBase64(string s) => Convert.TryFromBase64String(s, new byte[(s.Length * 3 / 4) + 3], out _);
 app.MapGet("/api/generate/{id}", (string id) =>
     comfy.Get(id) is { } job ? Results.Ok(new { state = job.State, upload = job.Upload, error = job.Error }) : Results.NotFound());
 

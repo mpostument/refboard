@@ -222,9 +222,24 @@ In place too: the edge map (`js/edges.js`) - over the picture in a session
 its change, not its size, with the line art closed out first; a step of How
 to draw it in watercolour; and Generate's Edges row, soft or hard, for a
 reference to practise either from.
-Next: the pose and the light from the 3D figure - its depth or OpenPose
-render through a ControlNet - so the reference is the pose you set; a photo
-simplified into a study (img2img); variations of one you like (its seed).
+In place: starting from a picture (`genSetSource()` in `js/generate.js`, the
+`image` of `POST /api/generate`): **a study** - any picture, dropped on
+Generate or picked, simplified into flat shapes in the style chosen (img2img:
+the picture encoded as the sampler's start, `denoise` .45 / .62 / .8); **Vary**
+on a generated picture - its own tags and shape again, a little or a lot
+changed; and **Draw this pose** (Forms > Pose, only with `COMFY_CONTROLNET`) -
+the 3D figure's render through a ControlNet, so the reference is the pose you
+set. The page crops the picture to the shape's size, so the server only passes
+it on. Not yet run against a real ComfyUI here - the graphs are those ComfyUI
+writes for its own img2img and ControlNetApplyAdvanced nodes. The figure goes
+as a depth map (`formsDepthSnapshot()` in `js/forms.js`: the forms alone,
+MeshDepthMaterial, the camera's near and far closed in on them, the greys
+stretched), and the key light - which a depth map cannot carry - as Generate's
+Light row (`formLightChoice()`: from behind the subject is Backlit, from a
+side Side, low and across Dramatic, from the camera's side Soft); From and
+the framing follow the camera too. Draw this shot sets Light the same way.
+Next: OpenPose from the figure's joints, for a ControlNet that reads a
+skeleton, not a volume.
 
 Head and face:
 

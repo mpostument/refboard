@@ -63,6 +63,11 @@ public sealed class RefboardOptions
     /// trained on them.</summary>
     public string ComfyCheckpoint { get; set; } = "animagine-xl-4.0-opt.safetensors";
 
+    /// <summary>An SDXL ControlNet in that ComfyUI's models/controlnet (a depth
+    /// or union one) - what "Draw this pose" holds a figure to. Empty: the
+    /// page does not offer it.</summary>
+    public string ComfyControlNet { get; set; } = "";
+
     /// <summary>URL prefix for images served straight from <see cref="SourceDir"/>.</summary>
     public string RefsPrefix { get; } = "/refs/";
 
@@ -95,6 +100,7 @@ public sealed class RefboardOptions
             DhashThreshold = Int("DHASH_THRESHOLD", 4),
             ComfyUrl = Str("COMFY_URL", "").TrimEnd('/'),
             ComfyCheckpoint = Str("COMFY_CHECKPOINT", "animagine-xl-4.0-opt.safetensors"),
+            ComfyControlNet = Str("COMFY_CONTROLNET", ""),
         };
 
         var patterns = Environment.GetEnvironmentVariable("ROTATION_PATTERNS");

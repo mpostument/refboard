@@ -78,6 +78,7 @@ All via environment variables; every one has a default.
 | `DHASH_THRESHOLD` | `4` | Hamming distance at/below which two frames in one folder are flagged near-duplicate (advisory - off by default in the UI) |
 | `ROTATION_PATTERNS` | `360,turnaround` | Comma-separated folder-name substrings marking a rotation set |
 | `COMFY_URL` | *(empty - off)* | A [ComfyUI](https://github.com/comfyanonymous/ComfyUI) to generate references with, e.g. `http://192.168.1.20:8188` - on a machine with a GPU, started with `--listen` so this container can reach it. Empty: the page does not offer generating. |
+| `COMFY_CONTROLNET` | *(empty - off)* | An SDXL ControlNet in that ComfyUI's `models/controlnet` (a depth or union one) - what **Draw this pose** holds a picture to - the page sends it the figure as a depth map (white near, black behind), so a depth or union ControlNet. Empty: the 3D figure's pose button is not offered. |
 | `COMFY_CHECKPOINT` | `animagine-xl-4.0-opt.safetensors` | The SDXL checkpoint in that ComfyUI's `models/checkpoints`. The prompts are Danbooru tags, so an anime model trained on them ([Animagine XL 4.0](https://huggingface.co/cagliostrolab/animagine-xl-4.0) is the one it is tuned for). |
 
 ## Volumes
@@ -115,8 +116,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
 | `GET /api/uploads/{id}` | One stored file, whichever folder it is in. |
 | `PUT /api/uploads/{id}/folder` | `{ "folder": "figure" }` - moves it into one of the fixed folders (keys: `figure`, `portrait`, `animals`, `landscape`, `city`, `plants`, `still-life`, `illustration`, `my-work`, `other`) and wakes the index pass. |
 | `DELETE /api/uploads/{id}` | |
-| `GET /api/generate` | Whether references can be generated: `{ available, checkpoint, quality, negative }` (the tags it always adds, shown in the page's Prompt), or `{ available: false, reason }` - no `COMFY_URL`, ComfyUI not answering, or the model not in it. |
-| `POST /api/generate` | `{ prompt, avoid, tags, shape, seed }` - Danbooru tags, and more to keep out (the server adds the quality tags and its own negative prompt, nsfw always in it), the words to file it under, `portrait`/`square`/`landscape`, and a seed or none. Returns `202 { id }`: a picture can take longer than a proxy lets a request run. |
+| `GET /api/generate` | Whether references can be generated: `{ available, checkpoint, quality, negative, control }` (`control`: a ControlNet is set up and in ComfyUI; the tags it always adds, shown in the page's Prompt), or `{ available: false, reason }` - no `COMFY_URL`, ComfyUI not answering, or the model not in it. |
+| `POST /api/generate` | `{ prompt, avoid, tags, shape, seed, image, denoise, control, strength }` - `image` (optional): a PNG as base64, already the size of `shape`; with `denoise` (0.2-1) the picture is started from (img2img), with `control: true` it is the figure the picture is held to, at `strength`. Otherwise: Danbooru tags, and more to keep out (the server adds the quality tags and its own negative prompt, nsfw always in it), the words to file it under, `portrait`/`square`/`landscape`, and a seed or none. Returns `202 { id }`: a picture can take longer than a proxy lets a request run. |
 | `GET /api/generate/{id}` | That job: `{ state, upload, error }` - state `running`, `done` or `error`. Done, the picture is kept like an upload, in the `generated` folder with its tags. |
 | `GET /api/items` | The kinds of document stored. |
 | `GET /api/items/{kind}` | Every document of a kind, as `{ id: document }`. |
@@ -385,7 +386,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   three and four. Shown as a map with the layers numbered on the large patches
   and each level's share, or as the picture drawn in strokes - each layer at
   its own angle (45, 135, 0 and 90 degrees), the pen lifted where fewer layers
-  are wanted - so the finished tone is seen before the first line. Open or
+  are wanted (short stubs closed up or dropped, the picture faint underneath, a key
+  of each level's lines) - so the finished tone is seen before the first line. Open or
   close lines. The pen can be a liner or a ballpoint: a liner takes a size for
   each layer (0.1 mm for the first two, then 0.2 and 0.3 - fine first keeps the
   crossings open), drawn at that width; a ballpoint builds the same ladder by
