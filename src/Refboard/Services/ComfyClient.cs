@@ -169,11 +169,27 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
 
         var until = DateTime.UtcNow.AddMinutes(10);
         JsonElement image;
+        // One answer is asked for 20 seconds, and five misses in a row end it: a
+        // laptop that fell asleep drops the packets, and the client's own five
+        // minutes per request would have the page waiting that long on a job
+        // that is gone. A single miss (Wi-Fi, a busy GPU) is not the end.
+        var misses = 0;
         for (;;)
         {
             if (DateTime.UtcNow > until) throw new TimeoutException("ComfyUI took longer than ten minutes.");
             await Task.Delay(1000);
-            var hist = await Http.GetFromJsonAsync<JsonElement>($"{opts.ComfyUrl}/history/{pid.GetString()}");
+            JsonElement hist;
+            try
+            {
+                using var ask = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                hist = await Http.GetFromJsonAsync<JsonElement>($"{opts.ComfyUrl}/history/{pid.GetString()}", ask.Token);
+                misses = 0;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                if (++misses >= 5) throw;
+                continue;
+            }
             if (!hist.TryGetProperty(pid.GetString()!, out var run)) continue;
             if (run.TryGetProperty("status", out var st) && st.TryGetProperty("status_str", out var s) && s.GetString() == "error")
                 throw new InvalidOperationException("ComfyUI could not make it - see its log.");
