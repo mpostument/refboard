@@ -150,3 +150,28 @@ test('clearing the name takes Hers away and Who back to Girl', async ({ page }) 
   await expect(hers).toBeHidden();
   await expect(page.locator('[data-gen="who"][data-opt="girl"]')).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('a variation takes a Setting or Clothes chosen now, on top of its own words - and nothing when none is', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const vary = choices => {
+      Object.assign(genChoices, GEN_DEFAULTS, choices);
+      genSource = { mode: 'vary', prompt: '1girl, solo, frieren, sousou no frieren', avoid: 'lowres', tags: ['frieren'], b64: 'x', shape: 'portrait', level: 0.6, preview: '' };
+      el('genExtra').value = 'smile';
+      return genRequest();
+    };
+    return { none: vary({}), original: vary({ setting: 'original', character: 'frieren' }), steam: vary({ setting: 'steampunk', character: 'frieren' }),
+      armour: vary({ clothes: 'armour' }) };
+  });
+  // Nothing chosen: its own words and More tags only, as before.
+  expect(r.none.prompt).toBe('1girl, solo, frieren, sousou no frieren, smile');
+  expect(r.original.prompt).toBe('1girl, solo, frieren, sousou no frieren, smile');
+  // Steampunk, for a named character: added and weighted, with "alternate costume"; More tags last.
+  expect(r.steam.prompt).toBe('1girl, solo, frieren, sousou no frieren, (steampunk, victorian, goggles on head, brass, gears, corset, gloves:1.4), alternate costume, smile');
+  // Clothes alone, no name: its tags, no costume to be alternate to.
+  expect(r.armour.prompt).toContain('(armor, breastplate, gauntlets:1.4)');
+  expect(r.armour.prompt).not.toContain('alternate costume');
+  // The server is told nothing of it, and keeps the original's avoid.
+  expect(r.steam.outfit).toBeUndefined();
+  expect(r.steam.avoid).toBe('lowres');
+});

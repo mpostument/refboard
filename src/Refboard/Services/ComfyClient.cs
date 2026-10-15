@@ -224,10 +224,14 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
     /// node reads from; returns the name it was given.</summary>
     private async Task<string> UploadAsync(string base64)
     {
-        var name = $"refboard-{Guid.NewGuid():N}.png";
+        // The page sends a JPEG (a PNG of the frame is 2 MB and nginx in front
+        // refuses a body over 1 MB), but a PNG still works: told by its first bytes.
+        var bytes = Convert.FromBase64String(base64);
+        var jpeg = bytes.Length > 2 && bytes[0] == 0xFF && bytes[1] == 0xD8;
+        var name = $"refboard-{Guid.NewGuid():N}.{(jpeg ? "jpg" : "png")}";
         using var form = new MultipartFormDataContent
         {
-            { new ByteArrayContent(Convert.FromBase64String(base64)) { Headers = { ContentType = new("image/png") } }, "image", name },
+            { new ByteArrayContent(bytes) { Headers = { ContentType = new(jpeg ? "image/jpeg" : "image/png") } }, "image", name },
             { new StringContent("true"), "overwrite" },
         };
         var r = await Http.PostAsync($"{opts.ComfyUrl}/upload/image", form);

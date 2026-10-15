@@ -598,6 +598,10 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   chips under the field.
   When the ComfyUI is set up and not answering (a laptop asleep, a tunnel
   down), Generate stays and says so, with *Check again*, instead of vanishing.
+  *Vary* takes a Setting or Clothes picked now on top of the picture's own
+  words (weighted: *Very* different puts her in steampunk on the same face);
+  the picture to start from goes as a JPEG under 700 kB, since nginx refuses a
+  request body over 1 MB.
 - **A studio layout** - dark throughout, an icon rail down the left for the
   sections, and the library and session controls as panels either side that
   fold away, so the image gets the screen. The session panel and the 3D

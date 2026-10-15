@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-vary-outfit', title: 'Generate: Vary takes a new outfit, and works behind nginx',
+    text: "Vary, a study and Draw this pose sent the picture to start from as a PNG of 2 MB, which the nginx in front of the container refuses over 1 MB (HTTP 413) - they now send a JPEG under 700 kB, and work there. Vary also takes the Setting or Clothes you pick now, added to its own words and weighted, so a made picture can go from her own clothes to steampunk on the same face: set How different to Very.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-offline', title: 'Generate: says why when ComfyUI is not answering',
     text: "When a ComfyUI is set up and the machine it runs on is asleep, off, or out of reach, Generate used to vanish without a word. Now the button stays, the view says that ComfyUI is not answering, and Check again asks once more - it also asks each time you open the view, and after a picture that fails. Generate is off while it is down, and the other views do not offer their Generate buttons.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

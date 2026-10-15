@@ -262,3 +262,21 @@ test('hatching strokes: the key shows lines, not the map\'s colours, and the pic
   const a = await page.evaluate(() => { const c = document.getElementById('hatchOverlay'); return c.getContext('2d').getImageData(2, 2, 1, 1).data[3]; });
   expect(a).toBeLessThan(250);
 });
+
+test('the picture sent to the server is a JPEG under 700 kB, even of noise - a PNG of it was refused by nginx (413)', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    // The worst case for a JPEG: noise over a whole frame.
+    const [W, H] = GEN_SHAPE_PX.portrait, c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d'), d = g.createImageData(W, H);
+    for (let i = 0; i < d.data.length; i += 4) { d.data[i] = Math.random() * 255; d.data[i + 1] = Math.random() * 255; d.data[i + 2] = Math.random() * 255; d.data[i + 3] = 255; }
+    g.putImageData(d, 0, 0);
+    const b64 = genEncode(c);
+    return { len: b64.length, jpeg: b64.startsWith('/9j/'), png: c.toDataURL('image/png').length };
+  });
+  expect(r.jpeg).toBe(true);
+  expect(r.len).toBeLessThanOrEqual(700000);
+  // The PNG of the same frame is what nginx's 1 MB refused.
+  expect(r.png).toBeGreaterThan(1000000);
+});

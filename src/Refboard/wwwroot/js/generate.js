@@ -525,7 +525,7 @@ function genHueTag(L, h) {
 // How hard the name pulls, as a ComfyUI weight. Unweighted, Frieren came out
 // without her pointed ears in 6 pictures of 8 (same seeds, Animagine XL 4.0,
 // bust, Original); at 1.2 in 2 of 8 - her clothes were there either way.
-const GEN_CHAR_WEIGHT = 1.2;
+const GEN_CHAR_WEIGHT = 1.2, GEN_VARY_OUTFIT_WEIGHT = 1.4;
 function genCharacterTags(text) {
   const t = String(text || '').trim().slice(0, 80);
   if (!t) return '';
@@ -579,10 +579,11 @@ function genPrompt(choices, extra = '') {
   const outfit = rows.some(([c, o]) => outfitAsked(c, o));
   // A row whose tags another choice has taken over (a temple, Setting's).
   const owned = new Set(rows.map(([, o]) => o.owns).filter(Boolean));
-  const tags = [], words = [], avoid = [];
+  const tags = [], words = [], avoid = [], outfitTags = [];
   for (const [c, o] of rows) {
     const t = owned.has(c.id) ? '' : pick(o.tags), a = owned.has(c.id) ? '' : pick(o.avoid);
     if (t) tags.push(t);
+    if (t && (c.id === 'setting' || c.id === 'clothes')) outfitTags.push(t);
     if (c.id === 'who' && who) tags.push(`(${who}:${GEN_CHAR_WEIGHT})`, ...(outfit ? ['alternate costume'] : []));
     if (a) avoid.push(a);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
@@ -591,7 +592,9 @@ function genPrompt(choices, extra = '') {
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
   const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' || choices.framing === 'expressions' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
-  return { prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...(who ? [who.split(', ')[0]] : []), ...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
+  // outfit: what Setting and Clothes alone say, for a variation, which keeps its
+  // own tags and takes only these from the choices (genRequest).
+  return { outfit: outfitTags.join(', '), prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...(who ? [who.split(', ')[0]] : []), ...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
 
 /* "watercolor (medium)" is the Danbooru tag, but to ComfyUI bare brackets
@@ -649,7 +652,9 @@ function saveGenView() {
 function genRequest() {
   const req = genPrompt(genChoices, el('genExtra').value);
   const off = new Set(genView.off);
+  const outfit = req.outfit, who = genCharacterTags(genChoices.character);
   const out = { ...req, avoid: genSplit(req.avoid).filter(t => !off.has(t)).join(', ') };
+  delete out.outfit;
   const src = genSource;
   if (!src) return out;
   out.image = src.b64;
@@ -665,7 +670,14 @@ function genRequest() {
   } else {
     // A variation: the original's own words, then whatever is typed now.
     const more = genSplit(el('genExtra').value);
-    out.prompt = comfyTags([src.prompt, ...more].filter(Boolean).join(', '));
+    // Its own words, then a Setting or Clothes chosen now (added, not swapped:
+    // what it was made in stays in its words), then what is typed. The outfit
+    // is weighted: the picture is the sampler's starting point and the name in
+    // its words pulls back to her own clothes - plain, steampunk added only
+    // gears in the background; weighted 1.3-1.5 at "Very" it was goggles, a
+    // corset and gloves on the same face (Frieren, seed 9).
+    const wear = outfit ? `(${outfit}:${GEN_VARY_OUTFIT_WEIGHT})` : '';
+    out.prompt = comfyTags([src.prompt, wear, outfit && who ? 'alternate costume' : '', ...more].filter(Boolean).join(', '));
     out.avoid = src.avoid || '';
     out.tags = [...(src.tags || []), ...more, 'variation'].slice(0, 24).map(w => w.slice(0, 40));
   }
@@ -691,10 +703,25 @@ const GEN_LEVELS = {
 };
 const GEN_WHAT = {
   study: 'A study: this picture simplified into flat shapes, in the style chosen above.',
-  vary: 'A variation of this picture - its own tags, and any More tags added.',
+  vary: 'A variation of this picture - its own tags, a Setting or Clothes you pick now, and any More tags added.',
   pose: 'This pose, drawn as the character chosen above.',
 };
 let genSource = null;
+
+/* The frame as the base64 the server takes. A JPEG, not a PNG: a PNG of an
+   832x1216 frame is 2 MB as base64, and nginx in front of the container
+   refuses a request body over 1 MB (HTTP 413) - so Vary, a study and Draw this
+   pose never worked through it. The quality steps down until it is under 700 kB,
+   which leaves the prompt and the rest of the request room under that 1 MB. */
+const GEN_IMAGE_MAX = 700_000;
+function genEncode(canvas) {
+  let b64 = '';
+  for (const q of [0.92, 0.85, 0.75, 0.6, 0.45]) {
+    b64 = canvas.toDataURL('image/jpeg', q).split(',')[1];
+    if (b64.length <= GEN_IMAGE_MAX) break;
+  }
+  return b64;
+}
 
 async function genSetSource(blob, mode, extra = {}) {
   const url = URL.createObjectURL(blob);
@@ -718,7 +745,7 @@ async function genSetSource(blob, mode, extra = {}) {
     const k = (mode === 'pose' ? Math.min : Math.max)(W / img.naturalWidth, H / img.naturalHeight);
     const w = img.naturalWidth * k, h = img.naturalHeight * k;
     g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-    genSource = { mode, shape, b64: c.toDataURL('image/png').split(',')[1], preview: c.toDataURL('image/jpeg', 0.6),
+    genSource = { mode, shape, b64: genEncode(c), preview: c.toDataURL('image/jpeg', 0.6),
       level: GEN_LEVELS[mode].options[GEN_LEVELS[mode].start][1], ...extra };
   } finally { URL.revokeObjectURL(url); }
   renderGenSource();
