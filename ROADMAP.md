@@ -1424,6 +1424,15 @@ the wash.
   hour and under overcast, side by side on one grid - a Monet series.
 - **Clothes on the figure.** Cloth simulated over the mannequin's pose:
   folds at elbows, knees and waist. Drapery exists; on a body it does not.
+- **A real human body for the figure.** The mannequin is ellipsoids and capsules (`FORM_RIG` in
+  `js/forms-models.js`): no muscle, no fingers, no shape to a calf or a hip. Replace its look with a
+  real human mesh (glTF - MakeHuman or another CC0 / CC-BY base) skinned to the same joints, so the
+  poses, the Body builds, the Proportions sliders, Pose from a photo and the depth map Character
+  draws from all keep working on a body with real anatomy. The open points: which licence and which
+  base mesh; how its bones map onto `FORM_RIG`'s ten joint kinds; how a build (Child, Older,
+  Heavier, Muscular...) scales a skinned body; hands with fingers; and the size of the mesh in a
+  page that loads lazily. The mannequin stays as the plain view for practising forms. Asked for
+  2026-10-16, after the figure's depth map made every character a mannequin's silhouette.
 - **Features.** The eye, nose, mouth and ear close up from the head scan,
   in the planes view - how light sits on each form alone.
 - **Hatching, the rest.** In place (3D forms > Guides > Hatching along the
