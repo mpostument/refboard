@@ -385,7 +385,11 @@ test('a character is asked for solo, whole, facing the way its direction says, a
   await openApp(page);
   const front = await ask(page, settings({ kind: 'character', thing: 'girl knight', dir: 'front' }));
   const left = await ask(page, settings({ kind: 'character', thing: 'girl knight', dir: 'left' }));
-  for (const w of ['solo', 'girl knight', 'full body', 'standing', 'facing viewer', 'game sprite', 'white background']) expect(front.prompt, w).toContain(w);
+  for (const w of ['solo', 'girl knight', 'full body', 'standing', 'facing viewer', 'anime style', 'soft shading', 'thin outline', 'white background']) expect(front.prompt, w).toContain(w);
+  // Not the sprite recipe's flat shapes with a thick outline: the user asked for ordinary anime.
+  for (const w of ['thick outline', 'flat color', 'cel shading']) expect(front.prompt, w).not.toContain(w);
+  // Soft shading is what the sprite recipe keeps out as "gradient".
+  for (const w of ['gradient', 'glossy']) expect(front.avoid, w).not.toContain(w);
   expect(front.prompt).not.toContain('no humans');
   expect(left.prompt).toContain('facing left');
   expect(left.prompt).not.toContain('facing viewer');
@@ -486,4 +490,35 @@ test('one direction is the default and faces right, for the game to mirror', asy
   expect(r.dirs).toBe('1');
   expect(r.one).toEqual([['right', 270]]);
   expect(r.choices).toEqual(['1', '4', '8']);
+});
+
+test('a figure on a cream gradient (soft-shaded anime comes so) is cut out whole; the plain cut leaves the corners', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const c = Object.assign(document.createElement('canvas'), { width: 200, height: 300 }), g = c.getContext('2d');
+    // Cream at the top, a tan about 200 steps (R+G+B) darker at the bottom, as a model's vignette is:
+    // the border is not one colour.
+    const grad = g.createLinearGradient(0, 0, 0, 300);
+    grad.addColorStop(0, 'rgb(250,246,232)'); grad.addColorStop(1, 'rgb(190,182,160)');
+    g.fillStyle = grad; g.fillRect(0, 0, 200, 300);
+    g.fillStyle = '#111'; g.fillRect(70, 60, 60, 180);        // the outline
+    g.fillStyle = '#3a6ea5'; g.fillRect(74, 64, 52, 172);     // the figure
+    const alpha = (cv, x, y) => cv.getContext('2d').getImageData(x, y, 1, 1).data[3];
+    const plain = cutOut(c, { trim: false });
+    const fig = assetCutFigure(c);
+    return { plainCorner: plain.found ? alpha(plain.canvas, 3, 3) : 'not found', found: fig.found, tolerance: fig.tolerance,
+      size: fig.found ? [fig.canvas.width, fig.canvas.height] : null,
+      middle: fig.found ? alpha(fig.canvas, fig.canvas.width >> 1, fig.canvas.height >> 1) : null,
+      borderClear: assetBorderClear(c) };
+  });
+  // The plain cut did not clear the corner (or gave up) - that is what the raised tolerance is for.
+  expect(r.plainCorner === 'not found' || r.plainCorner > 8).toBe(true);
+  expect(r.found).toBe(true);
+  expect(r.tolerance).toBeGreaterThan(48);
+  // Trimmed to the figure (60 x 180) and the pad, not the picture's 200 x 300.
+  expect(r.size[0]).toBeLessThan(80);
+  expect(r.size[1]).toBeLessThan(200);
+  expect(r.middle).toBe(255);
+  // An uncut picture's border is not clear: the test cannot be passed by doing nothing.
+  expect(r.borderClear).toBeLessThan(0.5);
 });

@@ -33,7 +33,7 @@ const CUT_SPECK = 0.002;     // a loose piece under this fraction of the biggest
 
 /* The commonest colour on the outer two pixels of the picture, and how much of
    that ring is near it. Colours are counted in 16 steps a channel, then averaged. */
-function cutEdgeColour(src, w, h) {
+function cutEdgeColour(src, w, h, reach = 60) {
   // The ring: all of the top and bottom two rows, and the first and last two pixels of the rest.
   const ring = fn => {
     for (let y = 0; y < h; y++) {
@@ -55,7 +55,7 @@ function cutEdgeColour(src, w, h) {
   for (let k = 1; k < 4096; k++) if (bins[k] > bins[best]) best = k;
   const c = [sum[best * 3] / bins[best], sum[best * 3 + 1] / bins[best], sum[best * 3 + 2] / bins[best]];
   let near = 0;
-  ring(i => { if (Math.abs(src[i] - c[0]) + Math.abs(src[i + 1] - c[1]) + Math.abs(src[i + 2] - c[2]) <= 60) near++; });
+  ring(i => { if (Math.abs(src[i] - c[0]) + Math.abs(src[i + 1] - c[1]) + Math.abs(src[i + 2] - c[2]) <= reach) near++; });
   return { c, share: near / total };
 }
 
@@ -65,7 +65,7 @@ function cutEdgeColour(src, w, h) {
 function cutOut(pic, { tolerance = CUT_TOLERANCE, holes = false, trim = true, specks = true } = {}) {
   const w = pic.width, h = pic.height, n = w * h;
   const src = pic.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
-  const { c: ref, share } = cutEdgeColour(src, w, h);
+  const { c: ref, share } = cutEdgeColour(src, w, h, Math.max(60, tolerance));
   if (share < CUT_EDGE_SHARE) return { found: false, share, bgShare: 0 };
 
   const far = new Uint16Array(n);
@@ -344,6 +344,36 @@ function assetIcon(canvas, { size = 128, diagonal = false } = {}) {
   g.imageSmoothingQuality = 'high';
   g.drawImage(piece, Math.round((size - dw) / 2), Math.round((size - dh) / 2), dw, dh);
   return out;
+}
+
+/* A figure cut out of a background that may not be plain. An anime illustration with soft shading
+   comes on a cream *gradient* (a vignette, darker in the corners), and cutOut at its usual tolerance
+   takes only the strip near the edge colour and leaves the rest: the picture looks cut and is not.
+   So the tolerance is raised step by step until the picture's own edge is clear - the test a cut
+   figure must pass: nothing of it touches the border, so every border pixel is background. The
+   bigger tolerances are safe only because the flood still cannot cross a jump in colour (CUT_STEP),
+   and the figure has an outline. Returns { found, canvas (trimmed), tolerance }. */
+// The last two reach a gradient that darkens 200 steps from the colour the edge is mostly of; the
+// last is "as far as the step between neighbours allows" (765 is the greatest |dR|+|dG|+|dB|).
+const FIGURE_TOLERANCES = [CUT_TOLERANCE, 100, 160, 260, 765];
+const FIGURE_EDGE_CLEAR = 0.98;   // of the border's pixels that must be transparent
+function assetBorderClear(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  let clear = 0, total = 0;
+  const look = (x, y) => { total++; if (d[(y * w + x) * 4 + 3] <= ASSET_ALPHA) clear++; };
+  for (let x = 0; x < w; x++) { look(x, 0); look(x, h - 1); }
+  for (let y = 1; y < h - 1; y++) { look(0, y); look(w - 1, y); }
+  return clear / total;
+}
+function assetCutFigure(pic) {
+  for (const tolerance of FIGURE_TOLERANCES) {
+    const cut = cutOut(pic, { tolerance, trim: false });
+    if (!cut.found || assetBorderClear(cut.canvas) < FIGURE_EDGE_CLEAR) continue;
+    const canvas = assetTrim(cut.canvas);
+    if (canvas) return { found: true, canvas, tolerance };
+  }
+  return { found: false };
 }
 
 /* The white edge the model draws round a figure (a sticker's border), taken off. The plain

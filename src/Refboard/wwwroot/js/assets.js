@@ -81,6 +81,12 @@ const CHAR_PITCH = { side: 4, top: 25 };
 // What the model draws unless told not: a chibi (not wanted), and a sheet of several figures.
 const CHAR_AVOID = 'chibi, super deformed, multiple views, character sheet, reference sheet, turnaround, multiple girls, multiple boys';
 const CHAR_STRENGTH = 0.5;
+/* A character is an anime illustration, not a sprite's flat shapes (the user, 2026-10-16, of the
+   first runs: "I do not like the style"; "ordinary anime"): a thin outline and soft shading. What it
+   keeps out is only what would not cut out or would not stand on its own - shadow, floor - and not
+   "gradient, glossy, lighting", which the sprite recipe keeps out and which is what soft shading is. */
+const CHAR_STYLE = 'anime style, anime illustration, soft shading, thin outline, 2d game character, white background, simple background';
+const CHAR_NOT = 'shadow, cast shadow, ground shadow, drop shadow, contact shadow, depth of field, 3d, realistic, floor, ground, background, glow, rim light, colored outline';
 
 const ASSET_THEMES = [
   { id: 'any', label: 'Any', tags: '' },
@@ -145,7 +151,7 @@ function assetRequest(s) {
   const short = kind.character ? thing.split(',')[0].trim().slice(0, 40) : thing;
   const named = [kind.tile || kind.character ? '' : material.word, thing].filter(Boolean).join(' ');
   const box = ASSET_CONTAINER.test(thing);
-  const tags = kind.character ? [] : ['no humans'], avoid = [kind.tile ? TILE_AVOID : ASSET_AVOID, kind.character ? `${CHAR_AVOID}, ${GEN_POSE_AVOID}` : ASSET_ALONE];
+  const tags = kind.character ? [] : ['no humans'], avoid = [kind.tile ? TILE_AVOID : kind.character ? CHAR_NOT : ASSET_AVOID, kind.character ? `${CHAR_AVOID}, ${GEN_POSE_AVOID}` : ASSET_ALONE];
   const dir = s.dir && CHAR_FACE[s.dir] ? s.dir : 'front';
   if (kind.tile) {
     const ground = TILE_WORDS[thing] || { tags: `${thing}, seamless texture, tileable` };
@@ -164,7 +170,7 @@ function assetRequest(s) {
     tags.push(named, ...(box ? ['closed', 'closed lid'] : []), view.tags, 'object focus');
     if (box) avoid.push('open, open lid, gold, coins, jewels, gems, overflowing');
   }
-  const prompt = [...tags, theme.tags, simple.tags, kind.tile ? TILE_STYLE : ASSET_STYLE].filter(Boolean).join(', ');
+  const prompt = [...tags, theme.tags, simple.tags, kind.tile ? TILE_STYLE : kind.character ? CHAR_STYLE : ASSET_STYLE].filter(Boolean).join(', ');
   if (kind.character) return {
     prompt: comfyTags(prompt),
     avoid: comfyTags([...avoid, simple.avoid].filter(Boolean).join(', ')),
@@ -347,7 +353,7 @@ async function assetsCharacterGo(s) {
   await runGenerate(jobs, (i, total) => `Drawing ${dirs[i - 1][0]} (${i} of ${total})...`, `${dirs.length} directions made - in Uploads, Assets.`, async made => {
     let pic;
     try { pic = await genLoadPicture(made.doc); } catch { return; }
-    const cut = cutOut(pic);
+    const cut = assetCutFigure(pic);
     if (cut.found) {
       // Kept at once, cut out and with the white border off: stopping, or a closed page, leaves
       // usable pictures, not the model's own. Lining up needs them all, so it is a second pass.
@@ -428,7 +434,12 @@ function initAssets() {
     if (b) {
       assetState[b.dataset.as] = b.dataset.opt;
       // A different kind has different things to name, and may or may not have views and an icon.
-      if (b.dataset.as === 'kind') { assetState.thing = assetKind(b.dataset.opt).things[0]; assetsSave(); renderAssets(); return; }
+      if (b.dataset.as === 'kind') {
+        assetState.thing = assetKind(b.dataset.opt).things[0];
+        // A character is an illustration with some shading; "Simple" asks for the flat shapes of a sprite.
+        if (assetKind(b.dataset.opt).character && assetState.simple === 'simple') assetState.simple = 'medium';
+        assetsSave(); renderAssets(); return;
+      }
     } else if (!t) return;
     assetsSave();
     for (const x of el('assetChoices').querySelectorAll('[data-as],[data-thing]'))
