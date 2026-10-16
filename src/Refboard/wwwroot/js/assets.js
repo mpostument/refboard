@@ -16,11 +16,42 @@ const ASSET_AVOID = 'shadow, cast shadow, gradient, glossy, shiny, depth of fiel
 // An anime model makes a girl holding the thing, and a landscape behind a tree.
 const ASSET_ALONE = 'human, 1girl, 1boy, person, hands, holding, character, scenery, landscape, sky';
 
-/* How simple, a setting of its own: without it the output is far too busy for a game. */
+/* How simple, a setting of its own: without it the output is far too busy for a game.
+   A tile is a texture, so what it keeps out (tileAvoid) is not "texture, patterns". */
 const ASSET_SIMPLE = [
-  { id: 'simple', label: 'Simple', tags: 'minimalist, simple design, limited color palette', avoid: 'detailed, intricate, ornate, complex, texture, patterns', hint: 'A few flat colours - what a small sprite can show' },
-  { id: 'medium', label: 'Medium', tags: '', avoid: 'intricate, ornate', hint: 'Some detail, no ornament' },
-  { id: 'detailed', label: 'Detailed', tags: 'detailed', avoid: '', hint: 'Fine detail - for a big picture, not a small sprite' },
+  { id: 'simple', label: 'Simple', tags: 'minimalist, simple design, limited color palette', avoid: 'detailed, intricate, ornate, complex, texture, patterns', tileAvoid: 'detailed, intricate, ornate, complex', hint: 'A few flat colours - what a small sprite can show' },
+  { id: 'medium', label: 'Medium', tags: '', avoid: 'intricate, ornate', tileAvoid: 'intricate, ornate', hint: 'Some detail, no ornament' },
+  { id: 'detailed', label: 'Detailed', tags: 'detailed', avoid: '', tileAvoid: '', hint: 'Fine detail - for a big picture, not a small sprite' },
+];
+
+/* A tile is a flat piece of ground, not a sprite on white: no outline, no background to cut
+   away, and none of the "floor, ground" that a sprite is told to keep out. */
+const TILE_STYLE = 'flat color, cel shading, 2d game texture, from above';
+const TILE_AVOID = 'shadow, cast shadow, gradient, glossy, shiny, depth of field, 3d, realistic, lighting, border, frame, horizon, perspective, vignette, object';
+/* What phase 0 found per ground. Water fails with the word "tile" in it, and soil turns into
+   bricks at "simple" unless bricks are kept out. */
+const TILE_WORDS = {
+  grass: { tags: 'grass, lawn, seamless texture, tileable' },
+  dirt: { tags: 'dirt, bare soil, brown, seamless texture, tileable', avoid: 'brick, bricks, mosaic, pavement, tiles' },
+  stone: { tags: 'stone floor, cobblestone, seamless texture, tileable', avoid: 'gaps, white gaps' },
+  water: { tags: 'water, waves, ripples, blue', avoid: 'circles, mosaic, squares' },
+  wood: { tags: 'wood planks, wooden floor, seamless texture, tileable' },
+  sand: { tags: 'sand, desert sand, seamless texture, tileable' },
+  snow: { tags: 'snow, snowfield, seamless texture, tileable' },
+  lava: { tags: 'lava, molten rock, glowing cracks, seamless texture, tileable' },
+};
+// The tile is asked of the model whole, then mended at this size and shrunk to the one chosen.
+/* Real runs (grass, stone, water, one model, 2026-10-16): a denoise of 0.9 or more makes the server
+   erase the cross and draw it from nothing - a different green, less texture, the cross itself
+   visible at 1x; 0.6 keeps what is under it and only heals the join. tileSeam of the model's own
+   tile was 2.2 - 5.7, of the mended 1.3 - 3.5: the ranges overlap (a noisy texture scores high
+   whole), so the score marks only what is plainly bad, over TILE_SEAM_BAD. */
+const TILE_MODEL = 1024, TILE_BAND = 0.14, TILE_DENOISE = 0.6, TILE_SEAM_BAD = 4;
+const TILE_SIZES = [
+  { id: '512', label: '512', hint: 'A big tile - for a game drawn large' },
+  { id: '256', label: '256', hint: 'A tile for a game drawn at 256 px a square' },
+  { id: '32', label: '32', hint: 'Shrunk to 32 px, for a small game (colours not yet cut - that is phase 6)' },
+  { id: '16', label: '16', hint: 'Shrunk to 16 px' },
 ];
 
 const ASSET_THEMES = [
@@ -48,6 +79,8 @@ const ASSET_KINDS = [
     things: ['sword', 'axe', 'bow', 'staff', 'spear', 'dagger', 'mace', 'hammer', 'shield'] },
   { id: 'item', label: 'Item', size: [768, 768], views: false, icon: true, hint: 'Something picked up - a potion, a key, a coin',
     things: ['potion', 'key', 'scroll', 'coin', 'gem', 'ring', 'apple', 'book', 'heart', 'mushroom'] },
+  { id: 'tile', label: 'Tile', size: [TILE_MODEL, TILE_MODEL], views: false, icon: false, tile: true, hint: 'A square of ground that repeats with no seam - 3 x 3 shown',
+    things: Object.keys(TILE_WORDS) },
 ];
 
 // What a view says to the model; a prop is drawn from the front or from the 3/4 view above it.
@@ -60,7 +93,7 @@ const ASSET_VIEWS = [
 // also read as a body part, so the first idea is "treasure chest" - and the treasure kept inside.
 const ASSET_CONTAINER = /\b(chest|box|crate|barrel|door|jar|bag|coffin|basket|pot|book|casket)\b/i;
 
-const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', count: '4', draft: '', icon: true };
+const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true };
 let assetState = { ...ASSET_DEFAULTS };
 
 const assetKind = id => ASSET_KINDS.find(k => k.id === id) || ASSET_KINDS[0];
@@ -72,10 +105,14 @@ function assetRequest(s) {
   const kind = assetKind(s.kind), simple = assetPick(ASSET_SIMPLE, s.simple), theme = assetPick(ASSET_THEMES, s.theme);
   const material = assetPick(ASSET_MATERIALS, s.material), view = assetPick(ASSET_VIEWS, s.view);
   const thing = (s.thing || '').trim().toLowerCase().slice(0, 40) || kind.things[0];
-  const named = [material.word, thing].filter(Boolean).join(' ');
+  const named = [kind.tile ? '' : material.word, thing].filter(Boolean).join(' ');
   const box = ASSET_CONTAINER.test(thing);
-  const tags = ['no humans'], avoid = [ASSET_AVOID, ASSET_ALONE];
-  if (kind.id === 'weapon') {
+  const tags = ['no humans'], avoid = [kind.tile ? TILE_AVOID : ASSET_AVOID, ASSET_ALONE];
+  if (kind.tile) {
+    const ground = TILE_WORDS[thing] || { tags: `${thing}, seamless texture, tileable` };
+    tags.push(ground.tags);
+    if (ground.avoid) avoid.push(ground.avoid);
+  } else if (kind.id === 'weapon') {
     // The model draws a set of four to six, or a rack on a panel: ask for one, and keep the set out.
     tags.push('solo', `(single ${named}:1.3)`, 'full length', 'centered', 'vertical', 'pointing up', 'object focus');
     avoid.push('multiple, set, collection, rack, weapon rack, panel, display, sheath');
@@ -86,13 +123,13 @@ function assetRequest(s) {
     tags.push(named, ...(box ? ['closed', 'closed lid'] : []), view.tags, 'object focus');
     if (box) avoid.push('open, open lid, gold, coins, jewels, gems, overflowing');
   }
-  const prompt = [...tags, theme.tags, simple.tags, ASSET_STYLE].filter(Boolean).join(', ');
+  const prompt = [...tags, theme.tags, simple.tags, kind.tile ? TILE_STYLE : ASSET_STYLE].filter(Boolean).join(', ');
   const [width, height] = kind.size;
   return {
     prompt: comfyTags(prompt),
-    avoid: comfyTags([...avoid, simple.avoid].filter(Boolean).join(', ')),
+    avoid: comfyTags([...avoid, kind.tile ? simple.tileAvoid : simple.avoid].filter(Boolean).join(', ')),
     // The thing first: a picture is named from its first three tags.
-    tags: [thing, kind.id, ...(kind.views ? [view.id] : []), ...(theme.tags ? [theme.id] : []), `${width}x${height}`, 'asset']
+    tags: [thing, kind.id, ...(kind.views ? [view.id] : []), ...(theme.tags ? [theme.id] : []), ...(kind.tile ? ['seamless'] : []), `${width}x${height}`, 'asset']
       .slice(0, 24).map(t => t.slice(0, 40)),
     width, height, asset: kind.id,
   };
@@ -124,8 +161,9 @@ function renderAssets() {
     kind.things.map(t => `<button type="button" class="chip" data-thing="${esc(t)}" aria-pressed="${s.thing.trim().toLowerCase() === t}">${esc(t)}</button>`).join('') + '</div></div>' +
     (kind.views ? assetChips('view', 'View', ASSET_VIEWS, s.view, () => '') : '') + '</section>' +
     `<section class="gen-group">${assetChips('theme', 'Theme', ASSET_THEMES, s.theme, () => '')}` +
-    assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '') +
-    assetChips('simple', 'How simple', ASSET_SIMPLE, s.simple) + '</section>';
+    (kind.tile ? '' : assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '')) +
+    assetChips('simple', 'How simple', ASSET_SIMPLE, s.simple) +
+    (kind.tile ? assetChips('size', 'Tile size, px', TILE_SIZES, s.size) : '') + '</section>';
   el('assetIconRow').classList.toggle('hidden', !kind.icon);
   el('assetIcon').checked = !!s.icon;
   el('assetCount').value = s.count;
@@ -143,10 +181,39 @@ function renderAssetPrompt() {
     `<div><h5>Size asked of the model</h5><div class="gen-tags">${r.width} x ${r.height}</div></div>`;
 }
 
+/* A tile: not cut out - mended. The picture is shifted by half so that its seams lie in the
+   middle as a cross, the cross is drawn again by the model from the tile's own words (a second
+   job, `generateOne`, the Redraw path), and the result - whose edges now meet - is shrunk to the
+   size chosen. The model's own picture and its second pass are forgotten; what is kept is the
+   mended tile, tagged by how well its edges meet (tileSeam, 1 = no seam at all). */
+async function assetFinishTile(made, s) {
+  const doc = made.doc, status = el(ASSET_UI.status), size = Number(assetPick(TILE_SIZES, s.size).id);
+  let pic;
+  try { pic = await genLoadPicture(doc); } catch { return; }
+  const rolled = tileRoll(pic, pic.width >> 1, pic.height >> 1);
+  const cross = tileCross(pic.width, pic.height, Math.round(pic.width * TILE_BAND)).toDataURL('image/png').split(',')[1];
+  status.textContent = 'Mending the seams...';
+  const mended = await generateOne({ prompt: doc.prompt, avoid: doc.avoid || '', tags: (doc.tags || []).slice(0, 24), shape: 'square', seed: doc.seed,
+    image: genEncode(rolled), mask: cross, denoise: TILE_DENOISE, parent: doc.file, asset: 'tile',
+    ...(s.draft === 'draft' ? { steps: GEN_DRAFT_STEPS } : {}) });
+  let fixed;
+  try { fixed = await genLoadPicture(mended.doc); } catch { return; }
+  const seam = tileSeam(fixed), canvas = tileShrink(fixed, size);
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  const f = await storeFile(blob);
+  if (storeMode === 'server') await storeSortFile(f.id, 'assets');
+  const tags = [...(doc.tags || []).filter(t => t !== 'seamless' && !/^\d+x\d+$/.test(t)), seam < TILE_SEAM_BAD ? 'seamless' : 'seam visible', `${size}x${size}`].slice(0, 24);
+  await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png',
+    width: size, height: size, tags, t: Date.now() });
+  await forgetUpload(mended.doc);
+  await forgetUpload(doc);
+}
+
 /* One finished picture: cut out, and for a weapon or an item reduced to one piece, a
    weapon turned upright - kept in Uploads, Assets, in the place of the model's own, which
    is forgotten. A picture with no plain background is kept as it came, tagged so. */
 async function assetFinish(made, s) {
+  if (assetKind(s.kind).tile) return assetFinishTile(made, s);
   const doc = made.doc, kind = assetKind(s.kind);
   const keep = async (canvas, extra, over = {}) => {
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
@@ -212,10 +279,19 @@ async function showAssets(check = true) {
   el('assetEmpty').classList.toggle('hidden', all.length > 0);
   for (const u of all.slice(0, 48)) {
     const li = document.createElement('li');
-    li.innerHTML = `<button type="button" class="asset-open" title="${esc((u.tags || []).join(', '))}" aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
+    const tile = (u.tags || []).includes('tile');
+    li.innerHTML = `<button type="button" class="asset-open${tile ? ' asset-tile' : ''}" title="${esc((u.tags || []).join(', '))}" aria-label="Open ${esc(u.name)}">${tile ? '<span class="asset-3x3"></span>' : '<img alt="" loading="lazy">'}</button>` +
       `<button type="button" class="gen-del" aria-label="Delete ${esc(u.name)}" title="Delete it - from Uploads too">${iconSvg('close')}</button>` +
       `<span class="asset-name">${esc(u.name)}</span>`;
-    storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
+    storeFileUrl(u.file).then(url => {
+      if (!url) return;
+      if (tile) {
+        const three = li.querySelector('.asset-3x3');
+        three.style.backgroundImage = `url("${url}")`;
+        // A tile shrunk to a few pixels is enlarged without smoothing, or it is a blur.
+        three.classList.toggle('pixel', (u.width || 512) <= 64);
+      } else li.querySelector('img').src = url;
+    });
     li.querySelector('.asset-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-del').addEventListener('click', async () => {
       await forgetUpload(u);

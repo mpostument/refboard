@@ -65,6 +65,86 @@ test('an empty name falls back to the kind\'s first idea, and a long one is cut'
   expect((await ask(page, settings({ thing: 'x'.repeat(100) }))).tags[0].length).toBe(40);
 });
 
+// ---- Tiles. What phase 0 found per ground, and what a tile is not told that a sprite is.
+test('a tile is asked for as a texture: no sprite style, no outline, no "floor" kept out', async ({ page }) => {
+  await openApp(page);
+  const r = await ask(page, settings({ kind: 'tile', thing: 'grass', material: 'iron' }));
+  for (const w of ['grass', 'seamless texture', 'tileable', 'flat color', 'from above', 'no humans']) expect(r.prompt, w).toContain(w);
+  for (const w of ['white background', 'thick outline', 'game sprite', 'iron']) expect(r.prompt, w).not.toContain(w);
+  // A sprite keeps "floor, ground, texture" out; a tile is those.
+  for (const w of ['floor', 'ground', 'texture', 'patterns']) expect(r.avoid, w).not.toContain(w);
+  expect(r.avoid).toContain('horizon');
+  expect([r.width, r.height, r.asset]).toEqual([1024, 1024, 'tile']);
+  expect(r.tags.slice(0, 2)).toEqual(['grass', 'tile']);
+});
+
+test('water has no "tile" word, soil keeps bricks out, an unknown ground gets the general recipe', async ({ page }) => {
+  await openApp(page);
+  const water = await ask(page, settings({ kind: 'tile', thing: 'water' })), dirt = await ask(page, settings({ kind: 'tile', thing: 'dirt' }));
+  expect(water.prompt).toContain('waves, ripples');
+  expect(water.prompt).not.toMatch(/tile/);
+  expect(dirt.avoid).toContain('bricks');
+  const moss = await ask(page, settings({ kind: 'tile', thing: 'Moss' }));
+  expect(moss.prompt).toContain('moss, seamless texture, tileable');
+});
+
+// ---- Tiles, the half that needs no model.
+const PIX = `(c, x, y) => Array.from(c.getContext('2d').getImageData(x, y, 1, 1).data)`;
+
+test('rolling by half puts the old edges in the middle, and what left one side comes in on the other', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(pix => {
+    const px = eval(pix);
+    const c = Object.assign(document.createElement('canvas'), { width: 8, height: 8 }), g = c.getContext('2d');
+    g.fillStyle = '#888'; g.fillRect(0, 0, 8, 8);
+    g.fillStyle = '#f00'; g.fillRect(0, 0, 1, 8);        // a red first column
+    g.fillStyle = '#00f'; g.fillRect(7, 0, 1, 8);        // a blue last column
+    const o = tileRoll(c, 4, 4);
+    return { red: px(o, 4, 0), blue: px(o, 3, 0), edges: [px(o, 0, 0), px(o, 7, 0)], back: px(tileRoll(o, -4, -4), 0, 3) };
+  }, PIX);
+  expect(r.red.slice(0, 3)).toEqual([255, 0, 0]);   // the first column is now the middle one
+  expect(r.blue.slice(0, 3)).toEqual([0, 0, 255]);
+  expect(r.edges.map(e => e[3])).toEqual([255, 255]);   // nothing was lost: no gap at an edge
+  expect(r.back.slice(0, 3)).toEqual([255, 0, 0]);   // and it goes back
+});
+
+test('the seam score is 1 for a picture that wraps, far over for one that does not, and rolling moves a seam inside', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const make = f => {
+      const c = Object.assign(document.createElement('canvas'), { width: 128, height: 128 }), g = c.getContext('2d');
+      const d = g.createImageData(128, 128);
+      for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) { const v = f(x, y), i = (y * 128 + x) * 4; d.data.set([v, v * 0.8, 255 - v, 255], i); }
+      g.putImageData(d, 0, 0);
+      return c;
+    };
+    const ramp = make((x, y) => Math.round(x * 2 + y * 0.5));            // 0 .. 255 and then back to 0: a seam
+    const wave = make((x, y) => Math.round(128 + 100 * Math.sin(2 * Math.PI * x / 128) * Math.cos(2 * Math.PI * y / 128)));   // wraps by itself
+    return { ramp: tileSeam(ramp), wave: tileSeam(wave), rolled: tileSeam(tileRoll(ramp, 64, 64)) };
+  });
+  expect(r.ramp, 'a ramp has a seam').toBeGreaterThan(5);
+  expect(r.wave, 'a wave wraps').toBeLessThan(1.4);
+  // Rolled by half, the ramp's jump is in the middle and its edges meet: this is what mending starts from.
+  expect(r.rolled).toBeLessThan(1.4);
+});
+
+test('the cross is white through the middle and black in the corners; the grid and the shrink are the size they say', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(pix => {
+    const px = eval(pix);
+    const m = tileCross(100, 100, 20);
+    const c = Object.assign(document.createElement('canvas'), { width: 64, height: 64 }), g = c.getContext('2d');
+    g.fillStyle = '#c33'; g.fillRect(0, 0, 64, 64);
+    const small = tileShrink(c, 16);
+    return { mid: px(m, 50, 5), side: px(m, 5, 50), corner: px(m, 5, 5), grid: [tileGrid(c).width, tileGrid(c, 2).height], small: [small.width, small.height, px(small, 8, 8)] };
+  }, PIX);
+  expect(r.mid.slice(0, 3)).toEqual([255, 255, 255]);
+  expect(r.side.slice(0, 3)).toEqual([255, 255, 255]);
+  expect(r.corner.slice(0, 3)).toEqual([0, 0, 0]);
+  expect(r.grid).toEqual([192, 128]);
+  expect(r.small).toEqual([16, 16, [204, 51, 51, 255]]);
+});
+
 // ---- After the model. Shapes are drawn on a transparent canvas in the page.
 // A sword stood upright: a long blade, a wide guard near the foot, a thin grip below. The blade
 // is the heavy part, so the mass lies toward the tip.
@@ -207,7 +287,7 @@ test('the view is in the rail only with a ComfyUI, and says what it is', async (
   await expect(page.locator('.nav-item[data-view="assets"]')).toBeHidden();
   const s = await setup(page);
   await expect(page.locator('#viewTitle')).toHaveText('Game assets');
-  await expect(page.locator('#assetChoices [data-as="kind"]')).toHaveCount(3);
+  await expect(page.locator('#assetChoices [data-as="kind"]')).toHaveCount(4);
   expect(s.posted).toEqual([]);
 });
 
@@ -264,4 +344,38 @@ test('a ComfyUI that is not answering disables Make and says why', async ({ page
   await page.locator('.nav-item[data-view="assets"]').click();
   await expect(page.locator('#assetOffline')).toContainText('not answering');
   await expect(page.locator('#assetGo')).toBeDisabled();
+});
+
+test('a tile: asked of the model whole, the cross drawn again, one mended tile kept - and shown laid 3 x 3', async ({ page }) => {
+  const { posted, server } = await setup(page);
+  await page.click('#assetChoices [data-as="kind"][data-opt="tile"]');
+  await expect(page.locator('#assetThing')).toHaveValue('grass');
+  // A tile has a size, and none of the rows that are for a sprite.
+  await expect(page.locator('#assetChoices [data-as="size"]')).toHaveCount(4);
+  await expect(page.locator('#assetChoices [data-as="material"]')).toHaveCount(0);
+  await expect(page.locator('#assetChoices [data-as="view"]')).toHaveCount(0);
+  await expect(page.locator('#assetIconRow')).toBeHidden();
+  await page.click('#assetChoices [data-as="size"][data-opt="256"]');
+  await page.selectOption('#assetCount', '1');
+  const uploads = [];
+  page.on('request', r => { if (r.method() === 'POST' && /api\/uploads$/.test(r.url())) uploads.push(r.url()); });
+  await page.click('#assetGo');
+  await expect(page.locator('#assetStatus')).toHaveText('Made - in Uploads, Assets.');
+  // Two jobs: the tile at the model's size, then the rolled tile with the cross as the mask.
+  expect(posted).toHaveLength(2);
+  expect(posted[0]).toMatchObject({ width: 1024, height: 1024, asset: 'tile' });
+  expect(posted[0].image).toBeUndefined();
+  expect(posted[1]).toMatchObject({ shape: 'square', asset: 'tile', denoise: 0.6 });
+  expect(posted[1].image).toBeTruthy();
+  expect(posted[1].mask).toBeTruthy();
+  expect(posted[1].width).toBeUndefined();
+  expect(posted[1].prompt).toBe(posted[0].prompt);
+  // One tile kept, at the size chosen, and listed laid 3 x 3.
+  expect(uploads).toHaveLength(1);
+  const docs = [...server.items].filter(([k]) => k.startsWith('uploads/')).map(([, v]) => v);
+  const kept = docs.find(d => (d.tags || []).includes('256x256'));
+  expect(kept).toBeTruthy();
+  expect(kept.tags).not.toContain('1024x1024');
+  expect(kept.tags.some(t => t === 'seamless' || t === 'seam visible')).toBe(true);
+  await expect(page.locator('#assetResults .asset-3x3')).toHaveCount(1);
 });

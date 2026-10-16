@@ -574,7 +574,20 @@ the pictures looked at - as the Generate features were):
 3. **Tiles.** Make seamless; the 3x3 preview; ground / grass / water / stone /
    wood from the Spike's tags; a tile at 256 / 512 and shrunk to 16 / 32.
    *Done when* a 3x3 of a generated tile shows no seam at 1x, and the rolled
-   seam is drawn again, not blurred.
+   seam is drawn again, not blurred. **Done 2026-10-16** (Tile kind in the Game
+   assets view; `tileRoll` / `tileCross` / `tileSeam` / `tileGrid` / `tileShrink` in
+   `assetsfx.js`; `assetFinishTile` in `assets.js`). The tile is asked at 1024, rolled by
+   half, the cross (14% wide) drawn again as a second job through the Redraw path, then
+   shrunk to 512 / 256 / 32 / 16. Real runs, 3x3 looked at: grass, cobblestone, water (the
+   phase 0 failure: `waves, ripples` without "tile" gives clean swirls) and dirt show no
+   seam at 1x. **What was found:** at denoise 0.95 (the server erases the cross and draws it
+   from nothing) the seam at the edge goes but the *cross itself* shows - another green,
+   less texture; at 0.6 (it keeps what is under the mask and only heals the join) it does
+   not. `tileSeam` cannot say this alone: the model's own tile scored 2.2 - 5.7, the mended
+   1.3 - 3.5, the ranges overlap, so it only tags "seam visible" over 4. **Not good yet:**
+   dirt at "simple" is a flat orange, not soil; a plain shrink to 32 / 16 px averages the
+   detail away (grass becomes one green) - the pixel look is phase 6. Not done: the
+   ground "view" row (a tile is from above only), lava / snow / wood / sand were not run.
 4. **Characters.** One sprite per view, with a pose list (idle, walk, run,
    attack, hurt). Directions and frames through the 3D figure and the depth
    ControlNet that Draw this pose already uses: the figure turned to 4 or 8

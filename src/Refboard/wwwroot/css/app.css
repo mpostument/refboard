@@ -2230,3 +2230,7 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .asset-open:hover, .asset-open:focus-visible { border-color: var(--accent); }
 .asset-open img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .asset-name { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A tile is shown laid 3 x 3 - the way to see a seam - not once on a checkerboard. */
+.asset-tile { padding: 0; overflow: hidden; background: none; }
+.asset-3x3 { display: block; width: 100%; height: 100%; background-size: 33.334% 33.334%; background-repeat: repeat; }
+.asset-3x3.pixel { image-rendering: pixelated; }

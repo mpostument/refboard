@@ -21,7 +21,7 @@ namespace Refboard.Services;
 /// its document so the page can show the two side by side (Before and after). Width and Height
 /// (both, multiples of 64, 256 - 2048, at most 1.6 megapixels) are a free size for a new picture
 /// - a strip, a square at 512 - instead of one of the three Shapes; see <see cref="SizeOf"/>.
-/// Asset (prop, weapon or item) says the picture is for a game: it is kept in the Assets folder
+/// Asset (prop, weapon, item or tile) says the picture is for a game: it is kept in the Assets folder
 /// instead of Generated, and its document says which kind.</remarks>
 public sealed record GenerateRequest(string? Prompt, List<string>? Tags, string? Shape, long? Seed, string? Avoid = null,
     string? Image = null, double? Denoise = null, bool Control = false, double? Strength = null,
@@ -52,7 +52,7 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
     /// multiple of 64 (the latent is an eighth of the picture and the model's blocks
     /// halve it three times more), 256 - 2048, and no more than 1.6 megapixels - a
     /// small card's limit, and past it SDXL draws two of everything.</summary>
-    public static readonly string[] AssetKinds = ["prop", "weapon", "item"];
+    public static readonly string[] AssetKinds = ["prop", "weapon", "item", "tile"];
 
     public static bool ValidSize(int? width, int? height) =>
         width is null && height is null

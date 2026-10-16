@@ -345,3 +345,80 @@ function assetIcon(canvas, { size = 128, diagonal = false } = {}) {
   g.drawImage(piece, Math.round((size - dw) / 2), Math.round((size - dh) / 2), dw, dh);
   return out;
 }
+
+/* ---- Tiles (js/assets.js): the model draws a square of grass, and its left edge does not
+   meet its right. The mending is done in two halves, and only the half that needs a model
+   asks for one.
+
+   1. tileRoll shifts the picture by half its width and height, with wrap-around. Now the
+      four edges are the picture's own inside (they meet: they were neighbours), and the old
+      seams lie in the middle as a cross.
+   2. That cross is drawn again by the model (tileCross is the mask for it), in the words the
+      tile was made from, so what fills it is grass between grass.
+   Then tileSeam says, without looking, how well the edges meet, and tileGrid lays the tile
+   3 x 3 to look at it. */
+
+/* The picture shifted right by dx and down by dy, what leaves one side coming in on the other. */
+function tileRoll(canvas, dx, dy) {
+  const w = canvas.width, h = canvas.height;
+  const x = ((dx % w) + w) % w, y = ((dy % h) + h) % h;
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = out.getContext('2d');
+  for (const [ox, oy] of [[0, 0], [-w, 0], [0, -h], [-w, -h]]) g.drawImage(canvas, x + ox, y + oy);
+  return out;
+}
+
+/* The mask of a cross through the middle, band wide: white where to draw again, black elsewhere
+   (the server reads the red channel). */
+function tileCross(w, h, band) {
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = out.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#fff';
+  g.fillRect(Math.round((w - band) / 2), 0, band, h);
+  g.fillRect(0, Math.round((h - band) / 2), w, band);
+  return out;
+}
+
+/* How much the wrap-around edge differs from the picture's own inside: the mean difference of
+   the last column from the first, over the mean difference of the two pairs of columns on each
+   side of it (and the same for rows); the worse of the two. 1 is a seamless tile - the step
+   across the edge is no bigger than the steps next to it, however steep the picture is there;
+   a tile cut from a picture is 2 - 6. (Against the median of all the pairs a smooth, steep
+   edge of a wave that does wrap would read as a seam.) */
+function tileSeam(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const px = (x, y) => (y * w + x) * 4;
+  const pair = (a, b) => Math.abs(d[a] - d[b]) + Math.abs(d[a + 1] - d[b + 1]) + Math.abs(d[a + 2] - d[b + 2]);
+  const across = (len, mean) => {
+    const diffs = Array.from({ length: len }, (_, i) => mean(i, (i + 1) % len));
+    const near = (diffs[len - 3] + diffs[len - 2] + diffs[0] + diffs[1]) / 4;
+    return diffs[len - 1] / Math.max(near, 1);
+  };
+  const cols = across(w, (x, x2) => { let s = 0; for (let y = 0; y < h; y++) s += pair(px(x, y), px(x2, y)); return s / h; });
+  const rows = across(h, (y, y2) => { let s = 0; for (let x = 0; x < w; x++) s += pair(px(x, y), px(x, y2)); return s / w; });
+  return Math.max(cols, rows);
+}
+
+/* The tile laid n x n, to look at. */
+function tileGrid(canvas, n = 3) {
+  const out = Object.assign(document.createElement('canvas'), { width: canvas.width * n, height: canvas.height * n }), g = out.getContext('2d');
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) g.drawImage(canvas, x * canvas.width, y * canvas.height);
+  return out;
+}
+
+/* The tile at size x size, halved while it is more than twice too big so that every pixel is
+   the mean of the ones it covers (one jump from 1024 to 16 would keep one pixel in sixty-four). */
+function tileShrink(canvas, size) {
+  let c = canvas;
+  while (c.width > size * 2) {
+    const half = Object.assign(document.createElement('canvas'), { width: c.width >> 1, height: c.height >> 1 });
+    const g = half.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.drawImage(c, 0, 0, half.width, half.height);
+    c = half;
+  }
+  if (c.width === size) return c;
+  const out = Object.assign(document.createElement('canvas'), { width: size, height: size }), g = out.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(c, 0, 0, size, size);
+  return out;
+}
