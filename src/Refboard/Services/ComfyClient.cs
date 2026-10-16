@@ -17,10 +17,11 @@ namespace Refboard.Services;
 /// enlarged by it, and Denoise is how much the second pass may change: Finish it.
 /// With Mask - a PNG, white where to draw again, the size of Image - only the white is
 /// redrawn and the rest of Image is kept: Redraw a part. Steps (8 - 40, 28 by default):
-/// fewer for a draft.</remarks>
+/// fewer for a draft. Parent is the file id of the picture this one was made from, kept in
+/// its document so the page can show the two side by side (Before and after).</remarks>
 public sealed record GenerateRequest(string? Prompt, List<string>? Tags, string? Shape, long? Seed, string? Avoid = null,
     string? Image = null, double? Denoise = null, bool Control = false, double? Strength = null,
-    string? Mask = null, double? Scale = null, int? Steps = null);
+    string? Mask = null, double? Scale = null, int? Steps = null, string? Parent = null);
 
 /// <summary>
 /// Generates references with a ComfyUI (<see cref="RefboardOptions.ComfyUrl"/>)
@@ -310,7 +311,7 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
         {
             file = entry.Id, name = tags.Count > 0 ? string.Join(", ", tags.Take(3)) : "generated",
             type = "image/png", from = "generate", bytes = entry.Bytes,
-            t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), folder = "generated", tags, prompt = req.Prompt, avoid = req.Avoid, shape = req.Shape ?? "portrait", seed,
+            t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), folder = "generated", tags, prompt = req.Prompt, avoid = req.Avoid, shape = req.Shape ?? "portrait", seed, parent = req.Parent,
             kind = req.Image is null ? "new" : req.Control ? "pose" : scaled ? "finish" : req.Mask is { Length: > 0 } ? "redraw" : "img2img",
         });
         store.PutItem("uploads", entry.Id.Split('.')[0], doc);

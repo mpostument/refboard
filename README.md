@@ -622,6 +622,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   drawn again, img2img, with the light's or the medium's tags swapped in -
   ink and pencil keep some of the source's colour) and, with *As:
   Drafts*, pictures made in 14 steps instead of 28 to look through first.
+  A picture made from another keeps its parent, and **Before and after** puts the two
+  in one frame with a slider between them.
   While pictures are made the button is *Stop*: it cancels the one in hand
   (ComfyUI is told) and starts none of the rest.
 - **A studio layout** - dark throughout, an icon rail down the left for the

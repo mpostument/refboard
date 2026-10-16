@@ -1302,6 +1302,23 @@
   </div>
 </div>
 
+<!-- Before and after - js/genedit.js: a picture over the one it was made from, a
+     slider between them. -->
+<div id="compareSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="compareTitle">
+  <div class="sheet-box compare-box">
+    <div class="row">
+      <h2 id="compareTitle" class="grow">Before and after</h2>
+      <button type="button" class="ghost" id="compareClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="compare-stage" id="compareStage">
+      <img id="compareAfter" alt="After">
+      <img id="compareBefore" alt="Before">
+    </div>
+    <input type="range" id="compareSlider" min="0" max="100" value="50" aria-label="Before on the left, after on the right">
+    <p class="count compare-labels"><span>Before</span><span id="compareHint" role="status"></span><span>After</span></p>
+  </div>
+</div>
+
 <!-- How to draw it - js/steps.js: the picture in the workspace taken back to
      the steps it is drawn in, in the medium picked. -->
 <div id="stepsSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="stepsTitle">

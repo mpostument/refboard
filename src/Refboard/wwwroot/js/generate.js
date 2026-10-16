@@ -997,17 +997,21 @@ function renderGenResults(list, total = list.length) {
       `<button type="button" class="gen-del" aria-label="Delete ${esc(u.name)}" title="Delete it - from Uploads too">${iconSvg('close')}</button>` +
       `<button type="button" class="gen-more" aria-label="Do more with ${esc(u.name)}" aria-haspopup="true" aria-expanded="false" title="Vary it, redraw a part, finish it, how to draw it...">More</button>` +
       `<div class="gen-menu hidden" role="menu">` +
-      `<button type="button" class="gen-vary" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
+      `<div class="gen-menu-h" aria-hidden="true">Change it</div>` +
       `<button type="button" class="gen-redraw" title="Brush over a part - a hand, an eye - and only that is drawn again">Redraw a part...</button>` +
       `<button type="button" class="gen-bg" title="Draw the background again - found from the picture's edges, and yours to correct with the brush">New background...</button>` +
       `<button type="button" class="gen-finish" title="The same picture 1.5 times the size, with the detail that size has room for - what a draft becomes">Finish it</button>` +
+      (u.parent ? `<button type="button" class="gen-compare" title="It beside the picture it was made from - a slider between them">Before and after</button>` : '') +
       `<hr>` +
+      `<div class="gen-menu-h" aria-hidden="true">Try it another way</div>` +
+      `<button type="button" class="gen-vary" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
       `<button type="button" class="gen-lights" title="Four pictures of it: soft, from the side, backlit, dramatic">Light it four ways</button>` +
       `<button type="button" class="gen-media" title="It drawn in your other media - watercolour, ink, Copic markers, pencil - to put side by side">In other media</button>` +
       `<hr>` +
+      `<div class="gen-menu-h" aria-hidden="true">Learn from it</div>` +
       `<button type="button" class="gen-steps" title="How to draw it - step by step">How to draw it</button>` +
       `<button type="button" class="gen-colours" title="Her colours, with how to mix them - the Colour studio's Character sheet">Her colours</button>` +
-      `</ul>`;
+      `</div>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
     li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-del').addEventListener('click', async () => {
@@ -1020,6 +1024,7 @@ function renderGenResults(list, total = list.length) {
     li.querySelector('.gen-redraw').addEventListener('click', () => genRedrawOpen(u));
     li.querySelector('.gen-finish').addEventListener('click', () => genFinish(u));
     li.querySelector('.gen-bg').addEventListener('click', () => genRedrawOpen(u, true));
+    li.querySelector('.gen-compare')?.addEventListener('click', () => genCompare(u));
     li.querySelector('.gen-lights').addEventListener('click', () => genLights(u));
     li.querySelector('.gen-media').addEventListener('click', () => genMedia(u));
     li.querySelector('.gen-vary').addEventListener('click', async () => {

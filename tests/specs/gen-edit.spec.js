@@ -47,6 +47,7 @@ test('Finish it asks for the picture 1.5 times the size, with a little freedom, 
   expect(asked[0].image.length).toBeGreaterThan(100);
   expect(asked[0].mask).toBeUndefined();
   expect(asked[0].tags).toContain('finished');
+  expect(asked[0].parent).toBe('b'.repeat(64) + '.png');
 });
 
 test('Redraw a part sends the picture and a mask that is white only where it was brushed', async ({ page }) => {
@@ -79,6 +80,7 @@ test('Redraw a part sends the picture and a mask that is white only where it was
   expect(req.prompt).toBe('1girl, solo, red hair, (open hand:1.3)');
   expect(req.tags).toEqual(expect.arrayContaining(['red hair', 'open hand', 'redrawn']));
   expect(req.seed).toBeUndefined();
+  expect(req.parent).toBe('b'.repeat(64) + '.png');
   // The mask: black where nothing was brushed (a corner), white on the stroke's start.
   const px = await page.evaluate(async b64 => {
     const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
@@ -113,6 +115,31 @@ test('Light it four ways: four requests, each with its own light weighted and th
   expect(asked[2].prompt).toContain('(backlighting:1.3), (rim lighting:1.3)');
   expect(asked.every(a => a.denoise === 0.55 && a.seed === 77 && a.image.length > 100)).toBe(true);
   expect(asked[1].tags).toContain('side light');
+  expect(asked.every(a => a.parent === 'b'.repeat(64) + '.png')).toBe(true);
+});
+
+test('Before and after: only on a picture made from another; a slider shows more of one or the other', async ({ page }) => {
+  await setup(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await expect(page.locator('#genResults .gen-compare')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.evaluate(async () => {
+    const u = (await genMade())[0];
+    u.parent = 'a'.repeat(64) + '.png';
+    await storePutItem('uploads', uploadKey(u.file), u);
+  });
+  await page.reload();
+  await page.locator('.nav-item[data-view="generate"]').click();
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-compare').first().click();
+  await expect(page.locator('#compareSheet')).toBeVisible();
+  await expect(page.locator('#compareBefore')).toHaveAttribute('src', /api\/uploads\/a{64}\.png/);
+  await expect(page.locator('#compareAfter')).toHaveAttribute('src', /api\/uploads\/b{64}\.png/);
+  await expect(page.locator('#compareBefore')).toHaveCSS('clip-path', /50%/);
+  await page.locator('#compareSlider').fill('80');
+  await expect(page.locator('#compareBefore')).toHaveCSS('clip-path', /20%/);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#compareSheet')).toBeHidden();
 });
 
 test('In other media: the old medium\'s words are swapped for each new one, not piled up', async ({ page }) => {

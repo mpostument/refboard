@@ -156,6 +156,7 @@ app.MapPost("/api/generate", (GenerateRequest req) =>
         || (req.Mask is not null && (req.Image is null || req.Control || req.Mask.Length > 4_000_000 || !IsBase64(req.Mask)))
         || (req.Scale is not null && (req.Image is null || req.Control || req.Mask is not null || req.Scale is < 1.0 or > 2.0))
         || (req.Steps is not null && req.Steps is < 8 or > 40)
+        || (req.Parent is not null && !UserStore.ValidFileId(req.Parent))
         || (req.Control && (req.Image is null || !comfy.ControlConfigured)))
         return Results.BadRequest();
     return Results.Accepted(value: new { id = comfy.Start(req) });

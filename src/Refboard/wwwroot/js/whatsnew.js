@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-compare', title: 'Generate: before and after',
+    text: "A picture made from another - redrawn, finished, lit another way, in another medium - now has Before and after in its More menu: the two in one frame and a slider between them, to see what changed. The menu is grouped, too: Change it, Try it another way, Learn from it.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-rework', title: 'Generate: new background, light four ways, other media',
     text: "More in a generated picture's More menu. New background: the plain background is brushed for you (correct it with the brush) and drawn again as what you type. Light it four ways: soft, from the side, backlit, dramatic. In other media: the same picture in watercolour, ink, Copic markers and pencil, to put side by side.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

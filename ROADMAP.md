@@ -224,6 +224,11 @@ white round it for a margin and drew a white frame), Light it four ways
 other media (watercolour, ink, Copic, pencil: the old medium's tags and
 what it kept out removed first, denoise 0.65, 0.8 for ink and pencil - and
 even then red hair stayed red; a ControlNet on the line art would fix it).
+In place too: Before and after (`genCompare()` in `js/genedit.js`) - every picture made from another
+(Redraw, Finish, New background, Light, Media) keeps its `parent` file id in its document; the More menu
+then shows the two in one box, the first clipped to the left of a slider (`clip-path`, so a Finished
+picture at 1.5 times the size lines up with its draft). The menu itself is now grouped - Change it,
+Try it another way, Learn from it.
 In place too: the Prompt box (`renderGenPrompt()` - closed by default,
 the tags as sent, the choices' negative tags as switches kept in
 localStorage (`genRequest()` leaves the switched-off ones out), the

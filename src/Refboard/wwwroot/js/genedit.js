@@ -48,7 +48,7 @@ async function genFinish(u) {
     if (pic.width > GEN_FINISH_MAX_W || (u.tags || []).includes('finished')) { status.textContent = 'That one is already finished - bigger than this would not fit on a small card.'; return; }
     const tags = [...(u.tags || []).filter(t => t !== 'draft'), 'finished'].slice(0, 24).map(t => t.slice(0, 40));
     runGenerate([{ prompt: genWordsOf(u), avoid: u.avoid || '', tags, shape: u.shape || 'portrait', seed: u.seed,
-      image: genEncode(pic), denoise: GEN_FINISH_DENOISE, scale: GEN_FINISH_SCALE }], 'Finishing it - 1.5 times the size, so a little longer...', 'Finished - in Uploads, Generated.');
+      image: genEncode(pic), denoise: GEN_FINISH_DENOISE, scale: GEN_FINISH_SCALE, parent: u.file }], 'Finishing it - 1.5 times the size, so a little longer...', 'Finished - in Uploads, Generated.');
   } catch (err) { status.textContent = err.message; }
 }
 
@@ -58,7 +58,7 @@ async function genFinish(u) {
 const genWithout = (list, drop) => { const bare = s => s.replace(/\\/g, ''), d = new Set([...drop].map(bare)); return list.filter(t => !d.has(bare(t))); };
 function genRework(u, pic, prompt, avoid, tags, denoise) {
   return { prompt, avoid, tags: tags.slice(0, 24).map(t => t.slice(0, 40)), shape: u.shape || 'portrait', seed: u.seed,
-    image: genEncode(pic), denoise };
+    image: genEncode(pic), denoise, parent: u.file };
 }
 const genOptionOf = (row, id) => GEN_CHOICES.find(c => c.id === row).options.find(o => o.id === id);
 const genWordsOfOption = o => o.words ?? o.label.toLowerCase();
@@ -186,7 +186,7 @@ function redrawGo() {
   const prompt = comfyTags([...own, text && `(${text}:1.3)`].filter(Boolean).join(', '));
   const tags = [...(u.tags || []), ...genSplit(more), redraw.background ? 'new background' : 'redrawn'].slice(0, 24).map(t => t.slice(0, 40));
   const req = { prompt, avoid: u.avoid || '', tags, shape: u.shape || 'portrait',
-    image: genEncode(pic), mask: redrawMaskPng(), denoise: redraw.level };
+    image: genEncode(pic), mask: redrawMaskPng(), denoise: redraw.level, parent: u.file };
   const bg = redraw.background;
   closeRedraw();
   runGenerate([req], bg ? 'Drawing the background...' : 'Drawing that part again...', bg ? 'New background - in Uploads, Generated.' : 'Redrawn - in Uploads, Generated.');
@@ -228,7 +228,47 @@ function genBackgroundMask(pic) {
   return true;
 }
 
+/* ---- Before and after: the picture over the one it was made from, and a slider.
+   The "before" is clipped to the left of the slider; both are drawn in the same box, so a
+   Finished picture (1.5 times the size) lines up with its draft. */
+let compareOpen = false;
+function compareSet(v) {
+  v = Math.max(0, Math.min(100, v));
+  el('compareSlider').value = String(v);
+  el('compareBefore').style.clipPath = `inset(0 ${100 - v}% 0 0)`;
+  el('compareStage').style.setProperty('--cmp', v + '%');
+}
+async function genCompare(u) {
+  const hint = el('genStatus');
+  const [before, after] = await Promise.all([storeFileUrl(u.parent), storeFileUrl(u.file)]);
+  if (!before || !after) { hint.textContent = 'The picture it was made from is not there any more.'; return; }
+  el('compareHint').textContent = '';
+  // The original may have been deleted: a server answers with a URL either way.
+  const probe = new Image();
+  probe.onerror = () => { closeCompare(); hint.textContent = 'The picture it was made from is not there any more.'; };
+  probe.src = before;
+  el('compareBefore').src = before;
+  el('compareAfter').src = after;
+  compareSet(50);
+  compareOpen = true;
+  el('compareSheet').classList.remove('hidden');
+  dialogOpened(el('compareSheet'), el('compareSlider'));
+}
+function closeCompare() {
+  if (!compareOpen) return;
+  compareOpen = false;
+  el('compareSheet').classList.add('hidden');
+  dialogClosed(el('compareSheet'));
+}
+
 function initGenEdit() {
+  const stage = el('compareStage');
+  const drag = e => { const r = stage.getBoundingClientRect(); compareSet((e.clientX - r.left) / r.width * 100); };
+  stage.addEventListener('pointerdown', e => { stage.setPointerCapture(e.pointerId); drag(e); });
+  stage.addEventListener('pointermove', e => { if (e.buttons) drag(e); });
+  el('compareSlider').addEventListener('input', e => compareSet(Number(e.target.value)));
+  el('compareClose').addEventListener('click', closeCompare);
+  initSheet(el('compareSheet'), closeCompare);
   const mask = el('redrawMask');
   mask.addEventListener('pointerdown', e => {
     if (!redraw || e.button > 0) return;
