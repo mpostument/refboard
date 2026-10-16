@@ -457,10 +457,32 @@ test('a character with no figure in 3D forms takes you there, with the Figure bu
   await page.reload();
   await openSection(page, 'assets');
   await page.click('#assetChoices [data-as="kind"][data-opt="character"]');
+  // Only the turned kinds need the figure: the one side view is the next test.
+  await page.click('#assetChoices [data-as="dirs"][data-opt="4"]');
   await page.click('#assetGo');
   await expect(page.locator('#viewTitle')).toHaveText(/3D forms/i);
   await expect(page.locator('#formShapes [data-shape="figure"]')).toBeFocused();
   expect(s.posted).toEqual([]);
+});
+
+test('a character drawn from one side needs no 3D figure: free poses, one request per candidate, no depth map', async ({ page }) => {
+  const s = await setup(page);
+  await page.click('#assetChoices [data-as="kind"][data-opt="character"]');
+  // The count row is the candidates here, and goes away for the turned kinds.
+  await expect(page.locator('#assetCountRow')).toBeVisible();
+  await page.selectOption('#assetCount', '2');
+  await page.click('#assetGo');
+  await expect(page.locator('#assetGo')).toHaveText('Make');
+  expect(s.posted).toHaveLength(2);
+  for (const p of s.posted) {
+    expect(p).toMatchObject({ asset: 'character', shape: 'portrait' });
+    expect(p.image).toBeUndefined();
+    expect(p.control).toBeFalsy();
+    expect(p.prompt).toContain('facing right');
+  }
+  await expect(page.locator('#viewTitle')).toHaveText(/Game assets/i);
+  await page.click('#assetChoices [data-as="dirs"][data-opt="4"]');
+  await expect(page.locator('#assetCountRow')).toBeHidden();
 });
 
 test('the white border the model draws round a figure is taken off, down to the figure\'s own dark outline', async ({ page }) => {

@@ -117,7 +117,7 @@ const ASSET_KINDS = [
     things: Object.keys(TILE_WORDS) },
   // Its size is the figure's: the shape (portrait) is named, not a free width and height, as every picture
   // started from another one is.
-  { id: 'character', label: 'Character', size: null, views: true, icon: false, character: true, hint: 'One figure from Forms turned to 4 or 8 directions, cut out and set on one line',
+  { id: 'character', label: 'Character', size: null, views: true, icon: false, character: true, hint: 'One side view drawn freely, or the 3D figure from Forms turned to 4 or 8 directions - cut out',
     things: ['girl knight, short brown hair, silver armor, blue skirt', 'boy mage, black hair, dark blue robe, hood',
       'girl archer, blonde ponytail, green tunic, brown boots', 'boy villager, brown hair, white shirt, brown trousers',
       'girl rogue, black hair, dark hooded cloak, leather armor', 'boy warrior, red hair, leather armor, fur cape'] },
@@ -214,14 +214,17 @@ function renderAssets() {
     kind.things.map(t => `<button type="button" class="chip" data-thing="${esc(t)}" aria-pressed="${s.thing.trim().toLowerCase() === t}">${esc(t)}</button>`).join('') + '</div></div>' +
     (kind.views ? assetChips('view', 'View', ASSET_VIEWS, s.view, () => '') : '') +
     (kind.character ? assetChips('dirs', 'Turned to', CHAR_CHOICES, s.dirs) +
-      '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Whether the faces match is for you to judge.</p>' : '') + '</section>' +
+      (s.dirs === '1'
+        ? '<p class="gen-note">One side view, drawn freely from the words - no 3D figure, so the pose and build are the model\'s own. Make several and keep the one you like.</p>'
+        : '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Whether the faces match is for you to judge.</p>') : '') + '</section>' +
     `<section class="gen-group">${assetChips('theme', 'Theme', ASSET_THEMES, s.theme, () => '')}` +
     (kind.tile || kind.character ? '' : assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '')) +
     assetChips('simple', 'How simple', ASSET_SIMPLE, s.simple) +
     (kind.tile ? assetChips('size', 'Tile size, px', TILE_SIZES, s.size) : '') + '</section>';
   el('assetIconRow').classList.toggle('hidden', !kind.icon);
-  // The directions are the count of a character.
-  el('assetCountRow').classList.toggle('hidden', !!kind.character);
+  // The directions are the count of a character - except the one-sided kind, drawn free: there the
+  // count is how many candidates to choose from.
+  el('assetCountRow').classList.toggle('hidden', !!kind.character && s.dirs !== '1');
   el('assetIcon').checked = !!s.icon;
   el('assetCount').value = s.count;
   el('assetDraft').value = s.draft;
@@ -321,6 +324,7 @@ const ASSET_UI = { go: 'assetGo', status: 'assetStatus', goText: 'Make', refresh
    one height, the feet set on one line (assetAlign). */
 async function assetsCharacterGo(s) {
   const status = el(ASSET_UI.status);
+  if (s.dirs === '1') { await assetsCharacterFree(s); return; }
   if (!genControlAvailable()) { status.textContent = 'A character is drawn through a depth ControlNet, and this server has none (COMFY_CONTROLNET).'; return; }
   status.textContent = 'Opening the 3D figure...';
   // The 3D view is a lazy section and starts its engine on first use; it is brought up here
@@ -370,6 +374,28 @@ async function assetsCharacterGo(s) {
     await assetKeep(cuts[i].doc, lined.canvases[i], ['cut out', 'aligned', `${lined.width}x${lined.height}`]);
     await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
   }
+  storeChanged();
+  await ASSET_UI.refresh();
+}
+
+/* One side view needs no turning, so it needs no figure: the depth map made every hero the mannequin's
+   silhouette (the user, 2026-10-16: "I do not like how the heroes look"). It is drawn from the words
+   alone, `count` times with a new seed each, as candidates - they are alternatives, so they are cut
+   out and kept but not lined up to one height. */
+async function assetsCharacterFree(s) {
+  const r = assetRequest({ ...s, dir: CHAR_DIRS[1][0][0] }), n = Number(s.count) || 1;
+  const draft = s.draft === 'draft';
+  const jobs = Array.from({ length: n }, () => ({ ...r, ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) }));
+  await runGenerate(jobs, (i, total) => total > 1 ? `Drawing ${i} of ${total}...` : 'Drawing...',
+    n > 1 ? `${n} made - in Uploads, Assets.` : 'Made - in Uploads, Assets.', async made => {
+      let pic;
+      try { pic = await genLoadPicture(made.doc); } catch { return; }
+      const cut = assetCutFigure(pic);
+      if (!cut.found) { await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) }); return; }
+      const canvas = assetTrim(assetDefringe(cut.canvas)) || cut.canvas;
+      await assetKeep(made.doc, canvas, ['cut out']);
+      await forgetUpload(made.doc);
+    }, ASSET_UI);
   storeChanged();
   await ASSET_UI.refresh();
 }
@@ -440,6 +466,8 @@ function initAssets() {
         if (assetKind(b.dataset.opt).character && assetState.simple === 'simple') assetState.simple = 'medium';
         assetsSave(); renderAssets(); return;
       }
+      // The note and the count row depend on whether the figure is turned (4, 8) or not (1).
+      if (b.dataset.as === 'dirs') { assetsSave(); renderAssets(); return; }
     } else if (!t) return;
     assetsSave();
     for (const x of el('assetChoices').querySelectorAll('[data-as],[data-thing]'))
