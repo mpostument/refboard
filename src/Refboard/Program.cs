@@ -149,7 +149,7 @@ app.MapGet("/api/generate", async (CancellationToken ct) => Results.Ok(await com
 app.MapPost("/api/generate", (GenerateRequest req) =>
 {
     if (!comfy.Configured) return Results.NotFound();
-    if (string.IsNullOrWhiteSpace(req.Prompt) || req.Prompt.Length > 800 || (req.Avoid?.Length ?? 0) > 400
+    if (string.IsNullOrWhiteSpace(req.Prompt) || req.Prompt.Length > 800 || (req.Avoid?.Length ?? 0) > 800
         || (req.Tags ?? []).Count > 24 || (req.Tags ?? []).Any(t => t.Length > 40)
         || (req.Shape is not null && !ComfyClient.Shapes.ContainsKey(req.Shape))
         || !ComfyClient.ValidSize(req.Width, req.Height)

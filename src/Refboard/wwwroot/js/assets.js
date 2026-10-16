@@ -97,6 +97,17 @@ const CHAR_KEYS = [
   { word: 'cyan', clash: /blue|cyan|teal|turquoise|aqua|azure/ },
 ];
 const charKey = look => (CHAR_KEYS.find(k => !k.clash.test(look)) || CHAR_KEYS[0]).word;
+/* Turned to 4 or 8 directions, each is drawn on its own, and what the words say once is dropped first:
+   the trousers were one colour in the front and another in the three-quarter back view. So every part
+   of the look that names a colour ("blue skirt", "dark hooded cloak") is given weight, and the model holds
+   to it a little harder in every direction. The first part is the character's name, and is left as it is.
+   Only parts that say a colour: a weight on "hood" alone would be only a louder hood. */
+const CHAR_COLOUR = /\b(red|blue|green|yellow|orange|purple|violet|pink|white|black|brown|grey|gray|silver|golden|gold|beige|cream|teal|cyan|magenta|crimson|navy|dark|light|blonde)\b/;
+const CHAR_LOOK_WEIGHT = 1.2;   // a little above 1: 1.3 and up starts to tint the rest of the picture with that colour
+function charLook(look) {
+  const [name, ...parts] = look.split(',').map(p => p.trim()).filter(Boolean);
+  return [name, ...parts.map(p => CHAR_COLOUR.test(p) ? `(${p}:${CHAR_LOOK_WEIGHT})` : p)].join(', ');
+}
 // What a cut-out character is: the cut, trimmed, and (on a pale background only) the white border taken off.
 const assetFigureCanvas = cut => assetTrim(cut.keyed ? cut.canvas : assetDefringe(cut.canvas)) || cut.canvas;
 
@@ -161,7 +172,8 @@ function assetRequest(s) {
   // from one direction to the next - so it may be long; the picture is named by what is before the first comma.
   const thing = (s.thing || '').trim().toLowerCase().slice(0, kind.character ? ASSET_LOOK_MAX : 40) || kind.things[0];
   const short = kind.character ? thing.split(',')[0].trim().slice(0, 40) : thing;
-  const named = [kind.tile || kind.character ? '' : material.word, thing].filter(Boolean).join(' ');
+  // Several directions are several pictures that must agree, so the colours in the look are weighted (charLook).
+  const named = [kind.tile || kind.character ? '' : material.word, kind.character && Number(s.dirs) > 1 ? charLook(thing) : thing].filter(Boolean).join(' ');
   const box = ASSET_CONTAINER.test(thing);
   const tags = kind.character ? [] : ['no humans'], avoid = [kind.tile ? TILE_AVOID : kind.character ? CHAR_NOT : ASSET_AVOID, kind.character ? `${CHAR_AVOID}, ${GEN_POSE_AVOID}` : ASSET_ALONE];
   const dir = s.dir && CHAR_FACE[s.dir] ? s.dir : 'front';
@@ -229,7 +241,7 @@ function renderAssets() {
     (kind.character ? assetChips('dirs', 'Turned to', CHAR_CHOICES, s.dirs) +
       (s.dirs === '1'
         ? '<p class="gen-note">One side view, drawn freely from the words - no 3D figure, so the pose and build are the model\'s own. Make several and keep the one you like.</p>'
-        : '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Whether the faces match is for you to judge.</p>') : '') + '</section>' +
+        : '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Name every garment and its colour, trousers and boots too: what the look leaves out the model invents again in each direction. Whether the faces match is for you to judge.</p>') : '') + '</section>' +
     `<section class="gen-group">${assetChips('theme', 'Theme', ASSET_THEMES, s.theme, () => '')}` +
     (kind.tile || kind.character ? '' : assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '')) +
     assetChips('simple', 'How simple', ASSET_SIMPLE, s.simple) +

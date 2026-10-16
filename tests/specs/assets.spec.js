@@ -474,6 +474,38 @@ test('a character is named by its whole look, so the colours reach the model; th
   expect((await ask(page, settings({ kind: 'character', thing: 'x, ' + 'y'.repeat(300) }))).prompt.length).toBeLessThan(700);
 });
 
+test('turned to several directions the colours in the look are weighted, so the trousers hold from one direction to the next', async ({ page }) => {
+  await openApp(page);
+  const look = 'Girl knight, short brown hair, silver armor, blue skirt, hood, brown trousers';
+  const four = await ask(page, settings({ kind: 'character', thing: look, dirs: '4' }));
+  // Each part that names a colour; the name and a part with no colour are left as they are.
+  for (const part of ['(short brown hair:1.2)', '(silver armor:1.2)', '(blue skirt:1.2)', '(brown trousers:1.2)']) expect(four.prompt, part).toContain(part);
+  expect(four.prompt).toContain('girl knight, ');
+  expect(four.prompt).not.toContain('(girl knight');
+  expect(four.prompt).not.toContain('(hood');
+  // One side view is one picture: nothing to agree with, so the words go as they were.
+  const one = await ask(page, settings({ kind: 'character', thing: look, dirs: '1' }));
+  expect(one.prompt).not.toContain('(silver armor');
+  expect(one.prompt).toContain('silver armor');
+});
+
+test('a character request fits what the server accepts (Program.cs: prompt and avoid up to 800), whatever the settings', async ({ page }) => {
+  await openApp(page);
+  // The avoid list grew past the old limit of 400 and the server answered 400 to every Character - a unit test
+  // never saw it, because the server was not in it. So the longest the settings can make is held to the limit.
+  const longest = await page.evaluate(() => {
+    let prompt = 0, avoid = 0;
+    const look = 'girl knight, short brown hair, silver armor, blue skirt, blue boots, white cloak, gold belt, red scarf'.padEnd(ASSET_LOOK_MAX, ' ');
+    for (const simple of ASSET_SIMPLE.map(x => x.id)) for (const dirs of ['1', '4', '8']) for (const view of ['side', 'top']) {
+      const r = assetRequest({ ...ASSET_DEFAULTS, kind: 'character', thing: look, simple, dirs, view, theme: 'steampunk', dir: 'frontLeft' });
+      prompt = Math.max(prompt, r.prompt.length); avoid = Math.max(avoid, r.avoid.length);
+    }
+    return { prompt, avoid };
+  });
+  expect(longest.prompt).toBeLessThanOrEqual(800);
+  expect(longest.avoid).toBeLessThanOrEqual(800);
+});
+
 test('a character with no figure in 3D forms takes you there, with the Figure button in focus', async ({ page }) => {
   const s = await setup(page);
   // A server with a ControlNet (the last route registered wins).
