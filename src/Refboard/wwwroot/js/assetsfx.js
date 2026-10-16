@@ -189,3 +189,159 @@ function cutOut(pic, { tolerance = CUT_TOLERANCE, holes = false, trim = true, sp
   crop.getContext('2d').drawImage(full, cx, cy, cw, ch, 0, 0, cw, ch);
   return { found: true, canvas: crop, ref, bgShare: count / n, x: cx, y: cy };
 }
+
+/* ---- After Cut out, for a prop, a weapon or an item (js/assets.js).
+
+   The model draws "a sword" as a rack of swords, a potion with a second bottle behind
+   it: so the cut-out is reduced to one piece (assetSolo). A weapon is then turned to
+   stand along the vertical with its working end up (assetOrient), so four swords
+   made one after another point the same way. An icon is the piece, at the angle a
+   game draws it in an inventory, in a square frame (assetIcon). */
+
+const ASSET_ALPHA = 8;   // an alpha above this is the figure (the same line cutOut draws)
+
+/* The picture cut to its opaque part, CUT_PAD all round; null if nothing is opaque. */
+function assetTrim(canvas, pad = CUT_PAD) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > ASSET_ALPHA) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  if (x1 < 0) return null;
+  const cx = Math.max(0, x0 - pad), cy = Math.max(0, y0 - pad);
+  const cw = Math.min(w, x1 + 1 + pad) - cx, ch = Math.min(h, y1 + 1 + pad) - cy;
+  const out = Object.assign(document.createElement('canvas'), { width: cw, height: ch });
+  out.getContext('2d').drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+  return out;
+}
+
+/* Only the biggest piece of a cut-out, trimmed. Pieces closer than two pixels count as
+   one (a guard and a blade the outline parts), so the mask is grown before it is labelled
+   and the pixels kept are the figure's own. Returns { canvas, pieces } - how many there
+   were - or null if nothing is opaque. */
+function assetSolo(canvas) {
+  const w = canvas.width, h = canvas.height, n = w * h;
+  const img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
+  // Grown by two pixels, along x then along y.
+  const on = new Uint8Array(n), wide = new Uint8Array(n), grown = new Uint8Array(n);
+  for (let i = 0; i < n; i++) on[i] = d[i * 4 + 3] > ASSET_ALPHA ? 1 : 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    for (let k = Math.max(0, x - 2); k <= Math.min(w - 1, x + 2); k++) if (on[y * w + k]) { wide[y * w + x] = 1; break; }
+  }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    for (let k = Math.max(0, y - 2); k <= Math.min(h - 1, y + 2); k++) if (wide[k * w + x]) { grown[y * w + x] = 1; break; }
+  }
+  const label = new Int32Array(n), sizes = [0], stack = new Int32Array(n);
+  for (let s = 0; s < n; s++) {
+    if (!grown[s] || label[s]) continue;
+    const id = sizes.length;
+    let size = 0, sp = 1;
+    label[s] = id; stack[0] = s;
+    while (sp) {
+      const i = stack[--sp], x = i % w, y = (i / w) | 0;
+      if (on[i]) size++;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = ny * w + nx;
+        if (grown[j] && !label[j]) { label[j] = id; stack[sp++] = j; }
+      }
+    }
+    sizes.push(size);
+  }
+  if (sizes.length < 2) return null;
+  let best = 1;
+  for (let k = 2; k < sizes.length; k++) if (sizes[k] > sizes[best]) best = k;
+  for (let i = 0; i < n; i++) if (label[i] !== best) d[i * 4 + 3] = 0;
+  const kept = Object.assign(document.createElement('canvas'), { width: w, height: h });
+  kept.getContext('2d').putImageData(img, 0, 0);
+  const out = assetTrim(kept);
+  return out && { canvas: out, pieces: sizes.length - 1 };
+}
+
+/* The picture turned by rad (clockwise) about its centre onto a canvas big enough to hold it. */
+function assetRotate(canvas, rad) {
+  const w = canvas.width, h = canvas.height, c = Math.abs(Math.cos(rad)), s = Math.abs(Math.sin(rad));
+  const out = Object.assign(document.createElement('canvas'), { width: Math.ceil(w * c + h * s), height: Math.ceil(w * s + h * c) });
+  const g = out.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.translate(out.width / 2, out.height / 2);
+  g.rotate(rad);
+  g.drawImage(canvas, -w / 2, -h / 2);
+  return out;
+}
+
+/* The opaque part's centre of mass and how stretched it is: the long axis' angle from the
+   x axis (y down), and the ratio of the long extent to the short. */
+function assetShape(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  let m = 0, sx = 0, sy = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const a = d[(y * w + x) * 4 + 3] / 255;
+    m += a; sx += a * x; sy += a * y;
+  }
+  if (!m) return null;
+  const cx = sx / m, cy = sy / m;
+  let xx = 0, yy = 0, xy = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const a = d[(y * w + x) * 4 + 3] / 255;
+    xx += a * (x - cx) ** 2; yy += a * (y - cy) ** 2; xy += a * (x - cx) * (y - cy);
+  }
+  xx /= m; yy /= m; xy /= m;
+  const half = (xx + yy) / 2, spread = Math.sqrt(((xx - yy) / 2) ** 2 + xy ** 2);
+  return { cx, cy, angle: 0.5 * Math.atan2(2 * xy, xx - yy), stretch: Math.sqrt((half + spread) / Math.max(half - spread, 1e-6)) };
+}
+
+const ASSET_STRETCH = 1.6;   // a piece less stretched than this (a shield, a coin) has no up
+const ASSET_SNAP = 3 * Math.PI / 180;   // already this close to upright: left as it is
+const ASSET_FLIP = 0.58;   // the mass this far down a piece (0 top, 1 bottom) says it hangs head down
+
+/* A long piece stood upright. The long axis is brought to the vertical by the shorter way
+   round, so a piece drawn tip up and crooked stays tip up (js/assets.js asks the model for
+   "pointing up"). Turned over only on clear evidence: the mass of an axe is its head, of a
+   staff its orb, so with the mass in the lower part the piece hangs from it. A sword's
+   centre of mass is too near the middle to say - blade against guard and grip - and is not
+   trusted. Returns { canvas, turned } - the angle in degrees, 0 if it was left as it was -
+   or null if nothing is opaque. */
+function assetOrient(canvas) {
+  const first = assetShape(canvas);
+  if (!first) return null;
+  if (first.stretch < ASSET_STRETCH) return { canvas, turned: 0 };
+  // The long axis to the vertical by the shorter way round. An axis has no direction - its
+  // angle is only known up to a half turn (atan2 of a symmetric piece may say -90 or 90) - so
+  // the turn is taken modulo a half turn, into (-90, 90], never a full flip by accident.
+  const half = Math.PI;
+  let turn = Math.PI / 2 - first.angle;
+  turn = ((turn + Math.PI / 2) % half + half) % half - Math.PI / 2;
+  let out = Math.abs(turn) < ASSET_SNAP ? canvas : assetRotate(canvas, turn);
+  let total = turn;
+  const tall = assetTrim(out, 0), s = assetShape(tall);
+  if (s.cy > tall.height * ASSET_FLIP) { out = assetRotate(tall, Math.PI); total += Math.PI; }
+  const trimmed = assetTrim(out);
+  return { canvas: trimmed, turned: Math.round(((total * 180 / Math.PI) % 360 + 360) % 360) };
+}
+
+/* The inventory icon: a framed square with the piece in it. A weapon (diagonal) is laid at
+   45 degrees, its top toward the upper right - how a sword is drawn in a slot. */
+function assetIcon(canvas, { size = 128, diagonal = false } = {}) {
+  const out = Object.assign(document.createElement('canvas'), { width: size, height: size });
+  const g = out.getContext('2d');
+  const r = size * 0.14, inset = Math.max(2, size * 0.02);
+  g.beginPath();
+  g.roundRect(inset, inset, size - 2 * inset, size - 2 * inset, r);
+  g.fillStyle = '#2b2b3d';
+  g.fill();
+  g.lineWidth = Math.max(2, size * 0.035);
+  g.strokeStyle = '#a6adc8';
+  g.stroke();
+  let piece = canvas;
+  if (diagonal) piece = assetRotate(piece, Math.PI / 4);
+  piece = assetTrim(piece, 0) || piece;
+  const room = size * 0.68, k = Math.min(room / piece.width, room / piece.height);
+  const dw = Math.max(1, Math.round(piece.width * k)), dh = Math.max(1, Math.round(piece.height * k));
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(piece, Math.round((size - dw) / 2), Math.round((size - dh) / 2), dw, dh);
+  return out;
+}

@@ -1128,8 +1128,8 @@ function genCancel() {
 }
 function genStop() {
   genStopped = true;
-  el('genGo').disabled = true;
-  el('genStatus').textContent = 'Stopping...';
+  el(genUi.go).disabled = true;
+  el(genUi.status).textContent = 'Stopping...';
   genCancel();
 }
 
@@ -1137,28 +1137,35 @@ function genStop() {
 // Drafts are the choices drawn in fewer steps: quick to look through, and Finish it
 // makes the one worth keeping into the picture.
 const GEN_DRAFT_STEPS = 14;
+// The controls a run drives: this view's own, or - ui - another view's that shares the run
+// (Game assets: js/assets.js). refresh() redraws that view's list of what was made.
+const GEN_UI = { go: 'genGo', status: 'genStatus', goText: 'Generate', refresh: () => showGenerate(false) };
+let genUi = GEN_UI;
 // after(made): something to do to each picture made from jobs, before it is listed (In detail
 // puts the part back into the picture it was cut from).
-async function runGenerate(jobs = null, doing = '', done = '', after = null) {
+// doing may be a function of (i, n) - "Making 2 of 4" - when jobs are several.
+async function runGenerate(jobs = null, doing = '', done = '', after = null, ui = GEN_UI) {
   if (genBusy) return;
   genBusy = true;
   genStopped = false;
+  genUi = ui;
+  const go = el(ui.go);
   // While it works the button is Stop.
-  el('genGo').textContent = 'Stop';
-  el('genGo').title = 'Stop making pictures - the one in hand is cancelled, the rest are not started';
+  go.textContent = 'Stop';
+  go.title = 'Stop making pictures - the one in hand is cancelled, the rest are not started';
   const n = jobs ? jobs.length : Number(el('genCount').value) || 1;
   const req = jobs ? null : genRequest();
   if (req && el('genQuality').value === 'draft') { req.steps = GEN_DRAFT_STEPS; req.tags = [...req.tags, 'draft'].slice(0, 24); }
-  const status = el('genStatus');
+  const status = el(ui.status);
   try {
     for (let i = 1; i <= n; i++) {
       if (genStopped) break;
-      status.textContent = jobs ? doing : n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
+      status.textContent = jobs ? (typeof doing === 'function' ? doing(i, n) : doing) : n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
       const made = await generateOne(jobs ? jobs[i - 1] : req);
       if (!jobs && genLockWanted()) await genLockMade(made, status);
       if (jobs && after) await after(made);
       storeChanged();
-      await showGenerate(false);
+      await ui.refresh();
     }
     status.textContent = genStopped ? 'Stopped.' : jobs ? done : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
     if (!jobs && genChoices.subject === 'character') { genCharsRemember(genChoices.character); renderGenRecent(); }
@@ -1170,9 +1177,9 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null) {
   } finally {
     genBusy = false;
     genJob = '';
-    el('genGo').textContent = 'Generate';
-    el('genGo').removeAttribute('title');
-    el('genGo').disabled = !!genOffline;
+    go.textContent = ui.goText;
+    go.removeAttribute('title');
+    go.disabled = !!genOffline;
   }
 }
 
@@ -1267,6 +1274,9 @@ async function genCheck() {
   if (el('genWhere')) renderGenWhere();
   document.getElementById('formPoseGen')?.classList.toggle('hidden', !genControl);
   document.querySelector('.nav-item[data-view="generate"]').classList.toggle('hidden', !info.available && !genOffline);
+  // Game assets is made by the same ComfyUI: shown, and offline, with it (js/assets.js).
+  document.querySelector('.nav-item[data-view="assets"]').classList.toggle('hidden', !info.available && !genOffline);
+  assetsOffline();
   el('genOffline').classList.toggle('hidden', !genOffline);
   el('genOfflineText').textContent = genOffline;
   el('genGo').disabled = !!genOffline;

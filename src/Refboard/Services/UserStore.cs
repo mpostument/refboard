@@ -40,6 +40,8 @@ public sealed partial class UserStore(RefboardOptions opts)
         ["my-work"] = "My work", ["other"] = "Other",
         // Not sorted into: what ComfyClient generates goes here itself.
         ["generated"] = "Generated",
+        // Game assets (js/assets.js): what ComfyClient makes for a game, cut out and tagged.
+        ["assets"] = "Assets",
     };
 
     public string UploadsDir => Path.Combine(opts.DataDir, "uploads");

@@ -152,6 +152,9 @@ app.MapPost("/api/generate", (GenerateRequest req) =>
     if (string.IsNullOrWhiteSpace(req.Prompt) || req.Prompt.Length > 800 || (req.Avoid?.Length ?? 0) > 400
         || (req.Tags ?? []).Count > 24 || (req.Tags ?? []).Any(t => t.Length > 40)
         || (req.Shape is not null && !ComfyClient.Shapes.ContainsKey(req.Shape))
+        || !ComfyClient.ValidSize(req.Width, req.Height)
+        || (req.Asset is not null && !ComfyClient.AssetKinds.Contains(req.Asset))
+        || (req.Width is not null && req.Image is not null)
         || (req.Image is not null && (req.Image.Length > 8_000_000 || !IsBase64(req.Image)))
         || (req.Mask is not null && (req.Image is null || req.Control || req.Mask.Length > 4_000_000 || !IsBase64(req.Mask)))
         || (req.Scale is not null && (req.Image is null || req.Control || req.Mask is not null || req.Scale is < 1.0 or > 2.0))

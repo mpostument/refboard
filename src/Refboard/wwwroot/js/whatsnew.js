@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'game-assets', title: 'Game assets: props, weapons and items for a 2D game',
+    text: "A new view beside Generate. Pick Prop, Weapon or Item, name it in English (a treasure chest, a sword, a potion), a theme, a material and how simple, and it makes up to four, each cut out on a transparent background and kept in Uploads, Assets. A weapon is one to a picture - not the rack of swords the model likes to draw - and turned upright; weapons and items also get a framed square icon for an inventory. The pictures are asked of the model at a size that suits the thing, not one of three shapes.",
+    act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },
   { id: 'gen-cut', title: 'Generate: cut a figure out for a game',
     text: "A picture drawn on a plain background - white, cream, green - can be cut out: More > Cut out... finds the background from the picture's edges and takes it away, leaving a PNG with nothing behind it. Look at it over a checkerboard, a dark or a light ground and at three times the size, to see a fringe; one slider says how much counts as background. A picture with no plain background says so. This is the first piece of a game-assets kit; the model is not used.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

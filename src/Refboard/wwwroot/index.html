@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=cf1230d6">
+<link rel="stylesheet" href="css/app.css?v=efe84b6c">
 </head>
 <body>
 <div id="setup">
@@ -72,6 +72,7 @@
       <button class="nav-item" type="button" data-view="perspective" data-icon="perspective" data-tip="Perspective grid - vanishing points on your paper to print and draw over, and how tall people are anywhere in a picture" aria-label="Perspective grid"></button>
       <button class="nav-item" type="button" data-view="sky" data-icon="sky" data-tip="Sky and weather - a sky to study at any time of day, and how fast a wash will dry today" aria-label="Sky and weather"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
+      <button class="nav-item hidden" type="button" data-view="assets" data-icon="sword" data-tip="Game assets - props, weapons and items for a 2D game, cut out, with ComfyUI" aria-label="Game assets"></button>
       <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
     </div>
     <div class="rail-stage" role="group" aria-label="Practise" data-stage="Practise"
@@ -357,6 +358,34 @@
             </div>
             <ul id="genResults" aria-label="Generated pictures"></ul>
             <div class="count" id="genEmpty">What you generate shows here - click one to open it with every tool.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game assets - js/assets.js; shares Generate's run and is shown by the same check. -->
+      <div id="viewAssets" class="hidden">
+        <div class="col-wrap">
+          <div class="col-left gen-left">
+            <p id="assetOffline" class="gen-offline hidden" role="status"></p>
+            <div id="assetChoices"></div>
+            <div class="gen-bar">
+              <details id="assetPrompt">
+                <summary>Prompt</summary>
+                <div id="assetPromptBody"></div>
+              </details>
+              <div class="row gen-go">
+                <label>How many <select id="assetCount"><option>1</option><option>2</option><option>4</option></select></label>
+                <label>As <select id="assetDraft" title="Drafts take half the time - make four, then keep the one worth it."><option value="">Final pictures</option><option value="draft">Drafts</option></select></label>
+                <label id="assetIconRow"><input type="checkbox" id="assetIcon"> Also an inventory icon</label>
+                <button type="button" id="assetGo" class="primary">Make</button>
+                <span class="count" id="assetStatus" role="status"></span>
+              </div>
+            </div>
+          </div>
+          <div class="col-right gen-right">
+            <div class="gen-made-head"><h4>Made here <span class="count" id="assetMadeCount"></span></h4></div>
+            <ul id="assetResults" aria-label="Game assets made"></ul>
+            <div class="count" id="assetEmpty">What you make shows here, cut out - click one to open it with every tool.</div>
           </div>
         </div>
       </div>
@@ -2197,8 +2226,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=59939bce"></script>
-<script src="js/setup.js?v=bc13a3bd"></script>
+<script src="js/core.js?v=d303381b"></script>
+<script src="js/setup.js?v=ff7fd707"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=ea07afe9"></script>
 <script src="js/uploads.js?v=a59c8f0e"></script>
@@ -2208,7 +2237,7 @@
 <script src="js/tools.js?v=dfdbd425"></script>
 <script src="js/materials.js?v=aea2cd23"></script>
 <script src="js/vision.js?v=5c0f8101"></script>
-<script src="js/sort.js?v=a54fa3a1"></script>
+<script src="js/sort.js?v=6b40f3d5"></script>
 <script src="js/study.js?v=fc69529c"></script>
 <script src="js/layers.js?v=29c0c0af"></script>
 <script src="js/stages.js?v=c7fb5944"></script>
@@ -2218,7 +2247,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=165aa97e"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=3872fb07"></script>
+<script src="js/whatsnew.js?v=488be927"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=73f7eb91"></script>
@@ -2244,9 +2273,10 @@
 <script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
-<script src="js/generate.js?v=d1487326"></script>
-<script src="js/assetsfx.js?v=89f3ed34"></script>
+<script src="js/generate.js?v=30ed2188"></script>
+<script src="js/assetsfx.js?v=a04216e2"></script>
 <script src="js/genedit.js?v=bfdd1fea"></script>
+<script src="js/assets.js?v=5965fc7c"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->

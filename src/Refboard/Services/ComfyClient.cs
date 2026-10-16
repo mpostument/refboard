@@ -18,10 +18,14 @@ namespace Refboard.Services;
 /// With Mask - a PNG, white where to draw again, the size of Image - only the white is
 /// redrawn and the rest of Image is kept: Redraw a part. Steps (8 - 40, 28 by default):
 /// fewer for a draft. Parent is the file id of the picture this one was made from, kept in
-/// its document so the page can show the two side by side (Before and after).</remarks>
+/// its document so the page can show the two side by side (Before and after). Width and Height
+/// (both, multiples of 64, 256 - 2048, at most 1.6 megapixels) are a free size for a new picture
+/// - a strip, a square at 512 - instead of one of the three Shapes; see <see cref="SizeOf"/>.
+/// Asset (prop, weapon or item) says the picture is for a game: it is kept in the Assets folder
+/// instead of Generated, and its document says which kind.</remarks>
 public sealed record GenerateRequest(string? Prompt, List<string>? Tags, string? Shape, long? Seed, string? Avoid = null,
     string? Image = null, double? Denoise = null, bool Control = false, double? Strength = null,
-    string? Mask = null, double? Scale = null, int? Steps = null, string? Parent = null);
+    string? Mask = null, double? Scale = null, int? Steps = null, string? Parent = null, int? Width = null, int? Height = null, string? Asset = null);
 
 /// <summary>
 /// Generates references with a ComfyUI (<see cref="RefboardOptions.ComfyUrl"/>)
@@ -43,6 +47,29 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
     {
         ["portrait"] = (832, 1216), ["square"] = (1024, 1024), ["landscape"] = (1216, 832),
     };
+
+    /// <summary>Whether a free size is one SDXL can be asked for: both sides given, a
+    /// multiple of 64 (the latent is an eighth of the picture and the model's blocks
+    /// halve it three times more), 256 - 2048, and no more than 1.6 megapixels - a
+    /// small card's limit, and past it SDXL draws two of everything.</summary>
+    public static readonly string[] AssetKinds = ["prop", "weapon", "item"];
+
+    public static bool ValidSize(int? width, int? height) =>
+        width is null && height is null
+        || width is >= 256 and <= 2048 && height is >= 256 and <= 2048
+           && width % 64 == 0 && height % 64 == 0 && (long)width * height <= 1_600_000;
+
+    /// <summary>The size to draw: the free one if given, else the named shape's. The shape
+    /// kept in the document is the named one, or - for a free size - the nearest by
+    /// proportion, so a picture varied later starts from a shape the page knows.</summary>
+    public static (int W, int H, string Shape) SizeOf(GenerateRequest req)
+    {
+        if (req.Width is { } w && req.Height is { } h)
+            return (w, h, (double)w / h > 1.15 ? "landscape" : (double)w / h < 0.87 ? "portrait" : "square");
+        var shape = req.Shape ?? "portrait";
+        var (sw, sh) = Shapes[shape];
+        return (sw, sh, shape);
+    }
 
     // Added by the server, not sent by the page: the model's own quality tags
     // (Animagine's, which other Danbooru-tag models share), and what never to
@@ -162,7 +189,7 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
 
     private async Task<JsonElement> RunAsync(GenerateRequest req, Control control)
     {
-        var (w, h) = Shapes[req.Shape ?? "portrait"];
+        var (w, h, shape) = SizeOf(req);
         var seed = req.Seed ?? Random.Shared.NextInt64(0, 1L << 48);
         // The graph ComfyUI's own "save (API)" writes: checkpoint, two text
         // encodings, an empty latent, the sampler, the decode - and a preview,
@@ -305,13 +332,14 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
         // (the one js/store.js writes for a dropped picture) - which is where
         // the index takes its tags from.
         var saved = await store.SaveFileAsync(png, ".png", CancellationToken.None);
-        var entry = store.MoveFile(saved.Id, "generated")!;
+        var folder = req.Asset is null ? "generated" : "assets";
+        var entry = store.MoveFile(saved.Id, folder)!;
         var tags = req.Tags ?? [];
         var doc = JsonSerializer.SerializeToElement(new
         {
             file = entry.Id, name = tags.Count > 0 ? string.Join(", ", tags.Take(3)) : "generated",
             type = "image/png", from = "generate", bytes = entry.Bytes,
-            t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), folder = "generated", tags, prompt = req.Prompt, avoid = req.Avoid, shape = req.Shape ?? "portrait", seed, parent = req.Parent,
+            t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), folder, asset = req.Asset, tags, prompt = req.Prompt, avoid = req.Avoid, shape, width = w, height = h, seed, parent = req.Parent,
             kind = req.Image is null ? "new" : req.Control ? "pose" : scaled ? "finish" : req.Mask is { Length: > 0 } ? "redraw" : "img2img",
         });
         store.PutItem("uploads", entry.Id.Split('.')[0], doc);

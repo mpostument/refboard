@@ -560,7 +560,17 @@ the pictures looked at - as the Generate features were):
    sizes (`Width`, `Height`, multiples of 64, up to 1.6 MP) instead of three
    shapes - needed for a strip and a square at 512. *Done when* "a wooden chest,
    side view, fantasy" gives four cut-out chests, and "a steel sword" four
-   swords pointing the same way.
+   swords pointing the same way. **Done 2026-10-16** (Prop / Weapon / Item; Character,
+   Tile and the rest are later phases): the view `js/assets.js`, `Width`/`Height` and `Asset`
+   on the server (Uploads > Assets), `assetSolo` / `assetOrient` / `assetIcon` in
+   `assetsfx.js`. Run on the real ComfyUI: "wooden treasure chest" gave four cut-out chests
+   (3 of 4 closed with `closed lid` + avoid `open lid, jewels, gems`; a bare "chest" was read
+   as a body part and gave a panel); "steel sword" gave four *single* swords, all tip up (the
+   prompt asks `pointing up`; the long axis is only straightened, and turned over on clear
+   evidence - an axe's mass is its head - because a sword's centre of mass is too near the
+   middle to say which end is the tip), each with a 45-degree framed icon; a potion cut out
+   clean. Not done from the list above: the "game style" settings are phase 6, so only theme,
+   material and simplicity are here; the palette lock is not applied yet.
 3. **Tiles.** Make seamless; the 3x3 preview; ground / grass / water / stone /
    wood from the Spike's tags; a tile at 256 / 512 and shrunk to 16 / 32.
    *Done when* a 3x3 of a generated tile shows no seam at 1x, and the rolled

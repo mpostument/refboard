@@ -2210,3 +2210,23 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .warm-pic { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 12px; }
 .warm-pic img { max-width: 100%; max-height: calc(100% - 40px); object-fit: contain; }
 .warm-say { margin: 0; color: var(--dim); min-height: 1.4em; text-align: center; }
+/* Game assets (js/assets.js): a cut-out is looked at over a checkerboard, so its transparency shows. */
+#assetChoices { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px 28px; align-items: start; }
+#assetOffline { margin: 0 0 14px; font-size: 13px; }
+#assetPromptBody { max-height: 34vh; overflow: auto; margin-top: 8px; display: grid; gap: 8px; }
+#assetPromptBody h5 { margin: 0 0 4px; font-size: 11px; font-weight: 500; color: var(--dim); }
+#assetPromptBody .gen-tags { font-family: var(--mono, ui-monospace, monospace); font-size: 11.5px; color: var(--ink); overflow-wrap: anywhere; }
+#assetPromptBody .fixed { color: var(--dim); }
+#assetPrompt { flex: 1 1 100%; font-size: 12px; }
+#assetPrompt summary { cursor: pointer; color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; width: max-content; }
+#assetGo { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 8px 20px; font-weight: 600; cursor: pointer; }
+#assetGo:disabled { opacity: .55; cursor: not-allowed; }
+#assetThings { margin-top: 8px; }
+#assetResults { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+#assetResults li { position: relative; }
+#assetResults li:hover .gen-del, #assetResults .gen-del:focus-visible { opacity: 1; }
+.asset-open { display: block; width: 100%; aspect-ratio: 1; padding: 6px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+  background: repeating-conic-gradient(#8a8a8a 0 25%, #bdbdbd 0 50%) 0 0 / 14px 14px; }
+.asset-open:hover, .asset-open:focus-visible { border-color: var(--accent); }
+.asset-open img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.asset-name { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
