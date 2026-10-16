@@ -137,7 +137,9 @@ function hatchStrokes(f, c, cfg) {
   const { w, h, level } = f, S = Math.max(w, h), sp = S / HATCH_LINES[cfg.lines];
   c.width = w; c.height = h;
   const g = c.getContext('2d');
-  g.fillStyle = 'rgba(250,246,236,.96)'; g.fillRect(0, 0, w, h);
+  // Paper, but not quite opaque: the picture shows through faintly, so the
+  // lines can be placed on the figure - a bare net of hatching shows nothing.
+  g.fillStyle = 'rgba(250,246,236,.84)'; g.fillRect(0, 0, w, h);
   g.strokeStyle = '#1b1b24'; g.lineCap = 'round';
   const base = Math.max(0.9, sp / 7);
   for (let j = 0; j < 4; j++) {
@@ -155,16 +157,45 @@ function hatchStrokes(f, c, cfg) {
         t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b));
       }
       if (skip || t1 <= t0) continue;
-      let pen = false;
+      // Where along the line the level is above this layer: runs of t.
+      const runs = [];
+      let from = null;
       for (let t = Math.ceil(t0); t <= t1; t++) {
-        const x = o * nx + t * ux, y = o * ny + t * uy;
-        const xi = Math.min(w - 1, Math.max(0, Math.round(x))), yi = Math.min(h - 1, Math.max(0, Math.round(y)));
-        if (level[yi * w + xi] > j) { if (pen) g.lineTo(x, y); else { g.moveTo(x, y); pen = true; } }
-        else pen = false;
+        const xi = Math.min(w - 1, Math.max(0, Math.round(o * nx + t * ux))), yi = Math.min(h - 1, Math.max(0, Math.round(o * ny + t * uy)));
+        if (level[yi * w + xi] > j) { if (from === null) from = t; }
+        else if (from !== null) { runs.push([from, t - 1]); from = null; }
+      }
+      if (from !== null) runs.push([from, Math.floor(t1)]);
+      // A hand does not lift the pen for a gap of a hair, nor make a stroke
+      // shorter than the lines are apart: close the first, drop the second.
+      // Without that the edge of every area is a fringe of stubs.
+      const merged = [];
+      for (const r of runs) {
+        const last = merged[merged.length - 1];
+        if (last && r[0] - last[1] <= sp * 0.7) last[1] = r[1]; else merged.push([...r]);
+      }
+      for (const [a, b] of merged) {
+        if (b - a < sp * 1.2) continue;
+        g.moveTo(o * nx + a * ux, o * ny + a * uy);
+        g.lineTo(o * nx + b * ux, o * ny + b * uy);
       }
     }
     g.stroke();
   }
+}
+
+/* The key's swatch for a level in the strokes view: the lines that level has,
+   one set per layer, each at its own angle - so the key shows what to look for
+   in the drawing, where the map's colours would be nothing there. */
+function hatchSwatch(k) {
+  if (!k) return '<svg class="hm-sw" viewBox="0 0 22 14" aria-hidden="true"></svg>';
+  let lines = '';
+  for (let j = 0; j < k; j++) {
+    const ls = [];
+    for (let y = -14; y < 28; y += 4) ls.push(`<line x1="-14" y1="${y + j}" x2="36" y2="${y + j}"/>`);
+    lines += `<g transform="rotate(${HATCH_ANGLES[j]} 11 7)" stroke-width="${(0.8 + 0.25 * j).toFixed(2)}">${ls.join('')}</g>`;
+  }
+  return `<svg class="hm-sw" viewBox="0 0 22 14" aria-hidden="true"><g stroke="#1b1b24" fill="none">${lines}</g></svg>`;
 }
 
 /* The ballpoint's strokes: one direction, and the pressure is how dark and
@@ -215,14 +246,17 @@ function hatchDraw(f, c, cfg) {
 
 function hatchNote(f, cfg) {
   const chip = (attr, k, label, on) => `<button type="button" class="chip" data-hatch-${attr}="${k}" aria-pressed="${on}">${label}</button>`;
-  const ball = cfg.pen === 'ballpoint';
-  const bar = `<div class="tone-bar"><span>Pen</span>${chip('p', 'liner', 'Liner', !ball)}${chip('p', 'ballpoint', 'Ballpoint', ball)}` +
+  const ball = cfg.pen === 'ballpoint', strokes = cfg.view === 'strokes';
+  const bar =`<div class="tone-bar"><span>Pen</span>${chip('p', 'liner', 'Liner', !ball)}${chip('p', 'ballpoint', 'Ballpoint', ball)}` +
     `<span>Show</span>${chip('v', 'map', 'Map', cfg.view === 'map')}${chip('v', 'strokes', 'Strokes', cfg.view === 'strokes')}` +
     `<span>Lines</span>${chip('l', 'open', 'Open', cfg.lines === 'open')}${chip('l', 'close', 'Close', cfg.lines === 'close')}</div>`;
   if (f.flat) return bar + 'The values hardly differ in this picture: there is no ladder to build. One even layer, or none, says all it has.';
   const key = '<div class="hm-key">' + f.share.map((s, k) => ball
     ? `<span><i style="background:${k ? HATCH_BLUES[k] : '#fff'}"></i>${k ? k + ' ' : ''}${HATCH_PRESSURE[k]} ${Math.round(s)}%</span>`
-    : `<span><i style="background:${k ? HATCH_COLOURS[k] : 'transparent'}"></i>${k} ${HATCH_WORDS[k]}${k ? ', ' + HATCH_PEN_MM[k - 1] + ' mm' : ''} ${Math.round(s)}%</span>`).join('') + '</div>';
+    : `<span>${strokes ? hatchSwatch(k) : `<i style="background:${k ? HATCH_COLOURS[k] : 'transparent'}"></i>`}${k} ${HATCH_WORDS[k]}${k ? ', ' + HATCH_PEN_MM[k - 1] + ' mm' : ''} ${Math.round(s)}%</span>`).join('') + '</div>';
+  // Strokes: how to read them - the sets of lines are the layers.
+  const how = strokes && !ball
+    ? '<div>Every set of parallel lines is one layer, each at its own angle: first ╲, second ╱, third —, fourth |. Count the sets crossing at any spot - that is its number; where there are none, leave the paper. The picture is faint underneath to place them by.</div>' : '';
   const dark = f.share[3] + f.share[4], light = f.share[0] + f.share[1];
   let line;
   if (ball) {
@@ -231,7 +265,7 @@ function hatchNote(f, cfg) {
   } else if (dark > 25) line = `${Math.round(dark)}% wants three layers or four: a lot of ink. Build it from the top of the ladder down - the lightest layer over the whole area first, the crossing only where the numbers rise. The pen grows with the layers: fine first keeps the crossings open.`;
   else if (light > 65) line = `${Math.round(light)}% needs one layer or none: keep the pen light and let the paper be the highlights - they cannot be put back.`;
   else line = 'A full ladder: lay the first direction over everything that is not bare paper, then cross it where the numbers rise.';
-  return bar + key + esc(line) + " <small>Measured against this picture's own darkest and lightest, not the sheet's." + (ball ? '' : ' Pen sizes are a starting rule, not a measurement.') + '</small>';
+  return bar + how + key + esc(line) + " <small>Measured against this picture's own darkest and lightest, not the sheet's." + (ball ? '' : ' Pen sizes are a starting rule, not a measurement.') + '</small>';
 }
 
 /* ---- in a session: the map or the strokes over the picture, as a layer. */

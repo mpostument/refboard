@@ -550,6 +550,9 @@ const genSplit = s => [...new Set(s.split(/,\s*/).map(t => t.trim()).filter(Bool
 // has (initGenerate()), so the other views offer a button for it or not.
 const genAvailable = () => !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
 let genBusy = false;
+// Whether the server has a ControlNet for "Draw this pose" (forms.js).
+let genControl = false;
+const genControlAvailable = () => genControl;
 
 function loadGenChoices() {
   try { Object.assign(genChoices, JSON.parse(localStorage.getItem(GEN_KEY)) || {}); } catch { /* defaults */ }
@@ -580,7 +583,103 @@ function saveGenView() {
 function genRequest() {
   const req = genPrompt(genChoices, el('genExtra').value);
   const off = new Set(genView.off);
-  return { ...req, avoid: genSplit(req.avoid).filter(t => !off.has(t)).join(', ') };
+  const out = { ...req, avoid: genSplit(req.avoid).filter(t => !off.has(t)).join(', ') };
+  const src = genSource;
+  if (!src) return out;
+  out.image = src.b64;
+  out.shape = src.shape;
+  if (src.mode === 'pose') { out.control = true; out.strength = src.level; out.tags = [...out.tags, 'pose'].slice(0, 24); return out; }
+  out.denoise = src.level;
+  if (src.mode === 'study') {
+    // A photo has no tags of its own: the beginner's, so what comes out is
+    // a few flat shapes, then the choices above for what it is and its medium.
+    const tags = genSplit(out.prompt);
+    out.prompt = [...genSplit(BEGIN), ...tags.filter(t => !BEGIN.includes(t))].join(', ');
+    out.tags = [...out.tags, 'study', 'simplified'].slice(0, 24);
+  } else {
+    // A variation: the original's own words, then whatever is typed now.
+    const more = genSplit(el('genExtra').value);
+    out.prompt = comfyTags([src.prompt, ...more].filter(Boolean).join(', '));
+    out.avoid = src.avoid || '';
+    out.tags = [...(src.tags || []), ...more, 'variation'].slice(0, 24).map(w => w.slice(0, 40));
+  }
+  return out;
+}
+
+/* Starting from a picture. Three ways in, one strip:
+   - a study: a photo (or any picture) redrawn as a few flat shapes, in the
+     style the choices say - img2img, the picture encoded as the sampler's
+     starting point;
+   - a variation of a generated picture, from its Vary button;
+   - a pose: the 3D figure's render, which a ControlNet holds the picture to.
+   `level` is the one slider that matters for each: how far from the picture
+   it may wander (img2img's denoise), or how strictly it keeps to the figure
+   (the ControlNet's strength). The picture goes to the server already the
+   size of the shape - the page does the cropping, so the server only passes
+   it on. */
+const GEN_SHAPE_PX = { portrait: [832, 1216], square: [1024, 1024], landscape: [1216, 832] };
+const GEN_LEVELS = {
+  study: { title: 'How far from it', start: 1, options: [['Close', 0.45, 'Repaints the picture in the style, keeping its drawing'], ['Simplified', 0.62, 'Keeps the big shapes, drops the detail'], ['Loose', 0.8, 'Only its layout and colours']] },
+  vary: { title: 'How different', start: 1, options: [['Slightly', 0.4, 'The same picture, a little changed'], ['Somewhat', 0.6, 'Same idea, new details'], ['Very', 0.8, 'Only the layout stays']] },
+  pose: { title: 'How strictly', start: 1, options: [['Loose', 0.5, 'The pose is a suggestion'], ['Firm', 0.8, 'The pose, with some give'], ['Exact', 1.1, 'Follows the figure to the joint']] },
+};
+const GEN_WHAT = {
+  study: 'A study: this picture simplified into flat shapes, in the style chosen above.',
+  vary: 'A variation of this picture - its own tags, and any More tags added.',
+  pose: 'This pose, drawn as the character chosen above.',
+};
+let genSource = null;
+
+async function genSetSource(blob, mode, extra = {}) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await loadImg(url);
+    const ar = img.naturalWidth / img.naturalHeight;
+    const shape = extra.shape || (ar > 1.15 ? 'landscape' : ar < 0.87 ? 'portrait' : 'square');
+    const [W, H] = GEN_SHAPE_PX[shape] || GEN_SHAPE_PX.portrait;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    // A photo fills the frame (its edges may go); a figure must not lose a
+    // hand, so it is fitted whole, on the colour of its own background.
+    if (mode === 'pose') {
+      const px = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+      px.canvas.width = px.canvas.height = 1;
+      px.drawImage(img, 0, 0, 1, 1);
+      const [r, gg, b] = px.getImageData(0, 0, 1, 1).data;
+      g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(0, 0, W, H);
+    }
+    const k = (mode === 'pose' ? Math.min : Math.max)(W / img.naturalWidth, H / img.naturalHeight);
+    const w = img.naturalWidth * k, h = img.naturalHeight * k;
+    g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+    genSource = { mode, shape, b64: c.toDataURL('image/png').split(',')[1], preview: c.toDataURL('image/jpeg', 0.6),
+      level: GEN_LEVELS[mode].options[GEN_LEVELS[mode].start][1], ...extra };
+  } finally { URL.revokeObjectURL(url); }
+  renderGenSource();
+  setView({ kind: 'generate' });
+  el('genStatus').textContent = GEN_WHAT[mode] + ' Change anything, then Generate.';
+}
+
+function clearGenSource() {
+  genSource = null;
+  renderGenSource();
+}
+
+function renderGenSource() {
+  const host = el('genSourceBody'), src = genSource;
+  host.classList.toggle('hidden', !src);
+  el('genPick').textContent = src ? 'Another picture...' : 'Start from a picture...';
+  if (!src) { host.innerHTML = ''; return; }
+  const L = GEN_LEVELS[src.mode];
+  host.innerHTML = `<img alt="" src="${src.preview}">` +
+    `<span class="gen-source-what">${esc(GEN_WHAT[src.mode])}</span>` +
+    `<div class="chips" role="group" aria-label="${esc(L.title)}">` +
+    L.options.map(([label, v, hint]) => `<button type="button" class="chip" data-level="${v}" title="${esc(hint)}" aria-pressed="${v === src.level}">${esc(label)}</button>`).join('') + '</div>' +
+    `<button type="button" class="ghost" id="genSourceClear" title="Back to making a picture from the choices alone">Drop it</button>`;
+}
+
+async function genPicked(file) {
+  if (file && file.type.startsWith('image/')) await genSetSource(file, 'study');
 }
 
 function renderGenPrompt() {
@@ -648,6 +747,7 @@ function renderGenResults(list, total = list.length) {
     li.innerHTML = `<button type="button" class="gen-open" title="${esc((u.tags || []).join(', '))}" ` +
       `aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
       `<button type="button" class="gen-del" aria-label="Delete ${esc(u.name)}" title="Delete it - from Uploads too">${iconSvg('close')}</button>` +
+      `<button type="button" class="gen-vary" aria-label="Vary ${esc(u.name)}" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
       `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>` +
       `<button type="button" class="gen-colours" aria-label="Character sheet from ${esc(u.name)}" title="Her colours, with how to mix them - the Colour studio's Character sheet">Colours</button>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
@@ -656,6 +756,12 @@ function renderGenResults(list, total = list.length) {
       await forgetUpload(u);
       await showGenerate();
       el('genResults').querySelector('.gen-open')?.focus();
+    });
+    li.querySelector('.gen-vary').addEventListener('click', async () => {
+      const url = await storeFileUrl(u.file);
+      if (!url) return;
+      const blob = await (await fetch(url)).blob();
+      await genSetSource(blob, 'vary', { prompt: u.prompt || '', avoid: u.avoid || '', tags: u.tags || [], shape: u.shape || undefined });
     });
     li.querySelector('.gen-steps').addEventListener('click', async () => {
       const url = await storeFileUrl(u.file);
@@ -775,6 +881,20 @@ async function initGenerate() {
   });
   el('genExtra').addEventListener('input', renderGenPrompt);
   el('genGo').addEventListener('click', runGenerate);
+  el('genPick').addEventListener('click', () => el('genPickInput').click());
+  el('genPickInput').addEventListener('change', async e => { await genPicked(e.target.files[0]); e.target.value = ''; });
+  el('genSource').addEventListener('click', e => {
+    if (e.target.closest('#genSourceClear')) { clearGenSource(); el('genPick').focus(); return; }
+    const b = e.target.closest('[data-level]');
+    if (!b || !genSource) return;
+    genSource.level = Number(b.dataset.level);
+    for (const x of el('genSource').querySelectorAll('[data-level]')) x.setAttribute('aria-pressed', String(x === b));
+  });
+  // A picture dropped on the strip.
+  const strip = el('genSource');
+  strip.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); strip.classList.add('over'); } });
+  strip.addEventListener('dragleave', () => strip.classList.remove('over'));
+  strip.addEventListener('drop', async e => { e.preventDefault(); strip.classList.remove('over'); await genPicked(e.dataTransfer.files[0]); });
   el('genClear').addEventListener('click', clearGenerated);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });
 
@@ -785,6 +905,8 @@ async function initGenerate() {
   try { info = await (await fetch('api/generate')).json(); } catch { /* an older server: no such route */ }
   if (!info || !info.available) return;
   genServer = { quality: info.quality || '', negative: info.negative || '' };
+  genControl = !!info.control;
+  document.getElementById('formPoseGen')?.classList.toggle('hidden', !genControl);
   renderGenPrompt();
   document.querySelector('.nav-item[data-view="generate"]').classList.remove('hidden');
   renderStages();

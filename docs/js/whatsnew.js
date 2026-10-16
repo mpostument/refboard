@@ -15,6 +15,15 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-pose-depth', title: 'Draw this pose: a depth map, and the light',
+    text: "The 3D figure now goes to the ControlNet as a depth map - white where it is near, black behind, no floor - which is what a depth model reads a pose from; the shaded picture only told it where the light fell. The key light you set goes to Generate as its Light row (from behind: Backlit, from a side: From the side, low and across: Dramatic, from the camera's side: Soft), and From and the framing follow the camera. Draw this shot sets the light the same way.",
+    act: 'Open the 3D view', run: () => openForms() },
+  { id: 'gen-from-picture', title: 'Generate: start from a picture - a study, a variation, a pose',
+    text: "Generate, above More tags: Start from a picture... (or drop one there) redraws any picture as a simple study in the style you chose, and says how far it may wander from it. Vary on a made picture: the same one, a little or a lot changed. With a ControlNet on the server, Forms > Pose has Draw this pose: an anime character in exactly the pose you set. Also fixed: the Watercolour preview, Vignette and Line and wash no longer stretch a wide picture, and the Hatching map's Strokes view now has a key of lines instead of colours, shows the picture faintly under them, and draws fewer stubs.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
+  { id: 'profiles', title: 'Profiles: one app, more than one painter',
+    text: "Your data > Profile (or Ctrl+K, \"paint as\"): if someone else at home paints too, give each person a name. Each profile has its own materials, themes, practice log, trainer scores, boards and list of uploads, and a backup is of the one you are in. No password - it only decides whose things are shown. What you have now becomes Main and is not touched. A picture uploaded by both is still kept once.",
+    act: 'Open Your data', run: () => openData() },
   { id: 'session-kinds', title: 'Kind of session: a liner sketch, a pencil study, a watercolour in stages',
     text: "The top of the Timing tab (before you start): six kinds of session - gesture warm-up, liner sketch, pencil value study, hatching study, ink wash study, watercolour study. One press sets the interval or schedule, the stages and grayscale, says what to do with the time, and turns on the overlays that kind of work wants when the session starts. It only moves the controls that were already there: change any of them and it lets go.",
     act: 'Open it', run: () => setView({ kind: 'drop' }) },
