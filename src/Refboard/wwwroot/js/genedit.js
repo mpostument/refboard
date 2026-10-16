@@ -19,6 +19,8 @@
    - Extend the picture: a bigger canvas with the picture in it and the new part masked.
      The server draws the masked part from scratch (the same "Completely" Redraw) and
      pastes the original back over the rest, so the picture itself does not change.
+   - Cut out: the plain background found from the picture's edges and taken away, for
+     a PNG with alpha (the work itself is cutOut() in js/assetsfx.js, no model).
    - Light it differently, In other media: the same picture drawn again, img2img,
      with the light row's or the medium row's tags swapped in - several at once,
      to put side by side. */
@@ -418,6 +420,87 @@ function extendGo() {
   runGenerate([req], 'Drawing more of it...', 'Extended - in Uploads, Generated.');
 }
 
+/* ---- Cut out (cutOut() in js/assetsfx.js): the picture's plain background found and taken
+   away. The result is looked at over a checkerboard, a dark, a light and a green ground - a
+   pale fringe shows on the dark one - and at three times the size. Keep the PNG files it in
+   Uploads with its alpha, under the picture it was cut from. */
+const GEN_CUT_BEHIND = [['checker', 'Checkerboard'], ['dark', 'Dark'], ['light', 'Light'], ['green', 'Green']];
+const GEN_CUT_LOOK = [[1, 'Fit'], [3, '3x']];
+const GEN_CUT_NONE = 'This picture has no plain background to cut away. Make it on a plain one - "simple background, white background" - and try again.';
+let cut = null, cutQueued = false;   // cut: { u, pic, result, zoom } while the sheet is open
+
+function cutRender() {
+  const c = cut, r = cutOut(c.pic, { tolerance: Number(el('cutTol').value), holes: el('cutHoles').checked, trim: el('cutTrim').checked, specks: el('cutSpecks').checked });
+  c.result = r;
+  el('cutSave').disabled = !r.found;
+  if (!r.found) {
+    el('cutHint').textContent = r.bgShare >= 0.5 ? 'Everything counts as background - lower it.' : r.bgShare > 0 ? 'Too little counts as background - raise it.' : GEN_CUT_NONE;
+    return;
+  }
+  const cv = el('cutPreview');
+  cv.width = r.canvas.width; cv.height = r.canvas.height;
+  cv.getContext('2d').drawImage(r.canvas, 0, 0);
+  el('cutHint').textContent = `${r.canvas.width} x ${r.canvas.height}, with a transparent background - ${Math.round(r.bgShare * 100)}% of the picture was background.`;
+  cutLook();
+}
+// 3x is three times the width the picture is shown at, in a stage that scrolls.
+function cutLook() {
+  const cv = el('cutPreview'), stage = el('cutStage');
+  stage.classList.remove('zoomed');
+  cv.style.width = '';
+  if (cut.zoom > 1) {
+    const fit = cv.getBoundingClientRect().width;
+    stage.classList.add('zoomed');
+    cv.style.width = fit * cut.zoom + 'px';
+  }
+}
+function cutSoon() {
+  if (cutQueued) return;
+  cutQueued = true;
+  requestAnimationFrame(() => { cutQueued = false; if (cut) cutRender(); });
+}
+async function genCutOpen(u) {
+  let pic;
+  try { pic = await genLoadPicture(u); } catch (err) { el('genStatus').textContent = err.message; return; }
+  el('cutTol').value = String(CUT_TOLERANCE);
+  el('cutHoles').checked = false;
+  el('cutTrim').checked = true;
+  el('cutSpecks').checked = true;
+  cut = { u, pic, result: null, zoom: 1 };
+  cutRender();
+  // A picture with no plain background says so here, not in a sheet with nothing in it.
+  if (!cut.result.found) { cut = null; el('genStatus').textContent = GEN_CUT_NONE; return; }
+  el('cutStage').dataset.behind = 'checker';
+  el('cutBehind').innerHTML = GEN_CUT_BEHIND.map(([id, label]) =>
+    `<button type="button" class="chip" data-behind="${id}" aria-pressed="${id === 'checker'}">${label}</button>`).join('');
+  el('cutZoom').innerHTML = GEN_CUT_LOOK.map(([v, label]) =>
+    `<button type="button" class="chip" data-zoom="${v}" aria-pressed="${v === 1}">${label}</button>`).join('');
+  el('cutSheet').classList.remove('hidden');
+  dialogOpened(el('cutSheet'), el('cutSave'));
+  cutLook();
+}
+function closeCut() {
+  if (!cut) return;
+  el('cutSheet').classList.add('hidden');
+  cut = null;
+  dialogClosed(el('cutSheet'));
+}
+async function cutSave() {
+  const c = cut;
+  if (!c?.result?.found) return;
+  const blob = await new Promise(res => c.result.canvas.toBlob(res, 'image/png')), { u } = c, status = el('genStatus');
+  closeCut();
+  try {
+    const f = await storeFile(blob);
+    if (storeMode === 'server') await storeSortFile(f.id, u.folder || 'generated');
+    await storePutItem('uploads', uploadKey(f.id), { ...u, file: f.id, bytes: blob.size, type: 'image/png',
+      tags: [...(u.tags || []), 'cut out'].slice(0, 24), parent: u.file, t: Date.now() });
+    storeChanged();
+    await showGenerate(false);
+    status.textContent = 'Cut out - in Uploads, Generated.';
+  } catch (err) { status.textContent = err.message; }
+}
+
 /* ---- Before and after: the picture over the one it was made from, and a slider.
    The "before" is clipped to the left of the slider; both are drawn in the same box, so a
    Finished picture (1.5 times the size) lines up with its draft. */
@@ -471,6 +554,23 @@ function initGenEdit() {
     for (const x of el('extendAmount').children) x.setAttribute('aria-pressed', String(x === b));
     renderExtend();
   });
+  el('cutBehind').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-behind]');
+    if (!b || !cut) return;
+    el('cutStage').dataset.behind = b.dataset.behind;
+    for (const x of el('cutBehind').children) x.setAttribute('aria-pressed', String(x === b));
+  });
+  el('cutZoom').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-zoom]');
+    if (!b || !cut) return;
+    cut.zoom = Number(b.dataset.zoom);
+    for (const x of el('cutZoom').children) x.setAttribute('aria-pressed', String(x === b));
+    cutLook();
+  });
+  for (const id of ['cutTol', 'cutHoles', 'cutSpecks', 'cutTrim']) el(id).addEventListener('input', cutSoon);
+  el('cutSave').addEventListener('click', cutSave);
+  el('cutClose').addEventListener('click', closeCut);
+  initSheet(el('cutSheet'), closeCut);
   el('extendGo').addEventListener('click', extendGo);
   el('extendClose').addEventListener('click', closeExtend);
   el('extendText').addEventListener('keydown', ev => { if (ev.key === 'Enter') extendGo(); });

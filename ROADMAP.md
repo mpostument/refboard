@@ -252,6 +252,23 @@ In place too: Before and after (`genCompare()` in `js/genedit.js`) - every pictu
 then shows the two in one box, the first clipped to the left of a slider (`clip-path`, so a Finished
 picture at 1.5 times the size lines up with its draft). The menu itself is now grouped - Change it,
 Try it another way, Learn from it.
+In place too: Cut out (`cutOut()` in `js/assetsfx.js`, sheet in `js/genedit.js`; Game assets phase 1) - the
+background's colour is the commonest on the picture's outer two pixels (the edge must be 60% of it, or the
+picture "has no plain background"); it is spread inward from the edge over pixels within a tolerance of it
+that also differ little from the pixel they came from; the rim two pixels deep is given the colour of the
+figure just inside it and an alpha from where it lies on the background -> figure line, so there is no
+pale halo. Gaps inside (an arm against the body) are off by default - a white plate of armour is the same
+colour - and loose pieces under 0.2% of the biggest are dropped as specks. ~40 ms on a 832x1216 picture.
+Tried on the spike's pictures: characters (side and slightly from above) and chests cut cleanly; white armour on a
+white background loses its white parts at the default tolerance (lower it); a panel round four swords
+stays, because its frame stops the flood. **Not solved**: a background layer for parallax. Its "plain"
+ground is a gradient (lime to dark green), which a flood from the edge does not cross, and the figure
+touches the edge it must be seeded from - so layers need their own mode (phase 5).
+Checked on a real ComfyUI (3 rounds of the spike's pictures, 12 on cream or white, 8 on "green background",
+4 on magenta): 0 of ~40 000 rim pixels on the green ones were greenish, the characters and chests
+read clean on a dark ground. "Green background" comes back pale mint, not a key green - found from the
+edge, so it does not matter. A chest drawn with `thick outline` on white often gets a white "sticker"
+border; it is the model's, not a halo, and stays in the cut-out (avoid `sticker, white border`).
 In place too: the Prompt box (`renderGenPrompt()` - closed by default,
 the tags as sent, the choices' negative tags as switches kept in
 localStorage (`genRequest()` leaves the switched-off ones out), the

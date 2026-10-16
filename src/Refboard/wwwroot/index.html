@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=a6d63969">
+<link rel="stylesheet" href="css/app.css?v=cf1230d6">
 </head>
 <body>
 <div id="setup">
@@ -1332,6 +1332,34 @@
   </div>
 </div>
 
+<!-- Cut out - js/genedit.js, js/assetsfx.js: the figure of a picture on a plain background,
+     with nothing behind it - looked at over a checkerboard, a dark or a light ground. -->
+<div id="cutSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="cutTitle">
+  <div class="sheet-box redraw-box">
+    <div class="row">
+      <h2 id="cutTitle" class="grow">Cut out</h2>
+      <button type="button" class="ghost" id="cutClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="cut-stage" id="cutStage" data-behind="checker"><canvas id="cutPreview" role="img" aria-label="The picture with its background cut away"></canvas></div>
+    <p class="count" id="cutHint" role="status"></p>
+    <div class="row redraw-tools">
+      <span class="count">Behind it</span>
+      <span class="chips" id="cutBehind" role="group" aria-label="What is behind it"></span>
+      <span class="count">Look</span>
+      <span class="chips" id="cutZoom" role="group" aria-label="How closely"></span>
+    </div>
+    <div class="row redraw-tools">
+      <label class="grow" title="How near the background's colour a pixel may be and still go. Higher takes more of a shadow or a gradient - and, too high, a pale part of the figure">How much counts as background <input type="range" id="cutTol" min="10" max="120" step="2"></label>
+    </div>
+    <div class="row redraw-tools">
+      <label class="opt" title="Off: a gap between an arm and the body keeps its colour. On: it is cut away too - and so is a white plate of armour that is the colour of the background"><input type="checkbox" id="cutHoles"> Cut the gaps inside too</label>
+      <label class="opt" title="Dots and sparks the model scatters round a figure: loose pieces far smaller than the figure go"><input type="checkbox" id="cutSpecks" checked> Drop specks</label>
+      <label class="opt" title="The picture shrunk to the figure, with a little room round it"><input type="checkbox" id="cutTrim" checked> Crop to it</label>
+      <button type="button" class="primary" id="cutSave">Keep the PNG</button>
+    </div>
+  </div>
+</div>
+
 <!-- Before and after - js/genedit.js: a picture over the one it was made from, a
      slider between them. -->
 <div id="compareSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="compareTitle">
@@ -2190,7 +2218,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=165aa97e"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=0c96f1b2"></script>
+<script src="js/whatsnew.js?v=3872fb07"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=73f7eb91"></script>
@@ -2216,8 +2244,9 @@
 <script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
-<script src="js/generate.js?v=9b0dd1f8"></script>
-<script src="js/genedit.js?v=82f1f8c4"></script>
+<script src="js/generate.js?v=d1487326"></script>
+<script src="js/assetsfx.js?v=89f3ed34"></script>
+<script src="js/genedit.js?v=bfdd1fea"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->

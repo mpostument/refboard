@@ -627,6 +627,10 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   **Extend...** adds a quarter or half again of canvas on the sides you pick (the picture is
   pasted back unchanged, only the new part is drawn; scenery only unless you ask for the
   character to go on).
+  **Cut out...** (`cutOut()` in `js/assetsfx.js`, no model) finds a plain background from the
+  picture's edges and takes it away: a PNG with alpha, the rim given the figure's own colour so there is
+  no halo on a dark level; look at it over a checkerboard, a dark or a light ground and at 3x. A picture
+  with no plain background says so.
   A picture made from another keeps its parent, and **Before and after** puts the two
   in one frame with a slider between them.
   While pictures are made the button is *Stop*: it cancels the one in hand
