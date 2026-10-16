@@ -608,8 +608,9 @@ What turns them into 2D is two lists, added to every kind:
 
 | Kind x view | Verdict | What to say | What fails |
 | --- | --- | --- | --- |
-| Character, side | works (3-4 of 4) | `1girl, solo, <who>, full body, from side, side view` + style; `chibi` shortens the body and simplifies it | a floor ellipse under the feet (avoid `floor`); at "simple" a face can come out a black blob |
-| Character, top-down | works with chibi (3 of 4) | `chibi, from above, 3/4 view, rpg character` + style, avoid `island, diorama, background objects` | without that avoid: a floating island with ruins around her; a knight's helmet hides the face |
+| Character, side | works (3 of 4) | `1girl, solo, <who>, full body, from side, side view` + style, avoid `chibi` (the user dislikes it) | a floor ellipse under the feet (avoid `floor`) |
+| Character, top-down | works (3 of 4) | `from front, from slightly above, rpg sprite, 2d rpg character` + style, avoid `chibi, island, diorama, background objects, foreshortening` - the way a classic RPG draws it: seen from the front, tilted a little, not a camera above her | `from above` alone gives a strong foreshortened shot (big head, short legs) or a floating island with ruins |
+| Character, top-down, from behind | works (4 of 4) | the same with `from behind` instead of `from front` - the "up" direction of a 4-way walk | - |
 | Character, straight down | fails | - | the same three-quarter view as top-down; the model has no "directly above" |
 | Character, isometric | fails | - | an isometric *scene* (a person on a tile island), not an isometric figure |
 | Prop, side / top-down | works (4 of 4) | `no humans, <thing>, closed, front view` or `from above, 3/4 view`, `object focus` + style; avoid `open, gold, coins` | without `closed`: the lid opens and the chest is full of gold |
