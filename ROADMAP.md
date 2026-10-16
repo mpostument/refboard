@@ -215,6 +215,15 @@ and Drafts (`steps` 14). Run against a real ComfyUI: a box over one eye made it
 green and left every other pixel alone, with no seam to see. Still to come:
 a Finish that picks 2x for a big card, a mask from "the hands" found by the
 pose model, and a draft strip to pick from instead of the grid.
+In place too, in the same menu: New background (`genBackgroundMask()` - the
+colour at the picture's edge spread inward over pixels that change little
+from their neighbour, on a 200-px copy; "Completely" erases the masked part
+first, `VAEEncodeForInpaint`, since with only a noise mask the model took the
+white round it for a margin and drew a white frame), Light it four ways
+(soft, side, back, dramatic: the new light weighted 1.3, denoise 0.55) and In
+other media (watercolour, ink, Copic, pencil: the old medium's tags and
+what it kept out removed first, denoise 0.65, 0.8 for ink and pencil - and
+even then red hair stayed red; a ControlNet on the line art would fix it).
 In place too: the Prompt box (`renderGenPrompt()` - closed by default,
 the tags as sent, the choices' negative tags as switches kept in
 localStorage (`genRequest()` leaves the switched-off ones out), the

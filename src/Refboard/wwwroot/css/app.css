@@ -2000,6 +2000,7 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .gen-menu { position: fixed; z-index: 30; list-style: none; margin: 0; padding: 4px; min-width: 160px; border: 1px solid var(--line); border-radius: 8px;
   background: var(--panel); box-shadow: 0 6px 24px rgb(0 0 0 / .35); }
 .gen-menu.hidden { display: none; }
+.gen-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
 .gen-menu button { display: block; width: 100%; text-align: left; font-size: 13px; padding: 6px 10px; border: 0; border-radius: 5px; background: transparent; color: var(--ink); cursor: pointer; }
 .gen-menu button:hover, .gen-menu button:focus-visible { background: var(--accent); color: var(--on-accent); }
 /* Redraw a part (js/genedit.js): the picture and, over it, the canvas that is brushed on. */

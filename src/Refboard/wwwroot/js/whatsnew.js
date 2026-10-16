@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-rework', title: 'Generate: new background, light four ways, other media',
+    text: "More in a generated picture's More menu. New background: the plain background is brushed for you (correct it with the brush) and drawn again as what you type. Light it four ways: soft, from the side, backlit, dramatic. In other media: the same picture in watercolour, ink, Copic markers and pencil, to put side by side.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-edit', title: 'Generate: redraw a part, finish it, drafts',
     text: "Each picture Generate made has a More menu. Redraw a part: brush over a hand or an eye and only that is drawn again - the rest stays the same pixels. Finish it: the picture drawn again at 1.5 times the size, with the detail that size has room for. Set As to Drafts and a batch is made in half the time; Finish the one worth keeping.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

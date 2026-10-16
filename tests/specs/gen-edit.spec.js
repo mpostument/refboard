@@ -102,3 +102,56 @@ test('Drafts are the choices in fewer steps, tagged, to be finished later', asyn
   expect(asked[1].steps).toBe(14);
   expect(asked[1].tags).toContain('draft');
 });
+
+test('Light it four ways: four requests, each with its own light weighted and the old one gone', async ({ page }) => {
+  const asked = await setup(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-lights').first().click();
+  await expect(page.locator('#genStatus')).toHaveText('Four lights - in Uploads, Generated.');
+  expect(asked).toHaveLength(4);
+  expect(asked[0].prompt).toBe('1girl, solo, red hair, (soft lighting:1.3)');
+  expect(asked[2].prompt).toContain('(backlighting:1.3), (rim lighting:1.3)');
+  expect(asked.every(a => a.denoise === 0.55 && a.seed === 77 && a.image.length > 100)).toBe(true);
+  expect(asked[1].tags).toContain('side light');
+});
+
+test('In other media: the old medium\'s words are swapped for each new one, not piled up', async ({ page }) => {
+  const asked = await setup(page);
+  // Seed a picture in watercolour, with the tags the page itself writes.
+  await page.evaluate(async () => {
+    const all = await genMade(), u = all[0];
+    u.prompt = '1girl, solo, red hair, watercolor \\(medium\\), traditional media, lineart'; u.avoid = 'solid black, sepia';
+    u.tags = ['anime', 'girl', 'watercolour'];
+    await storePutItem('uploads', uploadKey(u.file), u);
+  });
+  await page.reload();
+  await page.locator('.nav-item[data-view="generate"]').click();
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-media').first().click();
+  await expect(page.locator('#genStatus')).toHaveText('3 media - in Uploads, Generated.');
+  expect(asked).toHaveLength(3);          // not watercolour again
+  const ink = asked.find(a => a.tags.includes('ink'));
+  expect(ink.prompt).toContain('ink \\(medium\\)');
+  expect(ink.prompt).not.toContain('watercolor');
+  expect(ink.avoid).toContain('solid black');
+  const copic = asked.find(a => a.tags.includes('copic markers'));
+  expect(copic.avoid).not.toContain('solid black');
+  expect(copic.denoise).toBe(0.65);
+});
+
+test('New background: the mask starts on the plain background, and the plain one\'s words are dropped', async ({ page }) => {
+  const asked = await setup(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-bg').first().click();
+  await expect(page.locator('#redrawTitle')).toHaveText('New background');
+  // The test picture is four flat quadrants touching the edge: all of it is "background" -
+  // enough to say that something was found, and that Redraw is on without a stroke.
+  await expect(page.locator('#redrawGo')).toBeEnabled();
+  await page.fill('#redrawText', 'a beach at sunset');
+  await page.click('#redrawGo');
+  await expect(page.locator('#genStatus')).toHaveText('New background - in Uploads, Generated.');
+  expect(asked[0].mask.length).toBeGreaterThan(100);
+  expect(asked[0].prompt).toBe('1girl, solo, red hair, (a beach at sunset:1.3)');
+  expect(asked[0].tags).toContain('new background');
+  expect(asked[0].denoise).toBe(0.95);
+});

@@ -616,7 +616,11 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   a **More** menu (`js/genedit.js`): **Redraw a part** (brush over a hand or an eye;
   the server masks the latent and pastes the new paint over the original, so
   the rest is the same pixels), **Finish it** (enlarged 1.5 times and drawn
-  again at denoise 0.4, in tiles so a small card holds it) and, with *As:
+  again at denoise 0.4, in tiles so a small card holds it), **New background**
+  (Redraw a part with the plain background already brushed, found from the
+  picture's edges), **Light it four ways** and **In other media** (the picture
+  drawn again, img2img, with the light's or the medium's tags swapped in -
+  ink and pencil keep some of the source's colour) and, with *As:
   Drafts*, pictures made in 14 steps instead of 28 to look through first.
   While pictures are made the button is *Stop*: it cancels the one in hand
   (ComfyUI is told) and starts none of the rest.

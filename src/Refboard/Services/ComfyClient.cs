@@ -211,7 +211,15 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
                 graph["12"] = Node("LoadImage", new() { ["image"] = await UploadAsync(req.Mask) });
                 graph["13"] = Node("ImageToMask", new() { ["image"] = Link("12", 0), ["channel"] = "red" });
                 graph["14"] = Node("GrowMask", new() { ["mask"] = Link("13", 0), ["expand"] = 10, ["tapered_corners"] = false });
-                graph["15"] = Node("SetLatentNoiseMask", new() { ["samples"] = Link("4", 0), ["mask"] = Link("14", 0) });
+                // Little freedom: the sampler keeps what is under the mask and changes it. Much
+                // (0.9 up, "Completely"): what is under it is erased first, or the sampler
+                // takes the white round it as the picture's margin and draws a frame there.
+                if (denoise >= 0.9)
+                {
+                    graph["15"] = Node("VAEEncodeForInpaint", new() { ["pixels"] = Link("8", 0), ["vae"] = Link("1", 2), ["mask"] = Link("13", 0), ["grow_mask_by"] = 10 });
+                    denoise = 1.0;
+                }
+                else graph["15"] = Node("SetLatentNoiseMask", new() { ["samples"] = Link("4", 0), ["mask"] = Link("14", 0) });
                 graph["16"] = Node("MaskToImage", new() { ["mask"] = Link("14", 0) });
                 graph["17"] = Node("ImageBlur", new() { ["image"] = Link("16", 0), ["blur_radius"] = 8, ["sigma"] = 4.0 });
                 graph["18"] = Node("ImageToMask", new() { ["image"] = Link("17", 0), ["channel"] = "red" });
