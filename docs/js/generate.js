@@ -32,6 +32,7 @@ const BEGIN = '(minimalist:1.4), (simple drawing:1.3), flat color, simple colori
 // alone the model dressed her in a gown with a train - so, with no Setting
 // to dress her, a t-shirt and trousers.
 const BEGIN_FIGURE = '(minimalist:1.2), simple drawing, simple coloring, clean lineart, straight hair';
+
 const BEGIN_AVOID = '(detailed:1.3), intricate details, complex background, gradient, shiny skin, shiny hair';
 // Clothes that differ for a girl and a boy: a ball gown or a prince's cape.
 const wear = (girl, boy) => ch => ch.who === 'boy' ? boy : girl;
@@ -57,6 +58,10 @@ const GEN_CHOICES = [
   { id: 'who', label: 'Who', for: PERSON, options: [
     { id: 'girl', label: 'Girl', tags: '1girl, solo' },
     { id: 'boy', label: 'Boy', tags: '1boy, solo' },
+    // A named character's own sex: "1girl" on Gojo Satoru drew a woman, so
+    // naming her hands it to the name (the Character field switches to this).
+    { id: 'her', label: 'Hers', tags: 'solo', words: '', when: ch => !!genCharacterTags(ch.character),
+      hint: 'Her own sex and look - nothing says girl or boy, the character does' },
   ] },
   { id: 'hair', label: 'Hair', for: PERSON, options: [
     ANY,
@@ -285,6 +290,13 @@ const GEN_CHOICES = [
   // its wooden houses. Nature and animals are much the same anywhere.
   { id: 'setting', label: 'Setting', for: ['character', 'landscape', 'building'], options: [
     ANY,
+    // A character named under Character, as she is drawn: nothing is added to
+    // her clothes, and Detail is left out (owns): Simple and Beginner's
+    // "minimalist, simple drawing" drew her bare-shouldered - the clothes
+    // nothing here names went with the detail (2026-10-15). Only a character
+    // has an own outfit, so only she is offered it.
+    { id: 'original', label: 'Original', words: 'original outfit', owns: 'detail', when: ch => ch.subject === 'character',
+      hint: "The character's own clothes and world - nothing is added, and Detail is ignored. Name her under Character." },
     { id: 'modern', label: 'Modern', words: 'modern', tags: {
       character: 'casual, hoodie, jeans, sneakers, contemporary',
       landscape: 'suburb, park, road, power lines, contemporary',
@@ -379,11 +391,14 @@ const GEN_CHOICES = [
     { id: 'sketch', label: 'Pencil and hatching', words: 'pencil',
       tags: 'monochrome, greyscale, sketch, (hatching (texture):1.2), traditional media',
       avoid: 'color, digital, sepia, pencil, holding pencil, art tools' },
-    // Watercolour's two cousins: the marker's even strokes side by side, the
-    // pencil's grain with a wash over it.
-    { id: 'wmarker', label: 'Watercolour markers', words: 'watercolour markers',
-      tags: 'watercolor (medium), marker (medium), traditional media, lineart, visible strokes, colored',
-      avoid: 'marker, holding marker, pen, art tools, digital, paint splatter, splashes, monochrome, greyscale' },
+    // Watercolour's two cousins: the alcohol marker's even strokes side by
+    // side (Copic's, though the model knows only "marker (medium)"), the
+    // pencil's grain with a wash over it. Not watercolour: no wet-on-wet.
+    // No "visible strokes" or "vibrant colors": alcohol blends smooth, and with
+    // those two the model drew red and blue streaks (2026-10-15).
+    { id: 'copic', label: 'Copic markers', words: 'copic markers',
+      tags: 'marker (medium), traditional media, lineart, colored',
+      avoid: 'marker, holding marker, pen, art tools, digital, paint splatter, splashes, monochrome, greyscale, watercolor (medium), wet-on-wet, color bleeding' },
     { id: 'wpencil', label: 'Watercolour pencils', words: 'watercolour pencils',
       tags: 'watercolor pencil (medium), colored pencil (medium), watercolor (medium), traditional media, sketch, visible strokes',
       avoid: 'pencil, holding pencil, art tools, digital' },
@@ -403,6 +418,14 @@ const GEN_CHOICES = [
     ANY,
     { id: 'palette', label: 'Your palette', words: 'palette', hint: 'The colours sent from Palettes, as words the model knows',
       tags: ch => genPaletteTags(ch.palette || []).join(', ') },
+    // The tubes of the Holbein box (PIGMENTS in js/paint.js). Words cannot name 28
+    // paints, so this is for Keep to the palette below; on its own it adds no tags.
+    { id: 'box', label: 'Holbein box', words: 'holbein box', hint: 'The 28 tubes of the Holbein box - use Keep to the palette to make the picture of them', tags: '' },
+  ] },
+  // Words only nudge a model; this recolours the finished picture (js/genlock.js).
+  { id: 'lock', label: 'Keep to the palette', when: ch => !GEN_GREY.includes(ch.medium) && (ch.colours === 'palette' || ch.colours === 'box'), options: [
+    { id: 'off', label: 'Words only', words: '', hint: 'The model is told the colours and paints what it likes', tags: '' },
+    { id: 'on', label: 'Recolour to it', words: 'palette locked', hint: 'Every colour in the picture becomes the nearest one of the palette; the shading stays', tags: '' },
   ] },
   // Simple, the default: a few big shapes to copy, not a finished
   // illustration to be daunted by. Beginner goes further, with weights
@@ -442,12 +465,12 @@ const GEN_GROUPS = [
   ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
-  ['picture', 'The picture', ['medium', 'edges', 'colours', 'detail', 'ground']],
+  ['picture', 'The picture', ['medium', 'edges', 'colours', 'lock', 'detail', 'ground']],
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', detail: 'simple',
+  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', detail: 'simple',
   ground: 'plain' };
 
 // Whether a row is asked, and used, with these choices.
@@ -503,6 +526,41 @@ function genHueTag(L, h) {
    the picture is filed under, and its shape: tall for a figure, wide for a landscape or a
    street, square for a head or a close look at something. extra is what was
    typed under More tags, passed on as it is. */
+/* The Character field as the tags the model learnt: the name, then the series,
+   lower case as Danbooru writes them. "Frieren (Sousou no Frieren)" and
+   "frieren, sousou no frieren" are the same; "ayanami_rei" is "ayanami rei".
+   An empty field is no character. */
+// How hard the name pulls, as a ComfyUI weight. Unweighted, Frieren came out
+// without her pointed ears in 6 pictures of 8 (same seeds, Animagine XL 4.0,
+// bust, Original); at 1.2 in 2 of 8 - her clothes were there either way.
+const GEN_POSE_AVOID = 'mannequin, wooden mannequin, art mannequin, doll, jointed doll, ball joints, faceless, 3d render';
+const GEN_CHAR_WEIGHT = 1.2, GEN_VARY_OUTFIT_WEIGHT = 1.4;
+function genCharacterTags(text) {
+  const t = String(text || '').trim().slice(0, 80);
+  if (!t) return '';
+  const m = t.match(/^([^()]+?)\s*\(([^()]+)\)\s*$/);
+  const parts = (m ? [m[1], m[2]] : t.split(','))
+    .map(x => x.replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()).filter(Boolean);
+  return [...new Set(parts)].join(', ');
+}
+
+// The characters drawn lately, newest first, kept to pick from again: typing
+// "Frieren (Sousou no Frieren)" once is enough. The same one twice (by its
+// tags - "Frieren (Sousou no Frieren)" is "frieren, sousou no frieren") is one.
+const GEN_CHARS_KEY = 'refboard.generate.characters.v1', GEN_CHARS_MAX = 8;
+function genCharsLoad() {
+  try {
+    const v = JSON.parse(localStorage.getItem(GEN_CHARS_KEY));
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).slice(0, GEN_CHARS_MAX) : [];
+  } catch { return []; }
+}
+function genCharsRemember(text) {
+  const t = String(text || '').trim().slice(0, 80), key = genCharacterTags(t);
+  if (!key) return;
+  const list = [t, ...genCharsLoad().filter(x => genCharacterTags(x) !== key)].slice(0, GEN_CHARS_MAX);
+  try { localStorage.setItem(GEN_CHARS_KEY, JSON.stringify(list)); } catch { /* private mode */ }
+}
+
 function genPrompt(choices, extra = '') {
   const subjects = GEN_CHOICES.find(c => c.id === 'subject').options;
   const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
@@ -515,14 +573,27 @@ function genPrompt(choices, extra = '') {
     const x = v && typeof v === 'object' ? v[subject] ?? v[setting] ?? v._ ?? '' : v;
     return typeof x === 'function' ? x(ch) : x;
   };
-  const rows = GEN_CHOICES.filter(c => genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })).map(c =>
-    [c, c.options.find(x => x.id === choices[c.id]) || c.options.find(x => x.id === GEN_DEFAULTS[c.id])]);
+  // An option with a `when` that does not hold (Original, for a landscape)
+  // is the row's default instead.
+  const rows = GEN_CHOICES.filter(c => genApplies(c, { ...GEN_DEFAULTS, ...choices, subject })).map(c => {
+    const o = c.options.find(x => x.id === choices[c.id]);
+    return [c, o && (!o.when || o.when(ch)) ? o : c.options.find(x => x.id === GEN_DEFAULTS[c.id])];
+  });
+  // Her tags come right after "1girl, solo", as the model's own sheet orders
+  // them. When something other than her own clothes is asked for, "alternate
+  // costume" says the outfit is not hers: the Armour of a named character
+  // kept her mantle without it.
+  const who = genCharacterTags(choices.character);
+  const outfitAsked = (c, o) => (c.id === 'setting' && !['any', 'original'].includes(o.id)) || (c.id === 'clothes' && o.id !== 'setting');
+  const outfit = rows.some(([c, o]) => outfitAsked(c, o));
   // A row whose tags another choice has taken over (a temple, Setting's).
   const owned = new Set(rows.map(([, o]) => o.owns).filter(Boolean));
-  const tags = [], words = [], avoid = [];
+  const tags = [], words = [], avoid = [], outfitTags = [];
   for (const [c, o] of rows) {
     const t = owned.has(c.id) ? '' : pick(o.tags), a = owned.has(c.id) ? '' : pick(o.avoid);
     if (t) tags.push(t);
+    if (t && (c.id === 'setting' || c.id === 'clothes')) outfitTags.push(t);
+    if (c.id === 'who' && who) tags.push(`(${who}:${GEN_CHAR_WEIGHT})`, ...(outfit ? ['alternate costume'] : []));
     if (a) avoid.push(a);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
     if (w) words.push(w);
@@ -530,7 +601,9 @@ function genPrompt(choices, extra = '') {
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
   const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' || choices.framing === 'expressions' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
-  return { prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
+  // outfit: what Setting and Clothes alone say, for a variation, which keeps its
+  // own tags and takes only these from the choices (genRequest).
+  return { outfit: outfitTags.join(', '), prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...(who ? [who.split(', ')[0]] : []), ...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
 }
 
 /* "watercolor (medium)" is the Danbooru tag, but to ComfyUI bare brackets
@@ -548,7 +621,11 @@ let genView = { open: false, off: [] }, genServer = { quality: '', negative: '' 
 const genSplit = s => [...new Set(s.split(/,\s*/).map(t => t.trim()).filter(Boolean))];
 // Whether this server has a ComfyUI to ask - its rail button shows once it
 // has (initGenerate()), so the other views offer a button for it or not.
-const genAvailable = () => !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
+// Why it cannot be used now, when a ComfyUI is set up and not answering (the
+// view shows it, with a way to ask again); '' when it can, or none is set up.
+// The other views offer their Generate buttons only when it can.
+let genOffline = '';
+const genAvailable = () => !genOffline && !document.querySelector('.nav-item[data-view="generate"]').classList.contains('hidden');
 let genBusy = false;
 // Whether the server has a ControlNet for "Draw this pose" (forms.js).
 let genControl = false;
@@ -556,6 +633,7 @@ const genControlAvailable = () => genControl;
 
 function loadGenChoices() {
   try { Object.assign(genChoices, JSON.parse(localStorage.getItem(GEN_KEY)) || {}); } catch { /* defaults */ }
+  if (typeof genChoices.character !== 'string') genChoices.character = '';
   const p = genChoices.palette;
   if (!(Array.isArray(p) && p.length && p.every(c => Array.isArray(c) && c.length === 3 && c.every(n => Number.isInteger(n) && n >= 0 && n <= 255)))) {
     delete genChoices.palette;
@@ -583,12 +661,25 @@ function saveGenView() {
 function genRequest() {
   const req = genPrompt(genChoices, el('genExtra').value);
   const off = new Set(genView.off);
+  const outfit = req.outfit, who = genCharacterTags(genChoices.character);
   const out = { ...req, avoid: genSplit(req.avoid).filter(t => !off.has(t)).join(', ') };
+  delete out.outfit;
   const src = genSource;
   if (!src) return out;
   out.image = src.b64;
   out.shape = src.shape;
-  if (src.mode === 'pose') { out.control = true; out.strength = src.level; out.tags = [...out.tags, 'pose'].slice(0, 24); return out; }
+  if (src.mode === 'pose') {
+    out.control = true; out.strength = src.level; out.tags = [...out.tags, 'pose'].slice(0, 24);
+    // The ControlNet reads a wooden mannequin; without this the model drew the mannequin
+    // itself, in watercolour, faceless (first run on a real ComfyUI).
+    out.avoid = [out.avoid, GEN_POSE_AVOID].filter(Boolean).join(', ');
+    // And clothes, when nothing chosen says what she wears: a bare list of tags
+    // on the mannequin's volumes drew the mannequin (strength 0.8, seed 7), while
+    // t-shirt, jeans, hair and a face at 0.5 drew a girl in the same pose.
+    if (genChoices.setting === 'any' && genChoices.clothes === 'setting' && !genCharacterTags(genChoices.character))
+      out.prompt = [out.prompt, 'casual, t-shirt, pants, detailed face'].join(', ');
+    return out;
+  }
   out.denoise = src.level;
   if (src.mode === 'study') {
     // A photo has no tags of its own: the beginner's, so what comes out is
@@ -599,7 +690,14 @@ function genRequest() {
   } else {
     // A variation: the original's own words, then whatever is typed now.
     const more = genSplit(el('genExtra').value);
-    out.prompt = comfyTags([src.prompt, ...more].filter(Boolean).join(', '));
+    // Its own words, then a Setting or Clothes chosen now (added, not swapped:
+    // what it was made in stays in its words), then what is typed. The outfit
+    // is weighted: the picture is the sampler's starting point and the name in
+    // its words pulls back to her own clothes - plain, steampunk added only
+    // gears in the background; weighted 1.3-1.5 at "Very" it was goggles, a
+    // corset and gloves on the same face (Frieren, seed 9).
+    const wear = outfit ? `(${outfit}:${GEN_VARY_OUTFIT_WEIGHT})` : '';
+    out.prompt = comfyTags([src.prompt, wear, outfit && who ? 'alternate costume' : '', ...more].filter(Boolean).join(', '));
     out.avoid = src.avoid || '';
     out.tags = [...(src.tags || []), ...more, 'variation'].slice(0, 24).map(w => w.slice(0, 40));
   }
@@ -621,27 +719,68 @@ const GEN_SHAPE_PX = { portrait: [832, 1216], square: [1024, 1024], landscape: [
 const GEN_LEVELS = {
   study: { title: 'How far from it', start: 1, options: [['Close', 0.45, 'Repaints the picture in the style, keeping its drawing'], ['Simplified', 0.62, 'Keeps the big shapes, drops the detail'], ['Loose', 0.8, 'Only its layout and colours']] },
   vary: { title: 'How different', start: 1, options: [['Slightly', 0.4, 'The same picture, a little changed'], ['Somewhat', 0.6, 'Same idea, new details'], ['Very', 0.8, 'Only the layout stays']] },
-  pose: { title: 'How strictly', start: 1, options: [['Loose', 0.5, 'The pose is a suggestion'], ['Firm', 0.8, 'The pose, with some give'], ['Exact', 1.1, 'Follows the figure to the joint']] },
+  pose: { title: 'How strictly', start: 1, options: [['Loose', 0.35, 'The pose is a suggestion'], ['Firm', 0.5, 'The pose, with some give'], ['Exact', 0.7, 'Follows the figure closely - and may keep something of the mannequin']] },
 };
 const GEN_WHAT = {
   study: 'A study: this picture simplified into flat shapes, in the style chosen above.',
-  vary: 'A variation of this picture - its own tags, and any More tags added.',
+  vary: 'A variation of this picture - its own tags, a Setting or Clothes you pick now, and any More tags added.',
   pose: 'This pose, drawn as the character chosen above.',
 };
 let genSource = null;
 
-async function genSetSource(blob, mode, extra = {}) {
+/* The frame as the base64 the server takes. A JPEG, not a PNG: a PNG of an
+   832x1216 frame is 2 MB as base64, and nginx in front of the container
+   refuses a request body over 1 MB (HTTP 413) - so Vary, a study and Draw this
+   pose never worked through it. The quality steps down until it is under 700 kB,
+   which leaves the prompt and the rest of the request room under that 1 MB. */
+const GEN_IMAGE_MAX = 700_000;
+function genEncode(canvas) {
+  let b64 = '';
+  for (const q of [0.92, 0.85, 0.75, 0.6, 0.45]) {
+    b64 = canvas.toDataURL('image/jpeg', q).split(',')[1];
+    if (b64.length <= GEN_IMAGE_MAX) break;
+  }
+  return b64;
+}
+
+/* Where the figure is in a pose picture (the 3D view's depth map): its box, a
+   margin round it, in the picture's pixels. The 3D view is wide and the figure
+   stands in the middle of it, a sixth of the frame - drawn as it came, the model
+   made a small figure on a big sheet. Looked for on a 160-px copy: whatever is not
+   the colour of the corner. */
+function genFigureBox(img) {
+  const k = 160 / Math.max(img.naturalWidth, img.naturalHeight), w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+  const g = Object.assign(document.createElement('canvas'), { width: w, height: h }).getContext('2d', { willReadFrequently: true });
+  g.drawImage(img, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    if (Math.abs(d[i] - d[0]) + Math.abs(d[i + 1] - d[1]) + Math.abs(d[i + 2] - d[2]) > 36) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return null;
+  const m = 0.08 * Math.max(x1 - x0, y1 - y0) + 2;
+  const L = Math.max(0, x0 - m) / k, T = Math.max(0, y0 - m) / k, R = Math.min(w, x1 + 1 + m) / k, B = Math.min(h, y1 + 1 + m) / k;
+  return { x: L, y: T, w: R - L, h: B - T };
+}
+
+/* A picture made ready for the server: fitted to the frame its shape names. A photo fills the
+   frame (its edges may go); a figure (mode 'pose') is fitted whole round its own box - or round
+   `box`, when the caller wants several pictures framed alike (the directions of one character:
+   each one cropped to its own box would draw the narrow side view bigger than the front). */
+async function genFrameImage(blob, mode, extra = {}, box = null) {
   const url = URL.createObjectURL(blob);
   try {
     const img = await loadImg(url);
-    const ar = img.naturalWidth / img.naturalHeight;
+    box = box || (mode === 'pose' ? genFigureBox(img) : null);
+    const crop = box || { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight };
+    const ar = crop.w / crop.h;
     const shape = extra.shape || (ar > 1.15 ? 'landscape' : ar < 0.87 ? 'portrait' : 'square');
     const [W, H] = GEN_SHAPE_PX[shape] || GEN_SHAPE_PX.portrait;
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const g = c.getContext('2d');
-    // A photo fills the frame (its edges may go); a figure must not lose a
-    // hand, so it is fitted whole, on the colour of its own background.
+    // A figure must not lose a hand, so it is fitted whole, on the colour of its own background.
     if (mode === 'pose') {
       const px = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
       px.canvas.width = px.canvas.height = 1;
@@ -649,12 +788,36 @@ async function genSetSource(blob, mode, extra = {}) {
       const [r, gg, b] = px.getImageData(0, 0, 1, 1).data;
       g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(0, 0, W, H);
     }
-    const k = (mode === 'pose' ? Math.min : Math.max)(W / img.naturalWidth, H / img.naturalHeight);
-    const w = img.naturalWidth * k, h = img.naturalHeight * k;
-    g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-    genSource = { mode, shape, b64: c.toDataURL('image/png').split(',')[1], preview: c.toDataURL('image/jpeg', 0.6),
+    if (box) {
+      // The frame is the figure's box widened to the frame's own proportions, round
+      // the figure's middle: bars of the background colour at the sides made the
+      // model draw a dark edge there. Where the widened box leaves the picture, the
+      // background colour fills.
+      const t = W / H, cx = crop.x + crop.w / 2, cy = crop.y + crop.h / 2;
+      let cw = crop.w, ch = crop.h;
+      if (cw / ch < t) cw = ch * t; else ch = cw / t;
+      const x0 = cx - cw / 2, y0 = cy - ch / 2, k = W / cw;
+      const sx = Math.max(0, x0), sy = Math.max(0, y0), ex = Math.min(img.naturalWidth, x0 + cw), ey = Math.min(img.naturalHeight, y0 + ch);
+      g.drawImage(img, sx, sy, ex - sx, ey - sy, (sx - x0) * k, (sy - y0) * k, (ex - sx) * k, (ey - sy) * k);
+    } else {
+      const k = (mode === 'pose' ? Math.min : Math.max)(W / crop.w, H / crop.h);
+      const w = crop.w * k, h = crop.h * k;
+      g.drawImage(img, crop.x, crop.y, crop.w, crop.h, (W - w) / 2, (H - h) / 2, w, h);
+    }
+    return { mode, shape, b64: genEncode(c), preview: c.toDataURL('image/jpeg', 0.6),
       level: GEN_LEVELS[mode].options[GEN_LEVELS[mode].start][1], ...extra };
   } finally { URL.revokeObjectURL(url); }
+}
+
+/* Where the figure is in a depth picture, as genFigureBox finds it - for a caller that frames
+   several pictures round the union of their boxes. */
+async function genBoxOf(blob) {
+  const url = URL.createObjectURL(blob);
+  try { return genFigureBox(await loadImg(url)); } finally { URL.revokeObjectURL(url); }
+}
+
+async function genSetSource(blob, mode, extra = {}) {
+  genSource = await genFrameImage(blob, mode, extra);
   renderGenSource();
   setView({ kind: 'generate' });
   el('genStatus').textContent = GEN_WHAT[mode] + ' Change anything, then Generate.';
@@ -710,31 +873,130 @@ function renderGenerate() {
       `aria-pressed="${genChoices[c.id] === o.id}"${off(o) || (o.hint ? ` title="${esc(o.hint)}"` : '')}>${label(o)}</button>`).join('') +
     (c.id === 'colours' ? `<button type="button" class="ghost" id="genToPalettes" title="Make or change a palette">Palettes</button>` : '') +
     '</div></div>';
+  // Who she is, in words - not a chip: any character there is. Hidden but
+  // for a character picture (syncGenRows).
+  const charRow = `<div class="gen-row gen-char" data-row="character"><label class="gen-extra" for="genCharacter">Character ` +
+    `<input type="text" id="genCharacter" maxlength="80" autocomplete="off" spellcheck="false" value="${esc(genChoices.character || '')}" ` +
+    `placeholder="e.g. Frieren, Sousou no Frieren"></label><p class="count" id="genCharHint" role="status"></p>` +
+    `<div class="chips gen-recent hidden" id="genRecent" role="group" aria-label="Characters drawn lately"></div></div>`;
   el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
-    `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` +
+    `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` + (k === 'who' ? charRow : '') +
     ids.map(id => row(GEN_CHOICES.find(c => c.id === id))).join('') + '</section>').join('');
   syncGenRows();
+  renderGenRecent();
+  renderGenWhere();
+}
+let genControlMissing = '';
+function renderGenWhere() {
   el('genWhere').textContent = 'Made by the ComfyUI your server is set up with, and kept in Uploads - ' +
-    'the Generated group of the Uploads pack in the library, tagged with these choices.';
+    'the Generated group of the Uploads pack in the library, tagged with these choices.' +
+    (genControlMissing ? ` COMFY_CONTROLNET names ${genControlMissing}, but ComfyUI has no such file in models/controlnet - ` +
+      'put it there and Draw this pose (3D forms) will show up.' : '');
 }
 
 // Only the rows the choices ask: a landscape has no hair colour, ink no
 // wet-in-wet.
 function syncGenRows() {
-  for (const c of GEN_CHOICES)
-    el('genChoices').querySelector(`[data-row="${c.id}"]`).classList.toggle('hidden', !genApplies(c, genChoices));
+  const box = el('genChoices');
+  for (const c of GEN_CHOICES) {
+    box.querySelector(`[data-row="${c.id}"]`).classList.toggle('hidden', !genApplies(c, genChoices));
+    // An option offered only when() (Original: a character only): hidden
+    // when not, and a choice that was it goes back to the row's default.
+    for (const o of c.options) if (o.when)
+      box.querySelector(`[data-gen="${c.id}"][data-opt="${o.id}"]`)?.classList.toggle('hidden', !o.when(genChoices));
+    const cur = c.options.find(o => o.id === genChoices[c.id]);
+    if (cur?.when && !cur.when(genChoices)) {
+      genChoices[c.id] = GEN_DEFAULTS[c.id];
+      saveGenChoices();
+      for (const b of box.querySelectorAll(`[data-gen="${c.id}"]`)) b.setAttribute('aria-pressed', String(b.dataset.opt === genChoices[c.id]));
+    }
+  }
+  box.querySelector('[data-row="character"]')?.classList.toggle('hidden', genChoices.subject !== 'character');
+  syncGenCharHint();
   // A group with none of its rows asked (a landscape has no character) goes too.
   for (const g of el('genChoices').querySelectorAll('.gen-group'))
     g.classList.toggle('hidden', !g.querySelector('.gen-row:not(.hidden)'));
 }
 
+// Marks the chips of a row after its choice was changed in code.
+function genPressed(id) {
+  for (const b of el('genChoices').querySelectorAll(`[data-gen="${id}"]`)) b.setAttribute('aria-pressed', String(b.dataset.opt === genChoices[id]));
+}
+
+// The Character field's new text, from typing or a click on a recent one.
+// Naming her hands her sex to the name (Who: Hers, if it was still the
+// default Girl); clearing the name takes Who back to Girl (syncGenRows).
+function genSetCharacter(text) {
+  const was = !!genCharacterTags(genChoices.character);
+  genChoices.character = text.slice(0, 80);
+  if (!was && genCharacterTags(genChoices.character) && genChoices.who === 'girl') genChoices.who = 'her';
+  saveGenChoices();
+  syncGenRows();
+  genPressed('who');
+  renderGenRecent();
+  renderGenPrompt();
+}
+
+// The characters drawn lately as chips under the field; none, none shown.
+function renderGenRecent() {
+  const box = el('genRecent'), list = genCharsLoad(), now = genCharacterTags(genChoices.character);
+  if (!box) return;
+  box.classList.toggle('hidden', !list.length);
+  box.innerHTML = list.length ? `<span class="chips-group">Lately</span>` + list.map(t =>
+    `<button type="button" class="chip" data-char="${esc(t)}" aria-pressed="${genCharacterTags(t) === now}">${esc(t)}</button>`).join('') : '';
+}
+
+// What the Character field says to do next: the series (the model draws her
+// less like herself on a bare name), or Normal detail (Simple and Beginner
+// leave out clothes nothing names).
+function syncGenCharHint() {
+  const h = el('genCharHint'), who = genCharacterTags(genChoices.character);
+  if (!h) return;
+  h.textContent = !who ? '' : !who.includes(',')
+    ? 'Add her series after the name - without it she is drawn less like herself.'
+    : genChoices.detail === 'normal' ? ''
+    : genChoices.setting === 'original' ? 'Original draws her at Normal detail: Simple and Beginner would leave her clothes out.'
+    : 'Detail is not Normal: her clothes may be left out.';
+}
+
 const genMade = async () => (await listUploads()).filter(u => u.from === 'generate');
 
-async function showGenerate() {
+async function showGenerate(check = true) {
   if (!el('genChoices').children.length) renderGenerate();
+  if (check) genCheck();     // not awaited: the view does not wait on a slow answer
   const all = await genMade();
   renderGenResults(all.slice(0, 24), all.length);
 }
+
+/* A picture's menu: one open at a time, placed by the button that opened it and
+   kept inside the window (the pictures are in a narrow grid, the menu is wider
+   than one). Closed by a click elsewhere, Esc, or choosing something. */
+function genMenuClose() {
+  for (const li of document.querySelectorAll('#genResults li.menu-open')) {
+    li.classList.remove('menu-open');
+    li.querySelector('.gen-menu').classList.add('hidden');
+    li.querySelector('.gen-more').setAttribute('aria-expanded', 'false');
+  }
+}
+function genMenuToggle(li) {
+  const was = li.classList.contains('menu-open');
+  genMenuClose();
+  if (was) return;
+  const btn = li.querySelector('.gen-more'), menu = li.querySelector('.gen-menu');
+  li.classList.add('menu-open');
+  menu.classList.remove('hidden');
+  btn.setAttribute('aria-expanded', 'true');
+  const b = btn.getBoundingClientRect(), m = menu.getBoundingClientRect();
+  menu.style.left = Math.max(8, Math.min(b.left, innerWidth - m.width - 8)) + 'px';
+  menu.style.top = (b.top - m.height - 4 < 8 ? b.bottom + 4 : b.top - m.height - 4) + 'px';
+  menu.querySelector('button').focus();
+}
+document.addEventListener('click', e => { if (!e.target.closest('.gen-menu')) genMenuClose(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = document.querySelector('#genResults li.menu-open .gen-more');
+  if (open) { e.stopPropagation(); genMenuClose(); open.focus(); }
+}, true);
 
 function renderGenResults(list, total = list.length) {
   const host = el('genResults');
@@ -747,16 +1009,42 @@ function renderGenResults(list, total = list.length) {
     li.innerHTML = `<button type="button" class="gen-open" title="${esc((u.tags || []).join(', '))}" ` +
       `aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
       `<button type="button" class="gen-del" aria-label="Delete ${esc(u.name)}" title="Delete it - from Uploads too">${iconSvg('close')}</button>` +
-      `<button type="button" class="gen-vary" aria-label="Vary ${esc(u.name)}" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
-      `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>` +
-      `<button type="button" class="gen-colours" aria-label="Character sheet from ${esc(u.name)}" title="Her colours, with how to mix them - the Colour studio's Character sheet">Colours</button>`;
+      `<button type="button" class="gen-more" aria-label="Do more with ${esc(u.name)}" aria-haspopup="true" aria-expanded="false" title="Vary it, redraw a part, finish it, how to draw it...">More</button>` +
+      `<div class="gen-menu hidden" role="menu">` +
+      `<div class="gen-menu-h" aria-hidden="true">Change it</div>` +
+      `<button type="button" class="gen-redraw" title="Brush over a part - a hand, an eye - and only that is drawn again">Redraw a part...</button>` +
+      `<button type="button" class="gen-bg" title="Draw the background again - found from the picture's edges, and yours to correct with the brush">New background...</button>` +
+      `<button type="button" class="gen-extend" title="More canvas on the sides you choose, drawn to match - the picture itself is not changed">Extend...</button>` +
+      `<button type="button" class="gen-cut" title="Cut the figure out of a plain background - a PNG with nothing behind it, for a game">Cut out...</button>` +
+      `<button type="button" class="gen-finish" title="The same picture 1.5 times the size, with the detail that size has room for - what a draft becomes">Finish it</button>` +
+      (u.parent ? `<button type="button" class="gen-compare" title="It beside the picture it was made from - a slider between them">Before and after</button>` : '') +
+      `<hr>` +
+      `<div class="gen-menu-h" aria-hidden="true">Try it another way</div>` +
+      `<button type="button" class="gen-vary" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
+      `<button type="button" class="gen-lights" title="Four pictures of it: soft, from the side, backlit, dramatic">Light it four ways</button>` +
+      `<button type="button" class="gen-media" title="It drawn in your other media - watercolour, ink, Copic markers, pencil - to put side by side">In other media</button>` +
+      `<hr>` +
+      `<div class="gen-menu-h" aria-hidden="true">Learn from it</div>` +
+      `<button type="button" class="gen-steps" title="How to draw it - step by step">How to draw it</button>` +
+      `<button type="button" class="gen-colours" title="Her colours, with how to mix them - the Colour studio's Character sheet">Her colours</button>` +
+      `</div>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
     li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-del').addEventListener('click', async () => {
       await forgetUpload(u);
-      await showGenerate();
+      await showGenerate(false);
       el('genResults').querySelector('.gen-open')?.focus();
     });
+    li.querySelector('.gen-more').addEventListener('click', e => { e.stopPropagation(); genMenuToggle(li); });
+    li.querySelector('.gen-menu').addEventListener('click', () => genMenuClose());
+    li.querySelector('.gen-redraw').addEventListener('click', () => genRedrawOpen(u));
+    li.querySelector('.gen-cut').addEventListener('click', () => genCutOpen(u));
+    li.querySelector('.gen-finish').addEventListener('click', () => genFinish(u));
+    li.querySelector('.gen-extend').addEventListener('click', () => genExtendOpen(u));
+    li.querySelector('.gen-bg').addEventListener('click', () => genRedrawOpen(u, true));
+    li.querySelector('.gen-compare')?.addEventListener('click', () => genCompare(u));
+    li.querySelector('.gen-lights').addEventListener('click', () => genLights(u));
+    li.querySelector('.gen-media').addEventListener('click', () => genMedia(u));
     li.querySelector('.gen-vary').addEventListener('click', async () => {
       const url = await storeFileUrl(u.file);
       if (!url) return;
@@ -807,9 +1095,27 @@ async function clearGenerated() {
   } finally {
     b.disabled = false;
     storeChanged();
-    await showGenerate();
+    await showGenerate(false);
     el('genStatus').textContent = `${all.length} deleted.`;
   }
+}
+
+// What is being made, so Stop can say which: the job's id, and whether it was asked for.
+let genJob = '', genStopped = false;
+
+// Keep to the palette: the picture just made is recoloured (js/genlock.js) and
+// kept in its place - the same document, with "palette locked" among its tags.
+const genLockWanted = () => genChoices.lock === 'on' && genLockPalette(genChoices).length > 0;
+async function genLockMade(made, status) {
+  const doc = made.doc;
+  status.textContent = 'Recolouring to the palette...';
+  const blob = await genLockBlob(await (await fetch(await storeFileUrl(doc.file))).blob(), genLockPalette(genChoices));
+  if (!blob) { status.textContent = 'The palette has no colour to keep to - only greys.'; return; }
+  const f = await storeFile(blob);
+  if (storeMode === 'server') await storeSortFile(f.id, doc.folder || 'generated');
+  await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png',
+    tags: [...(doc.tags || []), 'palette locked'].slice(0, 24), t: Date.now() });
+  await forgetUpload(doc);
 }
 
 // One picture: start the job, then ask after it once a second.
@@ -817,34 +1123,77 @@ async function generateOne(req) {
   const r = await fetch('api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) });
   if (!r.ok) throw new Error(r.status === 404 ? 'This server has no ComfyUI set up.' : 'The server refused it (HTTP ' + r.status + ').');
   const { id } = await r.json();
+  genJob = id;
+  // Stop was clicked while the job was being started: it has an id now to stop.
+  if (genStopped) genCancel();
   for (;;) {
     await new Promise(res => setTimeout(res, 1000));
     const s = await (await fetch('api/generate/' + id)).json();
     if (s.state === 'done') return s.upload;
+    if (s.state === 'cancelled') throw new Error('Stopped.');
     if (s.state === 'error') throw new Error(s.error || 'ComfyUI could not make it.');
   }
 }
 
-async function runGenerate() {
+// Stop: the picture in hand is cancelled (ComfyUI is told, and drops it from
+// its queue or interrupts it), and the ones still to come are not started.
+function genCancel() {
+  if (genJob) fetch(`api/generate/${genJob}/cancel`, { method: 'POST' }).catch(() => { /* gone: nothing to stop */ });
+}
+function genStop() {
+  genStopped = true;
+  el(genUi.go).disabled = true;
+  el(genUi.status).textContent = 'Stopping...';
+  genCancel();
+}
+
+// jobs: requests built elsewhere (Finish it, Redraw a part) instead of the choices'.
+// Drafts are the choices drawn in fewer steps: quick to look through, and Finish it
+// makes the one worth keeping into the picture.
+const GEN_DRAFT_STEPS = 14;
+// The controls a run drives: this view's own, or - ui - another view's that shares the run
+// (Game assets: js/assets.js). refresh() redraws that view's list of what was made.
+const GEN_UI = { go: 'genGo', status: 'genStatus', goText: 'Generate', refresh: () => showGenerate(false) };
+let genUi = GEN_UI;
+// after(made): something to do to each picture made from jobs, before it is listed (In detail
+// puts the part back into the picture it was cut from).
+// doing may be a function of (i, n) - "Making 2 of 4" - when jobs are several.
+async function runGenerate(jobs = null, doing = '', done = '', after = null, ui = GEN_UI) {
   if (genBusy) return;
   genBusy = true;
-  el('genGo').disabled = true;
-  const n = Number(el('genCount').value) || 1;
-  const req = genRequest();
-  const status = el('genStatus');
+  genStopped = false;
+  genUi = ui;
+  const go = el(ui.go);
+  // While it works the button is Stop.
+  go.textContent = 'Stop';
+  go.title = 'Stop making pictures - the one in hand is cancelled, the rest are not started';
+  const n = jobs ? jobs.length : Number(el('genCount').value) || 1;
+  const req = jobs ? null : genRequest();
+  if (req && el('genQuality').value === 'draft') { req.steps = GEN_DRAFT_STEPS; req.tags = [...req.tags, 'draft'].slice(0, 24); }
+  const status = el(ui.status);
   try {
     for (let i = 1; i <= n; i++) {
-      status.textContent = n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
-      await generateOne(req);
+      if (genStopped) break;
+      status.textContent = jobs ? (typeof doing === 'function' ? doing(i, n) : doing) : n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
+      const made = await generateOne(jobs ? jobs[i - 1] : req);
+      if (!jobs && genLockWanted()) await genLockMade(made, status);
+      if (jobs && after) await after(made);
       storeChanged();
-      await showGenerate();
+      await ui.refresh();
     }
-    status.textContent = n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
+    status.textContent = genStopped ? 'Stopped.' : jobs ? done : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
+    if (!jobs && genChoices.subject === 'character') { genCharsRemember(genChoices.character); renderGenRecent(); }
   } catch (err) {
     status.textContent = err.message;
+    // It may have stopped answering: say so, with a way to ask again. Not
+    // after a Stop, which is no sign of that.
+    if (!genStopped) genCheck();
   } finally {
     genBusy = false;
-    el('genGo').disabled = false;
+    genJob = '';
+    go.textContent = ui.goText;
+    go.removeAttribute('title');
+    go.disabled = !!genOffline;
   }
 }
 
@@ -852,15 +1201,25 @@ async function initGenerate() {
   loadGenChoices();
   el('genChoices').addEventListener('click', e => {
     if (e.target.closest('#genToPalettes')) { setView({ kind: 'palette' }); return; }
+    const who = e.target.closest('[data-char]');
+    if (who) {
+      el('genCharacter').value = who.dataset.char;
+      genSetCharacter(who.dataset.char);
+      return;
+    }
     const b = e.target.closest('[data-gen]');
     if (!b) return;
     genChoices[b.dataset.gen] = b.dataset.opt;
     saveGenChoices();
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
-    if (['subject', 'medium', 'framing'].includes(b.dataset.gen)) syncGenRows();
+    if (['subject', 'setting', 'medium', 'framing', 'detail', 'colours'].includes(b.dataset.gen)) syncGenRows();
     renderGenPrompt();
   });
+  el('genChoices').addEventListener('input', e => {
+    if (e.target.id === 'genCharacter') genSetCharacter(e.target.value);
+  });
+  el('genChoices').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'genCharacter') runGenerate(); });
   try { Object.assign(genView, JSON.parse(localStorage.getItem(GEN_VIEW_KEY)) || {}); } catch { /* defaults */ }
   el('genPrompt').open = !!genView.open;
   el('genPrompt').addEventListener('toggle', () => {
@@ -880,7 +1239,7 @@ async function initGenerate() {
     el('genPromptBody').querySelector(t ? `[data-avoid="${CSS.escape(t.dataset.avoid)}"]` : '.gen-avoid button')?.focus();
   });
   el('genExtra').addEventListener('input', renderGenPrompt);
-  el('genGo').addEventListener('click', runGenerate);
+  el('genGo').addEventListener('click', () => genBusy ? genStop() : runGenerate());
   el('genPick').addEventListener('click', () => el('genPickInput').click());
   el('genPickInput').addEventListener('change', async e => { await genPicked(e.target.files[0]); e.target.value = ''; });
   el('genSource').addEventListener('click', e => {
@@ -898,17 +1257,44 @@ async function initGenerate() {
   el('genClear').addEventListener('click', clearGenerated);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });
 
+  el('genRetry').addEventListener('click', async () => {
+    el('genRetry').disabled = true;
+    el('genOfflineText').textContent = 'Asking ComfyUI...';
+    try { await genCheck(); } finally { el('genRetry').disabled = false; }
+  });
+
   // Offered only where it can work: a server, with a ComfyUI it can reach.
   await initStore();
   if (storeMode !== 'server') return;
+  await genCheck();
+}
+
+/* Asks the server whether generating can work now, and shows what it says:
+   the rail button and the view when it can; when a ComfyUI is set up and not
+   answering (a laptop asleep, a tunnel down), the button and the view too, with
+   the reason and a button to ask again - a feature that vanishes without a word
+   looks like one that was never there. Nothing at all with no ComfyUI set up,
+   or on a server too old to say. */
+async function genCheck() {
   let info = null;
   try { info = await (await fetch('api/generate')).json(); } catch { /* an older server: no such route */ }
-  if (!info || !info.available) return;
-  genServer = { quality: info.quality || '', negative: info.negative || '' };
-  genControl = !!info.control;
+  if (!info) return;
+  genOffline = !info.available && info.configured === true ? (info.reason || 'ComfyUI is not answering.') : '';
+  if (info.available) genServer = { quality: info.quality || '', negative: info.negative || '' };
+  genControl = !!info.available && !!info.control;
+  // A ControlNet named in COMFY_CONTROLNET that ComfyUI does not have: Draw this pose is
+  // missing for that reason, and nothing else on the page would say so.
+  genControlMissing = (info.available && info.controlMissing) || '';
+  if (el('genWhere')) renderGenWhere();
   document.getElementById('formPoseGen')?.classList.toggle('hidden', !genControl);
+  document.querySelector('.nav-item[data-view="generate"]').classList.toggle('hidden', !info.available && !genOffline);
+  // Game assets is made by the same ComfyUI: shown, and offline, with it (js/assets.js).
+  document.querySelector('.nav-item[data-view="assets"]').classList.toggle('hidden', !info.available && !genOffline);
+  assetsOffline();
+  el('genOffline').classList.toggle('hidden', !genOffline);
+  el('genOfflineText').textContent = genOffline;
+  el('genGo').disabled = !!genOffline;
   renderGenPrompt();
-  document.querySelector('.nav-item[data-view="generate"]').classList.remove('hidden');
   renderStages();
 }
 initGenerate();

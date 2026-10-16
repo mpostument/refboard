@@ -34,9 +34,13 @@ const MATERIALS = {
   wcPencil: { label: 'Watercolour pencils', group: 'Pencils and markers', paint: 'water', floor: 28,
     tones: ['the paper', 'one light layer', 'two light layers', 'firm pressure, layered',
       'layered, then wetted', 'layered, wetted, dry, layered again'] },
-  wcMarker: { label: 'Watercolour markers', group: 'Pencils and markers', paint: 'water', floor: 24,
-    tones: ['the paper', 'picked up from the tip with water - pale', 'a stroke thinned with water',
-      'one stroke of the marker', 'two strokes, blended', 'the darkest marker, layered'] },
+  // Alcohol-based: no water to thin it with and no white to lighten it, so
+  // darker is more layers - each pass of the same marker goes a step down -
+  // and lighter is a paler marker of the family. Its colours are picked by
+  // code, not mixed from pigments, hence no paint model.
+  copic: { label: 'Copic markers', group: 'Pencils and markers', paint: null, floor: 20,
+    tones: ['the paper', 'the palest marker of the family, one quick pass', 'a pale marker, one layer',
+      'a middle marker, one layer', 'the same marker, two or three layers', 'the darkest marker, layered'] },
   graphite: { label: 'Graphite pencil', group: 'Pencils and markers', paint: null, floor: 26,
     tones: ['the paper', '2H', 'HB', '2B', '4B', '8B'] },
 };
@@ -46,8 +50,10 @@ const MATERIALS_KEY = 'refboard.materials.v1';
 function materialsProfile() {
   try {
     const v = JSON.parse(localStorage.getItem(MATERIALS_KEY));
-    const have = Array.isArray(v?.have) ? v.have.filter(k => MATERIALS[k]) : [];
-    if (have.length) return { have, main: have.includes(v.main) ? v.main : have[0] };
+    // wcMarker was this material's key before it became Copic markers.
+    const renamed = k => k === 'wcMarker' ? 'copic' : k;
+    const have = Array.isArray(v?.have) ? [...new Set(v.have.map(renamed))].filter(k => MATERIALS[k]) : [];
+    if (have.length) return { have, main: have.includes(renamed(v.main)) ? renamed(v.main) : have[0] };
   } catch { /* fall through */ }
   const main = paintMedium() === 'opaque' ? 'opaque' : 'watercolour';
   return { have: [main], main };

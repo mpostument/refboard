@@ -32,7 +32,7 @@ const COMMAND_WORDS = {
   btnTemp: 'temperature warm cool colour color shadow light turn hue cel shading',
   btnSymmetry: 'symmetry symmetrical mirror fold halves axis centre center face vase building lopsided crooked drawing check',
   btnRhythms: 'reilly rhythm rhythms figure flow line of action gesture diagonal curve shoulder hip leg arm abstract',
-  btnMarkers: 'grey gray markers tombow n95 n15 value study greys brush pen numbers',
+  btnMarkers: 'grey gray markers copic neutral cool warm n0 n10 c0 w0 value study greys numbers',
   btnVignette: 'vignette fade dissolve edge lost paper bare end border island focus shape watercolour study unpainted margin',
   btnWatercolour: 'watercolour preview painted wash washes render paint it as granulation grain paper white bare edges wet soft hard bloom transparent look before painting',
   btnQuality: 'reference check quality good bad poor photo blown highlights clipped crushed shadows flat light flash hazy blurry blur soft focus sharp small resolution size worth drawing from',
@@ -150,7 +150,9 @@ function collectCommands() {
     for (const b of el('rail').querySelectorAll('button')) {
       // A section you hid (js/stages.js) is off the rail, not out of reach.
       const hid = b.classList.contains('user-hidden') && !b.classList.contains('hidden');
-      if ((!hid && !visible(b)) || b.id === 'btnFind') continue;
+      // A tab of a group (.rail-sub, js/stages.js) is not drawn on the rail and is as findable as ever.
+      const tab = b.classList.contains('rail-sub') && !b.classList.contains('hidden') && !b.disabled;
+      if ((!hid && !tab && !visible(b)) || b.id === 'btnFind') continue;
       const id = b.dataset.view ? 'view-' + b.dataset.view : b.id;
       // Its stage is its hint, and a word it is found by: "paint" lists the Paint group.
       const stage = b.closest('.rail-stage')?.dataset.stage;

@@ -1211,6 +1211,10 @@ function updateViewMeta() {
     m.textContent = 'Colours to plan a picture with, in harmony and spread over the values - each with how to mix it from your paints.';
     return;
   }
+  if (view.kind === 'assets') {
+    m.textContent = 'Pictures to use in a 2D game - a prop, a weapon, an item - made by your own ComfyUI, one to a picture and cut out, with an icon for an inventory.';
+    return;
+  }
   if (view.kind === 'generate') {
     m.textContent = 'Anime references made to order by your own ComfyUI - a character, a landscape, buildings, nature or an animal, in the light and medium you pick.';
     return;
@@ -1235,6 +1239,7 @@ function viewTitle() {
     case 'train': return 'Train';
     case 'colour': return 'Colour studio';
     case 'generate': return 'Generate references';
+    case 'assets': return 'Game assets';
     case 'palette': return 'Palettes';
     case 'museum': return 'Museums';
     case 'perspective': return 'Perspective grid';
@@ -1254,6 +1259,7 @@ function setView(next) {
   const browsing = view.kind === 'all' || view.kind === 'pack' || view.kind === 'group';
 
   const forms = view.kind === 'forms', train = view.kind === 'train', colour = view.kind === 'colour';
+  const assets = view.kind === 'assets';
   const generate = view.kind === 'generate', palette = view.kind === 'palette', museum = view.kind === 'museum';
   const perspective = view.kind === 'perspective', handbook = view.kind === 'handbook', sky = view.kind === 'sky';
   el('viewBrowse').classList.toggle('hidden', !browsing);
@@ -1261,6 +1267,7 @@ function setView(next) {
   el('viewTrain').classList.toggle('hidden', !train);
   el('viewColour').classList.toggle('hidden', !colour);
   el('viewGenerate').classList.toggle('hidden', !generate);
+  el('viewAssets').classList.toggle('hidden', !assets);
   el('viewPalette').classList.toggle('hidden', !palette);
   el('viewMuseum').classList.toggle('hidden', !museum);
   el('viewPerspective').classList.toggle('hidden', !perspective);
@@ -1271,16 +1278,19 @@ function setView(next) {
   // width from the stage; its one use in this view - the interval for Draw
   // random forms - has its own control in the 3D panel. The trainers have
   // no use for it at all.
-  const tool = forms || train || colour || generate || palette || museum || perspective || handbook || sky;
+  const tool = forms || train || colour || generate || assets || palette || museum || perspective || handbook || sky;
   el('setup').classList.toggle('forms-mode', tool);
   el('viewDashboard').classList.toggle('hidden', browsing || tool);
   el('searchbar').classList.toggle('hidden', !browsing);
   el('viewTitle').textContent = viewTitle();
   if (changed) announce(viewTitle());
 
+  // The rail button of a group is current while any section of the group is open.
+  const lead = viewGroupOf(view.kind)[0];
   for (const b of document.querySelectorAll('.nav-item[data-view]')) {
-    b.setAttribute('aria-current', String(b.dataset.view === view.kind));
+    b.setAttribute('aria-current', String(b.dataset.view === view.kind || b.dataset.view === lead));
   }
+  renderViewTabs();
   markCurrentInTree();
 
   if (browsing) refreshGrid(); else updateViewMeta();
@@ -1295,6 +1305,7 @@ function setView(next) {
   if (handbook) openLazyView('handbook', () => showHandbook());
   if (sky) openLazyView('sky', () => showSky());
   if (generate) showGenerate();
+  if (assets) showAssets();
   el('sidebar').classList.remove('peek');
   shellSync();
   el('mainBody').scrollTop = 0;
