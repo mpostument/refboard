@@ -85,8 +85,20 @@ const CHAR_STRENGTH = 0.5;
    first runs: "I do not like the style"; "ordinary anime"): a thin outline and soft shading. What it
    keeps out is only what would not cut out or would not stand on its own - shadow, floor - and not
    "gradient, glossy, lighting", which the sprite recipe keeps out and which is what soft shading is. */
-const CHAR_STYLE = 'anime style, anime illustration, soft shading, thin outline, 2d game character, white background, simple background';
-const CHAR_NOT = 'shadow, cast shadow, ground shadow, drop shadow, contact shadow, depth of field, 3d, realistic, floor, ground, background, glow, rim light, colored outline';
+const CHAR_STYLE = 'anime style, anime illustration, soft shading, thin outline, 2d game character';
+const CHAR_NOT = 'shadow, cast shadow, ground shadow, drop shadow, contact shadow, depth of field, 3d, realistic, floor, ground, vignette, scenery, glow, rim light, colored outline';
+/* The background a character is drawn on: one flat colour that is not in her look, so the cut-out can
+   take every pixel of it and none of her (the user, 2026-10-16: "the cutting works badly" - a white cloak
+   went with the white background, and gaps between the legs stayed). The first colour whose family the
+   look does not mention. */
+const CHAR_KEYS = [
+  { word: 'magenta', clash: /pink|magenta|purple|violet|red|rose|crimson|lilac/ },
+  { word: 'green', clash: /green|emerald|olive|lime|mint/ },
+  { word: 'cyan', clash: /blue|cyan|teal|turquoise|aqua|azure/ },
+];
+const charKey = look => (CHAR_KEYS.find(k => !k.clash.test(look)) || CHAR_KEYS[0]).word;
+// What a cut-out character is: the cut, trimmed, and (on a pale background only) the white border taken off.
+const assetFigureCanvas = cut => assetTrim(cut.keyed ? cut.canvas : assetDefringe(cut.canvas)) || cut.canvas;
 
 const ASSET_THEMES = [
   { id: 'any', label: 'Any', tags: '' },
@@ -158,7 +170,8 @@ function assetRequest(s) {
     tags.push(ground.tags);
     if (ground.avoid) avoid.push(ground.avoid);
   } else if (kind.character) {
-    tags.push('solo', named, 'full body', 'standing', CHAR_FACE[dir], ...(view.id === 'top' ? ['from above'] : []));
+    const key = charKey(thing);
+    tags.push('solo', named, 'full body', 'standing', CHAR_FACE[dir], ...(view.id === 'top' ? ['from above'] : []), `(${key} background:1.2)`, `solid ${key} background`, 'simple background');
   } else if (kind.id === 'weapon') {
     // The model draws a set of four to six, or a rack on a panel: ask for one, and keep the set out.
     tags.push('solo', `(single ${named}:1.3)`, 'full length', 'centered', 'vertical', 'pointing up', 'object focus');
@@ -361,7 +374,7 @@ async function assetsCharacterGo(s) {
     if (cut.found) {
       // Kept at once, cut out and with the white border off: stopping, or a closed page, leaves
       // usable pictures, not the model's own. Lining up needs them all, so it is a second pass.
-      const canvas = assetTrim(assetDefringe(cut.canvas)) || cut.canvas;
+      const canvas = assetFigureCanvas(cut);
       const f = await assetKeep(made.doc, canvas, ['cut out']);
       await forgetUpload(made.doc);
       cuts.push({ doc: made.doc, file: f.id, canvas });
@@ -392,7 +405,7 @@ async function assetsCharacterFree(s) {
       try { pic = await genLoadPicture(made.doc); } catch { return; }
       const cut = assetCutFigure(pic);
       if (!cut.found) { await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) }); return; }
-      const canvas = assetTrim(assetDefringe(cut.canvas)) || cut.canvas;
+      const canvas = assetFigureCanvas(cut);
       await assetKeep(made.doc, canvas, ['cut out']);
       await forgetUpload(made.doc);
     }, ASSET_UI);

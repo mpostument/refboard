@@ -412,12 +412,23 @@ function assetPeel(canvas, rounds = 3) {
   return out;
 }
 
+/* A character is asked for on a flat colour that is not in her look (a "green screen": see charKey in
+   js/assets.js), because a white or cream background cannot be told from a white cloak - cutOut, assetPeel
+   and assetDefringe all take pale pixels for background, and the cloak went with it. When the picture's
+   edge is that kind of colour (a saturated one) the figure cannot own it, so: the gaps inside the figure
+   (between the legs, under an arm) are cleared too, and the two steps that exist only for a pale background
+   are left out - they would take the pale parts of the figure. Returns { found, canvas (trimmed), tolerance, keyed }. */
+const KEY_SATURATION = 100;   // the edge colour's strongest channel less its weakest: a flat key, not a cream or grey
+const KEY_HOLES_UP_TO = 160;  // the widest tolerance gaps are cleared at - a wider one is a gradient, and would eat the figure
 function assetCutFigure(pic) {
+  const w = pic.width, h = pic.height;
+  const edge = cutEdgeColour(pic.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data, w, h);
+  const keyed = edge.share >= CUT_EDGE_SHARE && Math.max(...edge.c) - Math.min(...edge.c) >= KEY_SATURATION;
   for (const tolerance of FIGURE_TOLERANCES) {
-    const cut = cutOut(pic, { tolerance, trim: false });
+    const cut = cutOut(pic, { tolerance, trim: false, holes: keyed && tolerance <= KEY_HOLES_UP_TO });
     if (!cut.found || assetBorderClear(cut.canvas) < FIGURE_EDGE_CLEAR) continue;
-    const canvas = assetTrim(assetPeel(cut.canvas));
-    if (canvas) return { found: true, canvas, tolerance };
+    const canvas = assetTrim(keyed ? cut.canvas : assetPeel(cut.canvas));
+    if (canvas) return { found: true, canvas, tolerance, keyed };
   }
   return { found: false };
 }

@@ -385,7 +385,11 @@ test('a character is asked for solo, whole, facing the way its direction says, a
   await openApp(page);
   const front = await ask(page, settings({ kind: 'character', thing: 'girl knight', dir: 'front' }));
   const left = await ask(page, settings({ kind: 'character', thing: 'girl knight', dir: 'left' }));
-  for (const w of ['solo', 'girl knight', 'full body', 'standing', 'facing viewer', 'anime style', 'soft shading', 'thin outline', 'white background']) expect(front.prompt, w).toContain(w);
+  for (const w of ['solo', 'girl knight', 'full body', 'standing', 'facing viewer', 'anime style', 'soft shading', 'thin outline', 'magenta background']) expect(front.prompt, w).toContain(w);
+  // A white cloak is lost on a white background: the background is a colour she does not wear.
+  const key = async thing => (await ask(page, settings({ kind: 'character', thing }))).prompt.match(/solid (\w+) background/)[1];
+  expect([await key('girl knight, silver armor'), await key('girl mage, pink dress'), await key('boy, red hair, green coat'), await key('girl, purple dress, green boots')])
+    .toEqual(['magenta', 'green', 'cyan', 'cyan']);
   // Not the sprite recipe's flat shapes with a thick outline: the user asked for ordinary anime.
   for (const w of ['thick outline', 'flat color', 'cel shading']) expect(front.prompt, w).not.toContain(w);
   // Soft shading is what the sprite recipe keeps out as "gradient".
@@ -543,6 +547,22 @@ test('a figure on a cream gradient (soft-shaded anime comes so) is cut out whole
   expect(r.middle).toBe(255);
   // An uncut picture's border is not clear: the test cannot be passed by doing nothing.
   expect(r.borderClear).toBeLessThan(0.5);
+});
+
+test('on a flat colour key a white cloak with no outline stays, and the gap between the legs goes', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const c = Object.assign(document.createElement('canvas'), { width: 200, height: 300 }), g = c.getContext('2d');
+    g.fillStyle = '#ff00ff'; g.fillRect(0, 0, 200, 300);
+    g.fillStyle = '#ffffff'; g.fillRect(60, 50, 80, 150);     // a white cloak, no outline round it
+    g.fillStyle = '#334'; g.fillRect(70, 200, 20, 80); g.fillRect(110, 200, 20, 80);   // two legs, the key between them
+    const a = (cv, x, y) => cv.getContext('2d').getImageData(x, y, 1, 1).data[3];
+    const fig = assetCutFigure(c);
+    // Trimmed with a 4 px pad, so the crop starts at x = 56: the left leg is at 14-34, the gap at 34-54.
+    const canvas = assetFigureCanvas(fig);
+    return { found: fig.found, keyed: fig.keyed, cloak: a(canvas, 40, 40), gap: a(canvas, 44, canvas.height - 20), leg: a(canvas, 24, canvas.height - 20) };
+  });
+  expect(r).toEqual({ found: true, keyed: true, cloak: 255, gap: 0, leg: 255 });
 });
 
 test('a pale sheet left round a figure is peeled off, up to the figure\'s own outline; a clean figure is left alone', async ({ page }) => {
