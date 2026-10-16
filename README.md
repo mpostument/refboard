@@ -578,7 +578,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   (before Christianity: linen and a wreath, log houses behind a palisade,
   birch and oak), *East Asian*, *Western Europe*, *Nordic*, *Middle East*,
   *South Asian*, or a genre: *Fantasy*, *Sci-fi*, *Steampunk*,
-  *Post-apocalyptic* - as clothes on a character, the buildings on a
+  *Post-apocalyptic*; an *Era* says when, apart from where - *Ancient*,
+  *Medieval*, *Kyivan Rus*, *Victorian* - as clothes on a character, the buildings on a
   street, what grows in a landscape, and which temple - pagan idols in an
   oak grove, a cathedral, a mosque, a Hindu temple. *Clothes* dresses the
   character as her Setting would - *Everyday*, *Festive*, *Uniform*,

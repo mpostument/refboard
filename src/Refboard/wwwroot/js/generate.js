@@ -346,6 +346,31 @@ const GEN_CHOICES = [
       building: 'post-apocalypse, ruins, abandoned building, overgrown, broken window, rubble' } },
   ] },
 
+  // When, apart from where: Setting says the place (a Slavic character is her embroidered tunic), Era the
+  // time, so "Kyivan Rus" and "Victorian" can be asked of any place. Added after Setting's tags, not swapped
+  // for them. Hidden while Setting is Original, which adds nothing to a named character - an Era would be
+  // the one thing that did. Kyivan Rus is Christian (988) but is before the onion dome (the 1500s): a
+  // church there is a cube with a helmet dome, so the onion dome and the sunflower (America, 1700s) are kept out.
+  { id: 'era', label: 'Era', for: ['character', 'landscape', 'building'], when: ch => ch.setting !== 'original', options: [
+    ANY,
+    { id: 'ancient', label: 'Ancient', words: 'ancient', tags: {
+      character: 'ancient, tunic, sandals, bronze jewelry, linen, leather belt',
+      landscape: 'ancient, primeval, unspoiled, dirt path, standing stones',
+      building: 'ancient, stone building, columns, ruins, temple' } },
+    { id: 'medieval', label: 'Medieval', words: 'medieval', tags: {
+      character: wear('medieval, long dress, belt, hooded cloak, leather boots', 'medieval, tunic, belt, hooded cloak, leather boots'),
+      landscape: 'medieval, dirt road, farmland, castle in the distance, wooden fence',
+      building: 'medieval, stone castle, half-timbered house, cobblestone, thatched roof' } },
+    { id: 'kyivanrus', label: 'Kyivan Rus', words: 'kyivan rus', avoid: 'onion dome, sunflower, modern, gothic architecture, spire', tags: {
+      character: wear('medieval, long tunic, embroidered hem, fur-trimmed cloak, head veil, temple rings, belt', 'medieval, long tunic, embroidered hem, fur-trimmed cloak, fur hat, sash, boots'),
+      landscape: 'medieval, steppe, wide river, oak forest, wooden fortress on a hill',
+      building: 'medieval, wooden fortress, palisade, log house, small stone church, helmet dome, thatched roof' } },
+    { id: 'victorian', label: 'Victorian', words: 'victorian', tags: {
+      character: wear('victorian, long dress, bustle, bonnet, lace gloves, lace collar', 'victorian, tailcoat, waistcoat, top hat, cravat, pocket watch'),
+      landscape: 'victorian, gas lamp, cobblestone street, fog, 19th century',
+      building: 'victorian architecture, red brick, chimney, gas lamp, row houses, cobblestone' } },
+  ] },
+
   { id: 'time', label: 'Time of day', for: OUTDOORS, options: [
     ANY,
     { id: 'day', label: 'Day', tags: 'day, blue sky' },
@@ -461,14 +486,14 @@ const GEN_CHOICES = [
    and the Generate button fit on a screen. Only the page's order: the
    prompt keeps GEN_CHOICES' own, which puts "1girl, solo" first. */
 const GEN_GROUPS = [
-  ['what', 'What', ['style', 'subject', 'setting']],
+  ['what', 'What', ['style', 'subject', 'setting', 'era']],
   ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
   ['picture', 'The picture', ['medium', 'edges', 'colours', 'lock', 'detail', 'ground']],
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', detail: 'simple',
   ground: 'plain' };
@@ -584,7 +609,7 @@ function genPrompt(choices, extra = '') {
   // costume" says the outfit is not hers: the Armour of a named character
   // kept her mantle without it.
   const who = genCharacterTags(choices.character);
-  const outfitAsked = (c, o) => (c.id === 'setting' && !['any', 'original'].includes(o.id)) || (c.id === 'clothes' && o.id !== 'setting');
+  const outfitAsked = (c, o) => (c.id === 'setting' && !['any', 'original'].includes(o.id)) || (c.id === 'clothes' && o.id !== 'setting') || (c.id === 'era' && o.id !== 'any');
   const outfit = rows.some(([c, o]) => outfitAsked(c, o));
   // A row whose tags another choice has taken over (a temple, Setting's).
   const owned = new Set(rows.map(([, o]) => o.owns).filter(Boolean));
@@ -592,7 +617,7 @@ function genPrompt(choices, extra = '') {
   for (const [c, o] of rows) {
     const t = owned.has(c.id) ? '' : pick(o.tags), a = owned.has(c.id) ? '' : pick(o.avoid);
     if (t) tags.push(t);
-    if (t && (c.id === 'setting' || c.id === 'clothes')) outfitTags.push(t);
+    if (t && (c.id === 'setting' || c.id === 'clothes' || c.id === 'era')) outfitTags.push(t);
     if (c.id === 'who' && who) tags.push(`(${who}:${GEN_CHAR_WEIGHT})`, ...(outfit ? ['alternate costume'] : []));
     if (a) avoid.push(a);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());

@@ -21,6 +21,32 @@ test('the choices become the model\'s tags and the words it is filed under', asy
   expect(head.prompt.startsWith('1girl, solo, portrait, close-up, straight-on')).toBe(true);
 });
 
+test('Era says when, apart from where: tags per subject, after the Setting\'s, nothing for Any, and not with Original', async ({ page }) => {
+  await openApp(page);
+  const p = c => page.evaluate(c => genPrompt({ ...GEN_DEFAULTS, ...c }), c);
+  // A Slavic girl of Kyivan Rus: her place's tags, then the time's; a boy is dressed differently.
+  const girl = await p({ setting: 'slavic', era: 'kyivanrus' });
+  expect(girl.prompt).toContain('embroidered linen tunic');
+  expect(girl.prompt).toContain('medieval, long tunic, embroidered hem, fur-trimmed cloak, head veil');
+  expect(girl.prompt.indexOf('embroidered linen tunic')).toBeLessThan(girl.prompt.indexOf('head veil'));
+  expect((await p({ who: 'boy', era: 'kyivanrus' })).prompt).toContain('fur hat');
+  // Christian but before the onion dome.
+  expect(girl.avoid).toContain('onion dome');
+  expect(girl.tags).toContain('kyivan rus');
+  // Landscape and building have their own words; Any adds nothing.
+  expect((await p({ subject: 'landscape', era: 'victorian' })).prompt).toContain('gas lamp, cobblestone street');
+  expect((await p({ subject: 'building', era: 'medieval' })).prompt).toContain('stone castle');
+  expect((await p({ era: 'any' })).prompt).not.toContain('medieval');
+  // For a named character it is an outfit asked for, so the outfit is not hers any more.
+  expect((await p({ character: 'Frieren (Sousou no Frieren)', era: 'victorian' })).prompt).toContain('alternate costume');
+  // Original adds nothing to her, Era included: the row is out of the prompt (and hidden on the page).
+  const original = await p({ character: 'Frieren (Sousou no Frieren)', setting: 'original', era: 'victorian' });
+  expect(original.prompt).not.toContain('victorian');
+  expect(original.prompt).not.toContain('alternate costume');
+  // An animal or nature has no era: the row is for the other three.
+  expect((await p({ subject: 'animal', era: 'victorian' })).prompt).not.toContain('victorian');
+});
+
 test('a character sheet made again: her eyes, and a turnaround, wide', async ({ page }) => {
   await openApp(page);
   const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, colour: 'purple', eyes: 'aqua', framing: 'sheet' }));

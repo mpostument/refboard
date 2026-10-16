@@ -176,8 +176,15 @@ before Christianity - no church or onion dome, and no sunflowers, which came
 from America in the 1700s. The rows are grouped (What, The character, The
 shot, Light and time, The picture; `GEN_GROUPS`) in two columns, a group
 hidden with its rows, and More tags and Generate stay at the bottom of the
-view. Still to come on it: a setting for the 3D forms' scene, and eras
-(ancient, medieval, Victorian, Kyivan Rus) apart from places.
+view. Still to come on it: a setting for the 3D forms' scene.
+In place too: Era (`era` row after Setting, for a character, a landscape and a building) - when,
+apart from where: Ancient, Medieval, Kyivan Rus, Victorian, with tags per subject, added after the
+Setting's and not swapped for them; a named character takes it as an outfit asked for (alternate
+costume); hidden with Setting Original, which adds nothing. Kyivan Rus keeps out the onion dome, the
+sunflower and, after one real run drew a Gothic spire behind a wooden street, gothic architecture
+and spires. Checked on Animagine XL 4.0 (seed 4242): the girls read as a veiled long tunic with an
+embroidered hem, a hooded brown cloak and a bonnet with a lace-gloved gown; a church "with a helmet
+dome" was not drawn, only log houses under thatch.
 In place too: a Character field (`genCharacterTags()` - name then series, lower
 case, after "1girl, solo") and Setting: Original, a character's own clothes: it
 owns Detail, since Simple and Beginner's "minimalist, simple drawing" drew a
