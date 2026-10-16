@@ -1302,6 +1302,33 @@
   </div>
 </div>
 
+<!-- Extend the picture - js/genedit.js: more canvas on the sides chosen, drawn to match. -->
+<div id="extendSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="extendTitle">
+  <div class="sheet-box redraw-box">
+    <div class="row">
+      <h2 id="extendTitle" class="grow">Extend the picture</h2>
+      <button type="button" class="ghost" id="extendClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="redraw-stage"><canvas id="extendPreview" role="img" aria-label="The picture, with the new canvas round it"></canvas></div>
+    <p class="count" id="extendHint" role="status"></p>
+    <div class="row redraw-tools">
+      <span class="count">Which sides</span>
+      <span class="chips" id="extendSides" role="group" aria-label="Which sides"></span>
+    </div>
+    <div class="row redraw-tools">
+      <span class="count">How much</span>
+      <span class="chips" id="extendAmount" role="group" aria-label="How much"></span>
+    </div>
+    <div class="row redraw-tools">
+      <label class="opt" title="Off: only the scenery goes on - her hair and face are not described, or the model draws more of them. On: for a cropped picture whose body goes on past the edge"><input type="checkbox" id="extendPerson"> Continue the character too</label>
+    </div>
+    <div class="row redraw-tools">
+      <label class="grow">What is there <input type="text" id="extendText" maxlength="100" placeholder="optional - e.g. more of the room, a forest path"></label>
+      <button type="button" class="primary" id="extendGo">Extend</button>
+    </div>
+  </div>
+</div>
+
 <!-- Before and after - js/genedit.js: a picture over the one it was made from, a
      slider between them. -->
 <div id="compareSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="compareTitle">

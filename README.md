@@ -622,6 +622,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   drawn again, img2img, with the light's or the medium's tags swapped in -
   ink and pencil keep some of the source's colour) and, with *As:
   Drafts*, pictures made in 14 steps instead of 28 to look through first.
+  **Extend...** adds a quarter or half again of canvas on the sides you pick (the picture is
+  pasted back unchanged, only the new part is drawn; scenery only unless you ask for the
+  character to go on).
   A picture made from another keeps its parent, and **Before and after** puts the two
   in one frame with a slider between them.
   While pictures are made the button is *Stop*: it cancels the one in hand

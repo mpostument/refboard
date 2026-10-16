@@ -182,3 +182,68 @@ test('New background: the mask starts on the plain background, and the plain one
   expect(asked[0].tags).toContain('new background');
   expect(asked[0].denoise).toBe(0.95);
 });
+
+test('Extend: the picture goes on a bigger canvas, the mask is white only over the new part', async ({ page }) => {
+  const asked = await setup(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-extend').first().click();
+  await expect(page.locator('#extendSheet')).toBeVisible();
+  // Right, a quarter: the default. Nothing picked, nothing to draw.
+  await expect(page.locator('#extendGo')).toBeEnabled();
+  await page.click('#extendSides [data-side="right"]');
+  await expect(page.locator('#extendGo')).toBeDisabled();
+  await page.click('#extendSides [data-side="right"]');
+  await page.fill('#extendText', 'a forest path');
+  const wide = await page.evaluate(() => ({ ...extendBox(extend), W0: extend.pic.width }));
+  expect(wide.l).toBe(0);
+  expect(wide.r).toBeGreaterThan(0);
+  expect(wide.W).toBe(wide.W0 + wide.r);
+  await page.click('#extendGo');
+  await expect(page.locator('#genStatus')).toHaveText('Extended - in Uploads, Generated.');
+  const req = asked[0];
+  expect(req.denoise).toBe(1);
+  // The scenery only: her words are out, "no humans" is in, and she is kept out by name.
+  expect(req.prompt).toBe('no humans, (a forest path:1.3)');
+  expect(req.avoid).toContain('1girl');
+  expect(req.tags).toEqual(expect.arrayContaining(['red hair', 'a forest path', 'extended']));
+  expect(req.parent).toBe('b'.repeat(64) + '.png');
+  const px = await page.evaluate(async ([b64, W0]) => {
+    const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+    const c = Object.assign(document.createElement('canvas'), { width: img.width, height: img.height }), g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const at = (x, y) => g.getImageData(x, y, 1, 1).data[0];
+    return { w: img.width, h: img.height, inside: at(2, 2), outside: at(img.width - 2, 2), edgeIn: at(W0 - 2, 5), edgeOut: at(W0 + 2, 5) };
+  }, [req.mask, wide.W - wide.r]);
+  expect(px.w).toBe(wide.W);
+  expect(px.inside).toBe(0);
+  expect(px.outside).toBe(255);
+  expect(px.edgeIn).toBe(0);
+  expect(px.edgeOut).toBe(255);
+});
+
+test('Extend: Continue the character keeps her words, for a picture whose body goes on past the edge', async ({ page }) => {
+  const asked = await setup(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-extend').first().click();
+  await expect(page.locator('#extendSheet')).toBeVisible();
+  await page.click('#extendSides [data-side="right"]');
+  await page.click('#extendSides [data-side="bottom"]');
+  await page.check('#extendPerson');
+  await page.click('#extendGo');
+  await expect(page.locator('#genStatus')).toHaveText('Extended - in Uploads, Generated.');
+  expect(asked[0].prompt).toBe('1girl, solo, red hair');
+  expect(asked[0].avoid).toBe('sepia');
+});
+
+test('Extend: a canvas too big to draw in one go says so and cannot be sent', async ({ page }) => {
+  await setup(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-extend').first().click();
+  await expect(page.locator('#extendSheet')).toBeVisible();
+  await page.evaluate(() => { extend.pic = Object.assign(document.createElement('canvas'), { width: 1200, height: 1216 }); });
+  await page.click('#extendAmount [data-frac="0.5"]');
+  await expect(page.locator('#extendHint')).toContainText('too big');
+  await expect(page.locator('#extendGo')).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#extendSheet')).toBeHidden();
+});

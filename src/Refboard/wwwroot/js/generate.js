@@ -1000,6 +1000,7 @@ function renderGenResults(list, total = list.length) {
       `<div class="gen-menu-h" aria-hidden="true">Change it</div>` +
       `<button type="button" class="gen-redraw" title="Brush over a part - a hand, an eye - and only that is drawn again">Redraw a part...</button>` +
       `<button type="button" class="gen-bg" title="Draw the background again - found from the picture's edges, and yours to correct with the brush">New background...</button>` +
+      `<button type="button" class="gen-extend" title="More canvas on the sides you choose, drawn to match - the picture itself is not changed">Extend...</button>` +
       `<button type="button" class="gen-finish" title="The same picture 1.5 times the size, with the detail that size has room for - what a draft becomes">Finish it</button>` +
       (u.parent ? `<button type="button" class="gen-compare" title="It beside the picture it was made from - a slider between them">Before and after</button>` : '') +
       `<hr>` +
@@ -1023,6 +1024,7 @@ function renderGenResults(list, total = list.length) {
     li.querySelector('.gen-menu').addEventListener('click', () => genMenuClose());
     li.querySelector('.gen-redraw').addEventListener('click', () => genRedrawOpen(u));
     li.querySelector('.gen-finish').addEventListener('click', () => genFinish(u));
+    li.querySelector('.gen-extend').addEventListener('click', () => genExtendOpen(u));
     li.querySelector('.gen-bg').addEventListener('click', () => genRedrawOpen(u, true));
     li.querySelector('.gen-compare')?.addEventListener('click', () => genCompare(u));
     li.querySelector('.gen-lights').addEventListener('click', () => genLights(u));

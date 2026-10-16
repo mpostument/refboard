@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-extend', title: 'Generate: extend the picture',
+    text: "More canvas on the sides you choose - a quarter or half again - drawn to match; the picture itself is not changed, only the new part is drawn. Say what should be there, or leave it as scenery. Find it in a picture's More menu: Extend...",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-compare', title: 'Generate: before and after',
     text: "A picture made from another - redrawn, finished, lit another way, in another medium - now has Before and after in its More menu: the two in one frame and a slider between them, to see what changed. The menu is grouped, too: Change it, Try it another way, Learn from it.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

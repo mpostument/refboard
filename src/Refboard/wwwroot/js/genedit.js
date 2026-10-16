@@ -14,6 +14,9 @@
      the original, so the rest is the same pixels, not "nearly".
    - New background: Redraw a part with the mask already brushed over the
      background - found from the picture's edges - for you to correct.
+   - Extend the picture: a bigger canvas with the picture in it and the new part masked.
+     The server draws the masked part from scratch (the same "Completely" Redraw) and
+     pastes the original back over the rest, so the picture itself does not change.
    - Light it differently, In other media: the same picture drawn again, img2img,
      with the light row's or the medium row's tags swapped in - several at once,
      to put side by side. */
@@ -228,6 +231,104 @@ function genBackgroundMask(pic) {
   return true;
 }
 
+/* ---- Extend the picture. Sizes are kept to multiples of 8 (the VAE works in 8-pixel
+   cells) and to what SDXL draws in one piece without a small card running out: 1.7
+   megapixels - 832x1216 and a quarter more on one side is 1.26, half more 1.52. */
+const GEN_EXTEND_MAX = 1_700_000;
+const GEN_EXTEND_SIDES = [['left', 'Left'], ['right', 'Right'], ['top', 'Top'], ['bottom', 'Bottom']];
+const GEN_EXTEND_AMOUNTS = [[0.25, 'A quarter'], [0.5, 'Half']];
+let extend = null;   // { u, pic, sides: Set, frac } while the sheet is open
+
+/* The new canvas: how much is added on each side, and the whole size. A side's amount is
+   a fraction of the picture's width (left, right) or height (top, bottom). */
+function extendBox(e) {
+  const by = n => Math.round(n / 8) * 8, W0 = e.pic.width, H0 = e.pic.height;
+  const l = e.sides.has('left') ? by(W0 * e.frac) : 0, r = e.sides.has('right') ? by(W0 * e.frac) : 0;
+  const t = e.sides.has('top') ? by(H0 * e.frac) : 0, b = e.sides.has('bottom') ? by(H0 * e.frac) : 0;
+  return { l, r, t, b, W: W0 + l + r, H: H0 + t + b };
+}
+/* A picture's words with the person left out: the tags of the rows about her (who, hair,
+   eyes, clothes, pose...), "1girl", "solo", anything about hair or eyes, and the pieces of
+   a weighted character name. What is left is the style and the scene. Asked to draw a blank
+   strip from "1girl, blonde hair" the sampler draws her hair there - on a white background
+   it drew a long fall of it. */
+function genScenery(words) {
+  // An option's tags are a string, an object by subject or setting (strings, or functions of
+  // the choices), or a function: every string in them counts; a function is asked with the defaults.
+  const strings = v => typeof v === 'string' ? [v] : typeof v === 'function' ? strings(v({ ...GEN_DEFAULTS })) : v && typeof v === 'object' ? Object.values(v).flatMap(strings) : [];
+  const own = new Set(GEN_CHOICES.filter(c => c.for === PERSON).flatMap(c => c.options.flatMap(o => strings(o.tags).flatMap(s => genSplit(comfyTags(s))))));
+  const person = /^(\d+\+?(girl|boy|other)s?|solo|looking at viewer)$|\b(hair|eyes?|face|lips|blush|smile|breasts?|bangs|twintails|ponytail)\b/i;
+  return genSplit(words).filter(t => {
+    const bare = t.replace(/^\(|:[\d.]+\)$|\)$/g, '');
+    if (own.has(t) || own.has(bare) || person.test(bare)) return false;
+    // A weighted tag is whole ("(simple drawing:1.3)") or a piece of one that held a comma
+    // (a character's name and series): the pieces are dropped.
+    return (t.startsWith('(') ? /:[\d.]+\)$/.test(t) : !/:[\d.]+\)$/.test(t));
+  });
+}
+
+/* The shape the new picture is filed under: the nearest of the three. */
+const extendShape = (W, H) => W / H < 0.9 ? 'portrait' : W / H > 1.1 ? 'landscape' : 'square';
+
+async function genExtendOpen(u) {
+  if (genBusy) { el('genStatus').textContent = 'Wait for the picture in hand - or Stop it.'; return; }
+  let pic;
+  try { pic = await genLoadPicture(u); } catch (err) { el('genStatus').textContent = err.message; return; }
+  extend = { u, pic, sides: new Set(['right']), frac: 0.25 };
+  el('extendText').value = '';
+  el('extendPerson').checked = false;
+  el('extendSides').innerHTML = GEN_EXTEND_SIDES.map(([id, label]) =>
+    `<button type="button" class="chip" data-side="${id}" aria-pressed="${extend.sides.has(id)}">${label}</button>`).join('');
+  el('extendAmount').innerHTML = GEN_EXTEND_AMOUNTS.map(([v, label]) =>
+    `<button type="button" class="chip" data-frac="${v}" aria-pressed="${v === extend.frac}">${label}</button>`).join('');
+  renderExtend();
+  el('extendSheet').classList.remove('hidden');
+  dialogOpened(el('extendSheet'), el('extendGo'));
+}
+function closeExtend() {
+  if (!extend) return;
+  el('extendSheet').classList.add('hidden');
+  extend = null;
+  dialogClosed(el('extendSheet'));
+}
+function renderExtend() {
+  const e = extend, box = extendBox(e), c = el('extendPreview');
+  c.width = box.W; c.height = box.H;
+  const g = c.getContext('2d');
+  g.drawImage(e.pic, box.l, box.t);
+  g.strokeStyle = '#cba6f7'; g.lineWidth = Math.max(2, box.W / 300); g.setLineDash([10, 8]);
+  g.strokeRect(box.l, box.t, e.pic.width, e.pic.height);
+  const tooBig = box.W * box.H > GEN_EXTEND_MAX, none = !e.sides.size;
+  el('extendGo').disabled = tooBig || none;
+  el('extendHint').textContent = none ? 'Pick a side to add to.'
+    : tooBig ? `${box.W} x ${box.H} is too big to draw in one go - pick fewer sides or a smaller step.`
+    : `${e.pic.width} x ${e.pic.height} becomes ${box.W} x ${box.H}. The new part is drawn from what is at the edge.`;
+}
+function extendGo() {
+  const e = extend;
+  if (!e || el('extendGo').disabled) return;
+  const box = extendBox(e), more = el('extendText').value.trim().slice(0, 100), { u } = e;
+  // The picture on a bigger canvas, and a mask white over all of the new part. The server
+  // erases that part before drawing, so what the canvas holds there is never seen.
+  const big = Object.assign(document.createElement('canvas'), { width: box.W, height: box.H }), g = big.getContext('2d');
+  g.fillStyle = '#808080'; g.fillRect(0, 0, box.W, box.H);
+  g.drawImage(e.pic, box.l, box.t);
+  const mask = Object.assign(document.createElement('canvas'), { width: box.W, height: box.H }), m = mask.getContext('2d');
+  m.fillStyle = '#fff'; m.fillRect(0, 0, box.W, box.H);
+  m.fillStyle = '#000'; m.fillRect(box.l, box.t, e.pic.width, e.pic.height);
+  // Unless asked to go on drawing her, the new part is the scene: her words are left out and
+  // "no humans" is in, and she is kept out by name.
+  const person = el('extendPerson').checked;
+  const words = person ? genSplit(genWordsOf(u)) : ['no humans', ...genScenery(genWordsOf(u))];
+  const prompt = comfyTags([...words, more && `(${more}:1.3)`].filter(Boolean).join(', '));
+  const avoid = person ? u.avoid || '' : [u.avoid, '1girl, 1boy, solo, face, hair, spiral binding, notebook, paint swatches, color palette, border, frame'].filter(Boolean).join(', ');
+  const tags = [...(u.tags || []), ...genSplit(more), 'extended'].slice(0, 24).map(t => t.slice(0, 40));
+  const req = { prompt, avoid, tags, shape: extendShape(box.W, box.H), image: genEncode(big),
+    mask: mask.toDataURL('image/png').split(',')[1], denoise: 1, parent: u.file };
+  closeExtend();
+  runGenerate([req], 'Drawing more of it...', 'Extended - in Uploads, Generated.');
+}
+
 /* ---- Before and after: the picture over the one it was made from, and a slider.
    The "before" is clipped to the left of the slider; both are drawn in the same box, so a
    Finished picture (1.5 times the size) lines up with its draft. */
@@ -267,6 +368,24 @@ function initGenEdit() {
   stage.addEventListener('pointerdown', e => { stage.setPointerCapture(e.pointerId); drag(e); });
   stage.addEventListener('pointermove', e => { if (e.buttons) drag(e); });
   el('compareSlider').addEventListener('input', e => compareSet(Number(e.target.value)));
+  el('extendSides').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-side]');
+    if (!b || !extend) return;
+    extend.sides.has(b.dataset.side) ? extend.sides.delete(b.dataset.side) : extend.sides.add(b.dataset.side);
+    b.setAttribute('aria-pressed', String(extend.sides.has(b.dataset.side)));
+    renderExtend();
+  });
+  el('extendAmount').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-frac]');
+    if (!b || !extend) return;
+    extend.frac = Number(b.dataset.frac);
+    for (const x of el('extendAmount').children) x.setAttribute('aria-pressed', String(x === b));
+    renderExtend();
+  });
+  el('extendGo').addEventListener('click', extendGo);
+  el('extendClose').addEventListener('click', closeExtend);
+  el('extendText').addEventListener('keydown', ev => { if (ev.key === 'Enter') extendGo(); });
+  initSheet(el('extendSheet'), closeExtend);
   el('compareClose').addEventListener('click', closeCompare);
   initSheet(el('compareSheet'), closeCompare);
   const mask = el('redrawMask');

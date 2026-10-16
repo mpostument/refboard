@@ -224,6 +224,18 @@ white round it for a margin and drew a white frame), Light it four ways
 other media (watercolour, ink, Copic, pencil: the old medium's tags and
 what it kept out removed first, denoise 0.65, 0.8 for ink and pencil - and
 even then red hair stayed red; a ControlNet on the line art would fix it).
+In place too: Extend (`genExtendOpen()` in `js/genedit.js`) - a bigger canvas, the picture in it, a
+mask white over the new part (a quarter or half of the width for left and right, of the height for top
+and bottom; at most 1.7 megapixels, multiples of 8), "Completely" Redraw on the server so the original
+is pasted back as it was. Run against a real ComfyUI (832x1216 + 208 right, 18 s): the picture is
+untouched and has no seam, but asked to draw the strip from the picture's own words ("1girl, blonde
+hair") the model drew more hair there - so the person's words are left out (`genScenery()`: the tags of
+the rows about her, 1girl, solo, anything about hair or eyes, a character's weighted name), "no humans" is
+in and she is kept out by name; "Continue the character too" turns that off for a body cropped at
+the edge. Watercolour words drew a sketchbook page with a spiral binding and paint swatches in the strip
+(kept out by name); what is left is mostly blank white with now and then one stray shape. Still to come:
+the strip drawn in two steps for a bigger extension, and a plain colour fill for the white-background
+picture, which needs no model.
 In place too: Before and after (`genCompare()` in `js/genedit.js`) - every picture made from another
 (Redraw, Finish, New background, Light, Media) keeps its `parent` file id in its document; the More menu
 then shows the two in one box, the first clipped to the left of a slider (`clip-path`, so a Finished
