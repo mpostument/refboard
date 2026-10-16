@@ -93,7 +93,7 @@ test('with a ComfyUI behind the server: made, kept, shown, opened', async ({ pag
   const nav = page.locator('.nav-item[data-view="generate"]');
   await expect(nav).toBeVisible();
   // On the dashboard's Prepare card too.
-  await expect(page.locator('#stages .stage-card[data-stage="Prepare"]').getByRole('button', { name: /Generate references/ })).toHaveCount(1);
+  await expect(page.locator('#stages .stage-card[data-stage="Prepare"]').getByRole('button', { name: /Gen AI/ })).toHaveCount(1);
 
   await nav.click();
   // A landscape asks nothing about hair; back to a character, it does.

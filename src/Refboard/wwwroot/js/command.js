@@ -150,7 +150,9 @@ function collectCommands() {
     for (const b of el('rail').querySelectorAll('button')) {
       // A section you hid (js/stages.js) is off the rail, not out of reach.
       const hid = b.classList.contains('user-hidden') && !b.classList.contains('hidden');
-      if ((!hid && !visible(b)) || b.id === 'btnFind') continue;
+      // A tab of a group (.rail-sub, js/stages.js) is not drawn on the rail and is as findable as ever.
+      const tab = b.classList.contains('rail-sub') && !b.classList.contains('hidden') && !b.disabled;
+      if ((!hid && !tab && !visible(b)) || b.id === 'btnFind') continue;
       const id = b.dataset.view ? 'view-' + b.dataset.view : b.id;
       // Its stage is its hint, and a word it is found by: "paint" lists the Paint group.
       const stage = b.closest('.rail-stage')?.dataset.stage;

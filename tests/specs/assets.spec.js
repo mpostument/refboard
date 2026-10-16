@@ -1,7 +1,7 @@
 // Game assets, phase 2 (js/assets.js, and assetSolo / assetOrient / assetIcon in js/assetsfx.js):
 // the recipe a prop, a weapon or an item is asked for with, what is done to each picture after
 // the model, and the view that runs it. The model is not involved: pictures are drawn here.
-const { test, expect, openApp, fakeServer, makePng } = require('../helpers');
+const { openSection, test, expect, openApp, fakeServer, makePng } = require('../helpers');
 
 const settings = over => ({ kind: 'prop', view: 'side', thing: 'chest', theme: 'fantasy', material: 'any', simple: 'simple', ...over });
 const ask = (page, s) => page.evaluate(s => assetRequest(s), s);
@@ -277,7 +277,7 @@ async function setup(page) {
     return r.fulfill({ json: { state: 'done', upload: { doc, url: 'uploads/' + id + '.png' } } });
   });
   await openApp(page);
-  await page.locator('.nav-item[data-view="assets"]').click();
+  await openSection(page, 'assets');
   return { server, posted };
 }
 
@@ -333,7 +333,7 @@ test('switching the kind swaps the ideas, and the choice is remembered', async (
   await page.click('#assetThings [data-thing="key"]');
   await expect(page.locator('#assetThing')).toHaveValue('key');
   await page.reload();
-  await page.locator('.nav-item[data-view="assets"]').click();
+  await openSection(page, 'assets');
   await expect(page.locator('#assetThing')).toHaveValue('key');
 });
 
@@ -341,7 +341,7 @@ test('a ComfyUI that is not answering disables Make and says why', async ({ page
   await fakeServer(page);
   await page.route('**/api/generate**', r => r.fulfill({ json: { available: false, configured: true, reason: 'ComfyUI is not answering.' } }));
   await openApp(page);
-  await page.locator('.nav-item[data-view="assets"]').click();
+  await openSection(page, 'assets');
   await expect(page.locator('#assetOffline')).toContainText('not answering');
   await expect(page.locator('#assetGo')).toBeDisabled();
 });
@@ -455,7 +455,7 @@ test('a character with no figure in 3D forms takes you there, with the Figure bu
   // A server with a ControlNet (the last route registered wins).
   await page.route('**/api/generate', r => r.request().method() === 'GET' ? r.fulfill({ json: { available: true, control: true, checkpoint: 'test.safetensors', quality: 'masterpiece' } }) : r.fallback());
   await page.reload();
-  await page.click('.nav-item[data-view="assets"]');
+  await openSection(page, 'assets');
   await page.click('#assetChoices [data-as="kind"][data-opt="character"]');
   await page.click('#assetGo');
   await expect(page.locator('#viewTitle')).toHaveText(/3D forms/i);

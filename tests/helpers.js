@@ -121,4 +121,11 @@ async function fakeServer(page) {
   return { files, items, moves };
 }
 
-module.exports = { test, expect: base.expect, makePng, quadrantsPng, QUADS, openApp, NEWS_IDS, fakeServer };
+/* A section that is a tab of a group (VIEW_GROUPS in js/stages.js): the group's rail button, then the tab. */
+const SECTION_LEAD = { assets: 'generate', palette: 'colour', sky: 'perspective', museum: 'all' };
+async function openSection(page, view) {
+  await page.click(`.nav-item[data-view="${SECTION_LEAD[view]}"]`);
+  await page.click(`#viewTabs [data-view="${view}"]`);
+}
+
+module.exports = { openSection, test, expect: base.expect, makePng, quadrantsPng, QUADS, openApp, NEWS_IDS, fakeServer };

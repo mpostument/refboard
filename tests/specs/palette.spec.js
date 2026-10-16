@@ -2,11 +2,11 @@
 // Undo, harmonies, values spread out, only what your paints mix, recipes,
 // reordering, saved palettes, a picture's palette from the Colour studio, and a
 // palette sent to Generate as a reference's colours.
-const { test, expect, openApp, quadrantsPng, QUADS, fakeServer } = require('../helpers');
+const { openSection, test, expect, openApp, quadrantsPng, QUADS, fakeServer } = require('../helpers');
 
 const hexes = page => page.locator('#pgRow .pg-hex').allTextContents();
 const open = async page => {
-  await page.click('.nav-item[data-view="palette"]');
+  await openSection(page, 'palette');
   await expect(page.locator('#pgRow .pg-sw')).toHaveCount(5);
 };
 

@@ -1,11 +1,11 @@
 // Skies (js/sky.js): a sky painted on the spot - a time of day, a kind of cloud,
 // how much, what is under it - from noise, lit by a cheap rule, in perspective;
 // the first half of the Sky and weather section.
-const { test, expect, openApp } = require('../helpers');
+const { openSection, test, expect, openApp } = require('../helpers');
 
 const open = async page => {
   await openApp(page);
-  await page.click('.nav-item[data-view="sky"]');
+  await openSection(page, 'sky');
   await expect(page.locator('#skyNote')).toContainText('The colours are measured');
 };
 // Draws a sky from a state in the page and gives back what the tests ask of it.
@@ -129,7 +129,9 @@ test('the view: chips for the time, cloud and ground; cover hidden for clear; An
 
 test('it is on the rail under Prepare, found by Ctrl+K, and the weather half opens from What\'s new', async ({ page }) => {
   await openApp(page);
-  await expect(page.locator('#rail .rail-stage[data-stage="Prepare"] .nav-item[data-view="sky"]')).toBeVisible();
+  // A tab of the Perspective grid's group, not a rail button of its own; still on the dashboard's Prepare card.
+  await expect(page.locator('#rail .nav-item[data-view="sky"]')).toBeHidden();
+  await expect(page.locator('#stages .stage-card[data-stage="Prepare"]').getByRole('button', { name: /Sky and weather/ })).toHaveCount(1);
   await page.keyboard.press('Control+k');
   await page.locator('#cmdkInput').fill('clouds');
   await expect(page.locator('#cmdkList [role="option"]').first()).toContainText('Sky and weather');

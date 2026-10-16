@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=5f6f0a62">
+<link rel="stylesheet" href="css/app.css?v=6f73147f">
 </head>
 <body>
 <div id="setup">
@@ -66,14 +66,14 @@
       <span class="rail-stage-name" aria-hidden="true">Prepare</span>
       <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
       <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images - browse and search" aria-label="All images"></button>
-      <button class="nav-item" type="button" data-view="museum" data-icon="museum" data-tip="Museums - search the Met and the Rijksmuseum, open a painting in the workspace" aria-label="Museums"></button>
+      <button class="nav-item rail-sub" type="button" data-view="museum" data-icon="museum" data-tip="Museums - search the Met and the Rijksmuseum, open a painting in the workspace" aria-label="Museums"></button>
       <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
-      <button class="nav-item" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
+      <button class="nav-item rail-sub" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
       <button class="nav-item" type="button" data-view="perspective" data-icon="perspective" data-tip="Perspective grid - vanishing points on your paper to print and draw over, and how tall people are anywhere in a picture" aria-label="Perspective grid"></button>
-      <button class="nav-item" type="button" data-view="sky" data-icon="sky" data-tip="Sky and weather - a sky to study at any time of day, and how fast a wash will dry today" aria-label="Sky and weather"></button>
+      <button class="nav-item rail-sub" type="button" data-view="sky" data-icon="sky" data-tip="Sky and weather - a sky to study at any time of day, and how fast a wash will dry today" aria-label="Sky and weather"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
-      <button class="nav-item hidden" type="button" data-view="assets" data-icon="sword" data-tip="Game assets - props, weapons and items for a 2D game, cut out, with ComfyUI" aria-label="Game assets"></button>
-      <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Generate references - pictures made to order, with ComfyUI" aria-label="Generate references"></button>
+      <button class="nav-item rail-sub hidden" type="button" data-view="assets" data-icon="sword" data-tip="Game assets - props, weapons and items for a 2D game, cut out, with ComfyUI" aria-label="Game assets"></button>
+      <button class="nav-item hidden" type="button" data-view="generate" data-icon="sparkle" data-tip="Gen AI - pictures made with your ComfyUI: references, and assets for a 2D game" aria-label="Gen AI"></button>
     </div>
     <div class="rail-stage" role="group" aria-label="Practise" data-stage="Practise"
          data-blurb="The basics, a little every day.">
@@ -161,6 +161,8 @@
         <button class="icon-btn" type="button" id="btnOpenSession" data-icon="sliders"
                 title="Session controls - interval, schedule, options, Start" aria-label="Session controls"></button>
       </div>
+      <!-- The sections that share one rail button (VIEW_GROUPS, js/stages.js), as tabs. -->
+      <div class="chips hidden" id="viewTabs" role="group" aria-label="In this section" style="margin-top:6px"></div>
       <div class="count" id="viewMeta" style="margin-top:6px"></div>
       <!-- Browse-only: a search box over a dashboard would have nothing to
            search. setView() shows and hides it with the grid it belongs to. -->
@@ -2227,7 +2229,7 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=d303381b"></script>
-<script src="js/setup.js?v=ff7fd707"></script>
+<script src="js/setup.js?v=22b4a0a5"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=ea07afe9"></script>
 <script src="js/uploads.js?v=a59c8f0e"></script>
@@ -2240,12 +2242,12 @@
 <script src="js/sort.js?v=6b40f3d5"></script>
 <script src="js/study.js?v=fc69529c"></script>
 <script src="js/layers.js?v=29c0c0af"></script>
-<script src="js/stages.js?v=c7fb5944"></script>
+<script src="js/stages.js?v=eee7c2f5"></script>
 <script src="js/pins.js?v=b448b387"></script>
 <script src="js/workspace.js?v=db149ee0"></script>
 <script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=165aa97e"></script>
+<script src="js/command.js?v=7d7929fe"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
 <script src="js/whatsnew.js?v=edfa509c"></script>
 <script src="js/edges.js?v=055fd538"></script>

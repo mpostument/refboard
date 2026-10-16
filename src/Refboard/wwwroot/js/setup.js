@@ -1285,9 +1285,12 @@ function setView(next) {
   el('viewTitle').textContent = viewTitle();
   if (changed) announce(viewTitle());
 
+  // The rail button of a group is current while any section of the group is open.
+  const lead = viewGroupOf(view.kind)[0];
   for (const b of document.querySelectorAll('.nav-item[data-view]')) {
-    b.setAttribute('aria-current', String(b.dataset.view === view.kind));
+    b.setAttribute('aria-current', String(b.dataset.view === view.kind || b.dataset.view === lead));
   }
+  renderViewTabs();
   markCurrentInTree();
 
   if (browsing) refreshGrid(); else updateViewMeta();

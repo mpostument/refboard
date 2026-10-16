@@ -1,7 +1,7 @@
 // Museums (js/museum.js): the Met and the Rijksmuseum searched from the app,
 // a result opened in the workspace. The museums' hosts are answered here,
 // so the test needs no network - and can say which requests were made.
-const { test, expect, openApp, quadrantsPng, makePng } = require('../helpers');
+const { openSection, test, expect, openApp, quadrantsPng, makePng } = require('../helpers');
 
 const EN = 'http://vocab.getty.edu/aat/300388277';
 const png = quadrantsPng();
@@ -68,7 +68,7 @@ async function fakeMuseums(page, { metFails = false } = {}) {
 }
 
 const open = async page => {
-  await page.click('.nav-item[data-view="museum"]');
+  await openSection(page, 'museum');
   await expect(page.locator('#muQuery')).toBeVisible();
 };
 const search = async (page, q) => {

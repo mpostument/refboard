@@ -2,7 +2,7 @@
 // air's temperature, humidity and wind - typed, or fetched from Open-Meteo for
 // a place. The second half of the Sky and weather section. Open-Meteo is
 // stubbed: no test here reaches the network.
-const { test, expect, openApp } = require('../helpers');
+const { openSection, test, expect, openApp } = require('../helpers');
 
 // A forecast as Open-Meteo answers it: two days of hours, the current reading, the sun.
 const forecast = (over = {}) => {
@@ -32,7 +32,7 @@ const stub = async (page, fc = forecast()) => {
 };
 const openWeather = async page => {
   await openApp(page);
-  await page.click('.nav-item[data-view="sky"]');
+  await openSection(page, 'sky');
   await page.click('#skyMode [data-mode="weather"]');
   await expect(page.locator('#wxPane')).toBeVisible();
 };
@@ -139,7 +139,7 @@ test('a place: searched on the geocoder, chosen, its forecast asked by coordinat
   await expect(page.locator('.wx-table tr.wx-best')).toHaveCount(1);
   // Remembered: a reload opens the weather half and asks again by itself.
   await page.reload();
-  await page.click('.nav-item[data-view="sky"]');
+  await openSection(page, 'sky');
   await expect(page.locator('.wx-table tbody tr')).toHaveCount(12);
   expect(asked.filter(u => u.startsWith('https://api.open-meteo.com/'))).toHaveLength(2);
 });

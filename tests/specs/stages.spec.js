@@ -11,7 +11,8 @@ test('the dashboard has the four stages, each with what the rail has in it', asy
   // with the sample pack standing in for a library, as here.
   await expect(card(page, 'Prepare').getByRole('button', { name: /All images/ })).toHaveCount(1);
   for (const stage of ['Prepare', 'Practise', 'Paint', 'Check']) {
-    const onRail = await page.locator(`#rail .rail-stage[data-stage="${stage}"] button:visible`).count();
+    // A section that is a tab of a group is not drawn on the rail (.rail-sub) but has its card.
+    const onRail = await page.locator(`#rail .rail-stage[data-stage="${stage}"] button:not(.hidden)`).count();
     await expect(card(page, stage).locator('.stage-tool')).toHaveCount(onRail);
   }
 

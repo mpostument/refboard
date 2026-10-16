@@ -1,6 +1,6 @@
 // Accessibility: every control has a name a screen reader can say, focus
 // can be seen, and a modal dialog keeps the keyboard inside it.
-const { test, expect, openApp, quadrantsPng } = require('../helpers');
+const { openSection, test, expect, openApp, quadrantsPng } = require('../helpers');
 
 // The name a screen reader would read, near enough: aria-label, the
 // element aria-labelledby points at, a <label>, the text inside, the title.
@@ -19,7 +19,8 @@ const unnamed = page => page.evaluate(() => {
 test('every control on every screen has a name', async ({ page }) => {
   await openApp(page);
   for (const view of ['dashboard', 'colour', 'palette', 'museum', 'perspective', 'train', 'forms']) {
-    await page.click(`.nav-item[data-view="${view}"]`);
+    if (view === 'palette' || view === 'museum') await openSection(page, view);
+    else await page.click(`.nav-item[data-view="${view}"]`);
     if (view === 'forms') await expect(page.locator('#formsPanel button').first()).toBeVisible();
     expect(await unnamed(page), view).toEqual([]);
   }

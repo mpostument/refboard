@@ -1,10 +1,10 @@
 // Seasons and times of day (js/seasons.js): ready landscape palettes in the palette
 // generator, six colours each, with what to do with them.
-const { test, expect, openApp } = require('../helpers');
+const { openSection, test, expect, openApp } = require('../helpers');
 
 const hexes = page => page.locator('#pgRow .pg-hex').allTextContents();
 const open = async page => {
-  await page.click('.nav-item[data-view="palette"]');
+  await openSection(page, 'palette');
   await expect(page.locator('#pgRow .pg-sw')).toHaveCount(5);
 };
 
