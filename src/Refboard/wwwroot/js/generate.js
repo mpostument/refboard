@@ -533,6 +533,7 @@ function genHueTag(L, h) {
 // How hard the name pulls, as a ComfyUI weight. Unweighted, Frieren came out
 // without her pointed ears in 6 pictures of 8 (same seeds, Animagine XL 4.0,
 // bust, Original); at 1.2 in 2 of 8 - her clothes were there either way.
+const GEN_POSE_AVOID = 'mannequin, wooden mannequin, art mannequin, doll, jointed doll, ball joints, faceless, 3d render';
 const GEN_CHAR_WEIGHT = 1.2, GEN_VARY_OUTFIT_WEIGHT = 1.4;
 function genCharacterTags(text) {
   const t = String(text || '').trim().slice(0, 80);
@@ -667,7 +668,18 @@ function genRequest() {
   if (!src) return out;
   out.image = src.b64;
   out.shape = src.shape;
-  if (src.mode === 'pose') { out.control = true; out.strength = src.level; out.tags = [...out.tags, 'pose'].slice(0, 24); return out; }
+  if (src.mode === 'pose') {
+    out.control = true; out.strength = src.level; out.tags = [...out.tags, 'pose'].slice(0, 24);
+    // The ControlNet reads a wooden mannequin; without this the model drew the mannequin
+    // itself, in watercolour, faceless (first run on a real ComfyUI).
+    out.avoid = [out.avoid, GEN_POSE_AVOID].filter(Boolean).join(', ');
+    // And clothes, when nothing chosen says what she wears: a bare list of tags
+    // on the mannequin's volumes drew the mannequin (strength 0.8, seed 7), while
+    // t-shirt, jeans, hair and a face at 0.5 drew a girl in the same pose.
+    if (genChoices.setting === 'any' && genChoices.clothes === 'setting' && !genCharacterTags(genChoices.character))
+      out.prompt = [out.prompt, 'casual, t-shirt, pants, detailed face'].join(', ');
+    return out;
+  }
   out.denoise = src.level;
   if (src.mode === 'study') {
     // A photo has no tags of its own: the beginner's, so what comes out is
@@ -707,7 +719,7 @@ const GEN_SHAPE_PX = { portrait: [832, 1216], square: [1024, 1024], landscape: [
 const GEN_LEVELS = {
   study: { title: 'How far from it', start: 1, options: [['Close', 0.45, 'Repaints the picture in the style, keeping its drawing'], ['Simplified', 0.62, 'Keeps the big shapes, drops the detail'], ['Loose', 0.8, 'Only its layout and colours']] },
   vary: { title: 'How different', start: 1, options: [['Slightly', 0.4, 'The same picture, a little changed'], ['Somewhat', 0.6, 'Same idea, new details'], ['Very', 0.8, 'Only the layout stays']] },
-  pose: { title: 'How strictly', start: 1, options: [['Loose', 0.5, 'The pose is a suggestion'], ['Firm', 0.8, 'The pose, with some give'], ['Exact', 1.1, 'Follows the figure to the joint']] },
+  pose: { title: 'How strictly', start: 1, options: [['Loose', 0.35, 'The pose is a suggestion'], ['Firm', 0.5, 'The pose, with some give'], ['Exact', 0.7, 'Follows the figure closely - and may keep something of the mannequin']] },
 };
 const GEN_WHAT = {
   study: 'A study: this picture simplified into flat shapes, in the style chosen above.',
@@ -731,11 +743,34 @@ function genEncode(canvas) {
   return b64;
 }
 
+/* Where the figure is in a pose picture (the 3D view's depth map): its box, a
+   margin round it, in the picture's pixels. The 3D view is wide and the figure
+   stands in the middle of it, a sixth of the frame - drawn as it came, the model
+   made a small figure on a big sheet. Looked for on a 160-px copy: whatever is not
+   the colour of the corner. */
+function genFigureBox(img) {
+  const k = 160 / Math.max(img.naturalWidth, img.naturalHeight), w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+  const g = Object.assign(document.createElement('canvas'), { width: w, height: h }).getContext('2d', { willReadFrequently: true });
+  g.drawImage(img, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    if (Math.abs(d[i] - d[0]) + Math.abs(d[i + 1] - d[1]) + Math.abs(d[i + 2] - d[2]) > 36) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return null;
+  const m = 0.08 * Math.max(x1 - x0, y1 - y0) + 2;
+  const L = Math.max(0, x0 - m) / k, T = Math.max(0, y0 - m) / k, R = Math.min(w, x1 + 1 + m) / k, B = Math.min(h, y1 + 1 + m) / k;
+  return { x: L, y: T, w: R - L, h: B - T };
+}
+
 async function genSetSource(blob, mode, extra = {}) {
   const url = URL.createObjectURL(blob);
   try {
     const img = await loadImg(url);
-    const ar = img.naturalWidth / img.naturalHeight;
+    const box = mode === 'pose' ? genFigureBox(img) : null;
+    const crop = box || { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight };
+    const ar = crop.w / crop.h;
     const shape = extra.shape || (ar > 1.15 ? 'landscape' : ar < 0.87 ? 'portrait' : 'square');
     const [W, H] = GEN_SHAPE_PX[shape] || GEN_SHAPE_PX.portrait;
     const c = document.createElement('canvas');
@@ -750,9 +785,22 @@ async function genSetSource(blob, mode, extra = {}) {
       const [r, gg, b] = px.getImageData(0, 0, 1, 1).data;
       g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(0, 0, W, H);
     }
-    const k = (mode === 'pose' ? Math.min : Math.max)(W / img.naturalWidth, H / img.naturalHeight);
-    const w = img.naturalWidth * k, h = img.naturalHeight * k;
-    g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+    if (box) {
+      // The frame is the figure's box widened to the frame's own proportions, round
+      // the figure's middle: bars of the background colour at the sides made the
+      // model draw a dark edge there. Where the widened box leaves the picture, the
+      // background colour fills.
+      const t = W / H, cx = crop.x + crop.w / 2, cy = crop.y + crop.h / 2;
+      let cw = crop.w, ch = crop.h;
+      if (cw / ch < t) cw = ch * t; else ch = cw / t;
+      const x0 = cx - cw / 2, y0 = cy - ch / 2, k = W / cw;
+      const sx = Math.max(0, x0), sy = Math.max(0, y0), ex = Math.min(img.naturalWidth, x0 + cw), ey = Math.min(img.naturalHeight, y0 + ch);
+      g.drawImage(img, sx, sy, ex - sx, ey - sy, (sx - x0) * k, (sy - y0) * k, (ex - sx) * k, (ey - sy) * k);
+    } else {
+      const k = (mode === 'pose' ? Math.min : Math.max)(W / crop.w, H / crop.h);
+      const w = crop.w * k, h = crop.h * k;
+      g.drawImage(img, crop.x, crop.y, crop.w, crop.h, (W - w) / 2, (H - h) / 2, w, h);
+    }
     genSource = { mode, shape, b64: genEncode(c), preview: c.toDataURL('image/jpeg', 0.6),
       level: GEN_LEVELS[mode].options[GEN_LEVELS[mode].start][1], ...extra };
   } finally { URL.revokeObjectURL(url); }
@@ -822,8 +870,14 @@ function renderGenerate() {
     ids.map(id => row(GEN_CHOICES.find(c => c.id === id))).join('') + '</section>').join('');
   syncGenRows();
   renderGenRecent();
+  renderGenWhere();
+}
+let genControlMissing = '';
+function renderGenWhere() {
   el('genWhere').textContent = 'Made by the ComfyUI your server is set up with, and kept in Uploads - ' +
-    'the Generated group of the Uploads pack in the library, tagged with these choices.';
+    'the Generated group of the Uploads pack in the library, tagged with these choices.' +
+    (genControlMissing ? ` COMFY_CONTROLNET names ${genControlMissing}, but ComfyUI has no such file in models/controlnet - ` +
+      'put it there and Draw this pose (3D forms) will show up.' : '');
 }
 
 // Only the rows the choices ask: a landscape has no hair colour, ink no
@@ -1143,6 +1197,10 @@ async function genCheck() {
   genOffline = !info.available && info.configured === true ? (info.reason || 'ComfyUI is not answering.') : '';
   if (info.available) genServer = { quality: info.quality || '', negative: info.negative || '' };
   genControl = !!info.available && !!info.control;
+  // A ControlNet named in COMFY_CONTROLNET that ComfyUI does not have: Draw this pose is
+  // missing for that reason, and nothing else on the page would say so.
+  genControlMissing = (info.available && info.controlMissing) || '';
+  if (el('genWhere')) renderGenWhere();
   document.getElementById('formPoseGen')?.classList.toggle('hidden', !genControl);
   document.querySelector('.nav-item[data-view="generate"]').classList.toggle('hidden', !info.available && !genOffline);
   el('genOffline').classList.toggle('hidden', !genOffline);

@@ -972,6 +972,30 @@ function poseFormRig(m, o) {
   }
 }
 
+async function poseFromPhoto(file) {
+  const note = el('formPhotoNote'), b = el('formPosePhoto'), o = activeFormObject();
+  if (formRigOf(o.shape) !== FORM_RIGS.figure || !file.type.startsWith('image/')) return;
+  b.disabled = true;
+  note.textContent = visionModels.pose ? 'Reading the pose...' : 'Loading the pose model - about 6 MB, once. The photo stays in this browser.';
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImg(url);
+    const res = (await loadVision('pose')).detect(visionCanvas(img));
+    const fit = res.worldLandmarks && res.worldLandmarks[0] && fitFigurePose(res.worldLandmarks[0]);
+    if (!fit) { note.textContent = 'No figure found - the hips and shoulders must show in the photo.'; return; }
+    pushFormUndo(formObjectsSnapshot());
+    o.pose = cleanFormPose(fit.pose, FORM_RIGS.figure);
+    o.rx = fit.rx; o.ry = fit.ry; o.rz = fit.rz;
+    formsChanged();
+    const seen = Object.keys(o.pose).length;
+    note.textContent = `Pose taken from the photo: ${seen} of 14 joints seen${seen < 14 ? ' (the rest stay at rest)' : ''}. Hands are not read.` +
+      (genControlAvailable() ? ' Draw this pose makes a character in it.' : '');
+  } catch (err) {
+    console.error('pose from a photo:', err);
+    note.textContent = 'Could not read a pose from that picture - the pose model needs a connection the first time.';
+  } finally { URL.revokeObjectURL(url); b.disabled = false; }
+}
+
 // Which joint of the selected figure is being posed: a name, or null for
 // the figure as a whole. Kept off the scene - it is a selection, not a pose -
 // and only good for the form it was picked on.
@@ -3226,8 +3250,11 @@ function formsPanelHtml() {
         <button class="ghost" type="button" id="formPoseRandom" title="One of the poses above, every joint moved a little">Random pose</button>
         <button class="ghost" type="button" id="formPoseMirror" title="Left and right swapped, as in a mirror - the other half of a contrapposto">Mirror</button>
         <button class="ghost" type="button" id="formPoseReset" title="Back to the rest pose">Reset pose</button>
+        <button class="ghost" type="button" id="formPosePhoto" title="A photo of a whole person, standing or any other way: the figure takes the pose, turned as the person is">From a photo...</button>
+        <input type="file" id="formPosePhotoInput" accept="image/*" class="hidden" aria-label="Photo to take the pose from">
         <button class="ghost hidden" type="button" id="formPoseGen" title="With your ComfyUI and a ControlNet: an anime character drawn in exactly this pose, from this camera">Draw this pose</button>
-      </div>`,
+      </div>
+      <div class="count" id="formPhotoNote" role="status"></div>`,
     // The face, top down: hair, eyes, expression - the first two alike (a
     // style, the named colours, any other) under your characters, which set
     // both at once; one note for all three, saying what the choice means.
@@ -3389,6 +3416,7 @@ function syncFormsPanel() {
       el('formBuildNote').innerHTML = `<b>${figureHeights(o.build).heads.toFixed(1)} heads.</b> ${esc(B.hint)}`;
     }
     el('formPoseMirror').classList.toggle('hidden', !rig.mirror);
+    el('formPosePhoto').classList.toggle('hidden', !figure);
     el('formPoseReset').title = rig.reset;
     el('formJointRows').classList.toggle('hidden', !joint);
     const v = (joint && o.pose[joint]) || [0, 0, 0];
@@ -3710,6 +3738,14 @@ function bindFormsPanel() {
   el('formPoseRandom').addEventListener('click', poseEdit(o => { o.pose = randomFormPose(formRigOf(o.shape)); }));
   el('formPoseMirror').addEventListener('click', poseEdit(mirrorFormPose));
   el('formPoseReset').addEventListener('click', poseEdit(o => { o.pose = {}; }));
+  // A photo's pose onto the figure (js/posefit.js): the pose model finds the joints in 3D,
+  // posefit turns them into this rig's angles - and the figure is turned as the person is.
+  el('formPosePhoto').addEventListener('click', () => el('formPosePhotoInput').click());
+  el('formPosePhotoInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (file) await poseFromPhoto(file);
+  });
   // Only where a ControlNet can hold the picture to the figure.
   el('formPoseGen').classList.toggle('hidden', !genControlAvailable());
   el('formPoseGen').addEventListener('click', async () => {

@@ -73,10 +73,12 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(3));
             var models = await Http.GetFromJsonAsync<List<string>>($"{opts.ComfyUrl}/models/checkpoints", cts.Token) ?? [];
+            var control = ControlConfigured && await HasControlNetAsync(cts.Token);
             return models.Contains(opts.ComfyCheckpoint)
-                // What it always adds, for the page's Prompt to show.
+                // What it always adds, for the page's Prompt to show. controlMissing: a ControlNet
+                // is named in the options and is not in ComfyUI - the page says which.
                 ? new { available = true, checkpoint = opts.ComfyCheckpoint, quality = Quality, negative = Negative,
-                    control = ControlConfigured && await HasControlNetAsync(cts.Token) }
+                    control, controlMissing = ControlConfigured && !control ? opts.ComfyControlNet : null }
                 : new { available = false, configured = true, reason = $"ComfyUI has no {opts.ComfyCheckpoint} in models/checkpoints." };
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)

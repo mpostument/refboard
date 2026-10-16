@@ -221,7 +221,10 @@ test('starting from a picture: a study, a variation, a pose', async ({ page }) =
   await page.click('#genGo');
   await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
   expect(asked[3].control).toBe(true);
-  expect(asked[3].strength).toBe(0.8);
+  expect(asked[3].strength).toBe(0.5);
+  // The mannequin the ControlNet reads is kept out of the picture, and she is dressed.
+  expect(asked[3].avoid).toContain('mannequin');
+  expect(asked[3].prompt).toContain('t-shirt');
   expect(asked[3].denoise).toBeUndefined();
   expect(asked[3].shape).toBe('portrait');
 });

@@ -78,7 +78,7 @@ All via environment variables; every one has a default.
 | `DHASH_THRESHOLD` | `4` | Hamming distance at/below which two frames in one folder are flagged near-duplicate (advisory - off by default in the UI) |
 | `ROTATION_PATTERNS` | `360,turnaround` | Comma-separated folder-name substrings marking a rotation set |
 | `COMFY_URL` | *(empty - off)* | A [ComfyUI](https://github.com/comfyanonymous/ComfyUI) to generate references with, e.g. `http://192.168.1.20:8188` - on a machine with a GPU, started with `--listen` so this container can reach it. Empty: the page does not offer generating. |
-| `COMFY_CONTROLNET` | *(empty - off)* | An SDXL ControlNet in that ComfyUI's `models/controlnet` (a depth or union one) - what **Draw this pose** holds a picture to - the page sends it the figure as a depth map (white near, black behind), so a depth or union ControlNet. Empty: the 3D figure's pose button is not offered. |
+| `COMFY_CONTROLNET` | *(empty - off)* | An SDXL ControlNet in that ComfyUI's `models/controlnet` (a depth or union one; `diffusers/controlnet-depth-sdxl-1.0`, the fp16 file, works with Animagine XL 4.0) - what **Draw this pose** holds a picture to - the page sends it the figure as a depth map (white near, black behind), so a depth or union ControlNet. Empty: the 3D figure's pose button is not offered. |
 | `COMFY_CHECKPOINT` | `animagine-xl-4.0-opt.safetensors` | The SDXL checkpoint in that ComfyUI's `models/checkpoints`. The prompts are Danbooru tags, so an anime model trained on them ([Animagine XL 4.0](https://huggingface.co/cagliostrolab/animagine-xl-4.0) is the one it is tuned for). |
 
 ## Volumes
@@ -602,6 +602,17 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   words (weighted: *Very* different puts her in steampunk on the same face);
   the picture to start from goes as a JPEG under 700 kB, since nginx refuses a
   request body over 1 MB.
+  *Colours* has the Holbein box beside *Your palette*, and **Keep to the palette**
+  recolours the finished picture to it (`js/genlock.js`): each coloured pixel takes
+  the hue of the nearest palette colour and keeps its own lightness and softness,
+  greys stay - words only nudge a model, this does not. **Warm-up with new
+  poses** (`js/warmup.js`) is gesture drawing with figures made for you: 5, 10
+  or 20 whole figures in different poses and from different sides, each shown
+  30 s - 2 min; the next is made while you draw (Space pauses, the arrow skips,
+  Esc stops). In the 3D figure's Pose, **From a photo...** (`js/posefit.js`) sets
+  the joints from a photo of a whole person, and turns the figure as the person
+  is turned; with a ControlNet, *Draw this pose* then makes a character in it.
+  Hands are not read, and a lying figure reads badly.
   While pictures are made the button is *Stop*: it cancels the one in hand
   (ComfyUI is told) and starts none of the rest.
 - **A studio layout** - dark throughout, an icon rail down the left for the

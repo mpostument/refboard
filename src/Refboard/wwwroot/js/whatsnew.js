@@ -15,6 +15,15 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'pose-photo', title: '3D figure: take the pose from a photo',
+    text: "In the figure's Pose, From a photo... reads a photo of a whole person with the pose model and sets the figure's joints from it - and turns the figure as the person is turned. With a ComfyUI that has a ControlNet, Draw this pose then makes a character in that pose. Hands are not read; a lying figure reads badly. Draw this pose itself was tuned on a real ComfyUI: it now draws a girl, not the wooden mannequin.",
+    act: 'Open 3D forms', run: () => setView({ kind: 'forms' }) },
+  { id: 'gen-warmup', title: 'Generate: warm-up with new poses',
+    text: "Gesture drawing with figures made for you: 5, 10 or 20 whole figures in different poses and from different sides, each on the screen for 30 seconds to 2 minutes. The next is made while you draw; Space pauses, the arrow skips, Esc stops.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
+  { id: 'gen-lock', title: 'Generate: keep to the palette',
+    text: "Colours has the Holbein box now, and Keep to the palette recolours the finished picture to your palette or the box: every colour becomes the nearest one of it, the shading stays.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-stop', title: 'Generate: Stop',
     text: "While pictures are being made, Generate is Stop. It cancels the one in hand - ComfyUI is told, and drops it from its queue or interrupts it, whichever it is doing - and starts none of the rest of a batch of two or four. A slow picture, or one on a machine that has gone to sleep, no longer has to be waited out.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

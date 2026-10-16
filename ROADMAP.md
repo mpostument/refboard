@@ -237,8 +237,13 @@ on a generated picture - its own tags and shape again, a little or a lot
 changed; and **Draw this pose** (Forms > Pose, only with `COMFY_CONTROLNET`) -
 the 3D figure's render through a ControlNet, so the reference is the pose you
 set. The page crops the picture to the shape's size, so the server only passes
-it on. Not yet run against a real ComfyUI here - the graphs are those ComfyUI
-writes for its own img2img and ControlNetApplyAdvanced nodes. The figure goes
+it on. Run against a real ComfyUI (Animagine XL 4.0, diffusers
+controlnet-depth-sdxl-1.0 fp16): at strength 0.8 the model drew the wooden
+mannequin itself, in watercolour; at 0.5 with clothes and hair named it drew a girl
+in the same pose - so Firm is 0.5, the mannequin is kept out, and a character
+with nothing said about her clothes gets "casual, t-shirt, pants". The picture is
+cropped to the figure's box in the shape's proportions (the 3D view is wide, the
+figure a sixth of it). The figure goes
 as a depth map (`formsDepthSnapshot()` in `js/forms.js`: the forms alone,
 MeshDepthMaterial, the camera's near and far closed in on them, the greys
 stretched), and the key light - which a depth map cannot carry - as Generate's
@@ -1095,9 +1100,14 @@ the wash.
 
 ## From photo to 3D
 
-- **Pose from a photo onto the mannequin.** The pose model already finds
-  the joints in 3D (world landmarks); set the wooden figure's joints from
-  them, then turn it, see it from other sides, relight it.
+- **Pose from a photo onto the mannequin, the rest.** In place (3D forms >
+  Pose > From a photo..., `js/posefit.js`): the pose model's world landmarks
+  become the rig's angles, joint by joint (the twist of an upper arm or a thigh
+  searched so that the elbow or knee folds the right way), and the figure is turned
+  as the person is. Seen on two generated pictures (a standing contrapposto
+  reads well, a girl lying on her side does not - the model gave an upright
+  crouch). Still to come: the hands from the hand model, the camera's height and
+  lens from the photo, two people in one photo, and a lying figure.
 - **Light direction from a photo.** Estimate where the light comes from on
   a face (the face model gives its 3D shape), and set the same light on
   the 3D head.
