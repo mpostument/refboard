@@ -458,3 +458,32 @@ test('a character with no figure in 3D forms takes you there, with the Figure bu
   await expect(page.locator('#formShapes [data-shape="figure"]')).toBeFocused();
   expect(s.posted).toEqual([]);
 });
+
+test('the white border the model draws round a figure is taken off, down to the figure\'s own dark outline', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    // A 40 x 40 canvas: a 3 px white border, then a 2 px black outline, then a red body; transparent outside.
+    const c = Object.assign(document.createElement('canvas'), { width: 40, height: 40 }), g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(6, 6, 28, 28);
+    g.fillStyle = '#000'; g.fillRect(9, 9, 22, 22);
+    g.fillStyle = '#c00'; g.fillRect(11, 11, 18, 18);
+    const o = assetDefringe(c), a = (x, y) => o.getContext('2d').getImageData(x, y, 1, 1).data[3];
+    // A white garment with no outline: it loses only what the passes take (here 2), not all of it.
+    const w = Object.assign(document.createElement('canvas'), { width: 30, height: 30 }), wg = w.getContext('2d');
+    wg.fillStyle = '#fff'; wg.fillRect(5, 5, 20, 20);
+    const ow = assetDefringe(w, 2), aw = (x, y) => ow.getContext('2d').getImageData(x, y, 1, 1).data[3];
+    return { border: [a(7, 20), a(20, 7), a(33, 20)], outline: a(9, 20), body: a(20, 20), garmentEdge: aw(5, 15), garmentDeep: aw(8, 15), garmentMid: aw(15, 15) };
+  });
+  expect(r.border).toEqual([0, 0, 0]);
+  expect(r.outline).toBe(255);
+  expect(r.body).toBe(255);
+  expect([r.garmentEdge, r.garmentDeep, r.garmentMid]).toEqual([0, 255, 255]);
+});
+
+test('one direction is the default and faces right, for the game to mirror', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => ({ dirs: ASSET_DEFAULTS.dirs, one: CHAR_DIRS[1], choices: CHAR_CHOICES.map(c => c.id) }));
+  expect(r.dirs).toBe('1');
+  expect(r.one).toEqual([['right', 270]]);
+  expect(r.choices).toEqual(['1', '4', '8']);
+});

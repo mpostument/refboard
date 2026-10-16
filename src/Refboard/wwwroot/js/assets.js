@@ -66,10 +66,13 @@ const CHAR_FACE = {
   backRight: 'from behind, three-quarter back view, facing back right',
 };
 const CHAR_DIRS = {
+  // A side-on game needs one: it faces right, and the game flips it for left.
+  1: [['right', 270]],
   4: [['front', 0], ['left', 90], ['back', 180], ['right', 270]],
   8: [['front', 0], ['frontLeft', 45], ['left', 90], ['backLeft', 135], ['back', 180], ['backRight', 225], ['right', 270], ['frontRight', 315]],
 };
 const CHAR_CHOICES = [
+  { id: '1', label: '1 - side', hint: 'One picture, facing right - a game mirrors it for left' },
   { id: '4', label: '4 directions', hint: 'Front, left, back, right - for most games' },
   { id: '8', label: '8 directions', hint: 'Adds the four diagonals - for a game with free movement' },
 ];
@@ -125,7 +128,7 @@ const ASSET_VIEWS = [
 const ASSET_CONTAINER = /\b(chest|box|crate|barrel|door|jar|bag|coffin|basket|pot|book|casket)\b/i;
 
 const ASSET_LOOK_MAX = 120;   // the longest look a character is named by
-const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '4' };
+const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1' };
 let assetState = { ...ASSET_DEFAULTS };
 
 const assetKind = id => ASSET_KINDS.find(k => k.id === id) || ASSET_KINDS[0];
@@ -324,7 +327,7 @@ async function assetsCharacterGo(s) {
     await openForms(() => { const b = document.querySelector('#formShapes [data-shape="figure"]'); if (b) b.focus(); });
     return;
   }
-  const dirs = CHAR_DIRS[s.dirs] || CHAR_DIRS[4], seed = Math.floor(Math.random() * 2 ** 31);
+  const dirs = CHAR_DIRS[s.dirs] || CHAR_DIRS[1], seed = Math.floor(Math.random() * 2 ** 31);
   const scene = { ...formScene, fisheye: false, roll: 0, pitch: CHAR_PITCH[s.view] ?? CHAR_PITCH.side };
   status.textContent = 'Turning the figure...';
   const blobs = [];
@@ -345,15 +348,21 @@ async function assetsCharacterGo(s) {
     let pic;
     try { pic = await genLoadPicture(made.doc); } catch { return; }
     const cut = cutOut(pic);
-    if (cut.found) cuts.push({ doc: made.doc, canvas: cut.canvas });
-    else await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) });
+    if (cut.found) {
+      // Kept at once, cut out and with the white border off: stopping, or a closed page, leaves
+      // usable pictures, not the model's own. Lining up needs them all, so it is a second pass.
+      const canvas = assetTrim(assetDefringe(cut.canvas)) || cut.canvas;
+      const f = await assetKeep(made.doc, canvas, ['cut out']);
+      await forgetUpload(made.doc);
+      cuts.push({ doc: made.doc, file: f.id, canvas });
+    } else await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) });
   }, ASSET_UI);
   // Whatever was drawn is lined up, even if it was stopped or one failed.
   const lined = assetAlign(cuts.map(c => c.canvas));
   if (!lined) return;
   for (let i = 0; i < cuts.length; i++) {
     await assetKeep(cuts[i].doc, lined.canvases[i], ['cut out', 'aligned', `${lined.width}x${lined.height}`]);
-    await forgetUpload(cuts[i].doc);
+    await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
   }
   storeChanged();
   await ASSET_UI.refresh();

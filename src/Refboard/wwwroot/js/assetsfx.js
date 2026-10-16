@@ -346,6 +346,33 @@ function assetIcon(canvas, { size = 128, diagonal = false } = {}) {
   return out;
 }
 
+/* The white edge the model draws round a figure (a sticker's border), taken off. The plain
+   background it was cut from is a cream, not white, so the border is a different colour from it
+   and cutOut keeps it - and on a dark game background it shows as a bright outline. Each pass
+   removes one pixel from the outside of the figure where that pixel is near-white; it stops at
+   the figure's own dark outline, and at anything coloured. Up to `passes` pixels, so a white
+   garment with no outline loses at most that much. Returns a new canvas. */
+const FRINGE_LIGHT = 205;   // every channel at least this: a near-white pixel
+function assetDefringe(canvas, passes = 8) {
+  const w = canvas.width, h = canvas.height;
+  const img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
+  const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
+  for (let k = 0; k < passes; k++) {
+    const gone = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!on(x, y)) continue;
+      if (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1)) continue;
+      const i = (y * w + x) * 4;
+      if (d[i] >= FRINGE_LIGHT && d[i + 1] >= FRINGE_LIGHT && d[i + 2] >= FRINGE_LIGHT) gone.push(i + 3);
+    }
+    if (!gone.length) break;
+    for (const i of gone) d[i] = 0;
+  }
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
+  out.getContext('2d').putImageData(img, 0, 0);
+  return out;
+}
+
 /* ---- Characters (js/assets.js): the directions of one character are drawn one at a time, so
    each comes out a little taller or shorter than the next, and cut out each stands in a box
    of its own size. A game swaps them in one place, so they have to share a frame: the same
