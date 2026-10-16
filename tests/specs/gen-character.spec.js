@@ -175,3 +175,69 @@ test('a variation takes a Setting or Clothes chosen now, on top of its own words
   expect(r.steam.outfit).toBeUndefined();
   expect(r.steam.avoid).toBe('lowres');
 });
+
+test('her hair and eyes, in her words: right after the name, and the rows set above win over them', async ({ page }) => {
+  await openApp(page);
+  const named = { character: 'Frieren (Sousou no Frieren)', look: 'Silver hair,  green eyes, pointed ears' };
+  const r = await prompt(page, named);
+  // Each part weighted like the name, lower case, in the order given - before the first row's tags.
+  expect(r.prompt.startsWith('1girl, solo, (frieren, sousou no frieren:1.2), (silver hair:1.2), (green eyes:1.2), (pointed ears:1.2), ')).toBe(true);
+  // Hair colour set: her hair is left out (the colour now is the ask), her eyes and ears stay.
+  const red = (await prompt(page, { ...named, colour: 'red' })).prompt;
+  expect(red).toContain('red hair');
+  expect(red).not.toContain('silver hair');
+  expect(red).toContain('(green eyes:1.2)');
+  // Eyes set: the other way round.
+  const blue = (await prompt(page, { ...named, eyes: 'blue' })).prompt;
+  expect(blue).not.toContain('green eyes');
+  expect(blue).toContain('(silver hair:1.2)');
+  expect(blue).toContain('(pointed ears:1.2)');
+  // The hair style row (Long) says length, not colour: it does not take her colour away.
+  expect((await prompt(page, { ...named, hair: 'long' })).prompt).toContain('(silver hair:1.2)');
+  // No name, no look; and at most six parts, so a long list is not a wall of weights.
+  expect((await prompt(page, { look: 'silver hair' })).prompt).not.toContain('silver hair');
+  const many = (await prompt(page, { character: 'x', look: 'a, b, c, d, e, f, g, h' })).prompt;
+  expect(many).toContain('(f:1.2)');
+  expect(many).not.toContain('(g:1.2)');
+});
+
+test('her hair and eyes: asked for once she is named, kept with her, back with her chip', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate**', r => r.fulfill({ json: { available: true, quality: 'masterpiece', negative: 'lowres' } }));
+  await openApp(page);
+  await page.locator('.nav-item[data-view="generate"]').click();
+  const look = page.locator('#genLook'), name = page.locator('#genCharacter');
+  await expect(look).toBeHidden();                       // no name: nothing to describe
+  await page.locator('#genPrompt summary').click();
+  await name.fill('Frieren (Sousou no Frieren)');
+  await expect(look).toBeVisible();
+  await look.fill('silver hair, green eyes');
+  await expect(page.locator('#genPromptBody')).toContainText('(silver hair:1.2), (green eyes:1.2)');
+  // Kept with her, as the characters drawn lately are - and with her only.
+  await page.evaluate(() => {
+    genCharsRemember(genChoices.character); genLooksRemember(genChoices.character, genChoices.look);
+    genCharsRemember('Ayanami Rei (Evangelion)'); genLooksRemember('Ayanami Rei (Evangelion)', 'blue hair, red eyes');
+    renderGenRecent();
+  });
+  const chips = page.locator('#genRecent .chip');
+  await chips.nth(1).click();                            // Frieren: her own back
+  await expect(look).toHaveValue('silver hair, green eyes');
+  await chips.nth(0).click();                            // Rei: hers, not Frieren's
+  await expect(look).toHaveValue('blue hair, red eyes');
+  await expect(page.locator('#genPromptBody')).not.toContainText('silver hair');
+  // A name with none kept: the field is emptied, so another one's does not follow her.
+  await name.fill('Gojo Satoru (Jujutsu Kaisen)');
+  await expect(look).toHaveValue('');
+  // The same one with her series added (the hint asks for it) keeps what was written; it is not wiped.
+  await look.fill('white hair');
+  await name.fill('Gojo Satoru');
+  await name.fill('Gojo Satoru (Jujutsu Kaisen)');
+  await expect(look).toHaveValue('white hair');
+  // Kept across a reload with the other choices, and a landscape has none of it.
+  await look.fill('white hair');
+  await page.reload();
+  await page.locator('.nav-item[data-view="generate"]').click();
+  await expect(look).toHaveValue('white hair');
+  await page.click('[data-gen="subject"][data-opt="landscape"]');
+  await expect(look).toBeHidden();
+});

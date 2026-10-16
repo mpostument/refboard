@@ -493,7 +493,7 @@ const GEN_GROUPS = [
   ['picture', 'The picture', ['medium', 'edges', 'colours', 'lock', 'detail', 'ground']],
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', look: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', detail: 'simple',
   ground: 'plain' };
@@ -586,6 +586,35 @@ function genCharsRemember(text) {
   try { localStorage.setItem(GEN_CHARS_KEY, JSON.stringify(list)); } catch { /* private mode */ }
 }
 
+/* Her hair and eyes, in her own words ("silver hair, green eyes"): nothing in the app knows what a
+   named character looks like, and the name alone leaves the model to remember - it does not always.
+   Said once next to her, kept with her (the same name later brings it back), and used where the rows
+   leave it to her: a part about the eyes is left out when Eyes is set, a part about the hair when Hair
+   colour is - those rows are the ask of now and win. Split on commas, each part weighted like the name. */
+const GEN_LOOK_MAX = 60, GEN_LOOK_PARTS = 6;
+function genLookTags(look, ch) {
+  return String(look || '').split(',').map(p => p.replace(/\s+/g, ' ').trim().toLowerCase()).filter(Boolean).slice(0, GEN_LOOK_PARTS)
+    .filter(p => !(/\beyes?\b/.test(p) && ch.eyes !== 'any') && !(/\bhair\b/.test(p) && ch.colour !== 'any'))
+    .map(p => `(${p}:${GEN_CHAR_WEIGHT})`);
+}
+// Kept by the name's tags, like the characters drawn lately, and only for those: the list is the bound.
+const GEN_LOOKS_KEY = 'refboard.generate.looks.v1';
+function genLooksLoad() {
+  try {
+    const v = JSON.parse(localStorage.getItem(GEN_LOOKS_KEY));
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch { return {}; }
+}
+function genLooksRemember(name, look) {
+  const key = genCharacterTags(name);
+  if (!key) return;
+  const all = genLooksLoad(), text = String(look || '').trim().slice(0, GEN_LOOK_MAX);
+  if (text) all[key] = text; else delete all[key];
+  const lately = new Set(genCharsLoad().map(genCharacterTags));
+  for (const k of Object.keys(all)) if (!lately.has(k)) delete all[k];
+  try { localStorage.setItem(GEN_LOOKS_KEY, JSON.stringify(all)); } catch { /* private mode */ }
+}
+
 function genPrompt(choices, extra = '') {
   const subjects = GEN_CHOICES.find(c => c.id === 'subject').options;
   const subject = subjects.some(o => o.id === choices.subject) ? choices.subject : GEN_DEFAULTS.subject;
@@ -618,7 +647,7 @@ function genPrompt(choices, extra = '') {
     const t = owned.has(c.id) ? '' : pick(o.tags), a = owned.has(c.id) ? '' : pick(o.avoid);
     if (t) tags.push(t);
     if (t && (c.id === 'setting' || c.id === 'clothes' || c.id === 'era')) outfitTags.push(t);
-    if (c.id === 'who' && who) tags.push(`(${who}:${GEN_CHAR_WEIGHT})`, ...(outfit ? ['alternate costume'] : []));
+    if (c.id === 'who' && who) tags.push(`(${who}:${GEN_CHAR_WEIGHT})`, ...genLookTags(choices.look, ch), ...(outfit ? ['alternate costume'] : []));
     if (a) avoid.push(a);
     const w = o.words ?? (o.id === 'any' ? '' : o.label.toLowerCase());
     if (w) words.push(w);
@@ -659,6 +688,7 @@ const genControlAvailable = () => genControl;
 function loadGenChoices() {
   try { Object.assign(genChoices, JSON.parse(localStorage.getItem(GEN_KEY)) || {}); } catch { /* defaults */ }
   if (typeof genChoices.character !== 'string') genChoices.character = '';
+  if (typeof genChoices.look !== 'string') genChoices.look = '';
   const p = genChoices.palette;
   if (!(Array.isArray(p) && p.length && p.every(c => Array.isArray(c) && c.length === 3 && c.every(n => Number.isInteger(n) && n >= 0 && n <= 255)))) {
     delete genChoices.palette;
@@ -903,6 +933,10 @@ function renderGenerate() {
   const charRow = `<div class="gen-row gen-char" data-row="character"><label class="gen-extra" for="genCharacter">Character ` +
     `<input type="text" id="genCharacter" maxlength="80" autocomplete="off" spellcheck="false" value="${esc(genChoices.character || '')}" ` +
     `placeholder="e.g. Frieren, Sousou no Frieren"></label><p class="count" id="genCharHint" role="status"></p>` +
+    // Only once she is named; kept with her (genLooksRemember). A row set above (Hair colour, Eyes) wins over it.
+    `<label class="gen-extra gen-look hidden" id="genLookBox" for="genLook" title="Used where Hair colour and Eyes say Any - a colour chosen there wins">Her hair and eyes ` +
+    `<input type="text" id="genLook" maxlength="${GEN_LOOK_MAX}" autocomplete="off" spellcheck="false" value="${esc(genChoices.look || '')}" ` +
+    `placeholder="e.g. silver hair, green eyes"></label>` +
     `<div class="chips gen-recent hidden" id="genRecent" role="group" aria-label="Characters drawn lately"></div></div>`;
   el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
     `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` + (k === 'who' ? charRow : '') +
@@ -951,10 +985,21 @@ function genPressed(id) {
 // The Character field's new text, from typing or a click on a recent one.
 // Naming her hands her sex to the name (Who: Hers, if it was still the
 // default Girl); clearing the name takes Who back to Girl (syncGenRows).
-function genSetCharacter(text) {
+function genSetCharacter(text, fromRecent = false) {
   const was = !!genCharacterTags(genChoices.character);
+  const before = genCharacterTags(genChoices.character);
   genChoices.character = text.slice(0, 80);
   if (!was && genCharacterTags(genChoices.character) && genChoices.who === 'girl') genChoices.who = 'her';
+  // Her hair and eyes come back with her. Another character (the name's first part is not the old one's
+  // beginning or its continuation) gets what was kept for her, or nothing: Rei's eyes must not follow
+  // Gojo. The same one - the series added to the name, a typo mended - keeps what was just written. A
+  // click on her chip always brings hers; a name typed in full brings hers if the field is empty.
+  const after = genCharacterTags(genChoices.character), kept = genLooksLoad()[after] || '';
+  const head = k => k.split(', ')[0], sameOne = before && after && (head(after).startsWith(head(before)) || head(before).startsWith(head(after)));
+  if (fromRecent || !sameOne || (!genChoices.look.trim() && kept)) {
+    genChoices.look = kept;
+    if (el('genLook')) el('genLook').value = kept;
+  }
   saveGenChoices();
   syncGenRows();
   genPressed('who');
@@ -977,6 +1022,7 @@ function renderGenRecent() {
 function syncGenCharHint() {
   const h = el('genCharHint'), who = genCharacterTags(genChoices.character);
   if (!h) return;
+  el('genLookBox')?.classList.toggle('hidden', !who);
   h.textContent = !who ? '' : !who.includes(',')
     ? 'Add her series after the name - without it she is drawn less like herself.'
     : genChoices.detail === 'normal' ? ''
@@ -1207,7 +1253,7 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null, ui 
       await ui.refresh();
     }
     status.textContent = genStopped ? 'Stopped.' : jobs ? done : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
-    if (!jobs && genChoices.subject === 'character') { genCharsRemember(genChoices.character); renderGenRecent(); }
+    if (!jobs && genChoices.subject === 'character') { genCharsRemember(genChoices.character); genLooksRemember(genChoices.character, genChoices.look); renderGenRecent(); }
   } catch (err) {
     status.textContent = err.message;
     // It may have stopped answering: say so, with a way to ask again. Not
@@ -1229,7 +1275,7 @@ async function initGenerate() {
     const who = e.target.closest('[data-char]');
     if (who) {
       el('genCharacter').value = who.dataset.char;
-      genSetCharacter(who.dataset.char);
+      genSetCharacter(who.dataset.char, true);
       return;
     }
     const b = e.target.closest('[data-gen]');
@@ -1243,6 +1289,7 @@ async function initGenerate() {
   });
   el('genChoices').addEventListener('input', e => {
     if (e.target.id === 'genCharacter') genSetCharacter(e.target.value);
+    if (e.target.id === 'genLook') { genChoices.look = e.target.value.slice(0, GEN_LOOK_MAX); saveGenChoices(); renderGenPrompt(); }
   });
   el('genChoices').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'genCharacter') runGenerate(); });
   try { Object.assign(genView, JSON.parse(localStorage.getItem(GEN_VIEW_KEY)) || {}); } catch { /* defaults */ }

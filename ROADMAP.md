@@ -190,8 +190,15 @@ case, after "1girl, solo") and Setting: Original, a character's own clothes: it
 owns Detail, since Simple and Beginner's "minimalist, simple drawing" drew a
 named character bare-shouldered (seen 2026-10-15, Animagine XL 4.0, bust); any
 other outfit adds "alternate costume". The last eight drawn are chips under
-the field. Still to come: her own hair and eye colour kept when the Hair
-and Eyes rows say Any; and a picture of her as a reference to draw from.
+the field. In place too: Her hair and eyes (`genLookTags()`, the field under Character once she is
+named) - "silver hair, green eyes" typed once, kept with her (`genLooksRemember()`, back with her chip,
+and only hers: Rei's eyes do not follow Gojo; a name with its series added keeps what was written),
+each comma part weighted like the name and put right after it; a part about the eyes is left out when
+Eyes is set, one about the hair when Hair colour is - the rows win. The app knows no character's look,
+so she tells it; a lookup by name (Danbooru) was weighed and left. Seen on Frieren, 4 seeds, bust: the
+eyes stayed green where they ranged blue to teal, the ears were drawn either way (the model knows her at
+this framing); one of the four came out in a blue coat with darker skin - a weight can tint the rest.
+Still to come: a picture of her as a reference to draw from.
 In place too: Modern, Steampunk and Post-apocalyptic Settings, each with a
 temple, and a Clothes row - Setting's (the default), Everyday, Festive,
 Uniform, Armour, Winter, each with tags per Setting (`wear(girl, boy)` for

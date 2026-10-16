@@ -591,7 +591,9 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   the tags as sent and what the choices keep out, each a switch.
   *Character* takes any character by name and series (*Frieren, Sousou no
   Frieren*; *Frieren (Sousou no Frieren)* is read the same), placed in the
-  prompt after *1girl, solo*; *Setting: Original* draws her in her own
+  prompt after *1girl, solo*. *Her hair and eyes* under it takes her look in your own
+  words ("silver hair, green eyes"), kept with her and used where *Hair colour* and *Eyes*
+  say Any; *Setting: Original* draws her in her own
   clothes, at Normal detail whatever *Detail* says (Simple and Beginner drop
   clothes nothing names), and any other Setting or Clothes adds *alternate
   costume* so her own does not come back. Naming her sets *Who* to *Hers*
