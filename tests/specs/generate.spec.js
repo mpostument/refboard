@@ -203,6 +203,7 @@ test('starting from a picture: a study, a variation, a pose', async ({ page }) =
   expect(asked[1].image).toBeUndefined();
 
   // Vary: the original's own words and shape, not the choices'.
+  await page.locator('#genResults .gen-more').first().click();
   await page.locator('#genResults .gen-vary').first().click();
   await page.click('#genGo');
   await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');

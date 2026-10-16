@@ -954,6 +954,36 @@ async function showGenerate(check = true) {
   renderGenResults(all.slice(0, 24), all.length);
 }
 
+/* A picture's menu: one open at a time, placed by the button that opened it and
+   kept inside the window (the pictures are in a narrow grid, the menu is wider
+   than one). Closed by a click elsewhere, Esc, or choosing something. */
+function genMenuClose() {
+  for (const li of document.querySelectorAll('#genResults li.menu-open')) {
+    li.classList.remove('menu-open');
+    li.querySelector('.gen-menu').classList.add('hidden');
+    li.querySelector('.gen-more').setAttribute('aria-expanded', 'false');
+  }
+}
+function genMenuToggle(li) {
+  const was = li.classList.contains('menu-open');
+  genMenuClose();
+  if (was) return;
+  const btn = li.querySelector('.gen-more'), menu = li.querySelector('.gen-menu');
+  li.classList.add('menu-open');
+  menu.classList.remove('hidden');
+  btn.setAttribute('aria-expanded', 'true');
+  const b = btn.getBoundingClientRect(), m = menu.getBoundingClientRect();
+  menu.style.left = Math.max(8, Math.min(b.left, innerWidth - m.width - 8)) + 'px';
+  menu.style.top = (b.top - m.height - 4 < 8 ? b.bottom + 4 : b.top - m.height - 4) + 'px';
+  menu.querySelector('button').focus();
+}
+document.addEventListener('click', e => { if (!e.target.closest('.gen-menu')) genMenuClose(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = document.querySelector('#genResults li.menu-open .gen-more');
+  if (open) { e.stopPropagation(); genMenuClose(); open.focus(); }
+}, true);
+
 function renderGenResults(list, total = list.length) {
   const host = el('genResults');
   host.innerHTML = '';
@@ -965,9 +995,14 @@ function renderGenResults(list, total = list.length) {
     li.innerHTML = `<button type="button" class="gen-open" title="${esc((u.tags || []).join(', '))}" ` +
       `aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
       `<button type="button" class="gen-del" aria-label="Delete ${esc(u.name)}" title="Delete it - from Uploads too">${iconSvg('close')}</button>` +
-      `<button type="button" class="gen-vary" aria-label="Vary ${esc(u.name)}" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
-      `<button type="button" class="gen-steps" aria-label="How to draw ${esc(u.name)}" title="How to draw it - step by step">Steps</button>` +
-      `<button type="button" class="gen-colours" aria-label="Character sheet from ${esc(u.name)}" title="Her colours, with how to mix them - the Colour studio's Character sheet">Colours</button>`;
+      `<button type="button" class="gen-more" aria-label="Do more with ${esc(u.name)}" aria-haspopup="true" aria-expanded="false" title="Vary it, redraw a part, finish it, how to draw it...">More</button>` +
+      `<div class="gen-menu hidden" role="menu">` +
+      `<button type="button" class="gen-vary" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
+      `<button type="button" class="gen-redraw" title="Brush over a part - a hand, an eye - and only that is drawn again">Redraw a part...</button>` +
+      `<button type="button" class="gen-finish" title="The same picture 1.5 times the size, with the detail that size has room for - what a draft becomes">Finish it</button>` +
+      `<button type="button" class="gen-steps" title="How to draw it - step by step">How to draw it</button>` +
+      `<button type="button" class="gen-colours" title="Her colours, with how to mix them - the Colour studio's Character sheet">Her colours</button>` +
+      `</ul>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
     li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-del').addEventListener('click', async () => {
@@ -975,6 +1010,10 @@ function renderGenResults(list, total = list.length) {
       await showGenerate(false);
       el('genResults').querySelector('.gen-open')?.focus();
     });
+    li.querySelector('.gen-more').addEventListener('click', e => { e.stopPropagation(); genMenuToggle(li); });
+    li.querySelector('.gen-menu').addEventListener('click', () => genMenuClose());
+    li.querySelector('.gen-redraw').addEventListener('click', () => genRedrawOpen(u));
+    li.querySelector('.gen-finish').addEventListener('click', () => genFinish(u));
     li.querySelector('.gen-vary').addEventListener('click', async () => {
       const url = await storeFileUrl(u.file);
       if (!url) return;
@@ -1077,27 +1116,32 @@ function genStop() {
   genCancel();
 }
 
-async function runGenerate() {
+// jobs: requests built elsewhere (Finish it, Redraw a part) instead of the choices'.
+// Drafts are the choices drawn in fewer steps: quick to look through, and Finish it
+// makes the one worth keeping into the picture.
+const GEN_DRAFT_STEPS = 14;
+async function runGenerate(jobs = null, doing = '', done = '') {
   if (genBusy) return;
   genBusy = true;
   genStopped = false;
   // While it works the button is Stop.
   el('genGo').textContent = 'Stop';
   el('genGo').title = 'Stop making pictures - the one in hand is cancelled, the rest are not started';
-  const n = Number(el('genCount').value) || 1;
-  const req = genRequest();
+  const n = jobs ? jobs.length : Number(el('genCount').value) || 1;
+  const req = jobs ? null : genRequest();
+  if (req && el('genQuality').value === 'draft') { req.steps = GEN_DRAFT_STEPS; req.tags = [...req.tags, 'draft'].slice(0, 24); }
   const status = el('genStatus');
   try {
     for (let i = 1; i <= n; i++) {
       if (genStopped) break;
-      status.textContent = n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
-      const made = await generateOne(req);
-      if (genLockWanted()) await genLockMade(made, status);
+      status.textContent = jobs ? doing : n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
+      const made = await generateOne(jobs ? jobs[i - 1] : req);
+      if (!jobs && genLockWanted()) await genLockMade(made, status);
       storeChanged();
       await showGenerate(false);
     }
-    status.textContent = genStopped ? 'Stopped.' : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
-    if (genChoices.subject === 'character') { genCharsRemember(genChoices.character); renderGenRecent(); }
+    status.textContent = genStopped ? 'Stopped.' : jobs ? done : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
+    if (!jobs && genChoices.subject === 'character') { genCharsRemember(genChoices.character); renderGenRecent(); }
   } catch (err) {
     status.textContent = err.message;
     // It may have stopped answering: say so, with a way to ask again. Not

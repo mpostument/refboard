@@ -206,7 +206,16 @@ idols). Tags escaped for ComfyUI (`comfyTags()`): bare brackets are its
 emphasis, so "pen (medium)" drew a pen into ink pictures; ink avoids sepia,
 which had made its lines reddish. Copic markers and watercolour pencils, and
 deleting generated pictures, one or all.
-In place too: the Prompt box (`renderGenPrompt()`) - closed by default,
+In place too: a More menu on each generated picture (`js/genedit.js`) - Redraw a
+part (a brush over the picture; `SetLatentNoiseMask` on the grown mask, the
+original pasted back through the blurred mask so only the brushed pixels
+change), Finish it (`ImageScaleBy` 1.5, tiled VAE, denoise 0.4: on Animagine XL
+4.0 a 14-step draft kept its composition and gained detail, 32 s on this card)
+and Drafts (`steps` 14). Run against a real ComfyUI: a box over one eye made it
+green and left every other pixel alone, with no seam to see. Still to come:
+a Finish that picks 2x for a big card, a mask from "the hands" found by the
+pose model, and a draft strip to pick from instead of the grid.
+In place too: the Prompt box (`renderGenPrompt()` - closed by default,
 the tags as sent, the choices' negative tags as switches kept in
 localStorage (`genRequest()` leaves the switched-off ones out), the
 server's quality and negative tags (from `GET /api/generate`) read-only.

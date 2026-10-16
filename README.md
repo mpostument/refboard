@@ -612,7 +612,12 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   Esc stops). In the 3D figure's Pose, **From a photo...** (`js/posefit.js`) sets
   the joints from a photo of a whole person, and turns the figure as the person
   is turned; with a ControlNet, *Draw this pose* then makes a character in it.
-  Hands are not read, and a lying figure reads badly.
+  Hands are not read, and a lying figure reads badly. Each generated picture has
+  a **More** menu (`js/genedit.js`): **Redraw a part** (brush over a hand or an eye;
+  the server masks the latent and pastes the new paint over the original, so
+  the rest is the same pixels), **Finish it** (enlarged 1.5 times and drawn
+  again at denoise 0.4, in tiles so a small card holds it) and, with *As:
+  Drafts*, pictures made in 14 steps instead of 28 to look through first.
   While pictures are made the button is *Stop*: it cancels the one in hand
   (ComfyUI is told) and starts none of the rest.
 - **A studio layout** - dark throughout, an icon rail down the left for the

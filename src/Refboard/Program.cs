@@ -153,6 +153,9 @@ app.MapPost("/api/generate", (GenerateRequest req) =>
         || (req.Tags ?? []).Count > 24 || (req.Tags ?? []).Any(t => t.Length > 40)
         || (req.Shape is not null && !ComfyClient.Shapes.ContainsKey(req.Shape))
         || (req.Image is not null && (req.Image.Length > 8_000_000 || !IsBase64(req.Image)))
+        || (req.Mask is not null && (req.Image is null || req.Control || req.Mask.Length > 4_000_000 || !IsBase64(req.Mask)))
+        || (req.Scale is not null && (req.Image is null || req.Control || req.Mask is not null || req.Scale is < 1.0 or > 2.0))
+        || (req.Steps is not null && req.Steps is < 8 or > 40)
         || (req.Control && (req.Image is null || !comfy.ControlConfigured)))
         return Results.BadRequest();
     return Results.Accepted(value: new { id = comfy.Start(req) });

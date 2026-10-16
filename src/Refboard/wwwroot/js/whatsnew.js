@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-edit', title: 'Generate: redraw a part, finish it, drafts',
+    text: "Each picture Generate made has a More menu. Redraw a part: brush over a hand or an eye and only that is drawn again - the rest stays the same pixels. Finish it: the picture drawn again at 1.5 times the size, with the detail that size has room for. Set As to Drafts and a batch is made in half the time; Finish the one worth keeping.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'pose-photo', title: '3D figure: take the pose from a photo',
     text: "In the figure's Pose, From a photo... reads a photo of a whole person with the pose model and sets the figure's joints from it - and turns the figure as the person is turned. With a ComfyUI that has a ControlNet, Draw this pose then makes a character in that pose. Hands are not read; a lying figure reads badly. Draw this pose itself was tuned on a real ComfyUI: it now draws a girl, not the wooden mannequin.",
     act: 'Open 3D forms', run: () => setView({ kind: 'forms' }) },

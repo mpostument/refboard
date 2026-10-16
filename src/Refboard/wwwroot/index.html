@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=478f0bf5">
+<link rel="stylesheet" href="css/app.css?v=b8d1e08c">
 </head>
 <body>
 <div id="setup">
@@ -343,6 +343,7 @@
               <label class="gen-extra">More tags <input type="text" id="genExtra" placeholder="e.g. hat, rain, holding umbrella" maxlength="200"></label>
               <div class="row gen-go">
                 <label>How many <select id="genCount"><option>1</option><option selected>2</option><option>4</option></select></label>
+                <label>As <select id="genQuality" title="Drafts take half the time - make four, then Finish the one worth keeping (More on its picture)."><option value="">Final pictures</option><option value="draft">Drafts</option></select></label>
                 <button type="button" id="genGo" class="primary">Generate</button>
                 <span class="count" id="genStatus" role="status"></span>
               </div>
@@ -1272,6 +1273,35 @@
   </div>
 </div>
 
+<!-- Redraw a part - js/genedit.js: a generated picture with a brush over it;
+     only what is brushed is drawn again. -->
+<div id="redrawSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="redrawTitle">
+  <div class="sheet-box redraw-box">
+    <div class="row">
+      <h2 id="redrawTitle" class="grow">Redraw a part</h2>
+      <button type="button" class="ghost" id="redrawClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="redraw-stage">
+      <canvas id="redrawPic" aria-hidden="true"></canvas>
+      <canvas id="redrawMask" role="img" aria-label="The picture, to brush over the part to draw again - with a pointer or a pen"></canvas>
+    </div>
+    <p class="count" id="redrawHint" role="status"></p>
+    <div class="row redraw-tools">
+      <label>Brush <input type="range" id="redrawSize" min="8" max="120" value="40"></label>
+      <button type="button" class="ghost" id="redrawUndo" title="Undo the last stroke (Ctrl+Z)">Undo</button>
+      <button type="button" class="ghost" id="redrawClear" title="Take all the brushing off">Clear</button>
+    </div>
+    <div class="row redraw-tools">
+      <span class="count">How different</span>
+      <span class="chips" id="redrawLevels" role="group" aria-label="How different"></span>
+    </div>
+    <div class="row redraw-tools">
+      <label class="grow">What should be there <input type="text" id="redrawText" maxlength="100" placeholder="optional - e.g. open hand, brown eyes"></label>
+      <button type="button" class="primary" id="redrawGo">Redraw</button>
+    </div>
+  </div>
+</div>
+
 <!-- How to draw it - js/steps.js: the picture in the workspace taken back to
      the steps it is drawn in, in the medium picked. -->
 <div id="stepsSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="stepsTitle">
@@ -2113,7 +2143,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=165aa97e"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=432d91cb"></script>
+<script src="js/whatsnew.js?v=904bb1dd"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=73f7eb91"></script>
@@ -2139,7 +2169,8 @@
 <script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
-<script src="js/generate.js?v=5b6a2701"></script>
+<script src="js/generate.js?v=4902f328"></script>
+<script src="js/genedit.js?v=03875439"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->

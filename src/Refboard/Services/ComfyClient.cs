@@ -13,9 +13,14 @@ namespace Refboard.Services;
 /// (0.2 - 1; low keeps the picture, high only borrows its layout) it is the
 /// picture to start from - a photo drawn as a study, a favourite varied. With
 /// Control instead it is the figure the picture is held to, through the
-/// ControlNet (COMFY_CONTROLNET), at Strength.</remarks>
+/// ControlNet (COMFY_CONTROLNET), at Strength. With Scale (1 - 2) the picture is first
+/// enlarged by it, and Denoise is how much the second pass may change: Finish it.
+/// With Mask - a PNG, white where to draw again, the size of Image - only the white is
+/// redrawn and the rest of Image is kept: Redraw a part. Steps (8 - 40, 28 by default):
+/// fewer for a draft.</remarks>
 public sealed record GenerateRequest(string? Prompt, List<string>? Tags, string? Shape, long? Seed, string? Avoid = null,
-    string? Image = null, double? Denoise = null, bool Control = false, double? Strength = null);
+    string? Image = null, double? Denoise = null, bool Control = false, double? Strength = null,
+    string? Mask = null, double? Scale = null, int? Steps = null);
 
 /// <summary>
 /// Generates references with a ComfyUI (<see cref="RefboardOptions.ComfyUrl"/>)
@@ -177,11 +182,46 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
         var positive = Link("2", 0);
         var negative = Link("3", 0);
         var hasImage = req.Image is { Length: > 0 };
+        // What the picture is when it is decoded: the sampler's own, or - Redraw a part -
+        // the sampler's pasted over the original through the mask.
+        var result = Link("6", 0);
+        var scaled = req.Scale is > 1.0;
         if (hasImage && !req.Control)
         {
             graph["8"] = Node("LoadImage", new() { ["image"] = await UploadAsync(req.Image!) });
-            graph["4"] = Node("VAEEncode", new() { ["pixels"] = Link("8", 0), ["vae"] = Link("1", 2) });
+            var pixels = Link("8", 0);
+            // Finish it: enlarged first, so the sampler redraws every shape at the new size
+            // and adds the detail a bigger picture has room for. Encoded and decoded in tiles:
+            // 1.5 x SDXL's size in one piece is more than a small card can hold.
+            if (scaled)
+            {
+                graph["11"] = Node("ImageScaleBy", new() { ["image"] = pixels, ["upscale_method"] = "lanczos", ["scale_by"] = Math.Clamp(req.Scale!.Value, 1.0, 2.0) });
+                pixels = Link("11", 0);
+            }
+            graph["4"] = scaled
+                ? Node("VAEEncodeTiled", new() { ["pixels"] = pixels, ["vae"] = Link("1", 2), ["tile_size"] = 512, ["overlap"] = 64, ["temporal_size"] = 64, ["temporal_overlap"] = 8 })
+                : Node("VAEEncode", new() { ["pixels"] = pixels, ["vae"] = Link("1", 2) });
             denoise = Math.Clamp(req.Denoise ?? 0.6, 0.2, 1.0);
+            if (req.Mask is { Length: > 0 } && !scaled)
+            {
+                // The white of the mask, widened a little so the new paint reaches past the
+                // edge of what was brushed; the sampler may change only that part of the
+                // latent. The original is then kept outside it (the VAE round trip changes
+                // every pixel a little), with the edge blurred so the join does not show.
+                graph["12"] = Node("LoadImage", new() { ["image"] = await UploadAsync(req.Mask) });
+                graph["13"] = Node("ImageToMask", new() { ["image"] = Link("12", 0), ["channel"] = "red" });
+                graph["14"] = Node("GrowMask", new() { ["mask"] = Link("13", 0), ["expand"] = 10, ["tapered_corners"] = false });
+                graph["15"] = Node("SetLatentNoiseMask", new() { ["samples"] = Link("4", 0), ["mask"] = Link("14", 0) });
+                graph["16"] = Node("MaskToImage", new() { ["mask"] = Link("14", 0) });
+                graph["17"] = Node("ImageBlur", new() { ["image"] = Link("16", 0), ["blur_radius"] = 8, ["sigma"] = 4.0 });
+                graph["18"] = Node("ImageToMask", new() { ["image"] = Link("17", 0), ["channel"] = "red" });
+                graph["19"] = Node("ImageCompositeMasked", new()
+                {
+                    ["destination"] = Link("8", 0), ["source"] = Link("6", 0), ["x"] = 0, ["y"] = 0,
+                    ["resize_source"] = false, ["mask"] = Link("18", 0),
+                });
+                result = Link("19", 0);
+            }
         }
         else graph["4"] = Node("EmptyLatentImage", new() { ["width"] = w, ["height"] = h, ["batch_size"] = 1 });
         // A figure to hold the picture to: the ControlNet reads it and bends
@@ -200,10 +240,13 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
             positive = Link("10", 0);
             negative = Link("10", 1);
         }
+        if (scaled) graph["6"] = Node("VAEDecodeTiled", new() { ["samples"] = Link("5", 0), ["vae"] = Link("1", 2), ["tile_size"] = 512, ["overlap"] = 64, ["temporal_size"] = 64, ["temporal_overlap"] = 8 });
+        graph["7"] = Node("PreviewImage", new() { ["images"] = result });
         graph["5"] = Node("KSampler", new()
         {
             ["model"] = Link("1", 0), ["positive"] = positive, ["negative"] = negative,
-            ["latent_image"] = Link("4", 0), ["seed"] = seed, ["steps"] = 28, ["cfg"] = 5.0,
+            ["latent_image"] = req.Mask is { Length: > 0 } && hasImage && !req.Control && !scaled ? Link("15", 0) : Link("4", 0),
+            ["seed"] = seed, ["steps"] = Math.Clamp(req.Steps ?? 28, 8, 40), ["cfg"] = 5.0,
             ["sampler_name"] = "euler_ancestral", ["scheduler"] = "normal", ["denoise"] = denoise,
         });
         var queued = await Http.PostAsJsonAsync($"{opts.ComfyUrl}/prompt", new JsonObject { ["prompt"] = graph });
@@ -260,7 +303,7 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
             file = entry.Id, name = tags.Count > 0 ? string.Join(", ", tags.Take(3)) : "generated",
             type = "image/png", from = "generate", bytes = entry.Bytes,
             t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), folder = "generated", tags, prompt = req.Prompt, avoid = req.Avoid, shape = req.Shape ?? "portrait", seed,
-            kind = req.Image is null ? "new" : req.Control ? "pose" : "img2img",
+            kind = req.Image is null ? "new" : req.Control ? "pose" : scaled ? "finish" : req.Mask is { Length: > 0 } ? "redraw" : "img2img",
         });
         store.PutItem("uploads", entry.Id.Split('.')[0], doc);
         ReindexHostedService.ReindexRequested = true;
