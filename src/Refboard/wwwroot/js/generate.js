@@ -418,6 +418,14 @@ const GEN_CHOICES = [
     ANY,
     { id: 'palette', label: 'Your palette', words: 'palette', hint: 'The colours sent from Palettes, as words the model knows',
       tags: ch => genPaletteTags(ch.palette || []).join(', ') },
+    // The tubes of the Holbein box (PIGMENTS in js/paint.js). Words cannot name 28
+    // paints, so this is for Keep to the palette below; on its own it adds no tags.
+    { id: 'box', label: 'Holbein box', words: 'holbein box', hint: 'The 28 tubes of the Holbein box - use Keep to the palette to make the picture of them', tags: '' },
+  ] },
+  // Words only nudge a model; this recolours the finished picture (js/genlock.js).
+  { id: 'lock', label: 'Keep to the palette', when: ch => !GEN_GREY.includes(ch.medium) && (ch.colours === 'palette' || ch.colours === 'box'), options: [
+    { id: 'off', label: 'Words only', words: '', hint: 'The model is told the colours and paints what it likes', tags: '' },
+    { id: 'on', label: 'Recolour to it', words: 'palette locked', hint: 'Every colour in the picture becomes the nearest one of the palette; the shading stays', tags: '' },
   ] },
   // Simple, the default: a few big shapes to copy, not a finished
   // illustration to be daunted by. Beginner goes further, with weights
@@ -457,12 +465,12 @@ const GEN_GROUPS = [
   ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
-  ['picture', 'The picture', ['medium', 'edges', 'colours', 'detail', 'ground']],
+  ['picture', 'The picture', ['medium', 'edges', 'colours', 'lock', 'detail', 'ground']],
 ];
 
 const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', setting: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', detail: 'simple',
+  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', detail: 'simple',
   ground: 'plain' };
 
 // Whether a row is asked, and used, with these choices.
@@ -971,6 +979,21 @@ async function clearGenerated() {
 // What is being made, so Stop can say which: the job's id, and whether it was asked for.
 let genJob = '', genStopped = false;
 
+// Keep to the palette: the picture just made is recoloured (js/genlock.js) and
+// kept in its place - the same document, with "palette locked" among its tags.
+const genLockWanted = () => genChoices.lock === 'on' && genLockPalette(genChoices).length > 0;
+async function genLockMade(made, status) {
+  const doc = made.doc;
+  status.textContent = 'Recolouring to the palette...';
+  const blob = await genLockBlob(await (await fetch(await storeFileUrl(doc.file))).blob(), genLockPalette(genChoices));
+  if (!blob) { status.textContent = 'The palette has no colour to keep to - only greys.'; return; }
+  const f = await storeFile(blob);
+  if (storeMode === 'server') await storeSortFile(f.id, doc.folder || 'generated');
+  await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png',
+    tags: [...(doc.tags || []), 'palette locked'].slice(0, 24), t: Date.now() });
+  await forgetUpload(doc);
+}
+
 // One picture: start the job, then ask after it once a second.
 async function generateOne(req) {
   const r = await fetch('api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) });
@@ -1014,7 +1037,8 @@ async function runGenerate() {
     for (let i = 1; i <= n; i++) {
       if (genStopped) break;
       status.textContent = n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
-      await generateOne(req);
+      const made = await generateOne(req);
+      if (genLockWanted()) await genLockMade(made, status);
       storeChanged();
       await showGenerate(false);
     }
@@ -1050,7 +1074,7 @@ async function initGenerate() {
     saveGenChoices();
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
-    if (['subject', 'setting', 'medium', 'framing', 'detail'].includes(b.dataset.gen)) syncGenRows();
+    if (['subject', 'setting', 'medium', 'framing', 'detail', 'colours'].includes(b.dataset.gen)) syncGenRows();
     renderGenPrompt();
   });
   el('genChoices').addEventListener('input', e => {
