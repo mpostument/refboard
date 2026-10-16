@@ -502,7 +502,7 @@ shoulders), *Isometric*. Each is a tag recipe per kind (`from side`, `from above
 **One style for the whole game.** A *Game style* kept once and applied to every
 kind: the view, the theme, an outline weight, the palette (the Colour studio's
 or the Holbein box, through the palette lock of `js/genlock.js`), the pixel
-grid, the sprite size. Without it fifty assets are fifty styles, which is the
+grid, the sprite size, how simple it is (simple / medium / detailed). Without it fifty assets are fifty styles, which is the
 usual way generated art fails a game.
 
 **The parts that need no model** (client-side, `js/assetsfx.js`, all testable
@@ -589,6 +589,55 @@ rest by choosing the view's tags carefully, or by the depth ControlNet over a
 good, not what a pixel artist draws. A character's face will change between
 frames. None of this is a reason not to build it; it is why phase 0 comes
 first and why the table, not this text, is what the recipes are built from.
+
+**Phase 0 results** (2026-10-16; Animagine XL 4.0 through the real server, 4 fixed seeds
+per cell, three rounds, every picture looked at; the sheets are not kept, the tags are).
+
+The first round used only the subject and the view ("from side", "from above"): it gave
+anime *illustrations* - lit, glossy, with a floor, a fog, a whole scene - not game assets.
+What turns them into 2D is two lists, added to every kind:
+
+- **Style words**: `game sprite, 2d game asset, flat color, cel shading, thick outline,
+  simple background, white background`.
+- **Avoid**: `shadow, cast shadow, gradient, glossy, shiny, depth of field, 3d, realistic,
+  floor, ground, lighting`.
+- **Simplicity** is a third list and a setting of its own (simple / medium / detailed):
+  simple adds `minimalist, simple design, limited color palette` and avoids `detailed,
+  intricate, ornate, complex, texture, patterns`. Without it the output is far too busy
+  for a game.
+
+| Kind x view | Verdict | What to say | What fails |
+| --- | --- | --- | --- |
+| Character, side | works (3-4 of 4) | `1girl, solo, <who>, full body, from side, side view` + style; `chibi` shortens the body and simplifies it | a floor ellipse under the feet (avoid `floor`); at "simple" a face can come out a black blob |
+| Character, top-down | works with chibi (3 of 4) | `chibi, from above, 3/4 view, rpg character` + style, avoid `island, diorama, background objects` | without that avoid: a floating island with ruins around her; a knight's helmet hides the face |
+| Character, straight down | fails | - | the same three-quarter view as top-down; the model has no "directly above" |
+| Character, isometric | fails | - | an isometric *scene* (a person on a tile island), not an isometric figure |
+| Prop, side / top-down | works (4 of 4) | `no humans, <thing>, closed, front view` or `from above, 3/4 view`, `object focus` + style; avoid `open, gold, coins` | without `closed`: the lid opens and the chest is full of gold |
+| Prop, isometric | half (2 of 4) | `isometric` + avoid `tile, platform, island` | a base slab under it; one opens the lid; one on a dark background |
+| Weapon, side | fails for one | a vertical portrait shape + `full length, centered` | the model draws a *set* of 4-6 swords, or a rack on a panel; one in four is a lone sword. Next: `solo` words, or cut one out of the set (phase 1) |
+| Tile, grass | works | `grass, seamless texture, tileable, flat color` | a dull flat green (fine); seams not yet tested |
+| Tile, stone | works (3 of 4) | `stone floor, cobblestone, flat color` | some white gaps between stones |
+| Tile, dirt | half | - | "simple" turns it into a brick / mosaic pattern, not soil |
+| Tile, water | fails | - | mosaics, circles, yellow squares; needs another recipe (`waves`, `ripples`, no "tile" word) |
+| Background, far layer | works | `distant mountains / hills, sky, clouds, flat color, parallax background layer` | a lit, deep scene at "detailed"; at "simple" a line-art landscape |
+| Background, mid layer | works on a *green* background, fails on white | `tree trunks, silhouette, simple background, green background` + avoid `sky, ground, floor` | on white: poles, shadows and a ground; with fog the trunks go see-through |
+| Background, near layer | works | `foreground bushes, tall grass, dark silhouette, along the bottom edge, green background` | none seen |
+| UI, panel | works (4 of 4) | `empty rectangular panel, plain wooden frame, border only, empty center` | the centre is beige, not transparent (cut it out); the frame is thin and uneven, so 9-slice needs a straightening step |
+| UI, ornate | fails | - | an ornament in the centre; a medallion, not a panel |
+
+**Not found, so not promised.** Pixel art by words (`pixel art, 16-bit`): noise, the
+figure lost among diamonds and splashes - without a LoRA it is a shrink of a
+painting (phase 6), not a prompt. True top-down and isometric figures: not by tags -
+the depth ControlNet over the 3D figure (phase 4). A single weapon: not reliably.
+
+**Parallax.** A background is not one picture: *far* (sky, hills; opaque), *middle*
+(trunks on a flat key colour, cut out) and *near* (bushes along the bottom edge, cut
+out), each made on its own and each looping sideways at its own speed. So phase 1
+(cut out) is a prerequisite of phase 5, not a side tool; and the layers must share a
+palette (the lock of `js/genlock.js`), which one run of three prompts does not give.
+
+Backgrounds of the pictures are often off-white or cream, not white - the cut-out has to
+find the colour from the edges, not assume `#fff`.
 
 **Server changes** (small, all in `ComfyClient.cs` / `Program.cs`): free
 `Width` / `Height` (validated); `Kind` filed with the document (`asset:prop`,
