@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'game-character', title: 'Game assets: a character, and the rail in groups',
+    text: "Game assets now makes a Character: describe the look in English (hair, clothes and their colours) and it draws one side view, facing right - a game mirrors it for left - as up to four candidates to choose from, each cut out. It is drawn on a flat colour that is not in the look, so a white cloak is not lost with the background. For 4 or 8 directions it turns the 3D figure from Forms and draws each turn with one seed; whether the faces match is yours to judge. The left rail has fewer buttons: Gen AI holds References and Game assets as tabs, and Colour, Perspective grid and Images do the same with the views that go with them.",
+    act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },
   { id: 'game-assets', title: 'Game assets: props, weapons and items for a 2D game',
     text: "A new view beside Generate. Pick Prop, Weapon or Item, name it in English (a treasure chest, a sword, a potion), a theme, a material and how simple, and it makes up to four, each cut out on a transparent background and kept in Uploads, Assets. A weapon is one to a picture - not the rack of swords the model likes to draw - and turned upright; weapons and items also get a framed square icon for an inventory. The pictures are asked of the model at a size that suits the thing, not one of three shapes. Tile makes a square of ground - grass, dirt, stone, water, wood, sand, snow, lava - that repeats with no seam: the picture is shifted by half so its seams lie in the middle, that cross is drawn again to match, and the result is kept at 512, 256, 32 or 16 px and shown laid three by three.",
     act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },
