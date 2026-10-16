@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=9332d9e6">
+<link rel="stylesheet" href="css/app.css?v=478f0bf5">
 </head>
 <body>
 <div id="setup">
@@ -334,6 +334,12 @@
                 <input type="file" id="genPickInput" accept="image/*" class="hidden" aria-label="Picture to start from">
                 <div id="genSourceBody" class="hidden"></div>
               </div>
+              <!-- Figures to draw fast, made for you: js/warmup.js. -->
+              <div class="gen-warm" id="genWarm">
+                <select id="genWarmN" aria-label="How many poses"></select>
+                <select id="genWarmT" aria-label="Time for each pose"></select>
+                <button type="button" class="ghost" id="genWarmGo" title="Gesture drawing with new figures: a run of whole figures in different poses, each on the screen for a short time (the session kind Gesture warm-up draws from your library instead). The choices above are the character and the style; the next figure is made while you draw.">Warm-up with new poses</button>
+              </div>
               <label class="gen-extra">More tags <input type="text" id="genExtra" placeholder="e.g. hat, rain, holding umbrella" maxlength="200"></label>
               <div class="row gen-go">
                 <label>How many <select id="genCount"><option>1</option><option selected>2</option><option>4</option></select></label>
@@ -352,6 +358,16 @@
             <div class="count" id="genEmpty">What you generate shows here - click one to open it with every tool.</div>
           </div>
         </div>
+      </div>
+
+      <!-- The gesture warm-up's full-screen run (js/warmup.js). -->
+      <div id="warmup" class="warmup hidden" role="dialog" aria-label="Gesture warm-up">
+        <div class="warm-top"><span class="warm-count"></span><span class="warm-clock" aria-live="off"></span>
+          <span class="warm-bar" aria-hidden="true"><i></i></span>
+          <button type="button" class="ghost" data-warm="pause" title="Space">Pause</button>
+          <button type="button" class="ghost" data-warm="skip" title="Right arrow - only once the next is made">Skip</button>
+          <button type="button" class="ghost" data-warm="stop" title="Esc">Stop</button></div>
+        <div class="warm-pic"><img alt="The pose to draw"><p class="warm-say" role="status"></p></div>
       </div>
 
       <!-- Trainers - see TRAINERS. Built by showTrain(). -->
@@ -2122,6 +2138,7 @@
 <script src="js/tangents.js?v=67a34d15"></script>
 <script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
+<script src="js/warmup.js?v=e784b8ca"></script>
 <script src="js/generate.js?v=aa07b4d7"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
