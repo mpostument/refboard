@@ -346,6 +346,34 @@ function assetIcon(canvas, { size = 128, diagonal = false } = {}) {
   return out;
 }
 
+/* ---- Characters (js/assets.js): the directions of one character are drawn one at a time, so
+   each comes out a little taller or shorter than the next, and cut out each stands in a box
+   of its own size. A game swaps them in one place, so they have to share a frame: the same
+   height, the feet on the same line, the figure in the middle.
+
+   assetAlign takes the cut-out canvases (each trimmed to its figure), scales every one to the
+   median height - the middle one, so a single odd picture does not drag the others - and sets
+   them in canvases of one size, feet on the bottom line, the figure's box centred. Returns
+   { canvases, width, height }, or null if there is nothing to align. The box centre is not the
+   body's centre for a figure with a bow held out to one side: the known limit. */
+function assetAlign(canvases, pad = CUT_PAD) {
+  const list = canvases.filter(Boolean);
+  if (!list.length) return null;
+  const heights = list.map(c => c.height).sort((a, b) => a - b);
+  const mid = heights.length >> 1, target = heights.length % 2 ? heights[mid] : (heights[mid - 1] + heights[mid]) / 2;
+  const scaled = list.map(c => ({ c, k: target / c.height }));
+  const inner = Math.max(...scaled.map(({ c, k }) => Math.round(c.width * k)));
+  const width = inner + 2 * pad, height = Math.round(target) + 2 * pad;
+  const out = scaled.map(({ c, k }) => {
+    const o = Object.assign(document.createElement('canvas'), { width, height }), g = o.getContext('2d');
+    const w = Math.max(1, Math.round(c.width * k)), h = Math.max(1, Math.round(c.height * k));
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(c, Math.round((width - w) / 2), height - pad - h, w, h);
+    return o;
+  });
+  return { canvases: out, width, height };
+}
+
 /* ---- Tiles (js/assets.js): the model draws a square of grass, and its left edge does not
    meet its right. The mending is done in two halves, and only the half that needs a model
    asks for one.

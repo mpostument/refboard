@@ -596,7 +596,23 @@ the pictures looked at - as the Generate features were):
    character are recognisably the same - and if they are not (SDXL does not keep
    a face between pictures), the view says so and offers the next step: the
    frames as candidates to pick from, with onion-skinning, not as an animation
-   that was promised.
+   that was promised. **First slice done 2026-10-16: directions only; the pose list
+   (idle, walk...) and onion-skinning are not.** Character kind in the Game assets
+   view: the figure and pose set in 3D forms are turned to 4 or 8 yaws (the camera
+   goes round; 0 = the figure's front), a depth map per yaw (`formsDepthSnapshot` on a
+   copy of the scene), all framed round the union of their boxes (`genFrameImage`), drawn
+   with one seed and the same words but the facing (`CHAR_FACE`), cut out, scaled to the
+   median height and set feet-on-one-line in one frame (`assetAlign`). Real runs, looked
+   at: **the name must be the whole look.** "girl knight" gave a knight in front and
+   behind and a white faceless silhouette at the sides, with different shorts; "girl knight,
+   short brown hair, silver armor, blue skirt, blue boots" gave one recognisable
+   girl in all 4, and "girl archer, blonde ponytail, green tunic, brown boots" in all 8
+   (hair length and trouser colour drift a little). The first run also lost the colours
+   to the 40-character cut of a name (now 120 for a character). **Not good yet:** a light
+   glow round some cut-outs (frontLeft, backLeft: the model draws a coloured halo
+   `cutOut` takes as part of the figure); the front's face went red once; the box centre
+   is not the body's centre for a held bow; nothing says in the view that two directions
+   differ - it only tells you to judge the faces.
 5. **Backgrounds.** Biome and time of day; far / middle / near layers made
    in order, each told what is in front of it; a layer that loops sideways;
    Extend (already built) for a longer one; a room or map from above. *Done

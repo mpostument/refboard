@@ -52,7 +52,7 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
     /// multiple of 64 (the latent is an eighth of the picture and the model's blocks
     /// halve it three times more), 256 - 2048, and no more than 1.6 megapixels - a
     /// small card's limit, and past it SDXL draws two of everything.</summary>
-    public static readonly string[] AssetKinds = ["prop", "weapon", "item", "tile"];
+    public static readonly string[] AssetKinds = ["prop", "weapon", "item", "tile", "character"];
 
     public static bool ValidSize(int? width, int? height) =>
         width is null && height is null

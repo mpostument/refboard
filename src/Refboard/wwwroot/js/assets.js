@@ -54,6 +54,31 @@ const TILE_SIZES = [
   { id: '16', label: '16', hint: 'Shrunk to 16 px' },
 ];
 
+/* A character is drawn once per direction, from one figure: the 3D figure of Forms turned
+   round (the camera goes round it by `deg`, 0 = the figure's front), each turn a depth map
+   the ControlNet holds the picture to, all with the same seed and the same words but the one
+   that says which way she faces. Which way she faces on the screen: the camera 90 degrees round
+   sees her turned to the screen's left. `words` is what the model is told for that turn. */
+const CHAR_FACE = {
+  front: 'facing viewer', left: 'from side, profile, facing left', right: 'from side, profile, facing right',
+  back: 'from behind, back view', frontLeft: 'three-quarter view, facing front left',
+  frontRight: 'three-quarter view, facing front right', backLeft: 'from behind, three-quarter back view, facing back left',
+  backRight: 'from behind, three-quarter back view, facing back right',
+};
+const CHAR_DIRS = {
+  4: [['front', 0], ['left', 90], ['back', 180], ['right', 270]],
+  8: [['front', 0], ['frontLeft', 45], ['left', 90], ['backLeft', 135], ['back', 180], ['backRight', 225], ['right', 270], ['frontRight', 315]],
+};
+const CHAR_CHOICES = [
+  { id: '4', label: '4 directions', hint: 'Front, left, back, right - for most games' },
+  { id: '8', label: '8 directions', hint: 'Adds the four diagonals - for a game with free movement' },
+];
+// The camera's height for the two views: level with her for a side-on game, above for a top-down one.
+const CHAR_PITCH = { side: 4, top: 25 };
+// What the model draws unless told not: a chibi (not wanted), and a sheet of several figures.
+const CHAR_AVOID = 'chibi, super deformed, multiple views, character sheet, reference sheet, turnaround, multiple girls, multiple boys';
+const CHAR_STRENGTH = 0.5;
+
 const ASSET_THEMES = [
   { id: 'any', label: 'Any', tags: '' },
   { id: 'fantasy', label: 'Fantasy', tags: 'fantasy' },
@@ -81,6 +106,12 @@ const ASSET_KINDS = [
     things: ['potion', 'key', 'scroll', 'coin', 'gem', 'ring', 'apple', 'book', 'heart', 'mushroom'] },
   { id: 'tile', label: 'Tile', size: [TILE_MODEL, TILE_MODEL], views: false, icon: false, tile: true, hint: 'A square of ground that repeats with no seam - 3 x 3 shown',
     things: Object.keys(TILE_WORDS) },
+  // Its size is the figure's: the shape (portrait) is named, not a free width and height, as every picture
+  // started from another one is.
+  { id: 'character', label: 'Character', size: null, views: true, icon: false, character: true, hint: 'One figure from Forms turned to 4 or 8 directions, cut out and set on one line',
+    things: ['girl knight, short brown hair, silver armor, blue skirt', 'boy mage, black hair, dark blue robe, hood',
+      'girl archer, blonde ponytail, green tunic, brown boots', 'boy villager, brown hair, white shirt, brown trousers',
+      'girl rogue, black hair, dark hooded cloak, leather armor', 'boy warrior, red hair, leather armor, fur cape'] },
 ];
 
 // What a view says to the model; a prop is drawn from the front or from the 3/4 view above it.
@@ -93,7 +124,8 @@ const ASSET_VIEWS = [
 // also read as a body part, so the first idea is "treasure chest" - and the treasure kept inside.
 const ASSET_CONTAINER = /\b(chest|box|crate|barrel|door|jar|bag|coffin|basket|pot|book|casket)\b/i;
 
-const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true };
+const ASSET_LOOK_MAX = 120;   // the longest look a character is named by
+const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '4' };
 let assetState = { ...ASSET_DEFAULTS };
 
 const assetKind = id => ASSET_KINDS.find(k => k.id === id) || ASSET_KINDS[0];
@@ -104,14 +136,20 @@ const assetPick = (list, id) => list.find(x => x.id === id) || list[0];
 function assetRequest(s) {
   const kind = assetKind(s.kind), simple = assetPick(ASSET_SIMPLE, s.simple), theme = assetPick(ASSET_THEMES, s.theme);
   const material = assetPick(ASSET_MATERIALS, s.material), view = assetPick(ASSET_VIEWS, s.view);
-  const thing = (s.thing || '').trim().toLowerCase().slice(0, 40) || kind.things[0];
-  const named = [kind.tile ? '' : material.word, thing].filter(Boolean).join(' ');
+  // A character's name is its whole look - hair, clothes and their colours: nothing else holds them
+  // from one direction to the next - so it may be long; the picture is named by what is before the first comma.
+  const thing = (s.thing || '').trim().toLowerCase().slice(0, kind.character ? ASSET_LOOK_MAX : 40) || kind.things[0];
+  const short = kind.character ? thing.split(',')[0].trim().slice(0, 40) : thing;
+  const named = [kind.tile || kind.character ? '' : material.word, thing].filter(Boolean).join(' ');
   const box = ASSET_CONTAINER.test(thing);
-  const tags = ['no humans'], avoid = [kind.tile ? TILE_AVOID : ASSET_AVOID, ASSET_ALONE];
+  const tags = kind.character ? [] : ['no humans'], avoid = [kind.tile ? TILE_AVOID : ASSET_AVOID, kind.character ? `${CHAR_AVOID}, ${GEN_POSE_AVOID}` : ASSET_ALONE];
+  const dir = s.dir && CHAR_FACE[s.dir] ? s.dir : 'front';
   if (kind.tile) {
     const ground = TILE_WORDS[thing] || { tags: `${thing}, seamless texture, tileable` };
     tags.push(ground.tags);
     if (ground.avoid) avoid.push(ground.avoid);
+  } else if (kind.character) {
+    tags.push('solo', named, 'full body', 'standing', CHAR_FACE[dir], ...(view.id === 'top' ? ['from above'] : []));
   } else if (kind.id === 'weapon') {
     // The model draws a set of four to six, or a rack on a panel: ask for one, and keep the set out.
     tags.push('solo', `(single ${named}:1.3)`, 'full length', 'centered', 'vertical', 'pointing up', 'object focus');
@@ -124,6 +162,12 @@ function assetRequest(s) {
     if (box) avoid.push('open, open lid, gold, coins, jewels, gems, overflowing');
   }
   const prompt = [...tags, theme.tags, simple.tags, kind.tile ? TILE_STYLE : ASSET_STYLE].filter(Boolean).join(', ');
+  if (kind.character) return {
+    prompt: comfyTags(prompt),
+    avoid: comfyTags([...avoid, simple.avoid].filter(Boolean).join(', ')),
+    tags: [short, 'character', dir, view.id, ...(theme.tags ? [theme.id] : []), 'asset'].slice(0, 24).map(t => t.slice(0, 40)),
+    shape: 'portrait', asset: 'character', dir,
+  };
   const [width, height] = kind.size;
   return {
     prompt: comfyTags(prompt),
@@ -155,16 +199,20 @@ function renderAssets() {
   const s = assetState, kind = assetKind(s.kind);
   el('assetChoices').innerHTML =
     `<section class="gen-group">${assetChips('kind', 'What', ASSET_KINDS, s.kind)}` +
-    `<div class="gen-row"><label class="gen-extra" for="assetThing">Name it, in English ` +
-    `<input type="text" id="assetThing" maxlength="40" autocomplete="off" spellcheck="false" value="${esc(s.thing)}" placeholder="e.g. ${esc(kind.things[0])}"></label>` +
+    `<div class="gen-row"><label class="gen-extra" for="assetThing">${kind.character ? 'Describe the look, in English - hair, clothes and their colours: it is what keeps the directions alike' : 'Name it, in English'} ` +
+    `<input type="text" id="assetThing" maxlength="${kind.character ? ASSET_LOOK_MAX : 40}" autocomplete="off" spellcheck="false" value="${esc(s.thing)}" placeholder="e.g. ${esc(kind.things[0])}"></label>` +
     `<div class="chips" id="assetThings" role="group" aria-label="Ideas">` +
     kind.things.map(t => `<button type="button" class="chip" data-thing="${esc(t)}" aria-pressed="${s.thing.trim().toLowerCase() === t}">${esc(t)}</button>`).join('') + '</div></div>' +
-    (kind.views ? assetChips('view', 'View', ASSET_VIEWS, s.view, () => '') : '') + '</section>' +
+    (kind.views ? assetChips('view', 'View', ASSET_VIEWS, s.view, () => '') : '') +
+    (kind.character ? assetChips('dirs', 'Turned to', CHAR_CHOICES, s.dirs) +
+      '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Whether the faces match is for you to judge.</p>' : '') + '</section>' +
     `<section class="gen-group">${assetChips('theme', 'Theme', ASSET_THEMES, s.theme, () => '')}` +
-    (kind.tile ? '' : assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '')) +
+    (kind.tile || kind.character ? '' : assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '')) +
     assetChips('simple', 'How simple', ASSET_SIMPLE, s.simple) +
     (kind.tile ? assetChips('size', 'Tile size, px', TILE_SIZES, s.size) : '') + '</section>';
   el('assetIconRow').classList.toggle('hidden', !kind.icon);
+  // The directions are the count of a character.
+  el('assetCountRow').classList.toggle('hidden', !!kind.character);
   el('assetIcon').checked = !!s.icon;
   el('assetCount').value = s.count;
   el('assetDraft').value = s.draft;
@@ -209,20 +257,24 @@ async function assetFinishTile(made, s) {
   await forgetUpload(doc);
 }
 
+/* A canvas kept as a PNG in Uploads, Assets, as the document `doc` made it (its words, seed and tags
+   carried over, `extra` tags added, `over` laid on top). */
+async function assetKeep(doc, canvas, extra, over = {}) {
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  const f = await storeFile(blob);
+  if (storeMode === 'server') await storeSortFile(f.id, 'assets');
+  await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png',
+    width: canvas.width, height: canvas.height, tags: [...(doc.tags || []), ...extra].slice(0, 24), t: Date.now(), ...over });
+  return f;
+}
+
 /* One finished picture: cut out, and for a weapon or an item reduced to one piece, a
    weapon turned upright - kept in Uploads, Assets, in the place of the model's own, which
    is forgotten. A picture with no plain background is kept as it came, tagged so. */
 async function assetFinish(made, s) {
   if (assetKind(s.kind).tile) return assetFinishTile(made, s);
   const doc = made.doc, kind = assetKind(s.kind);
-  const keep = async (canvas, extra, over = {}) => {
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    const f = await storeFile(blob);
-    if (storeMode === 'server') await storeSortFile(f.id, 'assets');
-    await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png',
-      width: canvas.width, height: canvas.height, tags: [...(doc.tags || []), ...extra].slice(0, 24), t: Date.now(), ...over });
-    return f;
-  };
+  const keep = (canvas, extra, over) => assetKeep(doc, canvas, extra, over);
   let pic;
   try { pic = await genLoadPicture(doc); } catch { return; }
   const cut = cutOut(pic);
@@ -251,8 +303,60 @@ async function assetFinish(made, s) {
 const assetsMade = async () => (await listUploads()).filter(u => u.asset && u.folder === 'assets');
 const ASSET_UI = { go: 'assetGo', status: 'assetStatus', goText: 'Make', refresh: () => showAssets(false) };
 
+/* A character: one figure, turned. The depth map of the figure in Forms (the one Draw this pose
+   uses) is taken once per direction with the camera sent round it; the maps are framed alike
+   (round the union of their boxes, or the narrow side view would be drawn bigger than the front),
+   and each is drawn with the same seed and the same words but the one that says which way she
+   faces. SDXL does not keep a face between pictures, so the result is shown as candidates to look
+   at, not promised as one person: what is done to them is only what is certain - cut out, scaled to
+   one height, the feet set on one line (assetAlign). */
+async function assetsCharacterGo(s) {
+  const status = el(ASSET_UI.status);
+  if (!genControlAvailable()) { status.textContent = 'A character is drawn through a depth ControlNet, and this server has none (COMFY_CONTROLNET).'; return; }
+  status.textContent = 'Opening the 3D figure...';
+  // The 3D view is a lazy section and starts its engine on first use; it is brought up here
+  // without leaving this view - the depth maps are drawn off screen.
+  try { await loadSection('forms'); showForms(); await formsReady(); } catch (err) { status.textContent = err.message; return; }
+  const o = formShotSubject();
+  if (!o) { status.textContent = 'There is no figure to turn: add one in Forms (3D forms, Figure) and set its pose, then come back.'; return; }
+  const dirs = CHAR_DIRS[s.dirs] || CHAR_DIRS[4], seed = Math.floor(Math.random() * 2 ** 31);
+  const scene = { ...formScene, fisheye: false, roll: 0, pitch: CHAR_PITCH[s.view] ?? CHAR_PITCH.side };
+  status.textContent = 'Turning the figure...';
+  const blobs = [];
+  for (const [, deg] of dirs) blobs.push(await formsDepthSnapshot({ ...scene, yaw: wrap180((o.ry || 0) + deg) }));
+  const boxes = (await Promise.all(blobs.map(genBoxOf))).filter(Boolean);
+  if (!boxes.length) { status.textContent = 'The figure is not in view - the depth map is empty.'; return; }
+  const x0 = Math.min(...boxes.map(b => b.x)), y0 = Math.min(...boxes.map(b => b.y));
+  const union = { x: x0, y: y0, w: Math.max(...boxes.map(b => b.x + b.w)) - x0, h: Math.max(...boxes.map(b => b.y + b.h)) - y0 };
+  const draft = s.draft === 'draft';
+  const jobs = [];
+  for (let i = 0; i < dirs.length; i++) {
+    const frame = await genFrameImage(blobs[i], 'pose', { shape: 'portrait' }, union);
+    const { dir, ...r } = assetRequest({ ...s, dir: dirs[i][0] });
+    jobs.push({ ...r, image: frame.b64, control: true, strength: CHAR_STRENGTH, seed, tags: [...r.tags, 'pose'].slice(0, 24), ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) });
+  }
+  const cuts = [];
+  await runGenerate(jobs, (i, total) => `Drawing ${dirs[i - 1][0]} (${i} of ${total})...`, `${dirs.length} directions made - in Uploads, Assets.`, async made => {
+    let pic;
+    try { pic = await genLoadPicture(made.doc); } catch { return; }
+    const cut = cutOut(pic);
+    if (cut.found) cuts.push({ doc: made.doc, canvas: cut.canvas });
+    else await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) });
+  }, ASSET_UI);
+  // Whatever was drawn is lined up, even if it was stopped or one failed.
+  const lined = assetAlign(cuts.map(c => c.canvas));
+  if (!lined) return;
+  for (let i = 0; i < cuts.length; i++) {
+    await assetKeep(cuts[i].doc, lined.canvases[i], ['cut out', 'aligned', `${lined.width}x${lined.height}`]);
+    await forgetUpload(cuts[i].doc);
+  }
+  storeChanged();
+  await ASSET_UI.refresh();
+}
+
 async function assetsGo() {
   if (genBusy) { genStop(); return; }
+  if (assetKind(assetState.kind).character) { await assetsCharacterGo({ ...assetState }); return; }
   const s = { ...assetState }, r = assetRequest(s), n = Number(s.count) || 1;
   const draft = s.draft === 'draft';
   const jobs = Array.from({ length: n }, () => ({ ...r, ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) }));

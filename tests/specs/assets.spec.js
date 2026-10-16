@@ -287,7 +287,7 @@ test('the view is in the rail only with a ComfyUI, and says what it is', async (
   await expect(page.locator('.nav-item[data-view="assets"]')).toBeHidden();
   const s = await setup(page);
   await expect(page.locator('#viewTitle')).toHaveText('Game assets');
-  await expect(page.locator('#assetChoices [data-as="kind"]')).toHaveCount(4);
+  await expect(page.locator('#assetChoices [data-as="kind"]')).toHaveCount(5);
   expect(s.posted).toEqual([]);
 });
 
@@ -378,4 +378,70 @@ test('a tile: asked of the model whole, the cross drawn again, one mended tile k
   expect(kept.tags).not.toContain('1024x1024');
   expect(kept.tags.some(t => t === 'seamless' || t === 'seam visible')).toBe(true);
   await expect(page.locator('#assetResults .asset-3x3')).toHaveCount(1);
+});
+
+// ---- Characters (phase 4). The recipe, and the half that needs no model: setting the directions on one line.
+test('a character is asked for solo, whole, facing the way its direction says, and no chibi', async ({ page }) => {
+  await openApp(page);
+  const front = await ask(page, settings({ kind: 'character', thing: 'girl knight', dir: 'front' }));
+  const left = await ask(page, settings({ kind: 'character', thing: 'girl knight', dir: 'left' }));
+  for (const w of ['solo', 'girl knight', 'full body', 'standing', 'facing viewer', 'game sprite', 'white background']) expect(front.prompt, w).toContain(w);
+  expect(front.prompt).not.toContain('no humans');
+  expect(left.prompt).toContain('facing left');
+  expect(left.prompt).not.toContain('facing viewer');
+  // Not a human-free recipe: the sprite recipe's "human, 1girl" is not kept out here, but a chibi and a sheet are.
+  for (const w of ['chibi', 'character sheet', 'turnaround', 'mannequin']) expect(front.avoid, w).toContain(w);
+  expect(front.avoid).not.toMatch(/\b1girl\b/);
+  // Told apart only by the direction: the same words otherwise, so the seed means the same thing.
+  expect(front.avoid).toBe(left.avoid);
+  expect([front.shape, front.asset, front.width, front.tags.slice(0, 3)]).toEqual(['portrait', 'character', undefined, ['girl knight', 'character', 'front']]);
+});
+
+test('the top-down view of a character is from above; material is not part of one', async ({ page }) => {
+  await openApp(page);
+  const r = await ask(page, settings({ kind: 'character', thing: 'mage', view: 'top', material: 'iron' }));
+  expect(r.prompt).toContain('from above');
+  expect(r.prompt).not.toContain('iron');
+});
+
+test('4 directions go round the figure by quarters and 8 by eighths, the front first', async ({ page }) => {
+  await openApp(page);
+  const d = await page.evaluate(() => ({ four: CHAR_DIRS[4].map(([, a]) => a), eight: CHAR_DIRS[8].map(([, a]) => a),
+    faces: [...CHAR_DIRS[4], ...CHAR_DIRS[8]].every(([id]) => !!CHAR_FACE[id]) }));
+  expect(d.four).toEqual([0, 90, 180, 270]);
+  expect(d.eight).toEqual([0, 45, 90, 135, 180, 225, 270, 315]);
+  expect(d.faces).toBe(true);
+});
+
+test('aligning sets every direction to one height, on one floor line, in one frame', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    // Three cut-outs: a tall front, a narrow shorter side, a back as tall as the front. Each a solid block.
+    const make = (w, h) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); g.fillStyle = '#c00'; g.fillRect(0, 0, w, h); return c; };
+    const a = assetAlign([make(40, 100), make(24, 90), make(40, 100)]);
+    // The lowest and the highest opaque row, and the opaque columns, of each result.
+    const rows = c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let top = c.height, bot = -1, l = c.width, rr = -1;
+      for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 8) { top = Math.min(top, y); bot = Math.max(bot, y); l = Math.min(l, x); rr = Math.max(rr, x); }
+      return { top, bot, l, r: rr }; };
+    return { size: [a.width, a.height], boxes: a.canvases.map(c => ({ size: [c.width, c.height], ...rows(c) })), none: assetAlign([]) };
+  });
+  // The median height of 100, 90, 100 is 100: the shorter picture is scaled up to it, not the others down.
+  expect(r.size[1]).toBe(100 + 2 * 4);
+  expect(new Set(r.boxes.map(b => b.size.join('x'))).size).toBe(1);
+  for (const b of r.boxes) { expect(b.bot, 'feet on one line').toBe(r.size[1] - 4 - 1); expect(b.top, 'one height').toBe(4); }
+  // Centred: the margin left and right of the narrow one is the same (within a pixel).
+  const narrow = r.boxes[1];
+  expect(Math.abs(narrow.l - (r.size[0] - 1 - narrow.r))).toBeLessThanOrEqual(1);
+  expect(r.none).toBeNull();
+});
+
+test('a character is named by its whole look, so the colours reach the model; the picture is named by the first part', async ({ page }) => {
+  await openApp(page);
+  const look = 'Girl knight, short brown hair, silver armor, blue skirt, blue boots';
+  const r = await ask(page, settings({ kind: 'character', thing: look }));
+  // Not cut to 40 characters like the name of a prop: "silver ar" was what the first real run sent.
+  for (const w of ['short brown hair', 'silver armor', 'blue skirt', 'blue boots']) expect(r.prompt, w).toContain(w);
+  expect(r.tags.slice(0, 2)).toEqual(['girl knight', 'character']);
+  // Still a limit.
+  expect((await ask(page, settings({ kind: 'character', thing: 'x, ' + 'y'.repeat(300) }))).prompt.length).toBeLessThan(700);
 });

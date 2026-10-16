@@ -764,11 +764,15 @@ function genFigureBox(img) {
   return { x: L, y: T, w: R - L, h: B - T };
 }
 
-async function genSetSource(blob, mode, extra = {}) {
+/* A picture made ready for the server: fitted to the frame its shape names. A photo fills the
+   frame (its edges may go); a figure (mode 'pose') is fitted whole round its own box - or round
+   `box`, when the caller wants several pictures framed alike (the directions of one character:
+   each one cropped to its own box would draw the narrow side view bigger than the front). */
+async function genFrameImage(blob, mode, extra = {}, box = null) {
   const url = URL.createObjectURL(blob);
   try {
     const img = await loadImg(url);
-    const box = mode === 'pose' ? genFigureBox(img) : null;
+    box = box || (mode === 'pose' ? genFigureBox(img) : null);
     const crop = box || { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight };
     const ar = crop.w / crop.h;
     const shape = extra.shape || (ar > 1.15 ? 'landscape' : ar < 0.87 ? 'portrait' : 'square');
@@ -776,8 +780,7 @@ async function genSetSource(blob, mode, extra = {}) {
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const g = c.getContext('2d');
-    // A photo fills the frame (its edges may go); a figure must not lose a
-    // hand, so it is fitted whole, on the colour of its own background.
+    // A figure must not lose a hand, so it is fitted whole, on the colour of its own background.
     if (mode === 'pose') {
       const px = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
       px.canvas.width = px.canvas.height = 1;
@@ -801,9 +804,20 @@ async function genSetSource(blob, mode, extra = {}) {
       const w = crop.w * k, h = crop.h * k;
       g.drawImage(img, crop.x, crop.y, crop.w, crop.h, (W - w) / 2, (H - h) / 2, w, h);
     }
-    genSource = { mode, shape, b64: genEncode(c), preview: c.toDataURL('image/jpeg', 0.6),
+    return { mode, shape, b64: genEncode(c), preview: c.toDataURL('image/jpeg', 0.6),
       level: GEN_LEVELS[mode].options[GEN_LEVELS[mode].start][1], ...extra };
   } finally { URL.revokeObjectURL(url); }
+}
+
+/* Where the figure is in a depth picture, as genFigureBox finds it - for a caller that frames
+   several pictures round the union of their boxes. */
+async function genBoxOf(blob) {
+  const url = URL.createObjectURL(blob);
+  try { return genFigureBox(await loadImg(url)); } finally { URL.revokeObjectURL(url); }
+}
+
+async function genSetSource(blob, mode, extra = {}) {
+  genSource = await genFrameImage(blob, mode, extra);
   renderGenSource();
   setView({ kind: 'generate' });
   el('genStatus').textContent = GEN_WHAT[mode] + ' Change anything, then Generate.';
