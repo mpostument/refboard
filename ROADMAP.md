@@ -467,6 +467,134 @@ shoulder and other two-figure shots, and a lens's distortion on a photo.
   in watercolour too: where to leave the paper, where the soft edges go,
   in what order the layers.
 
+## Game assets
+
+Generate makes references to draw from. A 2D game needs the other thing:
+pictures to *use* - a character that walks, a sword in the inventory, a floor
+that tiles, a forest in three layers - cut out, at the size the engine wants,
+in one style, in a file it can load. The same ComfyUI makes them (Animagine XL
+4.0 and the depth ControlNet are what is installed); what is new is the recipes
+for each kind, the work *after* the model - cutting out, tiling, shrinking,
+packing - which needs no model and runs in the page, and the export.
+
+A new view, **Game assets** (`js/assets.js`, beside Generate in the nav; shares
+`runGenerate()`, `ComfyClient`, the More menu, the palette lock and the Redraw /
+Extend / Before-and-after sheets rather than copying them). Each picture is kept
+in Uploads > Assets with its kind, view and size as tags, so the library finds it.
+
+**What it makes**
+
+| Kind | What you choose | What comes out |
+| --- | --- | --- |
+| Character | view, pose (idle, walk, attack...), outfit, theme | one sprite on transparent; 4/8 directions; a turnaround |
+| Prop | what (barrel, chest, tree, lamp...), view, theme | a cut-out object; 4 variants at once |
+| Weapon and item | sword, axe, bow, staff, gun, potion, key...; material | a cut-out object, an inventory icon (square, outlined) |
+| Tile | ground, grass, water, stone, wood, lava, snow...; view | a seamless square, 3x3 preview; a terrain set (blob autotile) |
+| Background | biome, time of day; a far / middle / near layer | a wide picture; a layer that loops sideways; a room or map from above |
+| UI | panel, button, frame, bar, icon set | a stretchable frame (9-slice), a set of icons |
+
+**View** is the first choice on every kind: *Side* (platformer), *Top-down*
+(the three-quarter view of a Zelda or Stardew - what a game calls top-down),
+*Straight down* (a map, a floor plan; a character from above is a head and
+shoulders), *Isometric*. Each is a tag recipe per kind (`from side`, `from above`,
+`isometric`, `flat color`...), found by trying, not guessed - phase 0.
+
+**One style for the whole game.** A *Game style* kept once and applied to every
+kind: the view, the theme, an outline weight, the palette (the Colour studio's
+or the Holbein box, through the palette lock of `js/genlock.js`), the pixel
+grid, the sprite size. Without it fifty assets are fifty styles, which is the
+usual way generated art fails a game.
+
+**The parts that need no model** (client-side, `js/assetsfx.js`, all testable
+without ComfyUI):
+
+- *Cut out*: the picture is made on a flat colour (the model is told
+  `simple background, green background` or white), and the background found from
+  the edges and removed - the flood of `genBackgroundMask()`, but with a soft
+  edge, a despill of the colour at the rim, and the holes inside (between an arm
+  and a body) found too. A checkerboard shows the result. No `rembg`.
+- *Pixel it*: nearest-neighbour shrink to a grid (16, 32, 48, 64, 128), the
+  colours cut to 8 / 16 / 32 (median cut, or the palette's own), a one-pixel
+  outline. What the model drew is a painting; this makes it a sprite.
+- *Make seamless*: the tile rolled by half its width and height, so its seams
+  lie in the middle as a cross; that cross masked and drawn again through the
+  Redraw path (`VAEEncodeForInpaint`), then a 3x3 preview shows what is left. The
+  same with the vertical seam only makes a background loop sideways.
+- *Pack and export*: a sprite sheet (grid or packed, padding, power of two), a
+  JSON atlas (Phaser / generic), a Godot-friendly folder, Tiled's `.tsx`
+  for a tile set, a 9-slice description for UI frames.
+- *Blob autotile*: from two seamless textures (grass, dirt) the 47 (or 16) tiles
+  of a terrain set, the edge between them a noisy mask; pure canvas.
+
+**Phases** (each ends with a commit, tests, and a run on the real ComfyUI with
+the pictures looked at - as the Generate features were):
+
+0. **Spike - what the model can do.** Try each kind in each view on Animagine
+   XL 4.0, 4-8 seeds each, and write the tags that work (and the ones that fail)
+   into this file. Settles the bad cases early: a true top-down character,
+   pixel art without a LoRA, a tile that is not a picture of a floor. *Done
+   when* there is a table: kind x view -> tags, with a verdict and a sample.
+1. **Cut out.** `assetsfx.js` cut-out with the checkerboard view and a PNG
+   with alpha; works on any generated picture (a More item) as well as in the
+   new view. *Done when* a character on white, one on green and a prop each cut
+   out with no halo at 3x zoom, and a picture with no plain background says so.
+2. **The view, props and weapons.** The Game assets view with the style
+   settings, Prop / Weapon / Item, 4 variants, the icon frame. Server: free
+   sizes (`Width`, `Height`, multiples of 64, up to 1.6 MP) instead of three
+   shapes - needed for a strip and a square at 512. *Done when* "a wooden chest,
+   side view, fantasy" gives four cut-out chests, and "a steel sword" four
+   swords pointing the same way.
+3. **Tiles.** Make seamless; the 3x3 preview; ground / grass / water / stone /
+   wood from the Spike's tags; a tile at 256 / 512 and shrunk to 16 / 32.
+   *Done when* a 3x3 of a generated tile shows no seam at 1x, and the rolled
+   seam is drawn again, not blurred.
+4. **Characters.** One sprite per view, with a pose list (idle, walk, run,
+   attack, hurt). Directions and frames through the 3D figure and the depth
+   ControlNet that Draw this pose already uses: the figure turned to 4 or 8
+   yaws, or set to a walk cycle's keyframes, each drawn with the same seed and
+   the same words, then aligned on the feet. *Done when* 4 directions of one
+   character are recognisably the same - and if they are not (SDXL does not keep
+   a face between pictures), the view says so and offers the next step: the
+   frames as candidates to pick from, with onion-skinning, not as an animation
+   that was promised.
+5. **Backgrounds.** Biome and time of day; far / middle / near layers made
+   in order, each told what is in front of it; a layer that loops sideways;
+   Extend (already built) for a longer one; a room or map from above. *Done
+   when* three layers laid over one another read as depth and the loop point is
+   not found by looking.
+6. **Pixel it and the game style.** The shrink and the palette, the Game style
+   kept and applied to every kind, a style check (the palette share of an asset
+   against the style's). *Done when* a sprite, a tile and an icon from one style
+   share a palette and an outline.
+7. **Sheets and export.** Pack, JSON atlas, Tiled `.tsx`, the animation strip
+   with a preview that plays, a GIF of it; the asset pack as one zip. *Done
+   when* a pack loads in Godot and Phaser without a hand edit (tried, not
+   assumed).
+8. **Blob autotile and UI.** The 47-tile terrain set from two textures; panels
+   and buttons with a 9-slice; icon sets (a theme, 12 icons, one frame).
+9. **Models, if the above wants them** (each is the user's install, and an item
+   on the get-models script of the Generate notes): a pixel-art LoRA (needs a
+   `LoraLoader` in the server's graph - not there yet); a line-art ControlNet
+   (colour a sketch, keep the outline); IP-Adapter or a trained LoRA for the
+   same character across frames, the one real fix for the drift of phase 4; a
+   background-removal node for pictures with no plain background.
+
+**What will be hard, said now.** The model is an anime one: a prop asked for
+without `no humans` becomes a girl holding it, and a "tree" arrives with a
+landscape behind it - every kind needs its keep-out tags (the way Generate's
+`no humans` for all but a character was found). True orthographic top-down and
+true isometric are rare in its training; expect three-quarter views and fix the
+rest by choosing the view's tags carefully, or by the depth ControlNet over a
+3D box or figure (the app has both). Pixel art made by shrinking a painting is
+good, not what a pixel artist draws. A character's face will change between
+frames. None of this is a reason not to build it; it is why phase 0 comes
+first and why the table, not this text, is what the recipes are built from.
+
+**Server changes** (small, all in `ComfyClient.cs` / `Program.cs`): free
+`Width` / `Height` (validated); `Kind` filed with the document (`asset:prop`,
+`asset:tile`...); later `Lora` (name and weight, validated against ComfyUI's
+list) and a `Batch` of N seeds in one job. The rest is the page.
+
 ## Library
 
 In place: uploads sorted and tagged (`js/sort.js`) - behind the container,
