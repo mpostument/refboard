@@ -443,6 +443,26 @@ test('aligning sets every direction to one height, on one floor line, in one fra
   expect(r.none).toBeNull();
 });
 
+test('a bow held out to one side does not move the body in the frame', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    // A body 20 wide and 100 tall; the second also has a bow: 30 more pixels out to the right over 8 rows at arm height.
+    const make = bow => { const c = Object.assign(document.createElement('canvas'), { width: bow ? 50 : 20, height: 100 }), g = c.getContext('2d'); g.fillStyle = '#c00'; g.fillRect(0, 0, 20, 100); if (bow) g.fillRect(20, 40, 30, 8); return c; };
+    const a = assetAlign([make(false), make(true)]);
+    // The columns the body (rows 20..30, above the bow) covers in each result.
+    const body = c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const y = Math.round(c.height * 0.25); let l = c.width, rr = -1;
+      for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 8) { l = Math.min(l, x); rr = Math.max(rr, x); }
+      return [l, rr]; };
+    return { size: [a.width, a.height], bodies: a.canvases.map(body) };
+  });
+  // The same columns in both frames: the body stays put, and the bow takes room on the right only.
+  expect(r.bodies[1]).toEqual(r.bodies[0]);
+  // The frame holds the whole bow: 20 of body + 30 of bow + the padding.
+  expect(r.size[0]).toBe(50 + 2 * 4);
+  // And the body is not in the middle of that frame - it is on the left, where the bow leaves room.
+  expect(r.bodies[0][0]).toBe(4);
+});
+
 test('a character is named by its whole look, so the colours reach the model; the picture is named by the first part', async ({ page }) => {
   await openApp(page);
   const look = 'Girl knight, short brown hair, silver armor, blue skirt, blue boots';

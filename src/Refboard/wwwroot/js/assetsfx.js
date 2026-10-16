@@ -467,22 +467,40 @@ function assetDefringe(canvas, passes = 8) {
 
    assetAlign takes the cut-out canvases (each trimmed to its figure), scales every one to the
    median height - the middle one, so a single odd picture does not drag the others - and sets
-   them in canvases of one size, feet on the bottom line, the figure's box centred. Returns
-   { canvases, width, height }, or null if there is nothing to align. The box centre is not the
-   body's centre for a figure with a bow held out to one side: the known limit. */
+   them in canvases of one size, feet on the bottom line, the body on the middle line. Returns
+   { canvases, width, height }, or null if there is nothing to align.
+
+   The middle line is the body's, not the figure box's: a bow held out to one side widens the box
+   on that side only, and centring the box would slide the body the other way. assetBodyCentre
+   finds the body; the frame is as wide as the widest left side plus the widest right side. */
+const BODY_BAND = [0.15, 0.85];   // the rows (as a share of the height) the body's centre is read from: head to hip, not the feet
+function assetBodyCentre(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const mids = [];
+  for (let y = Math.floor(h * BODY_BAND[0]); y < Math.ceil(h * BODY_BAND[1]); y++) {
+    let l = -1, r = -1;
+    for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > ASSET_ALPHA) { if (l < 0) l = x; r = x; }
+    if (l >= 0) mids.push((l + r + 1) / 2);
+  }
+  if (!mids.length) return w / 2;
+  mids.sort((a, b) => a - b);
+  // The median: the few rows a bow or a sword reaches into do not move it, as they would an average.
+  return mids.length % 2 ? mids[mids.length >> 1] : (mids[(mids.length >> 1) - 1] + mids[mids.length >> 1]) / 2;
+}
 function assetAlign(canvases, pad = CUT_PAD) {
   const list = canvases.filter(Boolean);
   if (!list.length) return null;
   const heights = list.map(c => c.height).sort((a, b) => a - b);
   const mid = heights.length >> 1, target = heights.length % 2 ? heights[mid] : (heights[mid - 1] + heights[mid]) / 2;
-  const scaled = list.map(c => ({ c, k: target / c.height }));
-  const inner = Math.max(...scaled.map(({ c, k }) => Math.round(c.width * k)));
-  const width = inner + 2 * pad, height = Math.round(target) + 2 * pad;
-  const out = scaled.map(({ c, k }) => {
+  const scaled = list.map(c => { const k = target / c.height, cx = assetBodyCentre(c) * k; return { c, k, cx, rest: c.width * k - cx }; });
+  const left = Math.round(Math.max(...scaled.map(s => s.cx))), right = Math.round(Math.max(...scaled.map(s => s.rest)));
+  const width = left + right + 2 * pad, height = Math.round(target) + 2 * pad;
+  const out = scaled.map(({ c, k, cx }) => {
     const o = Object.assign(document.createElement('canvas'), { width, height }), g = o.getContext('2d');
     const w = Math.max(1, Math.round(c.width * k)), h = Math.max(1, Math.round(c.height * k));
     g.imageSmoothingQuality = 'high';
-    g.drawImage(c, Math.round((width - w) / 2), height - pad - h, w, h);
+    g.drawImage(c, pad + left - Math.round(cx), height - pad - h, w, h);
     return o;
   });
   return { canvases: out, width, height };

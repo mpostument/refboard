@@ -610,8 +610,7 @@ the pictures looked at - as the Generate features were):
    (hair length and trouser colour drift a little). The first run also lost the colours
    to the 40-character cut of a name (now 120 for a character). **Not good yet:** a light
    glow round some cut-outs (frontLeft, backLeft: the model draws a coloured halo
-   `cutOut` takes as part of the figure); the front's face went red once; the box centre
-   is not the body's centre for a held bow; nothing says in the view that two directions
+   `cutOut` takes as part of the figure); the front's face went red once; nothing says in the view that two directions
    differ - it only tells you to judge the faces.
 5. **Backgrounds.** Biome and time of day; far / middle / near layers made
    in order, each told what is in front of it; a layer that loops sideways;
