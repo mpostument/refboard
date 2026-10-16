@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-detail', title: 'Generate: redraw a small part in detail',
+    text: "Redraw a part now zooms in on a small part - a hand, a face - by default: it is cut out with room round it, enlarged, drawn there with all the detail that size has, and put back. A hand a hundred pixels wide used to come back as a smear. Turn In detail off in the sheet to draw it where it is.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'gen-extend', title: 'Generate: extend the picture',
     text: "More canvas on the sides you choose - a quarter or half again - drawn to match; the picture itself is not changed, only the new part is drawn. Say what should be there, or leave it as scenery. Find it in a picture's More menu: Extend...",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

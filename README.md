@@ -622,6 +622,8 @@ as the page), and nothing under a dot-prefixed path is served as a static file.
   drawn again, img2img, with the light's or the medium's tags swapped in -
   ink and pencil keep some of the source's colour) and, with *As:
   Drafts*, pictures made in 14 steps instead of 28 to look through first.
+  **Redraw a part** zooms in on a small part by default (*In detail*: cut out with room round it,
+  enlarged to about 1024 px, drawn there and put back with a soft edge).
   **Extend...** adds a quarter or half again of canvas on the sides you pick (the picture is
   pasted back unchanged, only the new part is drawn; scenery only unless you ask for the
   character to go on).

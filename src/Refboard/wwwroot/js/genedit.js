@@ -12,6 +12,8 @@
    - Redraw a part: brush over what is wrong (a hand, an eye) and only that is
      drawn again - the server masks the latent and pastes the new paint over
      the original, so the rest is the same pixels, not "nearly".
+   - In detail (on by default in Redraw a part): a small part is cut out with room round it,
+     enlarged to about 1024 px, drawn there and put back - see redrawZoom().
    - New background: Redraw a part with the mask already brushed over the
      background - found from the picture's edges - for you to correct.
    - Extend the picture: a bigger canvas with the picture in it and the new part masked.
@@ -111,6 +113,8 @@ async function genRedrawOpen(u, background = false) {
   pc.getContext('2d').drawImage(pic, 0, 0);
   redraw = { u, w: pic.width, h: pic.height, level: GEN_REDRAW_LEVELS[background ? 2 : 1][1], ink: false, undo: [], last: null, background };
   el('redrawTitle').textContent = background ? 'New background' : 'Redraw a part';
+  // A background is big and wide; there is no part of it to zoom in on.
+  el('redrawDetailRow').classList.toggle('hidden', background);
   el('redrawLabel').firstChild.textContent = background ? 'What the background is ' : 'What should be there ';
   el('redrawText').placeholder = background ? 'e.g. a beach at sunset, a classroom' : 'optional - e.g. open hand, brown eyes';
   if (background) redraw.ink = genBackgroundMask(pic);
@@ -191,8 +195,93 @@ function redrawGo() {
   const req = { prompt, avoid: u.avoid || '', tags, shape: u.shape || 'portrait',
     image: genEncode(pic), mask: redrawMaskPng(), denoise: redraw.level, parent: u.file };
   const bg = redraw.background;
+  // A small part drawn in detail: the part, with room round it, enlarged and drawn there,
+  // then put back - see redrawZoom().
+  const zoom = !bg && el('redrawDetail').checked ? redrawZoom() : null;
+  if (zoom) { req.image = zoom.image; req.mask = zoom.mask; req.shape = extendShape(zoom.ow, zoom.oh); }
   closeRedraw();
-  runGenerate([req], bg ? 'Drawing the background...' : 'Drawing that part again...', bg ? 'New background - in Uploads, Generated.' : 'Redrawn - in Uploads, Generated.');
+  runGenerate([req], bg ? 'Drawing the background...' : zoom ? 'Drawing that part again, in detail...' : 'Drawing that part again...',
+    bg ? 'New background - in Uploads, Generated.' : 'Redrawn - in Uploads, Generated.', zoom && (made => redrawPasteBack(u, made, zoom)));
+}
+
+/* ---- In detail. A hand or a face a hundred pixels wide is a handful of the sampler's own
+   cells, and drawn again there it gets no more detail than it had. So the part is cut out
+   with room round it (for what the model should match), enlarged to about 1024 px - the size
+   it draws best at - drawn again as a picture of its own, and the result, made small again,
+   is put back where it came from, only where the brush was, with a soft edge. */
+const GEN_ZOOM_SIDE = 1024, GEN_ZOOM_MAX_K = 4, GEN_ZOOM_MIN_K = 1.4, GEN_ZOOM_MIN_CROP = 256, GEN_ZOOM_MAX_SHARE = 0.35;
+const zoomCanvas = (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h });
+
+/* Where to cut: the brushed part's box widened by 60% of its long side each way (at least 256
+   px across, in the picture), moved - not cut - to stay inside the picture. Null when
+   nothing is brushed, the part is over a third of the picture (it is big enough already),
+   or enlarging would be less than 1.4 times. */
+function redrawCrop() {
+  const { w: W, h: H } = redraw, d = redrawInk().getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 16) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  if (bw * bh > GEN_ZOOM_MAX_SHARE * W * H) return null;
+  const grow = Math.max(bw, bh) * 0.6;
+  // A small part gets more room, not a bigger enlargement: both sides grow by what the long one lacks.
+  const lack = Math.max(0, GEN_ZOOM_MIN_CROP - (Math.max(bw, bh) + 2 * grow));
+  const cw = Math.min(W, Math.round(bw + 2 * grow + lack)), ch = Math.min(H, Math.round(bh + 2 * grow + lack));
+  const x = Math.max(0, Math.min(W - cw, Math.round((x0 + x1) / 2 - cw / 2))), y = Math.max(0, Math.min(H - ch, Math.round((y0 + y1) / 2 - ch / 2)));
+  const k = Math.min(GEN_ZOOM_MAX_K, GEN_ZOOM_SIDE / Math.max(cw, ch));
+  return k >= GEN_ZOOM_MIN_K ? { x, y, w: cw, h: ch, k } : null;
+}
+
+/* The request's picture and mask cut and enlarged, and what the paste-back needs: a copy of
+   the whole picture, and the mask at the cut's own size, widened and softened. */
+function redrawZoom() {
+  const c = redrawCrop();
+  if (!c) return null;
+  const ow = Math.max(8, Math.round(c.w * c.k / 8) * 8), oh = Math.max(8, Math.round(c.h * c.k / 8) * 8);
+  const pic = el('redrawPic'), ink = el('redrawMask');
+  const whole = zoomCanvas(pic.width, pic.height);
+  whole.getContext('2d').drawImage(pic, 0, 0);
+  const cut = zoomCanvas(ow, oh), cg = cut.getContext('2d');
+  cg.imageSmoothingQuality = 'high';
+  cg.drawImage(pic, c.x, c.y, c.w, c.h, 0, 0, ow, oh);
+  const mask = zoomCanvas(ow, oh), mg = mask.getContext('2d');
+  mg.fillStyle = '#000'; mg.fillRect(0, 0, ow, oh);
+  mg.drawImage(ink, c.x, c.y, c.w, c.h, 0, 0, ow, oh);
+  // At the cut's own size: blurred by what the server will grow and blur the mask by (about
+  // 18 of the enlarged pixels), and added to itself twice so the blur reaches full strength a
+  // little outside the brush - a thin stroke would stay faint otherwise.
+  const soft = zoomCanvas(c.w, c.h), sg = soft.getContext('2d');
+  sg.filter = `blur(${Math.max(2, 14 / c.k).toFixed(1)}px)`;
+  sg.drawImage(ink, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h);
+  sg.filter = 'none';
+  const once = zoomCanvas(c.w, c.h);
+  once.getContext('2d').drawImage(soft, 0, 0);
+  sg.globalCompositeOperation = 'lighter';
+  sg.drawImage(once, 0, 0); sg.drawImage(once, 0, 0);
+  return { image: genEncode(cut), mask: mask.toDataURL('image/png').split(',')[1], ow, oh, c, whole, soft };
+}
+
+/* The part drawn in detail, made small and put into the picture it was cut from; kept as that
+   picture (the same document, the way Keep to the palette keeps its own), and the cut-out
+   the server made - a picture of its own, that nobody asked for - forgotten. */
+async function redrawPasteBack(u, made, z) {
+  const status = el('genStatus'), doc = made.doc;
+  status.textContent = 'Putting it back into the picture...';
+  const part = await createImageBitmap(await (await fetch(await storeFileUrl(doc.file))).blob());
+  const patch = zoomCanvas(z.c.w, z.c.h), pg = patch.getContext('2d');
+  pg.imageSmoothingQuality = 'high';
+  pg.drawImage(part, 0, 0, z.c.w, z.c.h);
+  pg.globalCompositeOperation = 'destination-in';
+  pg.drawImage(z.soft, 0, 0);
+  const out = zoomCanvas(z.whole.width, z.whole.height), og = out.getContext('2d');
+  og.drawImage(z.whole, 0, 0);
+  og.drawImage(patch, z.c.x, z.c.y);
+  const blob = await new Promise(res => out.toBlob(res, 'image/png'));
+  const f = await storeFile(blob);
+  if (storeMode === 'server') await storeSortFile(f.id, doc.folder || 'generated');
+  await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png', shape: u.shape || 'portrait',
+    tags: [...(doc.tags || []), 'in detail'].slice(0, 24), t: Date.now() });
+  await forgetUpload(doc);
 }
 
 /* The background of a picture with a plain one: the colour that touches the picture's edge,

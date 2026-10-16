@@ -247,3 +247,76 @@ test('Extend: a canvas too big to draw in one go says so and cannot be sent', as
   await page.keyboard.press('Escape');
   await expect(page.locator('#extendSheet')).toBeHidden();
 });
+
+// A picture of a real size to brush a small part of: half of 832 x 1216, so the test is quick.
+async function bigPicture(page) {
+  const { makePng } = require('../helpers');
+  const png = makePng(416, 608, (x, y) => [x % 256, y % 256, 128]);
+  await page.route(/api\/uploads\/b{64}\.png/, r => r.fulfill({ contentType: 'image/png', body: png }));
+}
+async function brush(page, from, to) {
+  const box = await page.locator('#redrawMask').boundingBox();
+  await page.mouse.move(box.x + box.width * from[0], box.y + box.height * from[1]);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * to[0], box.y + box.height * to[1], { steps: 4 });
+  await page.mouse.up();
+}
+const sizeOf = (page, b64, type) => page.evaluate(async ([s, t]) => {
+  const img = new Image(); img.src = `data:image/${t};base64,${s}`; await img.decode();
+  return [img.width, img.height];
+}, [b64, type]);
+
+test('Redraw in detail: a small part is cut out with room round it and drawn at about 1024 px', async ({ page }) => {
+  const asked = await setup(page);
+  await bigPicture(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-redraw').first().click();
+  await expect(page.locator('#redrawDetail')).toBeChecked();
+  await brush(page, [0.5, 0.5], [0.58, 0.5]);
+  await page.click('#redrawGo');
+  await expect(page.locator('#genStatus')).toHaveText('Redrawn - in Uploads, Generated.');
+  const [w, h] = await sizeOf(page, asked[0].image, 'jpeg');
+  expect(Math.max(w, h)).toBe(1024);               // a small part: the long side is made 1024
+  expect(w % 8 + h % 8).toBe(0);
+  expect(await sizeOf(page, asked[0].mask, 'png')).toEqual([w, h]);
+  expect(asked[0].parent).toBe('b'.repeat(64) + '.png');
+});
+
+test('Redraw in detail off: the whole picture goes, as before', async ({ page }) => {
+  const asked = await setup(page);
+  await bigPicture(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-redraw').first().click();
+  await page.uncheck('#redrawDetail');
+  await brush(page, [0.5, 0.5], [0.58, 0.5]);
+  await page.click('#redrawGo');
+  await expect(page.locator('#genStatus')).toHaveText('Redrawn - in Uploads, Generated.');
+  expect(await sizeOf(page, asked[0].image, 'jpeg')).toEqual([416, 608]);
+});
+
+test('Redraw in detail: where the cut is - centred on the brush, inside the picture, none for a big part', async ({ page }) => {
+  await setup(page);
+  await bigPicture(page);
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-redraw').first().click();
+  const cut = await page.evaluate(() => {
+    // The sheet holds a 416 x 608 picture; paint boxes straight onto the brush layer.
+    const out = [], g = redrawInk(), box = (x, y, w, h) => { g.clearRect(0, 0, redraw.w, redraw.h); g.fillStyle = '#f00'; g.fillRect(x, y, w, h); return redrawCrop(); };
+    out.push(box(200, 300, 40, 40));       // small, in the middle
+    out.push(box(0, 0, 20, 20));            // in the corner: moved in, not cut
+    out.push(box(50, 50, 330, 400));        // over a third of the picture
+    g.clearRect(0, 0, redraw.w, redraw.h);
+    out.push(redrawCrop());                 // nothing brushed
+    return out;
+  });
+  const [mid, corner, big, none] = cut;
+  expect(mid.w).toBe(256);                  // 40 + 2 x 24 = 88, widened to 256
+  expect(Math.abs(mid.x + mid.w / 2 - 220)).toBeLessThanOrEqual(1);
+  expect(Math.abs(mid.y + mid.h / 2 - 320)).toBeLessThanOrEqual(1);
+  expect(mid.k).toBe(4);
+  expect(corner.x).toBe(0);
+  expect(corner.y).toBe(0);
+  expect(corner.w).toBe(256);
+  expect(big).toBeNull();
+  expect(none).toBeNull();
+});

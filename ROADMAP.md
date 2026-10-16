@@ -224,6 +224,17 @@ white round it for a margin and drew a white frame), Light it four ways
 other media (watercolour, ink, Copic, pencil: the old medium's tags and
 what it kept out removed first, denoise 0.65, 0.8 for ink and pencil - and
 even then red hair stayed red; a ControlNet on the line art would fix it).
+In place too: Redraw in detail (`redrawCrop()`, `redrawZoom()`, `redrawPasteBack()` in `js/genedit.js`) -
+the brushed part's box widened by 60% of its long side each way (at least 256 px across, moved - not cut -
+to stay inside the picture) is cut out and enlarged to 1024 px (at most 4 times; not at all under 1.4, or
+for a part over a third of the picture), drawn as a picture of its own by the same server path, made small
+again and put back through the brush mask, grown and softened (`ctx.filter` blur, added to itself twice), as
+the same picture's new version; the cut-out the server kept is forgotten. Run against a real ComfyUI on a
+full-length figure's closed right hand (72 x 100 px): the plain Redraw gave a smeared hand with a white
+halo, In detail five clean fingers in the picture's own line - with a few pale pink flecks past the
+fingertips, which the mask's grow lets through. Still to come: the hands and the face found for you (the
+pose and face models of `js/vision.js` were tried on the six sample girls: no face in any, a pose in one,
+so not on anime), and a second pass over the paste-back's edge.
 In place too: Extend (`genExtendOpen()` in `js/genedit.js`) - a bigger canvas, the picture in it, a
 mask white over the new part (a quarter or half of the width for left and right, of the height for top
 and bottom; at most 1.7 megapixels, multiples of 8), "Completely" Redraw on the server so the original

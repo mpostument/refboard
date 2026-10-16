@@ -1135,7 +1135,9 @@ function genStop() {
 // Drafts are the choices drawn in fewer steps: quick to look through, and Finish it
 // makes the one worth keeping into the picture.
 const GEN_DRAFT_STEPS = 14;
-async function runGenerate(jobs = null, doing = '', done = '') {
+// after(made): something to do to each picture made from jobs, before it is listed (In detail
+// puts the part back into the picture it was cut from).
+async function runGenerate(jobs = null, doing = '', done = '', after = null) {
   if (genBusy) return;
   genBusy = true;
   genStopped = false;
@@ -1152,6 +1154,7 @@ async function runGenerate(jobs = null, doing = '', done = '') {
       status.textContent = jobs ? doing : n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
       const made = await generateOne(jobs ? jobs[i - 1] : req);
       if (!jobs && genLockWanted()) await genLockMade(made, status);
+      if (jobs && after) await after(made);
       storeChanged();
       await showGenerate(false);
     }
