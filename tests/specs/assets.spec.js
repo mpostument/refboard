@@ -522,3 +522,25 @@ test('a figure on a cream gradient (soft-shaded anime comes so) is cut out whole
   // An uncut picture's border is not clear: the test cannot be passed by doing nothing.
   expect(r.borderClear).toBeLessThan(0.5);
 });
+
+test('a pale sheet left round a figure is peeled off, up to the figure\'s own outline; a clean figure is left alone', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const px = (c, x, y) => c.getContext('2d').getImageData(x, y, 1, 1).data[3];
+    const mk = withSheet => {
+      const c = Object.assign(document.createElement('canvas'), { width: 120, height: 200 }), g = c.getContext('2d');
+      if (withSheet) { g.fillStyle = 'rgb(240,232,210)'; g.fillRect(10, 10, 100, 180); }   // the paper the frame was cut from
+      g.fillStyle = '#111'; g.fillRect(40, 40, 40, 120);                                   // the outline
+      g.fillStyle = '#c33'; g.fillRect(43, 43, 34, 114);                                   // the figure
+      return c;
+    };
+    const sheet = assetPeel(mk(true)), clean = mk(false);
+    return { corner: px(sheet, 15, 15), nearFigure: px(sheet, 35, 100), outline: px(sheet, 41, 100), body: px(sheet, 60, 100),
+      sameObject: assetPeel(clean) === clean, cleanBody: px(clean, 60, 100) };
+  });
+  expect([r.corner, r.nearFigure]).toEqual([0, 0]);
+  expect([r.outline, r.body]).toEqual([255, 255]);
+  // After a clean cut the rim is the dark outline, not a pale colour: nothing is peeled.
+  expect(r.sameObject).toBe(true);
+  expect(r.cleanBody).toBe(255);
+});

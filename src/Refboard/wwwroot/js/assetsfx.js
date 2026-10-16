@@ -366,11 +366,57 @@ function assetBorderClear(canvas) {
   for (let y = 1; y < h - 1; y++) { look(0, y); look(w - 1, y); }
   return clear / total;
 }
+/* Some pictures have two backgrounds: a darker frame (a vignette, a torn paper edge) and a paler
+   sheet inside it that the figure stands on. cutOut takes the frame, and the sheet - cut off from
+   it by a soft edge bigger than one step - stays, as a pale patch round the figure. After a clean
+   cut the figure's rim is its own dark outline; after a half cut it is mostly this one pale
+   colour. So: if most of the rim is light and of one colour, that colour is spread inward from the
+   rim, over pixels near it and near their neighbour - it cannot cross the figure's outline.
+   Repeated, in case there is a third layer. Returns a new canvas, or the same one if nothing was
+   peeled. */
+const PEEL_SHARE = 0.25;    // the rim must be this much one colour
+const PEEL_LIGHT = 170;     // and every channel at least this light
+const PEEL_REACH = 60;      // |dR|+|dG|+|dB| from that colour that still counts as it
+function assetPeel(canvas, rounds = 3) {
+  const w = canvas.width, h = canvas.height, n = w * h;
+  const img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
+  const solid = i => d[i * 4 + 3] > ASSET_ALPHA;
+  const nbrs = i => { const x = i % w, o = []; if (x > 0) o.push(i - 1); if (x < w - 1) o.push(i + 1); if (i >= w) o.push(i - w); if (i < n - w) o.push(i + w); return o; };
+  const jump = (a, b) => Math.abs(d[a * 4] - d[b * 4]) + Math.abs(d[a * 4 + 1] - d[b * 4 + 1]) + Math.abs(d[a * 4 + 2] - d[b * 4 + 2]);
+  let peeled = false;
+  for (let r = 0; r < rounds; r++) {
+    const rim = [];
+    for (let i = 0; i < n; i++) if (solid(i) && (nbrs(i).length < 4 || nbrs(i).some(j => !solid(j)))) rim.push(i);
+    if (!rim.length) break;
+    const bins = new Map();
+    for (const i of rim) { const k = (d[i * 4] >> 4) << 8 | (d[i * 4 + 1] >> 4) << 4 | (d[i * 4 + 2] >> 4); const b = bins.get(k) || [0, 0, 0, 0]; b[0]++; b[1] += d[i * 4]; b[2] += d[i * 4 + 1]; b[3] += d[i * 4 + 2]; bins.set(k, b); }
+    let best = null;
+    for (const b of bins.values()) if (!best || b[0] > best[0]) best = b;
+    const c = [best[1] / best[0], best[2] / best[0], best[3] / best[0]];
+    if (best[0] / rim.length < PEEL_SHARE || Math.min(...c) < PEEL_LIGHT) break;
+    const near = i => Math.abs(d[i * 4] - c[0]) + Math.abs(d[i * 4 + 1] - c[1]) + Math.abs(d[i * 4 + 2] - c[2]) <= PEEL_REACH;
+    const stack = [], gone = new Uint8Array(n);
+    for (const i of rim) if (near(i)) { gone[i] = 1; stack.push(i); }
+    let count = 0;
+    while (stack.length) {
+      const i = stack.pop(); count++;
+      for (const j of nbrs(i)) if (!gone[j] && solid(j) && near(j) && jump(i, j) <= CUT_STEP) { gone[j] = 1; stack.push(j); }
+    }
+    if (!count) break;
+    for (let i = 0; i < n; i++) if (gone[i]) d[i * 4 + 3] = 0;
+    peeled = true;
+  }
+  if (!peeled) return canvas;
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
+  out.getContext('2d').putImageData(img, 0, 0);
+  return out;
+}
+
 function assetCutFigure(pic) {
   for (const tolerance of FIGURE_TOLERANCES) {
     const cut = cutOut(pic, { tolerance, trim: false });
     if (!cut.found || assetBorderClear(cut.canvas) < FIGURE_EDGE_CLEAR) continue;
-    const canvas = assetTrim(cut.canvas);
+    const canvas = assetTrim(assetPeel(cut.canvas));
     if (canvas) return { found: true, canvas, tolerance };
   }
   return { found: false };
