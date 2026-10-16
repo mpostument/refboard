@@ -318,7 +318,12 @@ async function assetsCharacterGo(s) {
   // without leaving this view - the depth maps are drawn off screen.
   try { await loadSection('forms'); showForms(); await formsReady(); } catch (err) { status.textContent = err.message; return; }
   const o = formShotSubject();
-  if (!o) { status.textContent = 'There is no figure to turn: add one in Forms (3D forms, Figure) and set its pose, then come back.'; return; }
+  if (!o) {
+    status.textContent = 'There is no figure to turn: add one in 3D forms (Figure) and set its pose, then come back and press Make.';
+    // Taken there, with the button that adds it in focus - one click from done.
+    await openForms(() => { const b = document.querySelector('#formShapes [data-shape="figure"]'); if (b) b.focus(); });
+    return;
+  }
   const dirs = CHAR_DIRS[s.dirs] || CHAR_DIRS[4], seed = Math.floor(Math.random() * 2 ** 31);
   const scene = { ...formScene, fisheye: false, roll: 0, pitch: CHAR_PITCH[s.view] ?? CHAR_PITCH.side };
   status.textContent = 'Turning the figure...';

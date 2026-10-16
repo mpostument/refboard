@@ -445,3 +445,16 @@ test('a character is named by its whole look, so the colours reach the model; th
   // Still a limit.
   expect((await ask(page, settings({ kind: 'character', thing: 'x, ' + 'y'.repeat(300) }))).prompt.length).toBeLessThan(700);
 });
+
+test('a character with no figure in 3D forms takes you there, with the Figure button in focus', async ({ page }) => {
+  const s = await setup(page);
+  // A server with a ControlNet (the last route registered wins).
+  await page.route('**/api/generate', r => r.request().method() === 'GET' ? r.fulfill({ json: { available: true, control: true, checkpoint: 'test.safetensors', quality: 'masterpiece' } }) : r.fallback());
+  await page.reload();
+  await page.click('.nav-item[data-view="assets"]');
+  await page.click('#assetChoices [data-as="kind"][data-opt="character"]');
+  await page.click('#assetGo');
+  await expect(page.locator('#viewTitle')).toHaveText(/3D forms/i);
+  await expect(page.locator('#formShapes [data-shape="figure"]')).toBeFocused();
+  expect(s.posted).toEqual([]);
+});
