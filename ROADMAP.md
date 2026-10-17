@@ -1159,10 +1159,17 @@ the wash.
   and the third the worst of it is in. Still to come: a tilted fold (a face
   turned or leaning), a horizontal one for reflections in water, colour and
   not only value, and the fold dragged by the pointer.
-- **Digitise your work.** A phone photo of a sketchbook page turned into a
-  clean scan: perspective straightened, the shadow and the paper's tint
-  taken out, white balance corrected. Kept in the local version's archive
-  next to its reference.
+- **Digitise your work.** In place (`js/digitise.js`, Compare's "Clean scan..."): you click the
+  page's four corners on the photo; it is stretched back to a rectangle (a projective map,
+  bilinear), and the paper under the marks - the brightest fifth of each block - is divided out
+  channel by channel, so a shadow, the lamp's tint and the phone's white balance go and the paper
+  comes out white. "Line drawing" uses small blocks, "Painting" large ones (a quarter of the side), so a
+  wash narrower than that is kept; a wash wider than the block is still bleached - the limit of
+  estimating paper from the picture itself. The scan replaces the photo in Compare and is kept in My
+  work (`from: 'work'`, tag `digitised`, `reference` = the pose it was drawn beside). Not tried on a
+  real phone photo. Still to come: the corners found by themselves, a rotate / mirror step, the paper
+  taken from a sample you click on a clear patch, and the portfolio site using the scans in place of
+  the photos (below).
 
 - **Portfolio site, the rest.** In place (`js/portfolio.js`, Your data > Make
   a portfolio site): the pictures kept as your work - Compare's photos of your

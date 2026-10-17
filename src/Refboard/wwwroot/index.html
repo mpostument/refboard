@@ -1148,6 +1148,11 @@
     </select>
     <label>Opacity <input type="range" id="cmpOpacity" min="0.1" max="1" step="0.05"></label>
     <button type="button" id="cmpAlign" title="Pick two landmarks on the reference, then the same two on your drawing - it is scaled, turned and moved to match them">Line up 2 points</button>
+    <button type="button" id="cmpScan" title="Digitise: click the four corners of the page on your photo - it is straightened, the shadow and the paper's tint taken out, and kept as a clean scan in My work">Clean scan...</button>
+    <select id="cmpPaper" title="What the page holds: a line drawing (thin marks on paper) or a painting (washes that must not be taken for paper)">
+      <option value="drawing">Line drawing</option>
+      <option value="painting">Painting</option>
+    </select>
     <button type="button" id="cmpFit" title="Back to fitted in the middle - undoes any lining up">Fit</button>
     <button type="button" id="cmpReplace" title="A different photo of your drawing">Another photo...</button>
     <button type="button" id="cmpRemove" title="Take your drawing off the reference (d hides it for a moment)">Remove</button>
@@ -1906,6 +1911,13 @@
         its overall light and colour cast are matched first - a dim room does
         not count - and the note says where the painting parts most, in
         hundredths of a value step. Line the photo up first; the map follows it.</p>
+      <p><b>Clean scan...</b> turns a phone photo of a sketchbook page into a
+        scan: click the four corners of the page (top left, top right, bottom
+        right, bottom left) and it is straightened, the shadow across it and
+        the lamp's tint are taken out and the paper comes out white. Choose
+        <b>Painting</b> for washes, so a wide dark patch is not taken for
+        shadow. The scan replaces the photo here and is kept in My work, tagged
+        <b>digitised</b>, with the reference it was drawn from.</p>
     </section>
 
     <section>
@@ -2256,7 +2268,7 @@
 <script src="js/materials.js?v=aea2cd23"></script>
 <script src="js/vision.js?v=5c0f8101"></script>
 <script src="js/sort.js?v=6b40f3d5"></script>
-<script src="js/study.js?v=0eaeca65"></script>
+<script src="js/study.js?v=90053b55"></script>
 <script src="js/layers.js?v=29c0c0af"></script>
 <script src="js/stages.js?v=eee7c2f5"></script>
 <script src="js/pins.js?v=b448b387"></script>
@@ -2274,6 +2286,7 @@
 <script src="js/amounts.js?v=a947277f"></script>
 <script src="js/linework.js?v=bdfbd9f6"></script>
 <script src="js/linewash.js?v=00a688c0"></script>
+<script src="js/digitise.js?v=0d7a90f3"></script>
 <script src="js/paintcheck.js?v=c5e7b0f2"></script>
 <script src="js/symmetry.js?v=5488c74f"></script>
 <script src="js/rhythms.js?v=e8a373cc"></script>
