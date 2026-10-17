@@ -735,3 +735,134 @@ test('a pale sheet left round a figure is peeled off, up to the figure\'s own ou
   expect(r.sameObject).toBe(true);
   expect(r.cleanBody).toBe(255);
 });
+
+// ---- The pixel look (assetPixelate in js/assetsfx.js; the choices in js/assets.js).
+// A disc that fades from red to blue on a transparent canvas: many colours, one soft edge.
+const DISC = `(w, h, from, to) => {
+  const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d');
+  const k = g.createLinearGradient(0, 0, w, 0); k.addColorStop(0, from); k.addColorStop(1, to);
+  g.fillStyle = k; g.beginPath(); g.ellipse(w / 2, h / 2, w * 0.4, h * 0.4, 0, 0, 7); g.fill();
+  return c;
+}`;
+const COUNT = `(c) => {
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, seen = new Set(), alphas = new Set();
+  for (let i = 0; i < d.length; i += 4) { alphas.add(d[i + 3]); if (d[i + 3]) seen.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]); }
+  return { colours: seen.size, alphas: [...alphas].sort((a, b) => a - b) };
+}`;
+
+test('a sprite is put on the grid, cut to its colours, hard-edged and outlined in the palette\'s darkest', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(([disc, count, pix]) => {
+    const mk = eval(disc), cnt = eval(count), px = eval(pix);
+    const out = assetPixelate(mk(200, 300, '#e33', '#33e'), { grid: 32, colours: 8, outline: true });
+    const plain = assetPixelate(mk(200, 300, '#e33', '#33e'), { grid: 32, colours: 8, outline: false });
+    const dark = out.palette.reduce((a, c) => (c[0] + c[1] + c[2] < a[0] + a[1] + a[2] ? c : a));
+    // Left of the disc's left edge, in the column that touches it: the outline.
+    let edge = null;
+    for (let x = 0; x < out.canvas.width && !edge; x++) { const p = px(out.canvas, x, out.canvas.height >> 1); if (p[3]) edge = p; }
+    return { size: [out.canvas.width, out.canvas.height], plain: [plain.canvas.width, plain.canvas.height], ...cnt(out.canvas), palette: out.palette.length,
+      corner: px(out.canvas, 0, 0)[3], edge: edge.slice(0, 3), dark };
+  }, [DISC, COUNT, PIX]);
+  // Longest side = the grid, the outline included (30 + 2); the short side in proportion.
+  expect(r.size).toEqual([22, 32]);
+  expect(r.plain, 'no outline: the shape takes the whole grid').toEqual([21, 32]);
+  expect(r.colours, 'no more than the colours asked').toBeLessThanOrEqual(8);
+  expect(r.palette).toBeLessThanOrEqual(8);
+  expect(r.alphas, 'on or off, never half').toEqual([0, 255]);
+  expect(r.corner).toBe(0);
+  expect(r.edge).toEqual(r.dark);
+});
+
+test('a game\'s palette is handed on: kept colours are used, only the new ones are added, and never past the number', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(([disc]) => {
+    const mk = eval(disc), rgb = a => a.map(c => c.join());
+    const a = assetPixelate(mk(120, 120, '#e33', '#33e'), { grid: 16, colours: 16, outline: false, palette: [], shared: true });
+    const b = assetPixelate(mk(120, 120, '#2a4', '#3ce'), { grid: 16, colours: 16, outline: false, palette: a.palette, shared: true });
+    const again = assetPixelate(mk(120, 120, '#e33', '#33e'), { grid: 16, colours: 16, outline: false, palette: b.palette, shared: true });
+    const alone = assetPixelate(mk(120, 120, '#e33', '#33e'), { grid: 16, colours: 16, outline: false });
+    return { a: a.palette.length, b: b.palette.length, again: again.palette.length, alone: alone.palette.length,
+      kept: rgb(a.palette).every((c, i) => rgb(b.palette)[i] === c) };
+  }, [DISC]);
+  expect(r.a, 'the first takes only a third of the room, so a tile after it finds some').toBeLessThanOrEqual(6);
+  expect(r.b).toBeGreaterThan(r.a);
+  expect(r.b).toBeLessThanOrEqual(16);
+  expect(r.kept, 'what was in the palette stays, in its place').toBe(true);
+  expect(r.again, 'a picture of colours the palette has adds nothing').toBe(r.b);
+  expect(r.alone, 'its own palette is not limited by a game\'s').toBeGreaterThan(r.a);
+});
+
+test('a tile is shrunk and cut to colours, filled to the edge, with no outline', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(([count]) => {
+    const cnt = eval(count);
+    const c = Object.assign(document.createElement('canvas'), { width: 256, height: 256 }), g = c.getContext('2d');
+    const k = g.createLinearGradient(0, 0, 256, 256); k.addColorStop(0, '#3a3'); k.addColorStop(1, '#8c4');
+    g.fillStyle = k; g.fillRect(0, 0, 256, 256);
+    const t = assetPixelate(c, { grid: 16, colours: 8, outline: false });
+    return { size: [t.canvas.width, t.canvas.height], ...cnt(t.canvas) };
+  }, [COUNT]);
+  expect(r.size).toEqual([16, 16]);
+  expect(r.alphas).toEqual([255]);
+  expect(r.colours).toBeLessThanOrEqual(8);
+});
+
+test('the pixel look: choices appear when it is on, the tile size is the grid, and the palette can be started again', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => { assetState.kind = 'tile'; assetState.thing = 'grass'; assetState.pix = 'off'; renderAssets(); });
+  expect(await page.locator('#assetChoices [data-as="size"]').count(), 'tile size while off').toBeGreaterThan(0);
+  expect(await page.locator('#assetChoices [data-as="pixColours"]').count()).toBe(0);
+  await page.evaluate(() => document.querySelector('#assetChoices [data-as="pix"][data-opt="32"]').click());
+  expect(await page.locator('#assetChoices [data-as="size"]').count(), 'the grid is the size').toBe(0);
+  expect(await page.locator('#assetChoices [data-as="pixColours"]').count()).toBe(4);
+  expect(await page.locator('#assetChoices [data-as="pixOutline"]').count(), 'a tile has no outline').toBe(0);
+  await page.evaluate(() => { assetState.kind = 'prop'; assetState.pixShared = 'game'; assetState.pixPalette = ['#112233', '#445566']; renderAssets(); });
+  expect(await page.locator('#assetChoices [data-as="pixOutline"]').count()).toBe(2);
+  expect(await page.locator('#assetChoices .pix-palette span').count()).toBe(2);
+  await page.locator('#assetChoices [data-pixforget]').click();
+  expect(await page.evaluate(() => assetState.pixPalette)).toEqual([]);
+  expect(await page.locator('#assetChoices .pix-palette').count()).toBe(0);
+});
+
+test('an item made with the pixel look on is kept on the grid, with its icon, tagged pixel, and the palette of the game is kept', async ({ page }) => {
+  await setup(page);
+  await page.click('#assetChoices [data-as="kind"][data-opt="item"]');
+  await page.click('#assetChoices [data-as="pix"][data-opt="32"]');
+  await page.click('#assetChoices [data-as="pixColours"][data-opt="8"]');
+  await page.click('#assetChoices [data-as="pixShared"][data-opt="game"]');
+  await page.selectOption('#assetCount', '1');
+  // What is kept, as it is kept (the stand-in server gives every upload one id, so its list cannot tell the two apart).
+  await page.evaluate(() => {
+    window.__kept = [];
+    const keep = assetKeep;
+    assetKeep = (doc, canvas, extra, over) => { window.__kept.push({ w: canvas.width, h: canvas.height, extra }); return keep(doc, canvas, extra, over); };
+  });
+  await page.click('#assetGo');
+  await expect(page.locator('#assetStatus')).toHaveText('Made - in Uploads, Assets.');
+  const kept = await page.evaluate(() => window.__kept);
+  expect(kept).toHaveLength(2);
+  const [sprite, icon] = kept;
+  expect(sprite.extra).toContain('pixel');
+  expect(Math.max(sprite.w, sprite.h), 'the sprite is on the grid').toBe(32);
+  expect(icon.extra).toEqual(expect.arrayContaining(['icon', 'pixel']));
+  expect([icon.w, icon.h], 'the icon is a square of the grid').toEqual([32, 32]);
+  // The palette is the game's, and is kept for the next picture: swatches under the choice.
+  const palette = await page.evaluate(() => assetState.pixPalette);
+  expect(palette.length).toBeGreaterThan(1);
+  expect(palette.length).toBeLessThanOrEqual(8);
+  await expect(page.locator('#assetChoices .pix-palette span')).toHaveCount(palette.length);
+});
+
+test('a tile made with the pixel look on is the size of the grid, in the colours of the game', async ({ page }) => {
+  const { server } = await setup(page);
+  await page.click('#assetChoices [data-as="kind"][data-opt="tile"]');
+  await page.click('#assetChoices [data-as="pix"][data-opt="16"]');
+  await page.selectOption('#assetCount', '1');
+  await page.click('#assetGo');
+  await expect(page.locator('#assetStatus')).toHaveText('Made - in Uploads, Assets.');
+  const docs = [...server.items].filter(([k]) => k.startsWith('uploads/')).map(([, v]) => v);
+  const kept = docs.find(d => (d.tags || []).includes('16x16'));
+  expect(kept, 'a 16 x 16 tile').toBeTruthy();
+  expect(kept.tags).toContain('pixel');
+  expect([kept.width, kept.height]).toEqual([16, 16]);
+});

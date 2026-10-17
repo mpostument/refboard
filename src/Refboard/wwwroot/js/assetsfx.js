@@ -568,17 +568,97 @@ function tileGrid(canvas, n = 3) {
 
 /* The tile at size x size, halved while it is more than twice too big so that every pixel is
    the mean of the ones it covers (one jump from 1024 to 16 would keep one pixel in sixty-four). */
-function tileShrink(canvas, size) {
+function tileShrink(canvas, size) { return assetShrinkTo(canvas, size, size); }
+
+/* The same for any shape: w x h, halved while either side is more than twice too big. */
+function assetShrinkTo(canvas, w, h) {
   let c = canvas;
-  while (c.width > size * 2) {
+  while (c.width > w * 2 && c.height > h * 2) {
     const half = Object.assign(document.createElement('canvas'), { width: c.width >> 1, height: c.height >> 1 });
     const g = half.getContext('2d'); g.imageSmoothingQuality = 'high';
     g.drawImage(c, 0, 0, half.width, half.height);
     c = half;
   }
-  if (c.width === size) return c;
-  const out = Object.assign(document.createElement('canvas'), { width: size, height: size }), g = out.getContext('2d');
+  if (c.width === w && c.height === h) return c;
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = out.getContext('2d');
   g.imageSmoothingQuality = 'high';
-  g.drawImage(c, 0, 0, size, size);
+  g.drawImage(c, 0, 0, w, h);
   return out;
+}
+
+/* ---- The pixel look (ROADMAP Game assets, phase 6) ----
+   What the model drew is a painting; a pixel game wants a sprite. Three steps, none of
+   which needs the model: shrink to a grid (the mean of the pixels each cell covers, then
+   the edge made hard - alpha is on or off, never half), cut the colours to a few (median
+   cut: the widest box of colours is split at its median until there are enough), and a
+   one-pixel outline in the palette's darkest colour round the shape. A game's palette is
+   handed in and handed back, so that the sprite, the tile and the icon of one game draw
+   from the same colours: a pixel already near one of them takes it, and only the colours
+   the palette does not have yet are cut anew - at most a third of what room is left (and at least four, while there is room), or the
+   first picture would use them all and the tile of grass after it find none. */
+
+const PIX_NEAR = 3000;   // weighted RGB distance (pixDist) within which a pixel is "in" the palette already
+const PIX_ALPHA = 128;
+const PIX_SPLIT = 20;   // a box of colours narrower than this (on every channel) is one colour: it is not cut again
+const PIX_SPLIT_TILE = 6;   // a tile is its texture: fine shades of one green are kept apart
+
+// Redmean-ish: green counts most, blue least, as the eye does.
+const pixDist = (a, b) => 2 * (a[0] - b[0]) ** 2 + 4 * (a[1] - b[1]) ** 2 + 3 * (a[2] - b[2]) ** 2;
+
+/* `pixels` ([r, g, b] each) cut into at most n colours: the mean of each box. */
+function pixelMedianCut(pixels, n, split = PIX_SPLIT) {
+  if (!pixels.length || n <= 0) return [];
+  const boxes = [pixels];
+  while (boxes.length < n) {
+    let at = -1, ch = 0, widest = 0;
+    boxes.forEach((b, i) => {
+      if (b.length < 2) return;
+      for (let c = 0; c < 3; c++) {
+        let lo = 255, hi = 0;
+        for (const p of b) { if (p[c] < lo) lo = p[c]; if (p[c] > hi) hi = p[c]; }
+        if (hi - lo > widest) { widest = hi - lo; at = i; ch = c; }
+      }
+    });
+    if (at < 0 || widest < split) break;   // every box is (near enough) one colour
+    const b = boxes[at].slice().sort((p, q) => p[ch] - q[ch]), mid = b.length >> 1;
+    boxes.splice(at, 1, b.slice(0, mid), b.slice(mid));
+  }
+  return boxes.map(b => [0, 1, 2].map(c => Math.round(b.reduce((s, p) => s + p[c], 0) / b.length)));
+}
+
+/* The canvas as pixel art: longest side `grid` cells (outline included), `colours` at most,
+   a one-cell outline when `outline`. `palette` ([r, g, b] list, may be empty) is the game's:
+   it is used first and grown, up to `colours`, when `shared`; when not, it is only the
+   picture's own and starts empty. Returns { canvas, palette } - the palette afterwards. */
+function assetPixelate(canvas, { grid = 32, colours = 16, outline = true, palette = [], shared = false, split = PIX_SPLIT } = {}) {
+  const pad = outline ? 1 : 0, k = (grid - 2 * pad) / Math.max(canvas.width, canvas.height);
+  const w = Math.max(1, Math.round(canvas.width * k)), h = Math.max(1, Math.round(canvas.height * k));
+  const small = assetShrinkTo(canvas, w, h);
+  const src = small.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const W = w + 2 * pad, H = h + 2 * pad;
+  const on = new Uint8Array(W * H), rgb = new Array(W * H);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    if (src[i + 3] >= PIX_ALPHA) { on[(y + pad) * W + x + pad] = 1; rgb[(y + pad) * W + x + pad] = [src[i], src[i + 1], src[i + 2]]; }
+  }
+  const pal = palette.map(c => c.slice());
+  const nearest = c => { let best = 0, d = Infinity; for (let j = 0; j < pal.length; j++) { const e = pixDist(c, pal[j]); if (e < d) { d = e; best = j; } } return [best, d]; };
+  const room = Math.max(0, colours - pal.length);
+  const take = shared ? Math.min(room, Math.max(4, Math.ceil(room / 3))) : room;
+  const unseen = [];
+  for (let i = 0; i < W * H; i++) if (on[i] && (!pal.length || nearest(rgb[i])[1] > PIX_NEAR)) unseen.push(rgb[i]);
+  pal.push(...pixelMedianCut(unseen, take, split));
+  const out = Object.assign(document.createElement('canvas'), { width: W, height: H }), g = out.getContext('2d');
+  if (!pal.length) return { canvas: out, palette: pal };
+  const dark = pal.reduce((a, c) => (c[0] + c[1] + c[2] < a[0] + a[1] + a[2] ? c : a));
+  const img = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    let c = null;
+    if (on[i]) c = pal[nearest(rgb[i])[0]];
+    else if (outline && ((x > 0 && on[i - 1]) || (x < W - 1 && on[i + 1]) || (y > 0 && on[i - W]) || (y < H - 1 && on[i + W]))) c = dark;
+    if (c) img.data.set([c[0], c[1], c[2], 255], i * 4);
+  }
+  g.putImageData(img, 0, 0);
+  return { canvas: out, palette: pal };
 }

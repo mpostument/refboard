@@ -607,7 +607,7 @@ the pictures looked at - as the Generate features were):
    not. `tileSeam` cannot say this alone: the model's own tile scored 2.2 - 5.7, the mended
    1.3 - 3.5, the ranges overlap, so it only tags "seam visible" over 4. **Not good yet:**
    dirt at "simple" is a flat orange, not soil; a plain shrink to 32 / 16 px averages the
-   detail away (grass becomes one green) - the pixel look is phase 6. Not done: the
+   detail away (grass becomes one green) - the pixel look (phase 6, below) cuts colours, it does not bring texture back. Not done: the
    ground "view" row (a tile is from above only), lava / snow / wood / sand were not run.
 4. **Characters.** One sprite per view, with a pose list (idle, walk, run,
    attack, hurt). Directions and frames through the 3D figure and the depth
@@ -641,7 +641,26 @@ the pictures looked at - as the Generate features were):
 6. **Pixel it and the game style.** The shrink and the palette, the Game style
    kept and applied to every kind, a style check (the palette share of an asset
    against the style's). *Done when* a sprite, a tile and an icon from one style
-   share a palette and an outline.
+   share a palette and an outline. **In place** (`assetPixelate` in `js/assetsfx.js`,
+   the "Pixel look" choices in `js/assets.js`): a grid of 16 / 32 / 48 / 64 on the longest
+   side, 8 / 16 / 32 / 64 colours (median cut; a box narrower than 20 on every channel is
+   one colour, 6 for a tile), a one-pixel outline in the palette's darkest colour (not on
+   a tile), alpha on or off, never half. Applied to every kind in `assetFinish` and to a
+   character's directions after they are lined up; the icon is made at 128 and pixelled
+   after, so its frame draws from the same palette; a tile's size is the grid. **One
+   palette for the game** (`Palette: One for the game`): kept in the browser, handed to
+   every picture and grown by it - a pixel near a colour already there takes it, only
+   what is not there is cut anew, at most a third of the room left and at least four
+   while there is room, so the first picture does not leave a tile nothing. Real run
+   (2026-10-17, Animagine XL 4.0, a potion, a sword, a chest, grass, 32 px, 32 colours,
+   looked at): sprite, icon and tile share one palette and one dark outline; at 16
+   colours the grass was lost (the first pictures filled the palette: brown and grey
+   where it was green), at 32 it is there. **Not good yet:** the tile is a flat green -
+   the model drew grass with almost no texture and averaging 1024 to 32 takes what is
+   left (a tile recipe matter, step 3); the palette is learned from the pictures, not
+   chosen (the Holbein box and the Colour studio's palettes are not offered); a style
+   check (the palette share of a picture against the game's) and the game style as one
+   saved thing (view, theme, simplicity beside the pixel choices) are not done.
 7. **Sheets and export.** Pack, JSON atlas, Tiled `.tsx`, the animation strip
    with a preview that plays, a GIF of it; the asset pack as one zip. *Done
    when* a pack loads in Godot and Phaser without a hand edit (tried, not

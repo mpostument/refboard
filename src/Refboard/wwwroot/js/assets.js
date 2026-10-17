@@ -50,7 +50,7 @@ const TILE_MODEL = 1024, TILE_BAND = 0.14, TILE_DENOISE = 0.6, TILE_SEAM_BAD = 4
 const TILE_SIZES = [
   { id: '512', label: '512', hint: 'A big tile - for a game drawn large' },
   { id: '256', label: '256', hint: 'A tile for a game drawn at 256 px a square' },
-  { id: '32', label: '32', hint: 'Shrunk to 32 px, for a small game (colours not yet cut - that is phase 6)' },
+  { id: '32', label: '32', hint: 'Shrunk to 32 px, for a small game' },
   { id: '16', label: '16', hint: 'Shrunk to 16 px' },
 ];
 
@@ -206,8 +206,46 @@ const WEAPON_SWORD_WORDS = ['full length', 'centered', 'vertical', 'pointing up'
 const ASSET_BACKDROP = 'border, frame, card, plaque, panel, backdrop, background pattern';
 
 const ASSET_LOOK_MAX = 120;   // the longest look a character is named by
-const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1' };
+const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1',
+  // The pixel look: the grid ('off' = the picture as it is), colours, outline, and the game's palette (#rrggbb list, kept).
+  pix: 'off', pixColours: '16', pixOutline: 'yes', pixShared: 'own', pixPalette: [] };
 let assetState = { ...ASSET_DEFAULTS };
+
+const PIX_GRIDS = [
+  { id: 'off', label: 'Off', hint: 'The picture as the model drew it' },
+  { id: '16', label: '16', hint: 'A grid of 16 cells on the longest side' },
+  { id: '32', label: '32', hint: 'A grid of 32 cells on the longest side' },
+  { id: '48', label: '48', hint: 'A grid of 48 cells on the longest side' },
+  { id: '64', label: '64', hint: 'A grid of 64 cells on the longest side' },
+];
+const PIX_COLOURS = [
+  { id: '8', label: '8', hint: 'Eight colours - very flat' },
+  { id: '16', label: '16', hint: 'Sixteen colours' },
+  { id: '32', label: '32', hint: 'Thirty-two colours - room for shading' },
+  { id: '64', label: '64', hint: 'Sixty-four colours - for a game that wants many hues in one palette' },
+];
+const PIX_OUTLINE = [
+  { id: 'yes', label: 'Outline', hint: 'One pixel of the palette\'s darkest colour round the shape (not on a tile)' },
+  { id: 'no', label: 'None', hint: 'No outline' },
+];
+const PIX_SHARED = [
+  { id: 'own', label: 'Its own', hint: 'Each picture gets the colours it needs' },
+  { id: 'game', label: 'One for the game', hint: 'Every picture draws from one palette that grows as you make things - a sprite, a tile and an icon then look like one game' },
+];
+const hexOf = c => '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+const rgbOfHex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+
+/* The canvas as the pixel look asks (or as it is, when it is off). The game's palette, when
+   one is kept for the game, is read from and written back to assetState: a batch of pictures
+   is finished one after another, each growing it. Returns the canvas. */
+function assetPixel(canvas, s, { outline = true, split } = {}) {
+  if (s.pix === 'off') return canvas;
+  const shared = s.pixShared === 'game';
+  const r = assetPixelate(canvas, { grid: Number(s.pix), colours: Number(s.pixColours), outline: outline && s.pixOutline === 'yes',
+    palette: shared ? (assetState.pixPalette || []).map(rgbOfHex) : [], shared, ...(split ? { split } : {}) });
+  if (shared) { assetState.pixPalette = r.palette.map(hexOf); assetsSave(); renderAssetPixel(); }
+  return r.canvas;
+}
 
 const assetKind = id => ASSET_KINDS.find(k => k.id === id) || ASSET_KINDS[0];
 const assetPick = (list, id) => list.find(x => x.id === id) || list[0];
@@ -305,7 +343,8 @@ function renderAssets() {
     `<section class="gen-group">${assetChips('theme', 'Theme', ASSET_THEMES, s.theme, () => '')}` +
     (kind.tile || kind.character ? '' : assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '')) +
     assetChips('simple', 'How simple', ASSET_SIMPLE, s.simple) +
-    (kind.tile ? assetChips('size', 'Tile size, px', TILE_SIZES, s.size) : '') + '</section>';
+    (kind.tile && s.pix === 'off' ? assetChips('size', 'Tile size, px', TILE_SIZES, s.size) : '') + '</section>' +
+    `<section class="gen-group" id="assetPixel">${assetPixelHtml(kind)}</section>`;
   el('assetIconRow').classList.toggle('hidden', !kind.icon);
   // The directions are the count of a character - except the one-sided kind, drawn free: there the
   // count is how many candidates to choose from.
@@ -315,6 +354,27 @@ function renderAssets() {
   el('assetDraft').value = s.draft;
   renderAssetPrompt();
 }
+
+/* The pixel look's choices. The colours, outline and palette only when it is on; a tile has no
+   outline; the game's palette is shown as swatches, with a way to start it again. */
+function assetPixelHtml(kind) {
+  const s = assetState, on = s.pix !== 'off';
+  let h = assetChips('pix', 'Pixel look - grid', PIX_GRIDS, s.pix);
+  if (!on) return h;
+  h += assetChips('pixColours', 'Colours', PIX_COLOURS, s.pixColours) +
+    (kind.tile ? '' : assetChips('pixOutline', 'Outline', PIX_OUTLINE, s.pixOutline)) +
+    assetChips('pixShared', 'Palette', PIX_SHARED, s.pixShared);
+  if (kind.tile) h += '<p class="gen-note">The grid is the size of the tile.</p>';
+  if (s.pixShared === 'game') {
+    const pal = s.pixPalette || [];
+    h += pal.length
+      ? `<div class="pix-palette" aria-label="The game's palette, ${pal.length} colours">${pal.map(c => `<span style="background:${c}" title="${c}"></span>`).join('')}` +
+        `<button type="button" class="chip" data-pixforget title="Forget these colours - the next picture starts a new palette">Start again</button></div>`
+      : '<p class="gen-note">The first picture you make starts the palette; each after it keeps those colours and adds only the ones it lacks, up to the number chosen.</p>';
+  }
+  return h;
+}
+function renderAssetPixel() { const host = el('assetPixel'); if (host) host.innerHTML = assetPixelHtml(assetKind(assetState.kind)); }
 
 // The words as they go to the model, for the curious - and for checking a recipe by eye.
 function renderAssetPrompt() {
@@ -332,7 +392,7 @@ function renderAssetPrompt() {
    size chosen. The model's own picture and its second pass are forgotten; what is kept is the
    mended tile, tagged by how well its edges meet (tileSeam, 1 = no seam at all). */
 async function assetFinishTile(made, s) {
-  const doc = made.doc, status = el(ASSET_UI.status), size = Number(assetPick(TILE_SIZES, s.size).id);
+  const doc = made.doc, status = el(ASSET_UI.status), size = s.pix === 'off' ? Number(assetPick(TILE_SIZES, s.size).id) : Number(s.pix);
   let pic;
   try { pic = await genLoadPicture(doc); } catch { return; }
   const rolled = tileRoll(pic, pic.width >> 1, pic.height >> 1);
@@ -343,11 +403,11 @@ async function assetFinishTile(made, s) {
     ...(s.draft === 'draft' ? { steps: GEN_DRAFT_STEPS } : {}) });
   let fixed;
   try { fixed = await genLoadPicture(mended.doc); } catch { return; }
-  const seam = tileSeam(fixed), canvas = tileShrink(fixed, size);
+  const seam = tileSeam(fixed), canvas = s.pix === 'off' ? tileShrink(fixed, size) : assetPixel(fixed, s, { outline: false, split: PIX_SPLIT_TILE });
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
   const f = await storeFile(blob);
   if (storeMode === 'server') await storeSortFile(f.id, 'assets');
-  const tags = [...(doc.tags || []).filter(t => t !== 'seamless' && !/^\d+x\d+$/.test(t)), seam < TILE_SEAM_BAD ? 'seamless' : 'seam visible', `${size}x${size}`].slice(0, 24);
+  const tags = [...(doc.tags || []).filter(t => t !== 'seamless' && !/^\d+x\d+$/.test(t)), seam < TILE_SEAM_BAD ? 'seamless' : 'seam visible', `${size}x${size}`, ...(s.pix === 'off' ? [] : ['pixel'])].slice(0, 24);
   await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png',
     width: size, height: size, tags, t: Date.now() });
   await forgetUpload(mended.doc);
@@ -395,10 +455,15 @@ async function assetFinish(made, s) {
     const o = assetOrient(canvas);
     if (o) { canvas = o.canvas; if (o.turned) notes.push('upright'); }
   }
+  const flat = canvas;
+  canvas = assetPixel(canvas, s);
+  if (s.pix !== 'off') notes.push('pixel');
   const main = await keep(canvas, notes, { width: canvas.width, height: canvas.height });
   await forgetUpload(doc);
   if (kind.icon && s.icon) {
-    await keep(assetIcon(canvas, { size: 128, diagonal: kind.id === 'weapon' }), ['icon', '128x128'],
+    // Pixelled from the smooth icon, not from the sprite: the frame is drawn at 128 and shares the palette.
+    const icon = assetPixel(assetIcon(flat, { size: 128, diagonal: kind.id === 'weapon' }), s, { outline: false });
+    await keep(icon, ['icon', `${icon.width}x${icon.height}`, ...(s.pix === 'off' ? [] : ['pixel'])],
       { parent: main.id, name: `${(doc.tags || [])[0] || kind.id}, icon` });
   }
 }
@@ -462,7 +527,8 @@ async function assetsCharacterGo(s) {
   const lined = assetAlign(cuts.map(c => c.canvas));
   if (!lined) return;
   for (let i = 0; i < cuts.length; i++) {
-    await assetKeep(cuts[i].doc, lined.canvases[i], ['cut out', 'aligned', `${lined.width}x${lined.height}`]);
+    const sprite = assetPixel(lined.canvases[i], s);
+    await assetKeep(cuts[i].doc, sprite, ['cut out', 'aligned', `${sprite.width}x${sprite.height}`, ...(s.pix === 'off' ? [] : ['pixel'])]);
     await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
   }
   storeChanged();
@@ -483,8 +549,8 @@ async function assetsCharacterFree(s) {
       try { pic = await genLoadPicture(made.doc); } catch { return; }
       const cut = assetCutFigure(pic);
       if (!cut.found) { await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) }); return; }
-      const canvas = assetFigureCanvas(cut);
-      await assetKeep(made.doc, canvas, ['cut out']);
+      const canvas = assetPixel(assetFigureCanvas(cut), s);
+      await assetKeep(made.doc, canvas, ['cut out', ...(s.pix === 'off' ? [] : ['pixel'])]);
       await forgetUpload(made.doc);
     }, ASSET_UI);
   storeChanged();
@@ -531,7 +597,12 @@ async function showAssets(check = true) {
         three.style.backgroundImage = `url("${url}")`;
         // A tile shrunk to a few pixels is enlarged without smoothing, or it is a blur.
         three.classList.toggle('pixel', (u.width || 512) <= 64);
-      } else li.querySelector('img').src = url;
+      } else {
+        const img = li.querySelector('img');
+        img.src = url;
+        // A sprite of a few dozen pixels is enlarged without smoothing, or it is a blur.
+        img.classList.toggle('pixel', (u.tags || []).includes('pixel'));
+      }
     });
     li.querySelector('.asset-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-del').addEventListener('click', async () => {
@@ -545,6 +616,7 @@ async function showAssets(check = true) {
 
 function initAssets() {
   el('assetChoices').addEventListener('click', e => {
+    if (e.target.closest('[data-pixforget]')) { assetState.pixPalette = []; assetsSave(); renderAssetPixel(); return; }
     const t = e.target.closest('[data-thing]');
     if (t) { assetState.thing = t.dataset.thing; el('assetThing').value = t.dataset.thing; }
     const b = e.target.closest('[data-as]');
@@ -559,6 +631,8 @@ function initAssets() {
       }
       // The note and the count row depend on whether the figure is turned (4, 8) or not (1).
       if (b.dataset.as === 'dirs') { assetsSave(); renderAssets(); return; }
+      // The pixel look has more to choose once it is on, and a tile has its size from the grid.
+      if (b.dataset.as.startsWith('pix')) { assetsSave(); renderAssets(); return; }
     } else if (!t) return;
     assetsSave();
     for (const x of el('assetChoices').querySelectorAll('[data-as],[data-thing]'))
