@@ -178,9 +178,11 @@ test('a tile is asked for as a texture: no sprite style, no outline, no "floor" 
 test('water has no "tile" word, soil keeps bricks out, an unknown ground gets the general recipe', async ({ page }) => {
   await openApp(page);
   const water = await ask(page, settings({ kind: 'tile', thing: 'water' })), dirt = await ask(page, settings({ kind: 'tile', thing: 'dirt' }));
-  expect(water.prompt).toContain('waves, ripples');
+  expect(water.prompt).toContain('wavy lines');
   expect(water.prompt).not.toMatch(/tile/);
   expect(dirt.avoid).toContain('bricks');
+  // A real run: "waves, ripples" drew a whirlpool.
+  expect(water.avoid).toContain('whirlpool');
   const moss = await ask(page, settings({ kind: 'tile', thing: 'Moss' }));
   expect(moss.prompt).toContain('moss, seamless texture, tileable');
 });
@@ -203,6 +205,22 @@ test('rolling by half puts the old edges in the middle, and what left one side c
   expect(r.blue.slice(0, 3)).toEqual([0, 0, 255]);
   expect(r.edges.map(e => e[3])).toEqual([255, 255]);   // nothing was lost: no gap at an edge
   expect(r.back.slice(0, 3)).toEqual([255, 0, 0]);   // and it goes back
+});
+
+// A real run: the model drew the mended cross a shade lighter than the rest, a grid of lines at 3 x 3.
+test('the mended cross is moved to the tone of the rest, and the rest is not touched', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(pix => {
+    const px = eval(pix);
+    const c = Object.assign(document.createElement('canvas'), { width: 20, height: 20 }), g = c.getContext('2d');
+    g.fillStyle = 'rgb(100,150,50)'; g.fillRect(0, 0, 20, 20);
+    g.fillStyle = 'rgb(130,180,80)'; g.fillRect(8, 0, 4, 20); g.fillRect(0, 8, 20, 4);   // the cross, 30 lighter
+    const o = tileMatch(c, tileCross(20, 20, 4));
+    return { cross: px(o, 9, 0), rest: px(o, 2, 2), source: px(c, 9, 0) };
+  }, PIX);
+  expect(r.cross.slice(0, 3)).toEqual([100, 150, 50]);
+  expect(r.rest.slice(0, 3)).toEqual([100, 150, 50]);
+  expect(r.source.slice(0, 3)).toEqual([130, 180, 80]);   // a new canvas: the model's own is left as it was
 });
 
 test('the seam score is 1 for a picture that wraps, far over for one that does not, and rolling moves a seam inside', async ({ page }) => {

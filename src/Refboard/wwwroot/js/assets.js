@@ -29,16 +29,20 @@ const ASSET_SIMPLE = [
 const TILE_STYLE = 'flat color, cel shading, 2d game texture, from above';
 const TILE_AVOID = 'shadow, cast shadow, gradient, glossy, shiny, depth of field, 3d, realistic, lighting, border, frame, horizon, perspective, vignette, object';
 /* What phase 0 found per ground. Water fails with the word "tile" in it, and soil turns into
-   bricks at "simple" unless bricks are kept out. */
+   bricks at "simple" unless bricks are kept out. Real runs (2026-10-17, a draft per wording): a ground
+   named only by what it is ("dirt, bare soil", "grass, lawn") comes back one flat colour - dirt a flat
+   orange, and at 32 px a flat tile is one pixel colour. What it is made of (pebbles, cracks, blades,
+   crests) is what the model draws; "simple" or "medium" changes almost nothing. "Waves, ripples" drew a
+   whirlpool, and "footprints" for snow drops of water. */
 const TILE_WORDS = {
-  grass: { tags: 'grass, lawn, seamless texture, tileable' },
-  dirt: { tags: 'dirt, bare soil, brown, seamless texture, tileable', avoid: 'brick, bricks, mosaic, pavement, tiles' },
-  stone: { tags: 'stone floor, cobblestone, seamless texture, tileable', avoid: 'gaps, white gaps' },
-  water: { tags: 'water, waves, ripples, blue', avoid: 'circles, mosaic, squares' },
-  wood: { tags: 'wood planks, wooden floor, seamless texture, tileable' },
-  sand: { tags: 'sand, desert sand, seamless texture, tileable' },
-  snow: { tags: 'snow, snowfield, seamless texture, tileable' },
-  lava: { tags: 'lava, molten rock, glowing cracks, seamless texture, tileable' },
+  grass: { tags: 'grass, many grass blades, tufts of grass, darker and lighter green, texture, seamless texture, tileable', avoid: 'flowers' },
+  dirt: { tags: 'dirt ground, dark brown soil, large pebbles, cracks, dark patches, light patches, seamless texture, tileable', avoid: 'brick, bricks, mosaic, pavement, tiles, orange' },
+  stone: { tags: 'stone floor, cobblestone, rounded stones, dark gaps between stones, seamless texture, tileable', avoid: 'gaps, white gaps' },
+  water: { tags: 'water surface, small waves, wavy lines, horizontal ripples, lighter wave crests, blue', avoid: 'whirlpool, vortex, spiral, swirl, circles, mosaic, squares, drops' },
+  wood: { tags: 'wood planks, wooden floor, planks side by side, wood grain, knots, dark lines between planks, seamless texture, tileable' },
+  sand: { tags: 'sand, desert sand, ripples, wavy lines in the sand, small stones, seamless texture, tileable' },
+  snow: { tags: 'snow, white snow, snow surface, soft light blue shaded patches, sparkles, seamless texture, tileable', avoid: 'footprints, drops, circles, water' },
+  lava: { tags: 'lava, molten rock, black rock crust, bright orange glowing cracks, seamless texture, tileable' },
 };
 // The tile is asked of the model whole, then mended at this size and shrunk to the one chosen.
 /* Real runs (grass, stone, water, one model, 2026-10-16): a denoise of 0.9 or more makes the server
@@ -396,13 +400,13 @@ async function assetFinishTile(made, s) {
   let pic;
   try { pic = await genLoadPicture(doc); } catch { return; }
   const rolled = tileRoll(pic, pic.width >> 1, pic.height >> 1);
-  const cross = tileCross(pic.width, pic.height, Math.round(pic.width * TILE_BAND)).toDataURL('image/png').split(',')[1];
+  const crossCanvas = tileCross(pic.width, pic.height, Math.round(pic.width * TILE_BAND)), cross = crossCanvas.toDataURL('image/png').split(',')[1];
   status.textContent = 'Mending the seams...';
   const mended = await generateOne({ prompt: doc.prompt, avoid: doc.avoid || '', tags: (doc.tags || []).slice(0, 24), shape: 'square', seed: doc.seed,
     image: genEncode(rolled), mask: cross, denoise: TILE_DENOISE, parent: doc.file, asset: 'tile',
     ...(s.draft === 'draft' ? { steps: GEN_DRAFT_STEPS } : {}) });
   let fixed;
-  try { fixed = await genLoadPicture(mended.doc); } catch { return; }
+  try { fixed = tileMatch(await genLoadPicture(mended.doc), crossCanvas); } catch { return; }
   const seam = tileSeam(fixed), canvas = s.pix === 'off' ? tileShrink(fixed, size) : assetPixel(fixed, s, { outline: false, split: PIX_SPLIT_TILE });
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
   const f = await storeFile(blob);

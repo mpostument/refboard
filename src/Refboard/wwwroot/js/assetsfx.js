@@ -538,6 +538,32 @@ function tileCross(w, h, band) {
   return out;
 }
 
+/* The mended cross, in the tone of the rest. The model draws it again from the words and comes back a
+   shade off (a real run: a lighter green band through a grass tile, a darker one through dirt - a grid
+   of lines at 3 x 3). Each channel under the mask is moved by the difference between the mean outside
+   it and the mean inside, so the band is no lighter or darker than what it joins; the texture in it is
+   left as drawn. Returns a new canvas. */
+function tileMatch(canvas, mask) {
+  const w = canvas.width, h = canvas.height;
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = out.getContext('2d', { willReadFrequently: true });
+  g.drawImage(canvas, 0, 0);
+  const img = g.getImageData(0, 0, w, h), d = img.data;
+  const m = mask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const inside = [0, 0, 0], outside = [0, 0, 0];
+  let ni = 0, no = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const into = m[i] > 127 ? inside : outside;
+    for (let c = 0; c < 3; c++) into[c] += d[i + c];
+    if (m[i] > 127) ni++; else no++;
+  }
+  if (!ni || !no) return out;
+  const shift = [0, 1, 2].map(c => outside[c] / no - inside[c] / ni);
+  for (let i = 0; i < d.length; i += 4) if (m[i] > 127)
+    for (let c = 0; c < 3; c++) d[i + c] = Math.max(0, Math.min(255, Math.round(d[i + c] + shift[c])));
+  g.putImageData(img, 0, 0);
+  return out;
+}
+
 /* How much the wrap-around edge differs from the picture's own inside: the mean difference of
    the last column from the first, over the mean difference of the two pairs of columns on each
    side of it (and the same for rows); the worse of the two. 1 is a seamless tile - the step
