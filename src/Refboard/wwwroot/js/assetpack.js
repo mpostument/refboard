@@ -4,7 +4,7 @@
    The functions here take sizes and names and give numbers and names - the canvases and the zip are
    put together in assets.js - so that they can be tried without a picture. */
 
-const PACK_PAD = 2;   // empty pixels between two pictures: a scaled sprite does not pull in its neighbour's edge
+const PACK_PAD = 4;   // empty pixels between two pictures: a smooth sprite, scaled or mipmapped in the engine, does not pull in its neighbour's edge
 
 /* `sizes` ([{ w, h }]) laid out in rows on a sheet of a power-of-two width and height, the smallest
    by area that holds them with `pad` between. Tall ones go first so that a row is as high as its

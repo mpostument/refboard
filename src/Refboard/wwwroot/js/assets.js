@@ -212,7 +212,7 @@ const ASSET_BACKDROP = 'border, frame, card, plaque, panel, backdrop, background
 const ASSET_LOOK_MAX = 120;   // the longest look a character is named by
 const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1',
   // The pixel look: the grid ('off' = the picture as it is), colours, outline, and the game's palette (#rrggbb list, kept).
-  pix: 'off', pixColours: '16', pixOutline: 'yes', pixShared: 'own', pixPalette: [] };
+  pix: 'off', packSize: '0', pixColours: '16', pixOutline: 'yes', pixShared: 'own', pixPalette: [] };
 let assetState = { ...ASSET_DEFAULTS };
 
 const PIX_GRIDS = [
@@ -475,6 +475,7 @@ async function assetFinish(made, s) {
 const assetsMade = async () => (await listUploads()).filter(u => u.asset && u.folder === 'assets');
 const ASSET_UI = { go: 'assetGo', status: 'assetStatus', goText: 'Make', refresh: () => showAssets(false) };
 
+const assetBitmapCanvas = async bmp => { const c = Object.assign(document.createElement('canvas'), { width: bmp.width, height: bmp.height }); c.getContext('2d').drawImage(bmp, 0, 0); return c; };
 const assetIsTile = u => (u.tags || []).includes('tile');
 
 /* What is made, as Unity loads it: the sprites on one sheet, and every picture, sprite or tile, as a file of
@@ -492,19 +493,26 @@ async function assetsPack() {
     }
     const names = packNames(loaded.map(x => x.u.name));
     loaded.forEach((x, i) => { x.name = names[i]; });
+    // A smooth sprite is as big as the model drew it; shrunk to the longest side chosen (halving, as a tile is), never enlarged.
+    const limit = Number(assetState.packSize) || 0;
+    for (const x of loaded) {
+      const k = !x.tile && limit ? Math.min(1, limit / Math.max(x.bmp.width, x.bmp.height)) : 1;
+      x.pic = k < 1 ? assetShrinkTo(await assetBitmapCanvas(x.bmp), Math.max(1, Math.round(x.bmp.width * k)), Math.max(1, Math.round(x.bmp.height * k))) : null;
+      x.w = x.pic ? x.pic.width : x.bmp.width; x.h = x.pic ? x.pic.height : x.bmp.height;
+    }
     const sprites = loaded.filter(x => !x.tile), tiles = loaded.filter(x => x.tile);
     const png = async c => new Uint8Array(await (await new Promise(res => c.toBlob(res, 'image/png'))).arrayBuffer());
     const canvasOf = (w, h) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
     const entries = [];
     for (const x of loaded) {
-      const [c, g] = canvasOf(x.bmp.width, x.bmp.height);
-      g.drawImage(x.bmp, 0, 0);
+      const [c, g] = canvasOf(x.w, x.h);
+      g.drawImage(x.pic || x.bmp, 0, 0);
       entries.push({ name: `${x.tile ? 'tiles' : 'sprites'}/${x.name}.png`, data: await png(c) });
     }
     if (sprites.length) {
-      const sheet = packRects(sprites.map(x => ({ w: x.bmp.width, h: x.bmp.height })));
+      const sheet = packRects(sprites.map(x => ({ w: x.w, h: x.h })));
       const [c, g] = canvasOf(sheet.w, sheet.h);
-      sprites.forEach((x, i) => g.drawImage(x.bmp, sheet.at[i].x, sheet.at[i].y));
+      sprites.forEach((x, i) => g.drawImage(x.pic || x.bmp, sheet.at[i].x, sheet.at[i].y));
       entries.push({ name: 'sheet.png', data: await png(c) });
     }
     for (const x of loaded) x.bmp.close();
@@ -634,7 +642,8 @@ async function showAssets(check = true) {
   const host = el('assetResults');
   host.innerHTML = '';
   el('assetMadeCount').textContent = all.length ? String(all.length) : '';
-  el('assetPack').classList.toggle('hidden', !all.length);
+  el('assetPackBox').classList.toggle('hidden', !all.length);
+  el('assetPackSize').value = assetState.packSize;
   el('assetEmpty').classList.toggle('hidden', all.length > 0);
   for (const u of all.slice(0, 48)) {
     const li = document.createElement('li');
@@ -701,6 +710,7 @@ function initAssets() {
   el('assetChoices').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'assetThing') assetsGo(); });
   el('assetPrompt').addEventListener('toggle', renderAssetPrompt);
   el('assetPack').addEventListener('click', assetsPack);
+  el('assetPackSize').addEventListener('change', e => { assetState.packSize = e.target.value; assetsSave(); });
   el('assetCount').addEventListener('change', e => { assetState.count = e.target.value; assetsSave(); });
   el('assetDraft').addEventListener('change', e => { assetState.draft = e.target.value; assetsSave(); });
   el('assetIcon').addEventListener('change', e => { assetState.icon = e.target.checked; assetsSave(); });

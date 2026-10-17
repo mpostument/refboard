@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=502227ab">
+<link rel="stylesheet" href="css/app.css?v=bff38cfc">
 </head>
 <body>
 <div id="setup">
@@ -386,7 +386,10 @@
           </div>
           <div class="col-right gen-right">
             <div class="gen-made-head"><h4>Made here <span class="count" id="assetMadeCount"></span></h4>
-              <button type="button" class="hidden" id="assetPack" title="Everything made here as one zip for Unity: a sheet of the sprites, and each picture, sprite or tile, as a file">Pack for a game</button></div>
+              <span class="asset-pack hidden" id="assetPackBox">
+                <select id="assetPackSize" aria-label="Longest side of a sprite in the pack" title="A smooth sprite is a big picture; shrunk, the sheet stays small enough for a phone. Tiles keep the size they were made at."><option value="0">Sprites as made</option><option value="1024">Sprites 1024 px</option><option value="512">Sprites 512 px</option><option value="256">Sprites 256 px</option><option value="128">Sprites 128 px</option></select>
+                <button type="button" id="assetPack" title="Everything made here as one zip for Unity: a sheet of the sprites, and each picture, sprite or tile, as a file">Pack for a game</button>
+              </span></div>
             <ul id="assetResults" aria-label="Game assets made"></ul>
             <div class="count" id="assetEmpty">What you make shows here, cut out - click one to open it with every tool.</div>
           </div>
@@ -2279,8 +2282,8 @@
 <script src="js/generate.js?v=8d6f197c"></script>
 <script src="js/assetsfx.js?v=f9cc5644"></script>
 <script src="js/genedit.js?v=bfdd1fea"></script>
-<script src="js/assetpack.js?v=7ae1f1c0"></script>
-<script src="js/assets.js?v=acfd614b"></script>
+<script src="js/assetpack.js?v=bdc88bd4"></script>
+<script src="js/assets.js?v=50f60b35"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->

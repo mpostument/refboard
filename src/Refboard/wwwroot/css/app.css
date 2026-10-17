@@ -1980,6 +1980,7 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .gen-open img { width: 100%; height: 100%; object-fit: cover; display: block; }
 #genResults li { position: relative; }
 .gen-made-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.asset-pack { display: flex; align-items: center; gap: 6px; }
 #genMadeCount { margin-left: 4px; text-transform: none; letter-spacing: 0; }
 #genClear { font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--dim); cursor: pointer; }
 #genClear:hover, #genClear:focus-visible { color: var(--ink); border-color: var(--bad); }

@@ -892,12 +892,12 @@ test('pictures are packed on a power-of-two sheet, inside it, apart, and none on
   const r = await page.evaluate(s => ({ ...packRects(s), sizes: s }), sizes);
   expect([r.w, r.h].map(n => (n & (n - 1)) === 0)).toEqual([true, true]);
   r.at.forEach((p, i) => {
-    expect(p.x, `x of ${i}`).toBeGreaterThanOrEqual(2);
-    expect(p.x + sizes[i].w + 2, `right of ${i}`).toBeLessThanOrEqual(r.w);
-    expect(p.y + sizes[i].h + 2, `bottom of ${i}`).toBeLessThanOrEqual(r.h);
+    expect(p.x, `x of ${i}`).toBeGreaterThanOrEqual(4);
+    expect(p.x + sizes[i].w + 4, `right of ${i}`).toBeLessThanOrEqual(r.w);
+    expect(p.y + sizes[i].h + 4, `bottom of ${i}`).toBeLessThanOrEqual(r.h);
     r.at.forEach((q, j) => {
       if (j <= i) return;
-      const apart = p.x + sizes[i].w + 2 <= q.x || q.x + sizes[j].w + 2 <= p.x || p.y + sizes[i].h + 2 <= q.y || q.y + sizes[j].h + 2 <= p.y;
+      const apart = p.x + sizes[i].w + 4 <= q.x || q.x + sizes[j].w + 4 <= p.x || p.y + sizes[i].h + 4 <= q.y || q.y + sizes[j].h + 4 <= p.y;
       expect(apart, `${i} and ${j}`).toBe(true);
     });
   });
@@ -928,4 +928,22 @@ test('Pack for a game gives one zip: a sheet of the sprites and every picture, s
   expect(got).toEqual(expect.arrayContaining(['sheet.png', 'sprites/chest-prop-side.png', 'sprites/chest-prop-side-2.png', 'tiles/grass-tile.png']));
   expect(got).toHaveLength(4);   // no atlas and no tile set: Unity reads neither
   await expect(page.locator('#assetStatus')).toContainText('Packed 2 sprites and 1 tile');
+});
+
+// A smooth sprite is as big as the model drew it: the pack shrinks it to the longest side chosen, never enlarges, and leaves a tile alone.
+test('Pack shrinks sprites to the longest side chosen and leaves a tile as it is', async ({ page }) => {
+  const s = await setup(page);
+  const doc = (id, name, tags) => ({ file: id.repeat(64) + '.png', name, type: 'image/png', from: 'generate', bytes: 100, t: Date.now(), folder: 'assets', asset: tags[1], tags, width: 200, height: 200 });
+  s.server.items.set('uploads/' + 'd'.repeat(64), doc('d', 'chest, prop, side', ['chest', 'prop', 'side']));
+  s.server.items.set('uploads/' + 'f'.repeat(64), doc('f', 'grass, tile', ['grass', 'tile']));
+  await page.evaluate(() => showAssets(false));
+  await page.selectOption('#assetPackSize', '128');
+  expect(await page.evaluate(() => assetState.packSize)).toBe('128');
+  await page.evaluate(() => loadSection('backup'));
+  const sizes = page.evaluate(() => new Promise(res => { const was = makeZip; makeZip = e => { makeZip = was; Promise.all(e.map(async x => { const b = await createImageBitmap(new Blob([x.data])); return [x.name, b.width, b.height]; })).then(res); return was(e); }; }));
+  await page.click('#assetPack');
+  const got = Object.fromEntries((await sizes).map(([n, w, h]) => [n, [w, h]]));
+  expect(got['sprites/chest-prop-side.png']).toEqual([128, 128]);
+  expect(got['tiles/grass-tile.png']).toEqual([200, 200]);
+  expect(got['sheet.png'][0]).toBeGreaterThanOrEqual(136);   // 128 and the padding either side
 });
