@@ -585,6 +585,13 @@ the pictures looked at - as the Generate features were):
    middle to say which end is the tip), each with a 45-degree framed icon; a potion cut out
    clean. Not done from the list above: the "game style" settings are phase 6, so only theme,
    material and simplicity are here; the palette lock is not applied yet.
+   **Second pass, 2026-10-17** (real runs, 4 seeds each, looked at): the one set of words did
+   not fit every weapon and item, so a bow, a shield and ten items have recipes of their own
+   (`WEAPON_RECIPES`, `ITEM_RECIPES`, found by the typed name; a name outside them keeps the old
+   words), the backdrop words (`border, frame, card, plaque, panel`) are kept out of both, the
+   white sticker rim is taken off (`assetDefringe`), and a thing with a hole (bow, ring, key) is cut
+   with the hole cleared. A bow, a key, a scroll and a heart are still weak; the table in phase 0
+   has the verdict per thing. Drawing on a key colour was tried for them and rejected.
 3. **Tiles.** Make seamless; the 3x3 preview; ground / grass / water / stone /
    wood from the Spike's tags; a tile at 256 / 512 and shrunk to 16 / 32.
    *Done when* a 3x3 of a generated tile shows no seam at 1x, and the rolled
@@ -684,7 +691,15 @@ What turns them into 2D is two lists, added to every kind:
 | Character, isometric | fails | - | an isometric *scene* (a person on a tile island), not an isometric figure |
 | Prop, side / top-down | works (4 of 4) | `no humans, <thing>, closed, front view` or `from above, 3/4 view`, `object focus` + style; avoid `open, gold, coins` | without `closed`: the lid opens and the chest is full of gold |
 | Prop, isometric | half (2 of 4) | `isometric` + avoid `tile, platform, island` | a base slab under it; one opens the lid; one on a dark background |
-| Weapon, side | fails for one | a vertical portrait shape + `full length, centered` | the model draws a *set* of 4-6 swords, or a rack on a panel; one in four is a lone sword. Next: `solo` words, or cut one out of the set (phase 1) |
+| Weapon, sword / spear / axe | works | `(single <thing>:1.3)`, `full length, centered, vertical, pointing up, object focus` + avoid `multiple, set, rack, border, frame, card, plaque, panel, backdrop` | a faint light rim on the blade (white sticker edge, taken off by `assetDefringe`) |
+| Weapon, bow | half (1-2 of 4) | `archery bow, curved limbs, bowstring, vertical` + avoid `ribbon, hair bow, bow tie, arrow, quiver, hand`; cut with `holes:true` | the sword's words ("vertical, pointing up") made a *ribbon bow on a stick*; with its own words one in four is a scythe or a bow with a crossed arrow. Not tried: the same with `holes:false` |
+| Weapon, shield | works (4 of 4) | `front view, emblem`, 1024 x 1024, avoid `pointing up, vertical, sword, spear, weapon` | asked tall and vertical it came as a framed card or a window |
+| Weapon, mace / hammer | works | the sword's words + the backdrop avoid words | a hammer's head often reads as a spear or a mace; a cream sticker rim, gone with the defringe |
+| Weapon, on a key colour | **rejected** | - | the model paints the object itself in the key colour: a shield half pink, a hollow shaft pink, a blade pink. Cream background + backdrop words + defringe is better |
+| Item, potion / book / gem / ring / mushroom | works (3 of 4 or better) | own words per item (`ITEM_RECIPES` in `js/assets.js`): `(single <thing>:1.3)` + `one glass bottle, cork stopper` / `closed hardcover book` / `cut gemstone, faceted, close-up` / `plain band ring` / `one mushroom, cap and stem`; a ring and a key are cut with `holes:true` | with the general words: a row of three bottles, a ring filled with white |
+| Item, apple / coin | half | `whole apple, stem and leaf` / `round gold coin, close-up` | an apple in a stone frame (one in four is not cut at all); a coin on a rounded card, or a speck in the middle of the picture, blurred when the trim enlarges it |
+| Item, key / scroll / heart | weak (1 of 4) | `skeleton key, ring head, long shaft` / `old parchment scroll, partly unrolled` / `red love heart` | a key's "bow" is a ribbon to the model (as a bow was), so it is never in the words; "paper roll" gave a mug and a tube; a heart comes in a frame or as a badge. Word tuning stopped after three rounds: the model, not the recipe |
+| Item, any | - | avoid `pixel art, pixelated, low resolution` | the model drew a pixel key, coin, heart and mushroom, coarse and blurred once enlarged; the pixel look is made afterwards (phase 6) |
 | Tile, grass | works | `grass, seamless texture, tileable, flat color` | a dull flat green (fine); seams not yet tested |
 | Tile, stone | works (3 of 4) | `stone floor, cobblestone, flat color` | some white gaps between stones |
 | Tile, dirt | half | - | "simple" turns it into a brick / mosaic pattern, not soil |

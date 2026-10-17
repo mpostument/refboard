@@ -40,6 +40,103 @@ test('a weapon is asked for one, whole, and the set it tends to draw is kept out
   expect(r.tags).not.toContain('side');
 });
 
+// Found by a real run (2026-10-17, 4 seeds each): the sword's words ("vertical, pointing up, full length")
+// made a ribbon on a stick of "bow" and a framed card of "shield".
+test('a bow is an archery bow, not a ribbon, and is not told to point up', async ({ page }) => {
+  await openApp(page);
+  for (const thing of ['bow', 'wooden longbow', 'Recurve Bow']) {
+    const r = await ask(page, settings({ kind: 'weapon', thing }));
+    expect(r.prompt, thing).toContain('archery bow');
+    expect(r.prompt, thing).toContain('bowstring');
+    expect(r.prompt, thing).not.toContain('pointing up');
+    expect(r.avoid, thing).toContain('ribbon');
+    expect(r.avoid, thing).toContain('hair bow');
+  }
+  // A crossbow, and a bow tie, are not a bow.
+  expect((await ask(page, settings({ kind: 'weapon', thing: 'crossbow' }))).prompt).toContain('pointing up');
+});
+
+test('a shield is drawn square, from the front, and is not asked to be a tall vertical card', async ({ page }) => {
+  await openApp(page);
+  const r = await ask(page, settings({ kind: 'weapon', thing: 'round shield', material: 'iron' }));
+  expect(r.prompt).toContain('(single iron round shield:1.3)');
+  expect(r.prompt).toContain('front view');
+  for (const w of ['pointing up', 'vertical', 'full length']) expect(r.prompt, w).not.toContain(w);
+  expect([r.width, r.height]).toEqual([1024, 1024]);
+  expect(r.tags).toContain('1024x1024');
+  // The sword keeps the tall shape and its words.
+  const sword = await ask(page, settings({ kind: 'weapon', thing: 'sword' }));
+  expect([sword.width, sword.height]).toEqual([768, 1152]);
+  expect(sword.prompt).toContain('pointing up');
+});
+
+test('a weapon and an item keep out the frame, card or plaque the model draws behind them', async ({ page }) => {
+  await openApp(page);
+  for (const kind of ['weapon', 'item']) {
+    const r = await ask(page, settings({ kind, thing: kind === 'weapon' ? 'mace' : 'potion' }));
+    for (const w of ['border', 'frame', 'card', 'plaque', 'backdrop']) expect(r.avoid, `${kind} ${w}`).toContain(w);
+  }
+});
+
+test('a bow is cut with its holes cleared, a sword is not', async ({ page }) => {
+  await openApp(page);
+  // The gap between the limbs and the string is background; the white of a blade is the blade.
+  const r = await page.evaluate(() => ({ bow: !!weaponRecipe('wooden bow').holes, sword: !!(weaponRecipe('sword') || {}).holes }));
+  expect(r).toEqual({ bow: true, sword: false });
+});
+
+// Found by a real run (2026-10-17, 4 seeds each, 7 items): a row of three bottles, a key on a slab, a scroll or
+// an apple in a stone frame, a coin on a rounded card, a ring filled with white.
+test('an item the table knows is drawn by words of its own; one it does not keeps the general ones', async ({ page }) => {
+  await openApp(page);
+  const potion = await ask(page, settings({ kind: 'item', thing: 'Health Potion' }));
+  expect(potion.prompt).toContain('(single health potion:1.3)');
+  expect(potion.prompt).toContain('one glass bottle');
+  expect(potion.avoid).toContain('row of bottles');
+  expect(potion.avoid).toContain('frame');          // the backdrop words stay
+  expect(potion.tags[0]).toBe('health potion');
+  const coin = await ask(page, settings({ kind: 'item', thing: 'coin' }));
+  expect(coin.prompt).toContain('close-up');
+  expect(coin.avoid).toContain('rounded square');
+  expect(coin.avoid).toContain('pixel art');        // made afterwards (phase 6), not drawn coarse by the model
+  // "bow" of a key is a ribbon bow to the model, as a bow was (real run 2026-10-17): the key is asked for by other words.
+  const key = await ask(page, settings({ kind: 'item', thing: 'key' }));
+  expect(key.prompt).not.toMatch(/\bbow\b/);
+  expect(key.prompt).toContain('skeleton key');
+  // Not in the table: the old words, and no "single" weight.
+  const feather = await ask(page, settings({ kind: 'item', thing: 'feather' }));
+  expect(feather.prompt).toContain('solo, centered, object focus');
+  expect(feather.prompt).not.toContain(':1.3)');
+  expect(feather.avoid).toContain('plaque');
+});
+
+test('every item idea in the list has a recipe, and only a ring or a key is cut with its holes cleared', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => ({
+    ideas: assetKind('item').things.map(t => [t, !!itemRecipe(t)]),
+    holes: ITEM_RECIPES.filter(x => x.holes).map(x => x.name),
+    // An earring and a "bring" are not a ring; a bookmark is not a book
+    near: ['earring', 'bookmark', 'keyboard'].map(t => !!itemRecipe(t)),
+  }));
+  for (const [t, has] of r.ideas) expect(has, t).toBe(true);
+  expect(r.holes.sort()).toEqual(['key', 'ring']);
+  expect(r.near).toEqual([false, false, false]);
+});
+
+test('the interface says which names of a weapon and an item have words of their own', async ({ page }) => {
+  await setup(page);
+  await page.click('#assetChoices [data-as="kind"][data-opt="item"]');
+  const note = page.locator('#assetChoices .gen-note');
+  await expect(note).toContainText('potion');
+  await expect(note).toContainText('mushroom');
+  await page.click('#assetChoices [data-as="kind"][data-opt="weapon"]');
+  await expect(note).toContainText('bow');
+  await expect(note).toContainText('shield');
+  // A prop has none
+  await page.click('#assetChoices [data-as="kind"][data-opt="prop"]');
+  await expect(note).toHaveCount(0);
+});
+
 test('simplicity is its own setting', async ({ page }) => {
   await openApp(page);
   const simple = await ask(page, settings({ simple: 'simple' })), detailed = await ask(page, settings({ simple: 'detailed' }));

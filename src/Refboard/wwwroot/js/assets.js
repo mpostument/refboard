@@ -156,6 +156,55 @@ const ASSET_VIEWS = [
 // also read as a body part, so the first idea is "treasure chest" - and the treasure kept inside.
 const ASSET_CONTAINER = /\b(chest|box|crate|barrel|door|jar|bag|coffin|basket|pot|book|casket)\b/i;
 
+/* The words a sword was found by ("vertical, pointing up, full length") make a *different* thing of some
+   weapons, so a weapon the table knows is drawn with its own. A "bow" was read as a ribbon bow on a stick,
+   and a shield asked to be tall and vertical came as a framed card or a window. Matched on the typed name,
+   so "wooden longbow" and "round shield" are found; a weapon not in the table keeps the sword's words. */
+const WEAPON_RECIPES = [
+  // holes: the gap between the limbs and the string is background, and a bow has no white blade to lose with it
+  { re: /\b(long|short|recurve|composite)?bow\b/i, name: 'bow', holes: true, tags: ['archery bow', 'curved limbs', 'bowstring', 'vertical', 'centered', 'object focus'],
+    avoid: 'ribbon, hair bow, bow tie, gift bow, arrow, arrows, quiver, hand, holding' },
+  { re: /\b(shield|buckler)\b/i, name: 'shield', size: [1024, 1024], tags: ['front view', 'emblem', 'centered', 'object focus'],
+    avoid: 'pointing up, vertical, sword, spear, weapon' },
+];
+const weaponRecipe = thing => WEAPON_RECIPES.find(r => r.re.test(thing));
+
+/* The same for what is picked up. Every item had one set of words ("solo, centered, object focus"), and the model
+   answered with what a game icon usually is: a row of three bottles, a key lying on a slab, a scroll or an apple
+   inside a stone frame, a coin on a rounded card. `holes`: the ring's and the key's bow are background too. A white
+   or cream item (a pearl, a bone) would lose its own enclosed white to it, so only a thing with a hole in it has it.
+   "close-up" is for the small things (coin, gem), which came a speck in the middle of the picture and blurred when
+   the trim scaled them up. */
+const ITEM_RECIPES = [
+  { re: /\bpotions?\b|\bflask\b|\belixir\b/i, name: 'potion', tags: ['one glass bottle', 'cork stopper', 'liquid inside', 'centered', 'object focus'],
+    avoid: 'bottles, two bottles, three bottles, row of bottles, shelf, candle, lamp' },
+  { re: /\bkeys?\b/i, name: 'key', holes: true, tags: ['skeleton key', 'ring head', 'long shaft', 'teeth', 'vertical', 'centered', 'object focus'],
+    avoid: 'key ring, keychain, bunch of keys, keys, lock, padlock, keyhole, chest, slab, plate, ribbon, bow, magnifying glass, handle' },
+  { re: /\bscrolls?\b/i, name: 'scroll', tags: ['old parchment scroll', 'partly unrolled', 'curled ends', 'ribbon tie', 'centered', 'object focus'],
+    avoid: 'banner, flag, sign, tablet, pillar, column, ornate border, text, cup, mug, tube, pipe, cylinder, toilet paper' },
+  { re: /\bcoins?\b/i, name: 'coin', tags: ['round gold coin', 'close-up', 'centered', 'object focus'],
+    avoid: 'square, rounded square, slot, medal, badge, pile of coins, coins, stack, clock, dial, plate' },
+  { re: /\b(gems?|gemstones?|crystal|jewel)\b/i, name: 'gem', tags: ['cut gemstone', 'faceted', 'close-up', 'centered', 'object focus'],
+    avoid: 'ring, jewelry setting, multiple gems, gems, dark background, grey background' },
+  { re: /\brings?\b/i, name: 'ring', holes: true, tags: ['plain band ring', 'jewelry', 'tilted view', 'centered', 'object focus'],
+    avoid: 'finger, hand, ring box, pillow, display, necklace, bracelet, chain, multiple rings' },
+  { re: /\bapples?\b/i, name: 'apple', tags: ['whole apple', 'stem and leaf', 'centered', 'object focus'],
+    avoid: 'frame, stone, bitten, slice, cut, tree, basket, bowl, cube' },
+  { re: /\bbooks?\b|\btome\b|\bgrimoire\b/i, name: 'book', tags: ['closed hardcover book', 'cover', 'centered', 'object focus'],
+    avoid: 'open book, spread pages, bookshelf, library, stack of books, multiple books' },
+  { re: /\bhearts?\b/i, name: 'heart', tags: ['red love heart', 'symmetrical', 'glossy highlight', 'centered', 'object focus'],
+    avoid: 'anatomical, organ, blood, hands, multiple hearts, frame, badge, emblem, gauge, machine, outline only' },
+  { re: /\bmushrooms?\b/i, name: 'mushroom', tags: ['one mushroom', 'cap and stem', 'centered', 'object focus'],
+    avoid: 'cluster, multiple mushrooms, forest, grass, ground, soil, logs' },
+];
+const itemRecipe = thing => ITEM_RECIPES.find(r => r.re.test(thing));
+// The recipe a kind's thing is drawn by, if it has one.
+const assetRecipe = (kindId, thing) => kindId === 'weapon' ? weaponRecipe(thing) : kindId === 'item' ? itemRecipe(thing) : null;
+const WEAPON_SWORD_WORDS = ['full length', 'centered', 'vertical', 'pointing up', 'object focus'];
+// What a cut-out weapon or item is never: the model draws a sheet of paper behind it (a frame, a card, a plaque) that
+// is not the background and so is not cut away.
+const ASSET_BACKDROP = 'border, frame, card, plaque, panel, backdrop, background pattern';
+
 const ASSET_LOOK_MAX = 120;   // the longest look a character is named by
 const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1' };
 let assetState = { ...ASSET_DEFAULTS };
@@ -175,6 +224,7 @@ function assetRequest(s) {
   // Several directions are several pictures that must agree, so the colours in the look are weighted (charLook).
   const named = [kind.tile || kind.character ? '' : material.word, kind.character && Number(s.dirs) > 1 ? charLook(thing) : thing].filter(Boolean).join(' ');
   const box = ASSET_CONTAINER.test(thing);
+  const own = assetRecipe(kind.id, thing);
   const tags = kind.character ? [] : ['no humans'], avoid = [kind.tile ? TILE_AVOID : kind.character ? CHAR_NOT : ASSET_AVOID, kind.character ? `${CHAR_AVOID}, ${GEN_POSE_AVOID}` : ASSET_ALONE];
   const dir = s.dir && CHAR_FACE[s.dir] ? s.dir : 'front';
   if (kind.tile) {
@@ -186,11 +236,14 @@ function assetRequest(s) {
     tags.push('solo', named, 'full body', 'standing', CHAR_FACE[dir], ...(view.id === 'top' ? ['from above'] : []), `(${key} background:1.2)`, `solid ${key} background`, 'simple background');
   } else if (kind.id === 'weapon') {
     // The model draws a set of four to six, or a rack on a panel: ask for one, and keep the set out.
-    tags.push('solo', `(single ${named}:1.3)`, 'full length', 'centered', 'vertical', 'pointing up', 'object focus');
-    avoid.push('multiple, set, collection, rack, weapon rack, panel, display, sheath');
+    tags.push('solo', `(single ${named}:1.3)`, ...(own ? own.tags : WEAPON_SWORD_WORDS));
+    avoid.push('multiple, set, collection, rack, weapon rack, display, sheath', ASSET_BACKDROP, ...(own ? [own.avoid] : []));
   } else if (kind.id === 'item') {
-    tags.push(named, 'solo', 'centered', 'object focus');
-    avoid.push('multiple, set, collection');
+    if (own) tags.push('solo', `(single ${named}:1.3)`, ...own.tags);
+    else tags.push(named, 'solo', 'centered', 'object focus');
+    // The pixel look is made afterwards from a smooth picture (ROADMAP phase 6); the model drew it, coarse and
+    // blurred when enlarged, for a key, a coin, a heart and a mushroom.
+    avoid.push('multiple, set, collection', ASSET_BACKDROP, 'pixel art, pixelated, low resolution', ...(own ? [own.avoid] : []));
   } else {
     tags.push(named, ...(box ? ['closed', 'closed lid'] : []), view.tags, 'object focus');
     if (box) avoid.push('open, open lid, gold, coins, jewels, gems, overflowing');
@@ -202,7 +255,7 @@ function assetRequest(s) {
     tags: [short, 'character', dir, view.id, ...(theme.tags ? [theme.id] : []), 'asset'].slice(0, 24).map(t => t.slice(0, 40)),
     shape: 'portrait', asset: 'character', dir,
   };
-  const [width, height] = kind.size;
+  const [width, height] = (own && own.size) || kind.size;
   return {
     prompt: comfyTags(prompt),
     avoid: comfyTags([...avoid, kind.tile ? simple.tileAvoid : simple.avoid].filter(Boolean).join(', ')),
@@ -229,6 +282,12 @@ function assetChips(group, label, list, current, hintOf = o => o.hint) {
       `${hintOf(o) ? ` title="${esc(hintOf(o))}"` : ''}>${esc(o.label)}</button>`).join('') + '</div></div>';
 }
 
+// Which names of a kind are drawn by words of their own, so that a name outside the list is not a surprise.
+function assetRecipeNote(kind) {
+  const list = kind.id === 'weapon' ? WEAPON_RECIPES : kind.id === 'item' ? ITEM_RECIPES : null;
+  return list ? `<p class="gen-note">Words of their own for: ${esc(list.map(r => r.name).join(', '))}. Any other name is drawn by the general words for a ${esc(kind.id)} - the Prompt below shows which.</p>` : '';
+}
+
 function renderAssets() {
   const s = assetState, kind = assetKind(s.kind);
   el('assetChoices').innerHTML =
@@ -237,6 +296,7 @@ function renderAssets() {
     `<input type="text" id="assetThing" maxlength="${kind.character ? ASSET_LOOK_MAX : 40}" autocomplete="off" spellcheck="false" value="${esc(s.thing)}" placeholder="e.g. ${esc(kind.things[0])}"></label>` +
     `<div class="chips" id="assetThings" role="group" aria-label="Ideas">` +
     kind.things.map(t => `<button type="button" class="chip" data-thing="${esc(t)}" aria-pressed="${s.thing.trim().toLowerCase() === t}">${esc(t)}</button>`).join('') + '</div></div>' +
+    assetRecipeNote(kind) +
     (kind.views ? assetChips('view', 'View', ASSET_VIEWS, s.view, () => '') : '') +
     (kind.character ? assetChips('dirs', 'Turned to', CHAR_CHOICES, s.dirs) +
       (s.dirs === '1'
@@ -314,7 +374,9 @@ async function assetFinish(made, s) {
   const keep = (canvas, extra, over) => assetKeep(doc, canvas, extra, over);
   let pic;
   try { pic = await genLoadPicture(doc); } catch { return; }
-  const cut = cutOut(pic);
+  // The thing is the picture's first tag (assetRequest).
+  const own = assetRecipe(kind.id, (doc.tags || [])[0] || '');
+  const cut = cutOut(pic, own && own.holes ? { holes: true } : {});
   if (!cut.found) {
     await storePutItem('uploads', uploadKey(doc.file), { ...doc, tags: [...(doc.tags || []), 'not cut out'].slice(0, 24) });
     return;
@@ -322,6 +384,10 @@ async function assetFinish(made, s) {
   let canvas = cut.canvas;
   const notes = ['cut out'];
   if (kind.id !== 'prop') {
+    // The white edge the model draws round a thing (a sticker's border) shows as a bright outline on a dark slot.
+    // Not drawn on a key colour: the model paints the thing itself in it (a shield half magenta, cut away with the
+    // background), which a white blade on cream never costs.
+    canvas = assetTrim(assetDefringe(canvas)) || canvas;
     const solo = assetSolo(canvas);
     if (solo) { canvas = solo.canvas; if (solo.pieces > 1) notes.push('one of ' + solo.pieces); }
   }
