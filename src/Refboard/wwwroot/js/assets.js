@@ -475,6 +475,64 @@ async function assetFinish(made, s) {
 const assetsMade = async () => (await listUploads()).filter(u => u.asset && u.folder === 'assets');
 const ASSET_UI = { go: 'assetGo', status: 'assetStatus', goText: 'Make', refresh: () => showAssets(false) };
 
+const assetIsTile = u => (u.tags || []).includes('tile');
+
+/* What is made, as a game loads it: the sprites on one sheet with an atlas, the tiles (all of the
+   size most of them are - Tiled wants one) in one tile set, every picture as its own file too, in one
+   zip. Pictures are copied pixel for pixel, never resampled, so a pixel sprite stays hard-edged. */
+async function assetsPack() {
+  const btn = el('assetPack'), status = el(ASSET_UI.status);
+  btn.disabled = true;
+  try {
+    await loadSection('backup');   // makeZip lives there
+    const made = await assetsMade(), loaded = [];
+    for (const u of made) {
+      const blob = await storeFileBlob(u.file);
+      if (blob) loaded.push({ u, bmp: await createImageBitmap(blob), tile: assetIsTile(u) });
+    }
+    const names = packNames(loaded.map(x => x.u.name)), enc = new TextEncoder();
+    loaded.forEach((x, i) => { x.name = names[i]; });
+    const sprites = loaded.filter(x => !x.tile);
+    const tileSizes = new Map();
+    for (const x of loaded.filter(x => x.tile)) tileSizes.set(x.bmp.width, (tileSizes.get(x.bmp.width) || 0) + 1);
+    const size = [...tileSizes].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] || 0;
+    const tiles = loaded.filter(x => x.tile && x.bmp.width === size && x.bmp.height === size), odd = loaded.filter(x => x.tile).length - tiles.length;
+    const png = async c => new Uint8Array(await (await new Promise(res => c.toBlob(res, 'image/png'))).arrayBuffer());
+    const canvasOf = (w, h) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
+    const entries = [];
+    for (const x of loaded) {
+      const [c, g] = canvasOf(x.bmp.width, x.bmp.height);
+      g.drawImage(x.bmp, 0, 0);
+      entries.push({ name: `${x.tile ? 'tiles' : 'sprites'}/${x.name}.png`, data: await png(c) });
+    }
+    if (sprites.length) {
+      const sheet = packRects(sprites.map(x => ({ w: x.bmp.width, h: x.bmp.height })));
+      const [c, g] = canvasOf(sheet.w, sheet.h);
+      sprites.forEach((x, i) => g.drawImage(x.bmp, sheet.at[i].x, sheet.at[i].y));
+      entries.push({ name: 'sheet.png', data: await png(c) },
+        { name: 'atlas.json', data: enc.encode(atlasJson(sprites.map(x => ({ name: x.name, w: x.bmp.width, h: x.bmp.height })), sheet.at, sheet, 'sheet.png')) });
+    }
+    if (tiles.length) {
+      const cols = Math.min(tiles.length, 8), [c, g] = canvasOf(cols * size, Math.ceil(tiles.length / cols) * size);
+      tiles.forEach((x, i) => g.drawImage(x.bmp, (i % cols) * size, Math.floor(i / cols) * size));
+      entries.push({ name: 'tiles.png', data: await png(c) }, { name: 'tiles.tsx', data: enc.encode(tilesetTsx(tiles.map(x => x.name), size, cols, 'tiles.png')) });
+    }
+    for (const x of loaded) x.bmp.close();
+    if (!entries.length) { status.textContent = 'Nothing made yet to pack.'; return; }
+    const zip = makeZip(entries), a = document.createElement('a');
+    a.href = URL.createObjectURL(zip);
+    a.download = `game-assets-${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    status.textContent = `Packed ${sprites.length} sprite${sprites.length === 1 ? '' : 's'} and ${tiles.length} tile${tiles.length === 1 ? '' : 's'} (${fmtBytes(zip.size)})` +
+      (odd ? ` - ${odd} tile${odd === 1 ? ' is' : 's are'} not ${size} px, left out of the tile set but kept as files` : '') + '.';
+  } catch (err) {
+    status.textContent = 'It could not be packed - ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 /* A character: one figure, turned. The depth map of the figure in Forms (the one Draw this pose
    uses) is taken once per direction with the camera sent round it; the maps are framed alike
    (round the union of their boxes, or the narrow side view would be drawn bigger than the front),
@@ -587,6 +645,7 @@ async function showAssets(check = true) {
   const host = el('assetResults');
   host.innerHTML = '';
   el('assetMadeCount').textContent = all.length ? String(all.length) : '';
+  el('assetPack').classList.toggle('hidden', !all.length);
   el('assetEmpty').classList.toggle('hidden', all.length > 0);
   for (const u of all.slice(0, 48)) {
     const li = document.createElement('li');
@@ -652,6 +711,7 @@ function initAssets() {
   });
   el('assetChoices').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'assetThing') assetsGo(); });
   el('assetPrompt').addEventListener('toggle', renderAssetPrompt);
+  el('assetPack').addEventListener('click', assetsPack);
   el('assetCount').addEventListener('change', e => { assetState.count = e.target.value; assetsSave(); });
   el('assetDraft').addEventListener('change', e => { assetState.draft = e.target.value; assetsSave(); });
   el('assetIcon').addEventListener('change', e => { assetState.icon = e.target.checked; assetsSave(); });

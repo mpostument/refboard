@@ -884,3 +884,56 @@ test('a tile made with the pixel look on is the size of the grid, in the colours
   expect(kept.tags).toContain('pixel');
   expect([kept.width, kept.height]).toEqual([16, 16]);
 });
+
+// ---- Phase 7: what a game loads.
+test('pictures are packed on a power-of-two sheet, inside it, apart, and none on another', async ({ page }) => {
+  await openApp(page);
+  const sizes = [{ w: 32, h: 32 }, { w: 48, h: 96 }, { w: 16, h: 16 }, { w: 64, h: 32 }, { w: 30, h: 50 }, { w: 32, h: 32 }];
+  const r = await page.evaluate(s => ({ ...packRects(s), sizes: s }), sizes);
+  expect([r.w, r.h].map(n => (n & (n - 1)) === 0)).toEqual([true, true]);
+  r.at.forEach((p, i) => {
+    expect(p.x, `x of ${i}`).toBeGreaterThanOrEqual(2);
+    expect(p.x + sizes[i].w + 2, `right of ${i}`).toBeLessThanOrEqual(r.w);
+    expect(p.y + sizes[i].h + 2, `bottom of ${i}`).toBeLessThanOrEqual(r.h);
+    r.at.forEach((q, j) => {
+      if (j <= i) return;
+      const apart = p.x + sizes[i].w + 2 <= q.x || q.x + sizes[j].w + 2 <= p.x || p.y + sizes[i].h + 2 <= q.y || q.y + sizes[j].h + 2 <= p.y;
+      expect(apart, `${i} and ${j}`).toBe(true);
+    });
+  });
+  expect(await page.evaluate(() => packRects([]))).toEqual({ w: 0, h: 0, at: [] });
+});
+
+test('the same name twice is kept apart, and the atlas and tile set say where each one is', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const names = packNames(['Chest, prop, side', 'chest, prop, side', 'Sword', '???']);
+    const atlas = JSON.parse(atlasJson([{ name: 'a', w: 10, h: 20 }, { name: 'b', w: 5, h: 5 }], [{ x: 2, y: 2 }, { x: 14, y: 2 }], { w: 32, h: 32 }, 'sheet.png'));
+    return { names, atlas, tsx: tilesetTsx(['grass', 'dirt & mud', 'lava'], 32, 2, 'tiles.png') };
+  });
+  expect(r.names).toEqual(['chest-prop-side', 'chest-prop-side-2', 'sword', 'asset']);
+  expect(r.atlas.frames.a).toMatchObject({ frame: { x: 2, y: 2, w: 10, h: 20 }, sourceSize: { w: 10, h: 20 } });
+  expect(r.atlas.meta).toMatchObject({ image: 'sheet.png', size: { w: 32, h: 32 } });
+  expect(r.tsx).toContain('tilecount="3" columns="2"');
+  expect(r.tsx).toContain('width="64" height="64"');   // two rows of two
+  expect(r.tsx).toContain('dirt &amp; mud');
+});
+
+test('Pack for a game gives one zip: a sheet and atlas for the sprites, a tile set for the tiles, every picture a file', async ({ page }) => {
+  const s = await setup(page);
+  const doc = (id, name, tags) => ({ file: id.repeat(64) + '.png', name, type: 'image/png', from: 'generate', bytes: 100, t: Date.now(), folder: 'assets', asset: tags[1], tags, width: 200, height: 200 });
+  s.server.items.set('uploads/' + 'd'.repeat(64), doc('d', 'chest, prop, side', ['chest', 'prop', 'side']));
+  s.server.items.set('uploads/' + 'e'.repeat(64), doc('e', 'chest, prop, side', ['chest', 'prop', 'side']));
+  s.server.items.set('uploads/' + 'f'.repeat(64), doc('f', 'grass, tile', ['grass', 'tile']));
+  await page.evaluate(() => showAssets(false));
+  await expect(page.locator('#assetPack')).toBeVisible();
+  // makeZip is in the backup section's script: wait for it to load, then watch it.
+  await page.evaluate(() => loadSection('backup'));
+  const watched = page.evaluate(() => new Promise(res => { const was = makeZip; makeZip = e => { makeZip = was; res(e.map(x => x.name)); return was(e); }; }));
+  const download = page.waitForEvent('download');
+  await page.click('#assetPack');
+  expect((await download).suggestedFilename()).toMatch(/^game-assets-\d{4}-\d{2}-\d{2}\.zip$/);
+  const got = await watched;
+  expect(got).toEqual(expect.arrayContaining(['sheet.png', 'atlas.json', 'tiles.png', 'tiles.tsx', 'sprites/chest-prop-side.png', 'sprites/chest-prop-side-2.png', 'tiles/grass-tile.png']));
+  await expect(page.locator('#assetStatus')).toContainText('Packed 2 sprites and 1 tile');
+});
