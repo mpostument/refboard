@@ -1136,11 +1136,17 @@ the wash.
 
 ## Checking your own work
 
-- **Painting check.** Photograph the painting, line it up over the
-  reference (as Compare your drawing does), and see a map of where it
-  differs in value and colour: darker here, greyer there, warmer here.
-  Compare checks a drawing's lines; this checks a painting's tones and
-  colours.
+- **Painting check.** In place (`js/paintcheck.js`, the last three choices of
+  Compare your drawing, "Where it parts"): the photo, laid over the reference as
+  Compare lays it, is read in the reference's frame at 120 cells and mapped in
+  OKLab - darker / lighter, warmer / cooler, stronger / greyer. The photo's overall
+  light and cast are matched to the reference's first (a dim room is not an
+  error), the map is softened by a few cells (brushwork is not an error), and the
+  note names the two zones of nine where it parts most, with the overall shift
+  that was taken out. Still to come: a per-colour reading ("your shadow is
+  bluer than the reference's"), the share of the painting off by more than a
+  threshold as one number to watch over weeks, and keeping a check with the
+  photo. Not tried on a real phone photo of paper.
 - **Framed.** A photo of the work in a mat and frame on a wall, with the
   format and mat colour to choose - to decide how to crop and present it.
 

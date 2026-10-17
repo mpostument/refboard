@@ -87,7 +87,7 @@ function openCompare(file) {
     // Moved on while it was being read: this drawing was for another pose.
     if (state.current !== pose) { URL.revokeObjectURL(url); return; }
     clearDrawing();
-    drawing = { photo: url, ink: URL.createObjectURL(inkBlob), w: img.naturalWidth, h: img.naturalHeight,
+    drawing = { photo: url, ink: URL.createObjectURL(inkBlob), img, w: img.naturalWidth, h: img.naturalHeight,
       t: [0, 0], s: 1, a: 0, align: null, hidden: false };
     fitDrawing();
     el('compareBar').classList.remove('hidden');
@@ -105,6 +105,7 @@ function openCompare(file) {
 
 function clearDrawing() {
   clearInterval(compareBlink); compareBlink = 0;
+  clearTimeout(diffTimer);
   if (drawing) { URL.revokeObjectURL(drawing.photo); URL.revokeObjectURL(drawing.ink); }
   drawing = null;
   el('drawWrap').classList.add('hidden');
@@ -146,6 +147,31 @@ function refToDrawing([x, y]) {
   return [c * dx + n * dy, -n * dx + c * dy];
 }
 
+/* Painting check (js/paintcheck.js): the modes that show not the photo but where it parts from the
+   reference. The map is in the reference's frame, so it is drawn untransformed over all of it, and
+   redone a moment after the photo stops moving (the reading is a few milliseconds, but not per drag step). */
+const DIFF_MODES = ['tones', 'warmth', 'colour'];
+let diffTimer = 0;
+function renderDiff(k, mode) {
+  const di = el('drawImg'), [W, H] = refSize();
+  Object.assign(di.style, { width: W * k + 'px', height: H * k + 'px', transform: 'none' });
+  const key = [mode, drawing.t.map(v => v.toFixed(1)).join(), drawing.s.toFixed(4), drawing.a.toFixed(4)].join('|');
+  const opacity = () => String(compareOpts.opacity[mode] ?? 0.85);
+  if (drawing.diffKey === key) { di.style.opacity = opacity(); return; }
+  di.style.opacity = '0';
+  clearTimeout(diffTimer);
+  diffTimer = setTimeout(() => {
+    if (!drawing || compareOpts.mode !== mode) return;
+    let diff;
+    try { diff = paintingCompare(drawing, el('img')); } catch { el('cmpHint').textContent = 'The reference could not be read for a comparison.'; return; }
+    if (!diff) { el('cmpHint').textContent = 'The photo and the reference share no ground - move the photo over the reference first.'; return; }
+    el('drawImg').src = paintingMapUrl(diff, mode);
+    drawing.diffKey = key; drawing.diff = diff;
+    el('drawImg').style.opacity = opacity();
+    el('cmpHint').textContent = paintingNote(diff, mode);
+  }, 150);
+}
+
 function renderDrawing() {
   const im = el('img'), wrap = el('drawWrap'), di = el('drawImg');
   if (!drawing || !im.naturalWidth || drawing.hidden) { wrap.classList.add('hidden'); return; }
@@ -159,12 +185,19 @@ function renderDrawing() {
   // find a landmark on.
   const onRef = al && al.step < 2, onDrawing = al && al.step >= 2;
   const mode = compareOpts.mode;
+  if (DIFF_MODES.includes(mode) && !al) {
+    clearInterval(compareBlink); compareBlink = 0; wrap.classList.remove('blink-off');
+    el('drawMarks').innerHTML = '';
+    renderDiff(k, mode);
+    return;
+  }
+  drawing.diffKey = null;
   const src = !onDrawing && mode === 'lines' ? drawing.ink : drawing.photo;
   if (di.getAttribute('src') !== src) di.src = src;
   di.style.width = drawing.w * k + 'px';
   di.style.height = drawing.h * k + 'px';
   di.style.transform = `translate(${drawing.t[0] * k}px, ${drawing.t[1] * k}px) rotate(${drawing.a}rad) scale(${drawing.s})`;
-  di.style.opacity = onRef ? '0' : onDrawing || mode === 'blink' ? '1' : String(compareOpts.opacity[mode]);
+  di.style.opacity = onRef ? '0' : onDrawing || mode === 'blink' ? '1' : String(compareOpts.opacity[mode] ?? 1);
 
   const blink = mode === 'blink' && !al;
   if (blink && !compareBlink) compareBlink = setInterval(() => wrap.classList.toggle('blink-off'), 700);

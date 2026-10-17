@@ -1140,6 +1140,11 @@
       <option value="lines">Lines in red</option>
       <option value="photo">See-through photo</option>
       <option value="blink">Blink</option>
+      <optgroup label="Where it parts (tones)">
+        <option value="tones">Darker / lighter</option>
+        <option value="warmth">Warmer / cooler</option>
+        <option value="colour">Stronger / greyer</option>
+      </optgroup>
     </select>
     <label>Opacity <input type="range" id="cmpOpacity" min="0.1" max="1" step="0.05"></label>
     <button type="button" id="cmpAlign" title="Pick two landmarks on the reference, then the same two on your drawing - it is scaled, turned and moved to match them">Line up 2 points</button>
@@ -1894,6 +1899,13 @@
         moved so they meet - what is left between them is your proportions
         and angles as drawn. <b>D</b> hides it for a moment; it goes away with
         the pose, and never leaves this browser.</p>
+      <p>For a <b>painting</b>, the last three choices (<b>Where it parts</b>)
+        are a map of tones, not lines: where the painting is <b>darker or
+        lighter</b> than the reference, <b>warmer or cooler</b>, <b>stronger or
+        greyer</b> in colour. A phone photo is never lit like the reference, so
+        its overall light and colour cast are matched first - a dim room does
+        not count - and the note says where the painting parts most, in
+        hundredths of a value step. Line the photo up first; the map follows it.</p>
     </section>
 
     <section>
@@ -2244,7 +2256,7 @@
 <script src="js/materials.js?v=aea2cd23"></script>
 <script src="js/vision.js?v=5c0f8101"></script>
 <script src="js/sort.js?v=6b40f3d5"></script>
-<script src="js/study.js?v=fc69529c"></script>
+<script src="js/study.js?v=0eaeca65"></script>
 <script src="js/layers.js?v=29c0c0af"></script>
 <script src="js/stages.js?v=eee7c2f5"></script>
 <script src="js/pins.js?v=b448b387"></script>
@@ -2262,6 +2274,7 @@
 <script src="js/amounts.js?v=a947277f"></script>
 <script src="js/linework.js?v=bdfbd9f6"></script>
 <script src="js/linewash.js?v=00a688c0"></script>
+<script src="js/paintcheck.js?v=c5e7b0f2"></script>
 <script src="js/symmetry.js?v=5488c74f"></script>
 <script src="js/rhythms.js?v=e8a373cc"></script>
 <script src="js/markers.js?v=119669f6"></script>
