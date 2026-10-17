@@ -904,22 +904,13 @@ test('pictures are packed on a power-of-two sheet, inside it, apart, and none on
   expect(await page.evaluate(() => packRects([]))).toEqual({ w: 0, h: 0, at: [] });
 });
 
-test('the same name twice is kept apart, and the atlas and tile set say where each one is', async ({ page }) => {
+test('the same name twice is kept apart, and a name is safe for a file', async ({ page }) => {
   await openApp(page);
-  const r = await page.evaluate(() => {
-    const names = packNames(['Chest, prop, side', 'chest, prop, side', 'Sword', '???']);
-    const atlas = JSON.parse(atlasJson([{ name: 'a', w: 10, h: 20 }, { name: 'b', w: 5, h: 5 }], [{ x: 2, y: 2 }, { x: 14, y: 2 }], { w: 32, h: 32 }, 'sheet.png'));
-    return { names, atlas, tsx: tilesetTsx(['grass', 'dirt & mud', 'lava'], 32, 2, 'tiles.png') };
-  });
-  expect(r.names).toEqual(['chest-prop-side', 'chest-prop-side-2', 'sword', 'asset']);
-  expect(r.atlas.frames.a).toMatchObject({ frame: { x: 2, y: 2, w: 10, h: 20 }, sourceSize: { w: 10, h: 20 } });
-  expect(r.atlas.meta).toMatchObject({ image: 'sheet.png', size: { w: 32, h: 32 } });
-  expect(r.tsx).toContain('tilecount="3" columns="2"');
-  expect(r.tsx).toContain('width="64" height="64"');   // two rows of two
-  expect(r.tsx).toContain('dirt &amp; mud');
+  const names = await page.evaluate(() => packNames(['Chest, prop, side', 'chest, prop, side', 'Sword', '???']));
+  expect(names).toEqual(['chest-prop-side', 'chest-prop-side-2', 'sword', 'asset']);
 });
 
-test('Pack for a game gives one zip: a sheet and atlas for the sprites, a tile set for the tiles, every picture a file', async ({ page }) => {
+test('Pack for a game gives one zip: a sheet of the sprites and every picture, sprite or tile, a file', async ({ page }) => {
   const s = await setup(page);
   const doc = (id, name, tags) => ({ file: id.repeat(64) + '.png', name, type: 'image/png', from: 'generate', bytes: 100, t: Date.now(), folder: 'assets', asset: tags[1], tags, width: 200, height: 200 });
   s.server.items.set('uploads/' + 'd'.repeat(64), doc('d', 'chest, prop, side', ['chest', 'prop', 'side']));
@@ -934,6 +925,7 @@ test('Pack for a game gives one zip: a sheet and atlas for the sprites, a tile s
   await page.click('#assetPack');
   expect((await download).suggestedFilename()).toMatch(/^game-assets-\d{4}-\d{2}-\d{2}\.zip$/);
   const got = await watched;
-  expect(got).toEqual(expect.arrayContaining(['sheet.png', 'atlas.json', 'tiles.png', 'tiles.tsx', 'sprites/chest-prop-side.png', 'sprites/chest-prop-side-2.png', 'tiles/grass-tile.png']));
+  expect(got).toEqual(expect.arrayContaining(['sheet.png', 'sprites/chest-prop-side.png', 'sprites/chest-prop-side-2.png', 'tiles/grass-tile.png']));
+  expect(got).toHaveLength(4);   // no atlas and no tile set: Unity reads neither
   await expect(page.locator('#assetStatus')).toContainText('Packed 2 sprites and 1 tile');
 });

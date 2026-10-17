@@ -1,7 +1,7 @@
-/* Game assets, phase 7: what a game engine loads. The pictures made in Assets are packed into one
-   sheet, with an atlas that says where each one is (Phaser's "JSON Hash", which Godot and most
-   engines have an importer for), the tiles into a Tiled tile set, and all of it into one zip.
-   The functions here take sizes and names and give numbers and text - the canvases and the zip are
+/* Game assets, phase 7: what Unity loads. The sprites made in Assets are packed into one sheet (Unity's
+   Sprite Editor cuts it again: Slice, Automatic - the empty pixels between pictures are what it cuts
+   along), every picture is a file of its own for a Tile Palette or a prefab, and all of it is one zip.
+   The functions here take sizes and names and give numbers and names - the canvases and the zip are
    put together in assets.js - so that they can be tried without a picture. */
 
 const PACK_PAD = 2;   // empty pixels between two pictures: a scaled sprite does not pull in its neighbour's edge
@@ -41,27 +41,4 @@ function packNames(names) {
     seen.set(base, k);
     return k === 1 ? base : `${base}-${k}`;
   });
-}
-
-/* Phaser's JSON Hash atlas: one frame per picture, by name. `items` is [{ name, w, h }], `at` the
-   places packRects gave, `image` the sheet's file name. */
-function atlasJson(items, at, sheet, image) {
-  const frames = {};
-  items.forEach((it, i) => {
-    frames[it.name] = { frame: { x: at[i].x, y: at[i].y, w: it.w, h: it.h }, rotated: false, trimmed: false,
-      spriteSourceSize: { x: 0, y: 0, w: it.w, h: it.h }, sourceSize: { w: it.w, h: it.h } };
-  });
-  return JSON.stringify({ frames, meta: { app: 'Refboard', image, format: 'RGBA8888', size: { w: sheet.w, h: sheet.h }, scale: '1' } }, null, 2);
-}
-
-const xmlEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-
-/* A Tiled tile set (.tsx) over one image of tiles laid in rows of `columns`: all of one size, as
-   Tiled wants, and each tile's name kept as a property. */
-function tilesetTsx(names, size, columns, image) {
-  const rows = Math.ceil(names.length / columns);
-  const tiles = names.map((n, i) => `  <tile id="${i}"><properties><property name="name" value="${xmlEsc(n)}"/></properties></tile>`).join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<tileset version="1.10" tiledversion="1.10.2" name="tiles" tilewidth="${size}" tileheight="${size}" tilecount="${names.length}" columns="${columns}">\n` +
-    ` <image source="${xmlEsc(image)}" width="${columns * size}" height="${rows * size}"/>\n${tiles}\n</tileset>\n`;
 }
