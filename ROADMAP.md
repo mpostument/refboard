@@ -661,6 +661,14 @@ the pictures looked at - as the Generate features were):
    chosen (the Holbein box and the Colour studio's palettes are not offered); a style
    check (the palette share of a picture against the game's) and the game style as one
    saved thing (view, theme, simplicity beside the pixel choices) are not done.
+   **Since** (tiles and the box): `Palette: Holbein box` draws every pixel in the nearest
+   of the box's 28 tubes (a fixed palette, never grown; the colours choice is hidden);
+   the pixel choices end in one "Game style (kept)" line. Tiles: snow no longer asks for
+   blue, grass asks for shadows between blades and keeps "flat color" out, and a tile
+   whose lightness varies less than 5 (`tileFlatness`) is tagged `flat` instead of being
+   passed off as a texture. **Not verified on the real model:** the new grass and snow
+   words (unit tests only); a flat tile is tagged, not redrawn. Still open: the Colour
+   studio's palette as the game's, the style check, view/theme in the saved style.
 7. **Sheets and export.** Pack, JSON atlas, Tiled `.tsx`, the animation strip
    with a preview that plays, a GIF of it; the asset pack as one zip. *Done
    when* a pack loads in Godot and Phaser without a hand edit (tried, not

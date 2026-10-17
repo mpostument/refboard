@@ -243,6 +243,47 @@ test('the seam score is 1 for a picture that wraps, far over for one that does n
   expect(r.rolled).toBeLessThan(1.4);
 });
 
+test('a flat tile scores under the flat line and a textured one over it', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const make = f => {
+      const c = Object.assign(document.createElement('canvas'), { width: 64, height: 64 }), g = c.getContext('2d');
+      const d = g.createImageData(64, 64);
+      for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) d.data.set([...f(x, y), 255], (y * 64 + x) * 4);
+      g.putImageData(d, 0, 0);
+      return c;
+    };
+    const flat = make(() => [60, 140, 50]);
+    const grass = make((x, y) => { const v = (x * 7 + y * 13) % 40; return [40 + v, 110 + v, 30]; });
+    return { flat: tileFlatness(flat), grass: tileFlatness(grass), line: TILE_FLAT };
+  });
+  expect(r.flat).toBeLessThan(r.line);
+  expect(r.grass).toBeGreaterThan(r.line);
+});
+
+test('the Holbein box as the palette: a fixed set of swatches, no colours choice, and a picture lands only on its tubes', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => { assetState.kind = 'prop'; assetState.pix = '32'; assetState.pixShared = 'box'; assetState.pixPalette = []; renderAssets(); });
+  expect(await page.locator('#assetChoices [data-as="pixColours"]').count(), 'the box brings its own number').toBe(0);
+  const tubes = await page.evaluate(() => genBoxRgbs().length);
+  expect(tubes).toBeGreaterThan(20);
+  await expect(page.locator('#assetChoices .pix-palette span')).toHaveCount(tubes);
+  expect(await page.locator('#assetChoices [data-pixforget]').count(), 'nothing to forget').toBe(0);
+  const r = await page.evaluate(() => {
+    const c = Object.assign(document.createElement('canvas'), { width: 40, height: 40 }), g = c.getContext('2d');
+    g.fillStyle = 'rgb(10,200,90)'; g.fillRect(0, 0, 40, 40);
+    const out = assetPixel(c, assetState, { outline: false });
+    const d = out.getContext('2d').getImageData(0, 0, out.width, out.height).data;
+    const box = genBoxRgbs().map(v => v.join());
+    const used = new Set();
+    for (let i = 0; i < d.length; i += 4) used.add([d[i], d[i + 1], d[i + 2]].join());
+    return { allTubes: [...used].every(u => box.includes(u)), grown: assetState.pixPalette.length };
+  });
+  expect(r.allTubes).toBe(true);
+  expect(r.grown, 'the game palette is not touched').toBe(0);
+  await expect(page.locator('#assetStyle')).toContainText('the box');
+});
+
 test('the cross is white through the middle and black in the corners; the grid and the shrink are the size they say', async ({ page }) => {
   await openApp(page);
   const r = await page.evaluate(pix => {

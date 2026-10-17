@@ -35,13 +35,13 @@ const TILE_AVOID = 'shadow, cast shadow, gradient, glossy, shiny, depth of field
    crests) is what the model draws; "simple" or "medium" changes almost nothing. "Waves, ripples" drew a
    whirlpool, and "footprints" for snow drops of water. */
 const TILE_WORDS = {
-  grass: { tags: 'grass, many grass blades, tufts of grass, darker and lighter green, texture, seamless texture, tileable', avoid: 'flowers' },
+  grass: { tags: 'grass, many grass blades, tufts of grass, dark green shadows between blades, light green highlights, texture, seamless texture, tileable', avoid: 'flowers, flat color, solid color' },
   dirt: { tags: 'dirt ground, dark brown soil, large pebbles, cracks, dark patches, light patches, seamless texture, tileable', avoid: 'brick, bricks, mosaic, pavement, tiles, orange' },
   stone: { tags: 'stone floor, cobblestone, rounded stones, dark gaps between stones, seamless texture, tileable', avoid: 'gaps, white gaps' },
   water: { tags: 'water surface, small waves, wavy lines, horizontal ripples, lighter wave crests, blue', avoid: 'whirlpool, vortex, spiral, swirl, circles, mosaic, squares, drops' },
   wood: { tags: 'wood planks, wooden floor, planks side by side, wood grain, knots, dark lines between planks, seamless texture, tileable' },
   sand: { tags: 'sand, desert sand, ripples, wavy lines in the sand, small stones, seamless texture, tileable' },
-  snow: { tags: 'snow, white snow, snow surface, soft light blue shaded patches, sparkles, seamless texture, tileable', avoid: 'footprints, drops, circles, water' },
+  snow: { tags: 'snow, white snow, snow surface, soft grey shaded patches, small snow drifts, sparkles, seamless texture, tileable', avoid: 'footprints, drops, circles, water, blue, ice' },
   lava: { tags: 'lava, molten rock, black rock crust, bright orange glowing cracks, seamless texture, tileable' },
 };
 // The tile is asked of the model whole, then mended at this size and shrunk to the one chosen.
@@ -51,6 +51,8 @@ const TILE_WORDS = {
    tile was 2.2 - 5.7, of the mended 1.3 - 3.5: the ranges overlap (a noisy texture scores high
    whole), so the score marks only what is plainly bad, over TILE_SEAM_BAD. */
 const TILE_MODEL = 1024, TILE_BAND = 0.14, TILE_DENOISE = 0.6, TILE_SEAM_BAD = 4;
+// A tile whose lightness varies less than this (tileFlatness) is one colour: kept, but tagged "flat" so it is not mistaken for a texture.
+const TILE_FLAT = 5;
 const TILE_SIZES = [
   { id: '512', label: '512', hint: 'A big tile - for a game drawn large' },
   { id: '256', label: '256', hint: 'A tile for a game drawn at 256 px a square' },
@@ -235,6 +237,7 @@ const PIX_OUTLINE = [
 const PIX_SHARED = [
   { id: 'own', label: 'Its own', hint: 'Each picture gets the colours it needs' },
   { id: 'game', label: 'One for the game', hint: 'Every picture draws from one palette that grows as you make things - a sprite, a tile and an icon then look like one game' },
+  { id: 'box', label: 'Holbein box', hint: 'The game is drawn in the colours of your Holbein box - every pixel is the nearest of its tubes, and the palette does not grow' },
 ];
 const hexOf = c => '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
 const rgbOfHex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -244,10 +247,11 @@ const rgbOfHex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
    is finished one after another, each growing it. Returns the canvas. */
 function assetPixel(canvas, s, { outline = true, split } = {}) {
   if (s.pix === 'off') return canvas;
-  const shared = s.pixShared === 'game';
-  const r = assetPixelate(canvas, { grid: Number(s.pix), colours: Number(s.pixColours), outline: outline && s.pixOutline === 'yes',
-    palette: shared ? (assetState.pixPalette || []).map(rgbOfHex) : [], shared, ...(split ? { split } : {}) });
-  if (shared) { assetState.pixPalette = r.palette.map(hexOf); assetsSave(); renderAssetPixel(); }
+  const box = s.pixShared === 'box' ? genBoxRgbs() : [];   // a fixed palette: as many colours as tubes, none added
+  const shared = s.pixShared === 'game' || box.length > 0;
+  const r = assetPixelate(canvas, { grid: Number(s.pix), colours: box.length || Number(s.pixColours), outline: outline && s.pixOutline === 'yes',
+    palette: box.length ? box : shared ? (assetState.pixPalette || []).map(rgbOfHex) : [], shared, ...(split ? { split } : {}) });
+  if (shared && !box.length) { assetState.pixPalette = r.palette.map(hexOf); assetsSave(); renderAssetPixel(); }
   return r.canvas;
 }
 
@@ -365,10 +369,17 @@ function assetPixelHtml(kind) {
   const s = assetState, on = s.pix !== 'off';
   let h = assetChips('pix', 'Pixel look - grid', PIX_GRIDS, s.pix);
   if (!on) return h;
-  h += assetChips('pixColours', 'Colours', PIX_COLOURS, s.pixColours) +
+  // The box brings its own number of colours, so the choice is hidden while it is the palette.
+  h += (s.pixShared === 'box' ? '' : assetChips('pixColours', 'Colours', PIX_COLOURS, s.pixColours)) +
     (kind.tile ? '' : assetChips('pixOutline', 'Outline', PIX_OUTLINE, s.pixOutline)) +
     assetChips('pixShared', 'Palette', PIX_SHARED, s.pixShared);
   if (kind.tile) h += '<p class="gen-note">The grid is the size of the tile.</p>';
+  if (s.pixShared === 'box') {
+    const tubes = genBoxRgbs().map(hexOf);
+    h += tubes.length
+      ? `<div class="pix-palette" aria-label="The Holbein box, ${tubes.length} colours">${tubes.map(c => `<span style="background:${c}" title="${c}"></span>`).join('')}</div>`
+      : '<p class="gen-note">The Holbein box is not loaded yet - open Colours once, or pick another palette.</p>';
+  }
   if (s.pixShared === 'game') {
     const pal = s.pixPalette || [];
     h += pal.length
@@ -376,6 +387,10 @@ function assetPixelHtml(kind) {
         `<button type="button" class="chip" data-pixforget title="Forget these colours - the next picture starts a new palette">Start again</button></div>`
       : '<p class="gen-note">The first picture you make starts the palette; each after it keeps those colours and adds only the ones it lacks, up to the number chosen.</p>';
   }
+  // The whole look in one line: it is kept with the settings, so the next session draws the same game.
+  const shared = assetPick(PIX_SHARED, s.pixShared).label.toLowerCase();
+  h += `<p class="gen-note" id="assetStyle">Game style (kept): ${s.pix} px grid, ${s.pixShared === 'box' ? 'the box\'s colours' : s.pixColours + ' colours'}` +
+    `${kind.tile || s.pixOutline !== 'yes' ? '' : ', outline'}, palette: ${shared}.</p>`;
   return h;
 }
 function renderAssetPixel() { const host = el('assetPixel'); if (host) host.innerHTML = assetPixelHtml(assetKind(assetState.kind)); }
@@ -407,11 +422,11 @@ async function assetFinishTile(made, s) {
     ...(s.draft === 'draft' ? { steps: GEN_DRAFT_STEPS } : {}) });
   let fixed;
   try { fixed = tileMatch(await genLoadPicture(mended.doc), crossCanvas); } catch { return; }
-  const seam = tileSeam(fixed), canvas = s.pix === 'off' ? tileShrink(fixed, size) : assetPixel(fixed, s, { outline: false, split: PIX_SPLIT_TILE });
+  const seam = tileSeam(fixed), flat = tileFlatness(fixed) < TILE_FLAT, canvas = s.pix === 'off' ? tileShrink(fixed, size) : assetPixel(fixed, s, { outline: false, split: PIX_SPLIT_TILE });
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
   const f = await storeFile(blob);
   if (storeMode === 'server') await storeSortFile(f.id, 'assets');
-  const tags = [...(doc.tags || []).filter(t => t !== 'seamless' && !/^\d+x\d+$/.test(t)), seam < TILE_SEAM_BAD ? 'seamless' : 'seam visible', `${size}x${size}`, ...(s.pix === 'off' ? [] : ['pixel'])].slice(0, 24);
+  const tags = [...(doc.tags || []).filter(t => t !== 'seamless' && !/^\d+x\d+$/.test(t)), seam < TILE_SEAM_BAD ? 'seamless' : 'seam visible', ...(flat ? ['flat'] : []), `${size}x${size}`, ...(s.pix === 'off' ? [] : ['pixel'])].slice(0, 24);
   await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png',
     width: size, height: size, tags, t: Date.now() });
   await forgetUpload(mended.doc);

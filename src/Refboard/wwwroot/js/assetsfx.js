@@ -585,6 +585,20 @@ function tileSeam(canvas) {
   return Math.max(cols, rows);
 }
 
+/* How much a tile varies: the standard deviation of its lightness (0 - 255), from every 4th pixel
+   each way. The model draws grass or snow nearly flat on some seeds (one colour, and at 32 px
+   one pixel colour); a real texture is 8 or more, a flat fill 1 - 4. */
+function tileFlatness(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  let n = 0, sum = 0, sq = 0;
+  for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) {
+    const i = (y * w + x) * 4, l = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+    n++; sum += l; sq += l * l;
+  }
+  return n ? Math.sqrt(Math.max(0, sq / n - (sum / n) ** 2)) : 0;
+}
+
 /* The tile laid n x n, to look at. */
 function tileGrid(canvas, n = 3) {
   const out = Object.assign(document.createElement('canvas'), { width: canvas.width * n, height: canvas.height * n }), g = out.getContext('2d');
