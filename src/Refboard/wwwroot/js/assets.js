@@ -773,7 +773,18 @@ function assetAnimShow(frames, name, pixel) {
   el('assetAnimName').textContent = name + ', ' + frames.length + ' frames';
   assetAnim = { frames, name, pixel, i: 0, last: 0, raf: 0, playing: true };
   el('assetAnimPlay').textContent = 'Pause';
-  const draw = () => { const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(frames[assetAnim.i], 0, 0); };
+  const draw = () => {
+    const g = cv.getContext('2d'), n = frames.length, i = assetAnim.i;
+    g.clearRect(0, 0, cv.width, cv.height);
+    // Onion skin: the neighbours faint underneath, the loop's own (the first follows the last).
+    if (el('assetAnimOnion').checked && n > 1) {
+      g.globalAlpha = 0.25;
+      g.drawImage(frames[(i + n - 1) % n], 0, 0);
+      if (n > 2) g.drawImage(frames[(i + 1) % n], 0, 0);
+      g.globalAlpha = 1;
+    }
+    g.drawImage(frames[i], 0, 0);
+  };
   const tick = now => {
     if (!assetAnim || !assetAnim.playing) return;
     if (now - assetAnim.last >= 1000 / Number(el('assetAnimFps').value)) { assetAnim.last = now; assetAnim.i = (assetAnim.i + 1) % frames.length; draw(); }
@@ -797,6 +808,7 @@ function initAssets() {
     assetAnim.playing = false; el('assetAnimPlay').textContent = 'Play';
     assetAnim.i = (assetAnim.i + 1) % assetAnim.frames.length; assetAnim.draw();
   });
+  el('assetAnimOnion').addEventListener('change', () => { if (assetAnim) assetAnim.draw(); });
   el('assetAnimGif').addEventListener('click', () => {
     if (!assetAnim) return;
     // A 32 px sprite is a speck in a viewer: pixel frames are enlarged by a whole number of pixels (never blurred) to about 256.

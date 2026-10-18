@@ -310,3 +310,29 @@ test('Save GIF in the player downloads the frames as one file; a small pixel spr
   // 24 px tall -> x11 (256 / 24 rounded): 16 x 11 wide, 24 x 11 tall.
   expect([bytes.readUInt16LE(6), bytes.readUInt16LE(8)]).toEqual([176, 264]);
 });
+
+test('Onion skin shows the frames before and after faintly behind this one, and only while it is on', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate**', r => r.fulfill({ json: { available: true, control: true, checkpoint: 'test.safetensors', quality: 'masterpiece' } }));
+  await openApp(page);
+  await openSection(page, 'assets');
+  await page.evaluate(() => {
+    // Three frames, a 6 px square each, 10 px further along: x 2, 12, 22.
+    const frames = [0, 1, 2].map(i => { const c = Object.assign(document.createElement('canvas'), { width: 30, height: 10 }), g = c.getContext('2d'); g.fillStyle = '#c33'; g.fillRect(2 + i * 10, 2, 6, 6); return c; });
+    assetAnimShow(frames, 'walk', true);
+  });
+  await page.click('#assetAnimPlay');   // paused
+  const alphas = () => page.evaluate(() => {
+    assetAnim.i = 1; assetAnim.draw();
+    const g = el('assetAnimCanvas').getContext('2d');
+    return [4, 14, 24].map(x => g.getImageData(x, 5, 1, 1).data[3]);
+  });
+  expect(await alphas(), 'off: only the frame itself').toEqual([0, 255, 0]);
+  await page.check('#assetAnimOnion');
+  const on = await alphas();
+  expect(on[1]).toBe(255);
+  expect(on[0], 'the frame before').toBeGreaterThan(40); expect(on[0]).toBeLessThan(100);
+  expect(on[2], 'the frame after').toBeGreaterThan(40); expect(on[2]).toBeLessThan(100);
+  await page.uncheck('#assetAnimOnion');
+  expect(await alphas()).toEqual([0, 255, 0]);
+});
