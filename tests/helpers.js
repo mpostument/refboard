@@ -44,7 +44,7 @@ const quadrantsPng = () => makePng(200, 200, (x, y) =>
    tests: a broken load order or a typo in one file shows up as exactly
    that. Missing backend files are expected - these run as GitHub Pages
    does, with no server behind the page. */
-const EXPECTED_404 = /index\.json|features\.json|healthz|state\.js/;
+const EXPECTED_404 = /index\.json|features\.json|palettes\.json|healthz|state\.js/;
 
 /* What's new would open over every test too: by default its items count
    as seen - their ids read from js/whatsnew.js itself, so a new item needs

@@ -868,8 +868,23 @@ packs (below), and moving a picture to another folder by hand.
   the limits checked against a library of references people have called good
   and bad.
 
-- **Search by colour.** Find references with a given palette - "warm
-  dusk", "green with a red accent" - or close in colour to a chosen one.
+- **Search by colour, the rest.** In place (`js/colourfind.js`, the Colour
+  button beside the library's search box): up to three colours - from the
+  picker, twelve named ones, or a mood (warm dusk, autumn, forest, seashore,
+  night, pastel) - and the grid keeps the pictures that have every one, the
+  best match first; "Like this" on a cell shows the pictures closest to it.
+  The server writes `palettes.json` (`PaletteBuilder`, after the features
+  pass, cached on mtime and size): five colours per picture by k-means in
+  OKLab, with each one's share - for the mounted packs and for uploads, which
+  features.json does not cover. A picture counts as having a colour when part
+  of it is within 0.105 (OKLab) of it; the first pick needs 4% of the picture,
+  an accent 3%. The reach was tuned by eye on the six sample pictures (it
+  separated a pink bob's pale pink from a black-haired girl's pale greys by a
+  hair), not measured on a real library. Without `palettes.json` - GitHub
+  Pages, a server that has not got to it - there is no Colour button. Still to
+  come: a name for the colour in words ("rust", "sage"), searching inside a
+  picture's own region (the sky is blue, not the picture), and colours of
+  generated pictures at the moment they are kept.
 - **Duplicate finder.** The backend finds identical and near-identical
   images (the same photo at different sizes) and offers to drop the
   extras.
@@ -1259,10 +1274,6 @@ the wash.
   caption and a date of your own per piece in place of the file's name, an
   order you choose, and a project's pieces as a page of their own (once
   Projects are in).
-
-- **Sketch layer.** Draw with a stylus straight over the reference - a
-  quick study, marking proportions or lines of action - kept in the
-  project.
 
 ## Reading a photo
 

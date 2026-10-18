@@ -92,6 +92,19 @@ public sealed class ReindexHostedService(RefboardOptions opts, UserStore store, 
                 {
                     logger.LogError(ex, "feature build failed");
                 }
+
+                // The colour search's file. After the features, and its own try: a
+                // failed palette pass must not cost the board its features, nor the reverse.
+                try
+                {
+                    PaletteBuilder.Run(LastIndex, opts, store.UploadsDir,
+                        Path.Combine(opts.DataDir, "palettes.json"), logger, stoppingToken);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "palette build failed");
+                }
             }
 
             try { await WakeSignal.WaitAsync(TimeSpan.FromSeconds(opts.IndexIntervalSecs), stoppingToken); }

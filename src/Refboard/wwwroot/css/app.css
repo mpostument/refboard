@@ -321,7 +321,10 @@ section { margin-bottom: 26px; }
 .run .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .run .num { color: var(--dim); font-variant-numeric: tabular-nums; }
 
-.searchbar { display: flex; gap: 8px; margin-top: 13px; }
+/* Wraps: on a narrow window the colour button and Draw these go to a second line
+   instead of squeezing the search box to nothing. */
+.searchbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.searchbar input[type=search] { min-width: 180px; }
 .searchbar input[type=search] { flex: 1; }
 /* Deliberately not flex:1 alongside the search box - a sort control that
    changes width with the window is harder to hit twice in a row than one
@@ -399,6 +402,37 @@ section { margin-bottom: 26px; }
 }
 .cell:hover .cell-skip, .cell:focus-within .cell-skip, .cell.skipped .cell-skip { opacity: 1; }
 .cell-skip:hover { background: #000; }
+/* Colour search (js/colourfind.js): the panel under the search box, the strip of a
+   picture's main colours along its cell's foot, and the button for its look-alikes. */
+#btnColour.on { border-color: var(--accent); color: var(--accent); }
+.colourbar { flex: 1 0 100%; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.cf-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cf-sw { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(128,128,128,.5); flex: none; }
+.cf-pick, .cf-like { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 8px;
+  border: 1px solid var(--line); border-radius: 14px; font-size: 13px; }
+.cf-x { background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 4px; }
+.cf-x:hover { color: var(--ink); }
+.cf-add { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px dashed var(--line);
+  border-radius: 14px; font-size: 13px; cursor: pointer; color: var(--dim); }
+.cf-add input { width: 22px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
+.cf-name { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 3px 6px; background: none;
+  border: 1px solid var(--line); border-radius: 14px; color: var(--ink); font-size: 12px; cursor: pointer; }
+.cf-name:hover { border-color: var(--accent); }
+.cell-pal { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; display: flex; opacity: 0;
+  transition: opacity .12s linear; pointer-events: none; z-index: 1; }
+.cell-pal i { display: block; height: 100%; }
+.cell:hover .cell-pal, .cell:focus .cell-pal, #thumbGrid.colour-on .cell-pal { opacity: 1; }
+/* Under the name, which the strip would otherwise sit on. */
+.cell:hover .cell-meta, .cell:focus .cell-meta { padding-bottom: 12px; }
+.cell-like {
+  position: absolute; top: 5px; left: 5px; z-index: 1;
+  background: rgba(0,0,0,.62); border: 1px solid rgba(255,255,255,.22);
+  color: #fff; border-radius: 6px; padding: 2px 6px; font-size: 11px;
+  cursor: pointer; opacity: 0; transition: opacity .12s linear;
+}
+.cell:hover .cell-like, .cell:focus-within .cell-like { opacity: 1; }
+.cell-like:hover { background: #000; }
 .empty { color: var(--dim); font-size: 13px; padding: 40px 0; text-align: center; }
 h2 {
   font-size: 11px; text-transform: uppercase; letter-spacing: .09em;

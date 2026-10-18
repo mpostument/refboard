@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'colour-search', title: 'Search the library by colour',
+    text: "Library > Colour, beside the search box: pick up to three colours (any colour, twelve named ones, or a mood like warm dusk) and the grid keeps the pictures that have all of them, the best match first. \"Like this\" on a picture shows the ones closest to it in colour. Needs the server to have measured the library (palettes.json); it does that by itself after the features pass.",
+    act: 'Open the library', run: () => setView({ kind: 'all' }) },
   { id: 'anime-hand', title: 'An anime hand to pose',
     text: "3D forms > Figure and head > Anime hand: the hand the way an anime artist blocks it in - a soft mitten for the palm, long fingers of two shapes each (a base and a bend) and a thumb of two, eleven joints instead of sixteen. The same poses as the full hand (Relaxed, Spread, Fist, Point, Pinch, Grip), so you can swap one for the other and keep the gesture. Turn it, light it, draw it.",
     act: 'Open 3D forms', run: () => setView({ kind: 'forms' }) },
