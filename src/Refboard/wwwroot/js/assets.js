@@ -114,8 +114,11 @@ function charLook(look) {
   const [name, ...parts] = look.split(',').map(p => p.trim()).filter(Boolean);
   return [name, ...parts.map(p => CHAR_COLOUR.test(p) ? `(${p}:${CHAR_LOOK_WEIGHT})` : p)].join(', ');
 }
-// What a cut-out character is: the cut, trimmed, and (on a pale background only) the white border taken off.
-const assetFigureCanvas = cut => assetTrim(cut.keyed ? cut.canvas : assetDefringe(cut.canvas)) || cut.canvas;
+// What a cut-out character is: the cut, trimmed, and the white border the model draws round her taken off. On a pale background
+// every near-white edge pixel goes; on a key colour only the ones with her own dark outline behind them (a white cloak with none stays),
+// and at a lower light, since the border there is blended with the key (a pink white on magenta, 230 204 226). Then the shadow
+// the model draws on the floor is taken off (assetDropShadow).
+const assetFigureCanvas = cut => assetTrim(assetDropShadow(cut.keyed ? assetDefringe(cut.canvas, 8, { light: FRINGE_KEYED_LIGHT, behind: true }) : assetDefringe(cut.canvas))) || cut.canvas;
 
 const ASSET_THEMES = [
   { id: 'any', label: 'Any', tags: '' },

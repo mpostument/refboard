@@ -185,3 +185,58 @@ test('Make with Walk draws one request per frame, each with its own pose and one
   await page.click('#assetAnimClose');
   await expect(page.locator('#assetAnim')).toBeHidden();
 });
+
+// ---- The border the model draws round a figure on a key colour (found by a real run, 2026-10-18: a frame of a walk
+// came with a pink-white halo the others had not, and a loop of them would flicker).
+test('on a key colour, the pink-white border over her outline goes, and a white garment with no outline stays', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const make = (w, h, draw) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); draw(g); return c; };
+    const px = (c, x, y) => Array.from(c.getContext('2d').getImageData(x, y, 1, 1).data);
+    // From the left: 4 px of a pink white (230 204 226 - blended with a magenta key), 2 px of dark outline, then blue.
+    const bordered = make(60, 40, g => {
+      g.fillStyle = 'rgb(236,210,230)'; g.fillRect(10, 5, 40, 30);
+      g.fillStyle = 'rgb(10,10,16)'; g.fillRect(14, 9, 32, 22);
+      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(16, 11, 28, 18);
+    });
+    const a = assetFigureCanvas({ keyed: true, canvas: bordered });
+    // A white cloak, nothing dark anywhere near: all of it is hers.
+    const cloak = make(60, 40, g => { g.fillStyle = 'rgb(245,245,245)'; g.fillRect(10, 5, 40, 30); });
+    const b = assetFigureCanvas({ keyed: true, canvas: cloak });
+    // Trimmed: the first column that is on is the edge of what is left.
+    const edge = c => { const d = c.getContext('2d').getImageData(0, c.height >> 1, c.width, 1).data; for (let x = 0; x < c.width; x++) if (d[x * 4 + 3] > 8) return [x, Array.from(d.slice(x * 4, x * 4 + 3))]; return null; };
+    const plain = assetTrim(cloak);   // the cloak trimmed and nothing taken off: the size to keep
+    return { bordered: [assetTrim(bordered).width, a.width, edge(a)], cloak: [b.width, b.height], plain: [plain.width, plain.height] };
+  });
+  // Trimmed with the border on it is wider than once the 4 px each side of the outline are gone.
+  expect(r.bordered[1]).toBeLessThan(r.bordered[0]);
+  expect(r.bordered[2][1]).toEqual([10, 10, 16]);   // the first pixel left is her outline
+  expect(r.cloak).toEqual(r.plain);   // the cloak is as it was
+});
+
+// A walk's frame came with a flat dark ellipse of floor shadow under it, 360 px wide under feet 160 px wide (real run, 2026-10-18).
+test('a dark ellipse on the floor, wider than her feet, is taken off; a boot\'s toe and sole are not', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const make = (w, h, draw) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); draw(g); return c; };
+    const alpha = (c, x, y) => c.getContext('2d').getImageData(x, y, 1, 1).data[3];
+    // A 100 x 400 figure in blue standing on a dark ellipse 300 wide and 14 high.
+    const shadowed = make(300, 420, g => {
+      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(100, 10, 100, 396);
+      g.fillStyle = 'rgb(5,5,8)'; g.beginPath(); g.ellipse(150, 411, 150, 7, 0, 0, 2 * Math.PI); g.fill();
+    });
+    const a = assetDropShadow(shadowed);
+    // The same figure with only a boot's toe: a dark tip 22 wide and 8 high, past her foot.
+    const toed = make(140, 420, g => {
+      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(20, 10, 60, 396);
+      g.fillStyle = 'rgb(5,5,8)'; g.fillRect(20, 398, 82, 8);
+    });
+    const b = assetDropShadow(toed);
+    return { shadowEdge: [alpha(shadowed, 10, 411), alpha(a, 10, 411)], underFoot: alpha(a, 150, 404), body: alpha(a, 150, 100),
+      toeTip: [alpha(toed, 95, 402), alpha(b, 95, 402)], same: b === toed };
+  });
+  expect(r.shadowEdge).toEqual([255, 0]);   // the ellipse beyond her feet is gone
+  expect(r.body).toBe(255);
+  expect(r.toeTip).toEqual([255, 255]);     // a toe is a few pixels wide: not a shadow
+  expect(r.same).toBe(true);                // nothing to take off: the same canvas comes back
+});

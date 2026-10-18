@@ -440,21 +440,84 @@ function assetCutFigure(pic) {
    the figure's own dark outline, and at anything coloured. Up to `passes` pixels, so a white
    garment with no outline loses at most that much. Returns a new canvas. */
 const FRINGE_LIGHT = 205;   // every channel at least this: a near-white pixel
-function assetDefringe(canvas, passes = 8) {
+const FRINGE_KEYED_LIGHT = 180;   // on a key colour the border's edge is blended with the key (a pink white on magenta), so it is paler by less
+const FRINGE_DARK = 110;   // a pixel this dark (every channel) is the figure's own outline
+const FRINGE_MAX = 7;   // how far a border may stand from the outline it hides: further, and what is there is not a border
+/* `behind` (for a picture drawn on a key colour, where a white cloak and a white border are both there) takes a
+   light edge pixel only if the figure's own dark outline lies within a few pixels (FRINGE_MAX + 2) inside it: a border
+   is a band between the outside and the outline, and a white garment with no outline is not. */
+function assetDefringe(canvas, passes = 8, { light = FRINGE_LIGHT, behind = false } = {}) {
   const w = canvas.width, h = canvas.height;
   const img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
   const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
+  const removed = [];
   for (let k = 0; k < passes; k++) {
     const gone = [];
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       if (!on(x, y)) continue;
       if (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1)) continue;
       const i = (y * w + x) * 4;
-      if (d[i] >= FRINGE_LIGHT && d[i + 1] >= FRINGE_LIGHT && d[i + 2] >= FRINGE_LIGHT) gone.push(i + 3);
+      if (d[i] >= light && d[i + 1] >= light && d[i + 2] >= light) gone.push(i);
     }
     if (!gone.length) break;
-    for (const i of gone) d[i] = 0;
+    for (const i of gone) { removed.push([i, d[i + 3]]); d[i + 3] = 0; }
   }
+  if (behind && removed.length) {
+    // The outline's reach: a pixel is near one if a dark, solid pixel is within r, found by two sweeps (across, then down).
+    const r = Math.min(passes, FRINGE_MAX) + 2, near = new Uint8Array(w * h), across = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      let last = -1e9;
+      for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; if (d[i + 3] > ASSET_ALPHA && d[i] < FRINGE_DARK && d[i + 1] < FRINGE_DARK && d[i + 2] < FRINGE_DARK) last = x; across[y * w + x] = x - last <= r ? 1 : 0; }
+      last = 1e9;
+      for (let x = w - 1; x >= 0; x--) { const i = (y * w + x) * 4; if (d[i + 3] > ASSET_ALPHA && d[i] < FRINGE_DARK && d[i + 1] < FRINGE_DARK && d[i + 2] < FRINGE_DARK) last = x; if (last - x <= r) across[y * w + x] = 1; }
+    }
+    for (let x = 0; x < w; x++) {
+      let last = -1e9;
+      for (let y = 0; y < h; y++) { if (across[y * w + x]) last = y; if (y - last <= r) near[y * w + x] = 1; }
+      last = 1e9;
+      for (let y = h - 1; y >= 0; y--) { if (across[y * w + x]) last = y; if (last - y <= r) near[y * w + x] = 1; }
+    }
+    // Put back what has no outline near it: that was the figure's own, not a border.
+    for (const [i, a] of removed) if (!near[i >> 2]) d[i + 3] = a;
+  }
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
+  out.getContext('2d').putImageData(img, 0, 0);
+  return out;
+}
+
+/* The shadow the model draws on the floor under a figure however it is told not to: a flat dark ellipse,
+   wider than her feet. It cuts out with her, makes the picture wider than she is, and sets the feet line
+   a few pixels low in one frame of a walk and not in the next. What marks it: a column whose lowest solid
+   pixels are dark and few (SHADOW_HIGH of the height at most) and have nothing above them - a sliver on the
+   ground, where a leg, a boot's toe or a heel is joined to what is above. A toe tip is such a sliver too, but
+   a few pixels wide: only when the slivers add up to SHADOW_SPAN of the height is it a shadow. Takes the
+   slivers off (what is under a foot is joined to it and stays). Returns a new canvas, or the same one if
+   there is none. */
+const SHADOW_HIGH = 0.04, SHADOW_SPAN = 0.12, SHADOW_DARK = 80;
+function assetDropShadow(canvas) {
+  const w = canvas.width, h = canvas.height, img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
+  const solid = (x, y) => y >= 0 && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
+  const dark = (x, y) => { const i = (y * w + x) * 4; return Math.max(d[i], d[i + 1], d[i + 2]) < SHADOW_DARK; };
+  let low = -1, top = h;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (solid(x, y)) { low = Math.max(low, y); top = Math.min(top, y); }
+  if (low < 0) return canvas;
+  const tall = low - top + 1, most = Math.max(2, Math.round(tall * SHADOW_HIGH)), runs = [];
+  for (let x = 0; x < w; x++) {
+    // The lowest solid pixel of the column, and the dark run up from it.
+    let y = h - 1; while (y >= 0 && !solid(x, y)) y--;
+    if (y < 0) continue;
+    let n = 0; while (y - n >= 0 && solid(x, y - n) && dark(x, y - n)) n++;
+    // Isolated: it is short, and above it comes nothing - not a pixel of a leg, a boot or a skirt for a few rows.
+    let clear = n > 0 && n <= most;
+    for (let k = 1; clear && k <= 3; k++) if (solid(x, y - n - k + 1)) clear = false;
+    if (clear) runs.push({ x, y, n });
+  }
+  // Only what is on the ground: a fingertip or a lock of hair is a sliver too, high up. The shadow is in pieces (the feet
+  // are joined to what is above and are not slivers), so what counts is how many columns there are in all.
+  const ground = runs.filter(r => r.y > low - 2 * most);
+  if (ground.length < tall * SHADOW_SPAN) return canvas;
+  runs.length = 0; runs.push(...ground);
+  for (const r of runs) for (let k = 0; k < r.n; k++) d[((r.y - k) * w + r.x) * 4 + 3] = 0;
   const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
   out.getContext('2d').putImageData(img, 0, 0);
   return out;

@@ -642,9 +642,17 @@ the pictures looked at - as the Generate features were):
    words but what she is doing; cut out, lined up, kept tagged `walk`, `frame 3 of 6`. Looked at: the
    8 poses of each action rendered by the real 3D engine (walk, run and attack read right; hurt was
    reworked once), and a test holds every pose inside the figure's joint limits (it found a chest
-   twist of 35 against a limit of 30). **Not tried on the real model:** whether the ControlNet keeps
-   the legs of a walk apart (at strength 0.5 they may blur), and whether the face and clothes hold
-   across 8 frames; onion-skinning is not done.
+   twist of 35 against a limit of 30). **Real run (Animagine, ControlNet 0.5, 4 frames of a walk, final quality,
+   ~70 s):** the same girl in all four, and the legs do read as a walk. What it found in the cut-out, fixed:
+   a white-pink border (the model draws its sticker edge on a key colour too) on some frames and not others,
+   which would flicker in a loop - on a key colour `assetDefringe` took no border off, to spare a white cloak;
+   now it takes a light edge pixel off only where her own dark outline is within a few pixels behind it
+   (`behind`, FRINGE_KEYED_LIGHT 180), and a white garment with no outline stays; and a flat dark floor
+   shadow wider than her feet, which makes the frame wider and puts the feet line low (`assetDropShadow`: a column
+   whose lowest dark pixels are few and have nothing above them, counted over the ground only, so a toe or a heel
+   is not one). **Still there:** the model drifts a little between frames (skirt length, hair, the torso of a
+   passing frame drawn wider); the loop playing, run / attack / hurt on the model, and the pixel look over
+   frames are not tried; onion-skinning is not done.
 5. **Backgrounds.** Biome and time of day; far / middle / near layers made
    in order, each told what is in front of it; a layer that loops sideways;
    Extend (already built) for a longer one; a room or map from above. *Done
