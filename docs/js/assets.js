@@ -29,16 +29,20 @@ const ASSET_SIMPLE = [
 const TILE_STYLE = 'flat color, cel shading, 2d game texture, from above';
 const TILE_AVOID = 'shadow, cast shadow, gradient, glossy, shiny, depth of field, 3d, realistic, lighting, border, frame, horizon, perspective, vignette, object';
 /* What phase 0 found per ground. Water fails with the word "tile" in it, and soil turns into
-   bricks at "simple" unless bricks are kept out. */
+   bricks at "simple" unless bricks are kept out. Real runs (2026-10-17, a draft per wording): a ground
+   named only by what it is ("dirt, bare soil", "grass, lawn") comes back one flat colour - dirt a flat
+   orange, and at 32 px a flat tile is one pixel colour. What it is made of (pebbles, cracks, blades,
+   crests) is what the model draws; "simple" or "medium" changes almost nothing. "Waves, ripples" drew a
+   whirlpool, and "footprints" for snow drops of water. */
 const TILE_WORDS = {
-  grass: { tags: 'grass, lawn, seamless texture, tileable' },
-  dirt: { tags: 'dirt, bare soil, brown, seamless texture, tileable', avoid: 'brick, bricks, mosaic, pavement, tiles' },
-  stone: { tags: 'stone floor, cobblestone, seamless texture, tileable', avoid: 'gaps, white gaps' },
-  water: { tags: 'water, waves, ripples, blue', avoid: 'circles, mosaic, squares' },
-  wood: { tags: 'wood planks, wooden floor, seamless texture, tileable' },
-  sand: { tags: 'sand, desert sand, seamless texture, tileable' },
-  snow: { tags: 'snow, snowfield, seamless texture, tileable' },
-  lava: { tags: 'lava, molten rock, glowing cracks, seamless texture, tileable' },
+  grass: { tags: 'grass, many grass blades, tufts of grass, dark green shadows between blades, light green highlights, texture, seamless texture, tileable', avoid: 'flowers, flat color, solid color' },
+  dirt: { tags: 'dirt ground, dark brown soil, large pebbles, cracks, dark patches, light patches, seamless texture, tileable', avoid: 'brick, bricks, mosaic, pavement, tiles, orange' },
+  stone: { tags: 'stone floor, cobblestone, rounded stones, dark gaps between stones, seamless texture, tileable', avoid: 'gaps, white gaps' },
+  water: { tags: 'water surface, small waves, wavy lines, horizontal ripples, lighter wave crests, blue', avoid: 'whirlpool, vortex, spiral, swirl, circles, mosaic, squares, drops' },
+  wood: { tags: 'wood planks, wooden floor, planks side by side, wood grain, knots, dark lines between planks, seamless texture, tileable' },
+  sand: { tags: 'sand, desert sand, ripples, wavy lines in the sand, small stones, seamless texture, tileable' },
+  snow: { tags: 'snow, white snow, snow surface, soft grey shaded patches, small snow drifts, sparkles, seamless texture, tileable', avoid: 'footprints, drops, circles, water, blue, ice' },
+  lava: { tags: 'lava, molten rock, black rock crust, bright orange glowing cracks, seamless texture, tileable' },
 };
 // The tile is asked of the model whole, then mended at this size and shrunk to the one chosen.
 /* Real runs (grass, stone, water, one model, 2026-10-16): a denoise of 0.9 or more makes the server
@@ -47,10 +51,12 @@ const TILE_WORDS = {
    tile was 2.2 - 5.7, of the mended 1.3 - 3.5: the ranges overlap (a noisy texture scores high
    whole), so the score marks only what is plainly bad, over TILE_SEAM_BAD. */
 const TILE_MODEL = 1024, TILE_BAND = 0.14, TILE_DENOISE = 0.6, TILE_SEAM_BAD = 4;
+// A tile whose lightness varies less than this (tileFlatness) is one colour: kept, but tagged "flat" so it is not mistaken for a texture.
+const TILE_FLAT = 5;
 const TILE_SIZES = [
   { id: '512', label: '512', hint: 'A big tile - for a game drawn large' },
   { id: '256', label: '256', hint: 'A tile for a game drawn at 256 px a square' },
-  { id: '32', label: '32', hint: 'Shrunk to 32 px, for a small game (colours not yet cut - that is phase 6)' },
+  { id: '32', label: '32', hint: 'Shrunk to 32 px, for a small game' },
   { id: '16', label: '16', hint: 'Shrunk to 16 px' },
 ];
 
@@ -97,8 +103,25 @@ const CHAR_KEYS = [
   { word: 'cyan', clash: /blue|cyan|teal|turquoise|aqua|azure/ },
 ];
 const charKey = look => (CHAR_KEYS.find(k => !k.clash.test(look)) || CHAR_KEYS[0]).word;
-// What a cut-out character is: the cut, trimmed, and (on a pale background only) the white border taken off.
-const assetFigureCanvas = cut => assetTrim(cut.keyed ? cut.canvas : assetDefringe(cut.canvas)) || cut.canvas;
+/* Turned to 4 or 8 directions, each is drawn on its own, and what the words say once is dropped first:
+   the trousers were one colour in the front and another in the three-quarter back view. So every part
+   of the look that names a colour ("blue skirt", "dark hooded cloak") is given weight, and the model holds
+   to it a little harder in every direction. The first part is the character's name, and is left as it is.
+   Only parts that say a colour: a weight on "hood" alone would be only a louder hood. */
+const CHAR_COLOUR = /\b(red|blue|green|yellow|orange|purple|violet|pink|white|black|brown|grey|gray|silver|golden|gold|beige|cream|teal|cyan|magenta|crimson|navy|dark|light|blonde)\b/;
+const CHAR_LOOK_WEIGHT = 1.2;   // a little above 1: 1.3 and up starts to tint the rest of the picture with that colour
+function charLook(look) {
+  const [name, ...parts] = look.split(',').map(p => p.trim()).filter(Boolean);
+  return [name, ...parts.map(p => CHAR_COLOUR.test(p) ? `(${p}:${CHAR_LOOK_WEIGHT})` : p)].join(', ');
+}
+// What a cut-out character is: the cut, trimmed, and the white border the model draws round her taken off. On a pale background
+// every near-white edge pixel goes; on a key colour only the ones with her own dark outline behind them (a white cloak with none stays),
+// and at a lower light, since the border there is blended with the key (a pink white on magenta, 230 204 226). Then the shadow
+// the model draws on the floor is taken off (assetDropShadow).
+// The border is a band about 1 px in 125 of the figure's height (8 px on a figure of 1000): a figure of a sheet's cell is a third of that
+// size, and 8 px off it took the pale skin of a thigh in blocks (real run, 2026-10-18).
+const assetFringePasses = canvas => Math.max(2, Math.min(8, Math.round(canvas.height / 125)));
+const assetFigureCanvas = cut => assetTrim(assetDropShadow(cut.keyed ? assetDefringe(cut.canvas, assetFringePasses(cut.canvas), { light: FRINGE_KEYED_LIGHT, behind: true }) : assetDefringe(cut.canvas, assetFringePasses(cut.canvas)))) || cut.canvas;
 
 const ASSET_THEMES = [
   { id: 'any', label: 'Any', tags: '' },
@@ -145,9 +168,123 @@ const ASSET_VIEWS = [
 // also read as a body part, so the first idea is "treasure chest" - and the treasure kept inside.
 const ASSET_CONTAINER = /\b(chest|box|crate|barrel|door|jar|bag|coffin|basket|pot|book|casket)\b/i;
 
+/* The words a sword was found by ("vertical, pointing up, full length") make a *different* thing of some
+   weapons, so a weapon the table knows is drawn with its own. A "bow" was read as a ribbon bow on a stick,
+   and a shield asked to be tall and vertical came as a framed card or a window. Matched on the typed name,
+   so "wooden longbow" and "round shield" are found; a weapon not in the table keeps the sword's words. */
+const WEAPON_RECIPES = [
+  // holes: the gap between the limbs and the string is background, and a bow has no white blade to lose with it
+  { re: /\b(long|short|recurve|composite)?bow\b/i, name: 'bow', holes: true, tags: ['archery bow', 'curved limbs', 'bowstring', 'vertical', 'centered', 'object focus'],
+    avoid: 'ribbon, hair bow, bow tie, gift bow, arrow, arrows, quiver, hand, holding' },
+  { re: /\b(shield|buckler)\b/i, name: 'shield', size: [1024, 1024], tags: ['front view', 'emblem', 'centered', 'object focus'],
+    avoid: 'pointing up, vertical, sword, spear, weapon' },
+];
+const weaponRecipe = thing => WEAPON_RECIPES.find(r => r.re.test(thing));
+
+/* The same for what is picked up. Every item had one set of words ("solo, centered, object focus"), and the model
+   answered with what a game icon usually is: a row of three bottles, a key lying on a slab, a scroll or an apple
+   inside a stone frame, a coin on a rounded card. `holes`: the ring's and the key's bow are background too. A white
+   or cream item (a pearl, a bone) would lose its own enclosed white to it, so only a thing with a hole in it has it.
+   "close-up" is for the small things (coin, gem), which came a speck in the middle of the picture and blurred when
+   the trim scaled them up. */
+const ITEM_RECIPES = [
+  { re: /\bpotions?\b|\bflask\b|\belixir\b/i, name: 'potion', tags: ['one glass bottle', 'cork stopper', 'liquid inside', 'centered', 'object focus'],
+    avoid: 'bottles, two bottles, three bottles, row of bottles, shelf, candle, lamp' },
+  { re: /\bkeys?\b/i, name: 'key', holes: true, tags: ['skeleton key', 'ring head', 'long shaft', 'teeth', 'vertical', 'centered', 'object focus'],
+    avoid: 'key ring, keychain, bunch of keys, keys, lock, padlock, keyhole, chest, slab, plate, ribbon, bow, magnifying glass, handle' },
+  { re: /\bscrolls?\b/i, name: 'scroll', tags: ['old parchment scroll', 'partly unrolled', 'curled ends', 'ribbon tie', 'centered', 'object focus'],
+    avoid: 'banner, flag, sign, tablet, pillar, column, ornate border, text, cup, mug, tube, pipe, cylinder, toilet paper' },
+  { re: /\bcoins?\b/i, name: 'coin', tags: ['round gold coin', 'close-up', 'centered', 'object focus'],
+    avoid: 'square, rounded square, slot, medal, badge, pile of coins, coins, stack, clock, dial, plate' },
+  { re: /\b(gems?|gemstones?|crystal|jewel)\b/i, name: 'gem', tags: ['cut gemstone', 'faceted', 'close-up', 'centered', 'object focus'],
+    avoid: 'ring, jewelry setting, multiple gems, gems, dark background, grey background' },
+  { re: /\brings?\b/i, name: 'ring', holes: true, tags: ['plain band ring', 'jewelry', 'tilted view', 'centered', 'object focus'],
+    avoid: 'finger, hand, ring box, pillow, display, necklace, bracelet, chain, multiple rings' },
+  { re: /\bapples?\b/i, name: 'apple', tags: ['whole apple', 'stem and leaf', 'centered', 'object focus'],
+    avoid: 'frame, stone, bitten, slice, cut, tree, basket, bowl, cube' },
+  { re: /\bbooks?\b|\btome\b|\bgrimoire\b/i, name: 'book', tags: ['closed hardcover book', 'cover', 'centered', 'object focus'],
+    avoid: 'open book, spread pages, bookshelf, library, stack of books, multiple books' },
+  { re: /\bhearts?\b/i, name: 'heart', tags: ['red love heart', 'symmetrical', 'glossy highlight', 'centered', 'object focus'],
+    avoid: 'anatomical, organ, blood, hands, multiple hearts, frame, badge, emblem, gauge, machine, outline only' },
+  { re: /\bmushrooms?\b/i, name: 'mushroom', tags: ['one mushroom', 'cap and stem', 'centered', 'object focus'],
+    avoid: 'cluster, multiple mushrooms, forest, grass, ground, soil, logs' },
+];
+const itemRecipe = thing => ITEM_RECIPES.find(r => r.re.test(thing));
+// The recipe a kind's thing is drawn by, if it has one.
+const assetRecipe = (kindId, thing) => kindId === 'weapon' ? weaponRecipe(thing) : kindId === 'item' ? itemRecipe(thing) : null;
+const WEAPON_SWORD_WORDS = ['full length', 'centered', 'vertical', 'pointing up', 'object focus'];
+// What a cut-out weapon or item is never: the model draws a sheet of paper behind it (a frame, a card, a plaque) that
+// is not the background and so is not cut away.
+const ASSET_BACKDROP = 'border, frame, card, plaque, panel, backdrop, background pattern';
+
 const ASSET_LOOK_MAX = 120;   // the longest look a character is named by
-const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1' };
+const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1', act: 'own', frames: '6',
+  // The pixel look: the grid ('off' = the picture as it is), colours, outline, and the game's palette (#rrggbb list, kept).
+  pix: 'off', packSize: '0', pixColours: '16', pixOutline: 'yes', pixShared: 'own', pixPalette: [] };
 let assetState = { ...ASSET_DEFAULTS };
+
+const PIX_GRIDS = [
+  { id: 'off', label: 'Off', hint: 'The picture as the model drew it' },
+  { id: '16', label: '16', hint: 'A grid of 16 cells on the longest side' },
+  { id: '32', label: '32', hint: 'A grid of 32 cells on the longest side' },
+  { id: '48', label: '48', hint: 'A grid of 48 cells on the longest side' },
+  { id: '64', label: '64', hint: 'A grid of 64 cells on the longest side' },
+];
+const PIX_COLOURS = [
+  { id: '8', label: '8', hint: 'Eight colours - very flat' },
+  { id: '16', label: '16', hint: 'Sixteen colours' },
+  { id: '32', label: '32', hint: 'Thirty-two colours - room for shading' },
+  { id: '64', label: '64', hint: 'Sixty-four colours - for a game that wants many hues in one palette' },
+];
+const PIX_OUTLINE = [
+  { id: 'yes', label: 'Outline', hint: 'One pixel of the palette\'s darkest colour round the shape (not on a tile)' },
+  { id: 'no', label: 'None', hint: 'No outline' },
+];
+const PIX_SHARED = [
+  { id: 'own', label: 'Its own', hint: 'Each picture gets the colours it needs' },
+  { id: 'game', label: 'One for the game', hint: 'Every picture draws from one palette that grows as you make things - a sprite, a tile and an icon then look like one game' },
+  { id: 'box', label: 'Holbein box', hint: 'The game is drawn in the colours of your Holbein box - every pixel is the nearest of its tubes, and the palette does not grow' },
+];
+const hexOf = c => '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+const rgbOfHex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+
+/* The canvas as the pixel look asks (or as it is, when it is off). The game's palette, when
+   one is kept for the game, is read from and written back to assetState: a batch of pictures
+   is finished one after another, each growing it. Returns the canvas. */
+function assetPixel(canvas, s, { outline = true, split } = {}) {
+  if (s.pix === 'off') return canvas;
+  const box = s.pixShared === 'box' ? genBoxRgbs() : [];   // a fixed palette: as many colours as tubes, none added
+  const shared = s.pixShared === 'game' || box.length > 0;
+  const r = assetPixelate(canvas, { grid: Number(s.pix), colours: box.length || Number(s.pixColours), outline: outline && s.pixOutline === 'yes',
+    palette: box.length ? box : shared ? (assetState.pixPalette || []).map(rgbOfHex) : [], shared, ...(split ? { split } : {}) });
+  if (shared && !box.length) { assetState.pixPalette = r.palette.map(hexOf); assetsSave(); renderAssetPixel(); }
+  return r.canvas;
+}
+
+/* The frames of one cycle as the pixel look asks. Each frame cut to its own colours would round the
+   same patch of skirt to a different shade from frame to frame - in the loop it flickers. So the
+   colours are cut once, from every frame together (on top of the game's, when one is kept), and
+   every frame is drawn from that. */
+function assetPixelFrames(canvases, s) {
+  if (s.pix === 'off' || s.pixShared === 'box' || canvases.length < 2) return canvases.map(c => assetPixel(c, s));
+  const game = s.pixShared === 'game', n = Number(s.pixColours);
+  const seed = game ? (assetState.pixPalette || []).map(rgbOfHex) : [];
+  const fresh = [];
+  for (const c of canvases) {
+    // Only to read the pixels the frame would have (no outline: that is the palette's darkest, not a colour of its own).
+    const r = assetPixelate(c, { grid: Number(s.pix), colours: 64, outline: false });
+    const d = r.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, r.canvas.width, r.canvas.height).data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (!d[i + 3]) continue;
+      const p = [d[i], d[i + 1], d[i + 2]];
+      if (!seed.length || seed.every(q => pixDist(p, q) > PIX_NEAR)) fresh.push(p);
+    }
+  }
+  const room = Math.max(0, n - seed.length);
+  const pal = seed.concat(pixelMedianCut(fresh, game ? Math.min(room, Math.max(4, Math.ceil(room / 3))) : room));
+  if (game) { assetState.pixPalette = pal.map(hexOf); assetsSave(); renderAssetPixel(); }
+  return canvases.map(c => assetPixelate(c, { grid: Number(s.pix), colours: pal.length, outline: s.pixOutline === 'yes', palette: pal, shared: true }).canvas);
+}
 
 const assetKind = id => ASSET_KINDS.find(k => k.id === id) || ASSET_KINDS[0];
 const assetPick = (list, id) => list.find(x => x.id === id) || list[0];
@@ -161,8 +298,11 @@ function assetRequest(s) {
   // from one direction to the next - so it may be long; the picture is named by what is before the first comma.
   const thing = (s.thing || '').trim().toLowerCase().slice(0, kind.character ? ASSET_LOOK_MAX : 40) || kind.things[0];
   const short = kind.character ? thing.split(',')[0].trim().slice(0, 40) : thing;
-  const named = [kind.tile || kind.character ? '' : material.word, thing].filter(Boolean).join(' ');
+  // Several directions are several pictures that must agree, so the colours in the look are weighted (charLook).
+  // Frames of one action, like directions, are pictures that must agree.
+  const named = [kind.tile || kind.character ? '' : material.word, kind.character && (Number(s.dirs) > 1 || (s.act && s.act !== 'own')) ? charLook(thing) : thing].filter(Boolean).join(' ');
   const box = ASSET_CONTAINER.test(thing);
+  const own = assetRecipe(kind.id, thing);
   const tags = kind.character ? [] : ['no humans'], avoid = [kind.tile ? TILE_AVOID : kind.character ? CHAR_NOT : ASSET_AVOID, kind.character ? `${CHAR_AVOID}, ${GEN_POSE_AVOID}` : ASSET_ALONE];
   const dir = s.dir && CHAR_FACE[s.dir] ? s.dir : 'front';
   if (kind.tile) {
@@ -171,14 +311,17 @@ function assetRequest(s) {
     if (ground.avoid) avoid.push(ground.avoid);
   } else if (kind.character) {
     const key = charKey(thing);
-    tags.push('solo', named, 'full body', 'standing', CHAR_FACE[dir], ...(view.id === 'top' ? ['from above'] : []), `(${key} background:1.2)`, `solid ${key} background`, 'simple background');
+    tags.push('solo', named, 'full body', CHAR_ACT_WORDS[s.act] || 'standing', CHAR_FACE[dir], ...(view.id === 'top' ? ['from above'] : []), `(${key} background:1.2)`, `solid ${key} background`, 'simple background');
   } else if (kind.id === 'weapon') {
     // The model draws a set of four to six, or a rack on a panel: ask for one, and keep the set out.
-    tags.push('solo', `(single ${named}:1.3)`, 'full length', 'centered', 'vertical', 'pointing up', 'object focus');
-    avoid.push('multiple, set, collection, rack, weapon rack, panel, display, sheath');
+    tags.push('solo', `(single ${named}:1.3)`, ...(own ? own.tags : WEAPON_SWORD_WORDS));
+    avoid.push('multiple, set, collection, rack, weapon rack, display, sheath', ASSET_BACKDROP, ...(own ? [own.avoid] : []));
   } else if (kind.id === 'item') {
-    tags.push(named, 'solo', 'centered', 'object focus');
-    avoid.push('multiple, set, collection');
+    if (own) tags.push('solo', `(single ${named}:1.3)`, ...own.tags);
+    else tags.push(named, 'solo', 'centered', 'object focus');
+    // The pixel look is made afterwards from a smooth picture (ROADMAP phase 6); the model drew it, coarse and
+    // blurred when enlarged, for a key, a coin, a heart and a mushroom.
+    avoid.push('multiple, set, collection', ASSET_BACKDROP, 'pixel art, pixelated, low resolution', ...(own ? [own.avoid] : []));
   } else {
     tags.push(named, ...(box ? ['closed', 'closed lid'] : []), view.tags, 'object focus');
     if (box) avoid.push('open, open lid, gold, coins, jewels, gems, overflowing');
@@ -190,7 +333,7 @@ function assetRequest(s) {
     tags: [short, 'character', dir, view.id, ...(theme.tags ? [theme.id] : []), 'asset'].slice(0, 24).map(t => t.slice(0, 40)),
     shape: 'portrait', asset: 'character', dir,
   };
-  const [width, height] = kind.size;
+  const [width, height] = (own && own.size) || kind.size;
   return {
     prompt: comfyTags(prompt),
     avoid: comfyTags([...avoid, kind.tile ? simple.tileAvoid : simple.avoid].filter(Boolean).join(', ')),
@@ -204,6 +347,8 @@ function assetRequest(s) {
 function assetsLoad() {
   try { Object.assign(assetState, JSON.parse(localStorage.getItem(ASSET_KEY)) || {}); } catch { /* defaults */ }
   if (!ASSET_KINDS.some(k => k.id === assetState.kind)) assetState.kind = ASSET_DEFAULTS.kind;
+  if (!CHAR_ACTIONS.some(a => a.id === assetState.act)) assetState.act = ASSET_DEFAULTS.act;
+  if (!CHAR_FRAMES.includes(Number(assetState.frames))) assetState.frames = ASSET_DEFAULTS.frames;
   if (typeof assetState.thing !== 'string' || !assetState.thing) assetState.thing = assetKind(assetState.kind).things[0];
 }
 function assetsSave() {
@@ -217,6 +362,12 @@ function assetChips(group, label, list, current, hintOf = o => o.hint) {
       `${hintOf(o) ? ` title="${esc(hintOf(o))}"` : ''}>${esc(o.label)}</button>`).join('') + '</div></div>';
 }
 
+// Which names of a kind are drawn by words of their own, so that a name outside the list is not a surprise.
+function assetRecipeNote(kind) {
+  const list = kind.id === 'weapon' ? WEAPON_RECIPES : kind.id === 'item' ? ITEM_RECIPES : null;
+  return list ? `<p class="gen-note">Words of their own for: ${esc(list.map(r => r.name).join(', '))}. Any other name is drawn by the general words for a ${esc(kind.id)} - the Prompt below shows which.</p>` : '';
+}
+
 function renderAssets() {
   const s = assetState, kind = assetKind(s.kind);
   el('assetChoices').innerHTML =
@@ -225,24 +376,75 @@ function renderAssets() {
     `<input type="text" id="assetThing" maxlength="${kind.character ? ASSET_LOOK_MAX : 40}" autocomplete="off" spellcheck="false" value="${esc(s.thing)}" placeholder="e.g. ${esc(kind.things[0])}"></label>` +
     `<div class="chips" id="assetThings" role="group" aria-label="Ideas">` +
     kind.things.map(t => `<button type="button" class="chip" data-thing="${esc(t)}" aria-pressed="${s.thing.trim().toLowerCase() === t}">${esc(t)}</button>`).join('') + '</div></div>' +
+    assetRecipeNote(kind) +
     (kind.views ? assetChips('view', 'View', ASSET_VIEWS, s.view, () => '') : '') +
-    (kind.character ? assetChips('dirs', 'Turned to', CHAR_CHOICES, s.dirs) +
-      (s.dirs === '1'
-        ? '<p class="gen-note">One side view, drawn freely from the words - no 3D figure, so the pose and build are the model\'s own. Make several and keep the one you like.</p>'
-        : '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Whether the faces match is for you to judge.</p>') : '') + '</section>' +
+    (kind.character ? assetChips('act', 'Pose', CHAR_ACTIONS, s.act) +
+      (s.act !== 'own' ? assetActionHtml(s) :
+        assetChips('dirs', 'Turned to', CHAR_CHOICES, s.dirs) +
+        (s.dirs === '1'
+          ? '<p class="gen-note">One side view, drawn freely from the words - no 3D figure, so the pose and build are the model\'s own. Make several and keep the one you like.</p>'
+          : '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Name every garment and its colour, trousers and boots too: what the look leaves out the model invents again in each direction. Whether the faces match is for you to judge.</p>')) : '') + '</section>' +
     `<section class="gen-group">${assetChips('theme', 'Theme', ASSET_THEMES, s.theme, () => '')}` +
     (kind.tile || kind.character ? '' : assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '')) +
     assetChips('simple', 'How simple', ASSET_SIMPLE, s.simple) +
-    (kind.tile ? assetChips('size', 'Tile size, px', TILE_SIZES, s.size) : '') + '</section>';
+    (kind.tile && s.pix === 'off' ? assetChips('size', 'Tile size, px', TILE_SIZES, s.size) : '') + '</section>' +
+    `<section class="gen-group" id="assetPixel">${assetPixelHtml(kind)}</section>`;
   el('assetIconRow').classList.toggle('hidden', !kind.icon);
   // The directions are the count of a character - except the one-sided kind, drawn free: there the
   // count is how many candidates to choose from.
-  el('assetCountRow').classList.toggle('hidden', !!kind.character && s.dirs !== '1');
+  el('assetCountRow').classList.toggle('hidden', !!kind.character && (s.act !== 'own' || s.dirs !== '1'));
   el('assetIcon').checked = !!s.icon;
   el('assetCount').value = s.count;
   el('assetDraft').value = s.draft;
   renderAssetPrompt();
 }
+
+/* What an action adds to the choices: how many frames (a slider, 4 - 6 - 8) for the actions that
+   move, and what is done with the figure. Always facing right: a side-on game mirrors it for left. */
+function assetActionHtml(s) {
+  const a = charAction(s.act);
+  return (a.frames
+    ? `<div class="gen-row"><label class="gen-extra" for="assetFrames">Frames <input type="range" id="assetFrames" min="4" max="8" step="2" value="${esc(s.frames)}">` +
+      `<output id="assetFramesOut" for="assetFrames">${esc(s.frames)} frames</output></label></div>`
+    : '') +
+    `<p class="gen-note">${a.frames ? 'The frames are drawn together, as the cells of one sheet, so that it is one girl in all of them (drawn one by one they were different girls). Each cell is the 3D figure from Forms set to one step of the ' + esc(a.label.toLowerCase()) + ', facing right' +
+      (s.act === 'attack' ? '.' : ' - the last frame leads back to the first.') + ' The sheet is cut back into frames 300 to 400 px tall: more frames, narrower ones.' : 'The 3D figure from Forms set to a ' + esc(a.label.toLowerCase()) + ', facing right.'} ` +
+    'Its build and clothes come from the figure and the look you describe - the pose you set in Forms is replaced. Name every garment and its colour' +
+    (s.act === 'attack' ? ', and what she holds ("holding a longsword"): a weapon the look does not name is drawn in some frames and not in others' : '') +
+    '. Whether the faces match is for you to judge.</p>';
+}
+
+/* The pixel look's choices. The colours, outline and palette only when it is on; a tile has no
+   outline; the game's palette is shown as swatches, with a way to start it again. */
+function assetPixelHtml(kind) {
+  const s = assetState, on = s.pix !== 'off';
+  let h = assetChips('pix', 'Pixel look - grid', PIX_GRIDS, s.pix);
+  if (!on) return h;
+  // The box brings its own number of colours, so the choice is hidden while it is the palette.
+  h += (s.pixShared === 'box' ? '' : assetChips('pixColours', 'Colours', PIX_COLOURS, s.pixColours)) +
+    (kind.tile ? '' : assetChips('pixOutline', 'Outline', PIX_OUTLINE, s.pixOutline)) +
+    assetChips('pixShared', 'Palette', PIX_SHARED, s.pixShared);
+  if (kind.tile) h += '<p class="gen-note">The grid is the size of the tile.</p>';
+  if (s.pixShared === 'box') {
+    const tubes = genBoxRgbs().map(hexOf);
+    h += tubes.length
+      ? `<div class="pix-palette" aria-label="The Holbein box, ${tubes.length} colours">${tubes.map(c => `<span style="background:${c}" title="${c}"></span>`).join('')}</div>`
+      : '<p class="gen-note">The Holbein box is not loaded yet - open Colours once, or pick another palette.</p>';
+  }
+  if (s.pixShared === 'game') {
+    const pal = s.pixPalette || [];
+    h += pal.length
+      ? `<div class="pix-palette" aria-label="The game's palette, ${pal.length} colours">${pal.map(c => `<span style="background:${c}" title="${c}"></span>`).join('')}` +
+        `<button type="button" class="chip" data-pixforget title="Forget these colours - the next picture starts a new palette">Start again</button></div>`
+      : '<p class="gen-note">The first picture you make starts the palette; each after it keeps those colours and adds only the ones it lacks, up to the number chosen.</p>';
+  }
+  // The whole look in one line: it is kept with the settings, so the next session draws the same game.
+  const shared = assetPick(PIX_SHARED, s.pixShared).label.toLowerCase();
+  h += `<p class="gen-note" id="assetStyle">Game style (kept): ${s.pix} px grid, ${s.pixShared === 'box' ? 'the box\'s colours' : s.pixColours + ' colours'}` +
+    `${kind.tile || s.pixOutline !== 'yes' ? '' : ', outline'}, palette: ${shared}.</p>`;
+  return h;
+}
+function renderAssetPixel() { const host = el('assetPixel'); if (host) host.innerHTML = assetPixelHtml(assetKind(assetState.kind)); }
 
 // The words as they go to the model, for the curious - and for checking a recipe by eye.
 function renderAssetPrompt() {
@@ -260,22 +462,22 @@ function renderAssetPrompt() {
    size chosen. The model's own picture and its second pass are forgotten; what is kept is the
    mended tile, tagged by how well its edges meet (tileSeam, 1 = no seam at all). */
 async function assetFinishTile(made, s) {
-  const doc = made.doc, status = el(ASSET_UI.status), size = Number(assetPick(TILE_SIZES, s.size).id);
+  const doc = made.doc, status = el(ASSET_UI.status), size = s.pix === 'off' ? Number(assetPick(TILE_SIZES, s.size).id) : Number(s.pix);
   let pic;
   try { pic = await genLoadPicture(doc); } catch { return; }
   const rolled = tileRoll(pic, pic.width >> 1, pic.height >> 1);
-  const cross = tileCross(pic.width, pic.height, Math.round(pic.width * TILE_BAND)).toDataURL('image/png').split(',')[1];
+  const crossCanvas = tileCross(pic.width, pic.height, Math.round(pic.width * TILE_BAND)), cross = crossCanvas.toDataURL('image/png').split(',')[1];
   status.textContent = 'Mending the seams...';
   const mended = await generateOne({ prompt: doc.prompt, avoid: doc.avoid || '', tags: (doc.tags || []).slice(0, 24), shape: 'square', seed: doc.seed,
     image: genEncode(rolled), mask: cross, denoise: TILE_DENOISE, parent: doc.file, asset: 'tile',
     ...(s.draft === 'draft' ? { steps: GEN_DRAFT_STEPS } : {}) });
   let fixed;
-  try { fixed = await genLoadPicture(mended.doc); } catch { return; }
-  const seam = tileSeam(fixed), canvas = tileShrink(fixed, size);
+  try { fixed = tileMatch(await genLoadPicture(mended.doc), crossCanvas); } catch { return; }
+  const seam = tileSeam(fixed), flat = tileFlatness(fixed) < TILE_FLAT, canvas = s.pix === 'off' ? tileShrink(fixed, size) : assetPixel(fixed, s, { outline: false, split: PIX_SPLIT_TILE });
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
   const f = await storeFile(blob);
   if (storeMode === 'server') await storeSortFile(f.id, 'assets');
-  const tags = [...(doc.tags || []).filter(t => t !== 'seamless' && !/^\d+x\d+$/.test(t)), seam < TILE_SEAM_BAD ? 'seamless' : 'seam visible', `${size}x${size}`].slice(0, 24);
+  const tags = [...(doc.tags || []).filter(t => t !== 'seamless' && !/^\d+x\d+$/.test(t)), seam < TILE_SEAM_BAD ? 'seamless' : 'seam visible', ...(flat ? ['flat'] : []), `${size}x${size}`, ...(s.pix === 'off' ? [] : ['pixel'])].slice(0, 24);
   await storePutItem('uploads', uploadKey(f.id), { ...doc, file: f.id, bytes: blob.size, type: 'image/png',
     width: size, height: size, tags, t: Date.now() });
   await forgetUpload(mended.doc);
@@ -302,7 +504,9 @@ async function assetFinish(made, s) {
   const keep = (canvas, extra, over) => assetKeep(doc, canvas, extra, over);
   let pic;
   try { pic = await genLoadPicture(doc); } catch { return; }
-  const cut = cutOut(pic);
+  // The thing is the picture's first tag (assetRequest).
+  const own = assetRecipe(kind.id, (doc.tags || [])[0] || '');
+  const cut = cutOut(pic, own && own.holes ? { holes: true } : {});
   if (!cut.found) {
     await storePutItem('uploads', uploadKey(doc.file), { ...doc, tags: [...(doc.tags || []), 'not cut out'].slice(0, 24) });
     return;
@@ -310,6 +514,10 @@ async function assetFinish(made, s) {
   let canvas = cut.canvas;
   const notes = ['cut out'];
   if (kind.id !== 'prop') {
+    // The white edge the model draws round a thing (a sticker's border) shows as a bright outline on a dark slot.
+    // Not drawn on a key colour: the model paints the thing itself in it (a shield half magenta, cut away with the
+    // background), which a white blade on cream never costs.
+    canvas = assetTrim(assetDefringe(canvas)) || canvas;
     const solo = assetSolo(canvas);
     if (solo) { canvas = solo.canvas; if (solo.pieces > 1) notes.push('one of ' + solo.pieces); }
   }
@@ -317,16 +525,78 @@ async function assetFinish(made, s) {
     const o = assetOrient(canvas);
     if (o) { canvas = o.canvas; if (o.turned) notes.push('upright'); }
   }
+  const flat = canvas;
+  canvas = assetPixel(canvas, s);
+  if (s.pix !== 'off') notes.push('pixel');
   const main = await keep(canvas, notes, { width: canvas.width, height: canvas.height });
   await forgetUpload(doc);
   if (kind.icon && s.icon) {
-    await keep(assetIcon(canvas, { size: 128, diagonal: kind.id === 'weapon' }), ['icon', '128x128'],
+    // Pixelled from the smooth icon, not from the sprite: the frame is drawn at 128 and shares the palette.
+    const icon = assetPixel(assetIcon(flat, { size: 128, diagonal: kind.id === 'weapon' }), s, { outline: false });
+    await keep(icon, ['icon', `${icon.width}x${icon.height}`, ...(s.pix === 'off' ? [] : ['pixel'])],
       { parent: main.id, name: `${(doc.tags || [])[0] || kind.id}, icon` });
   }
 }
 
 const assetsMade = async () => (await listUploads()).filter(u => u.asset && u.folder === 'assets');
 const ASSET_UI = { go: 'assetGo', status: 'assetStatus', goText: 'Make', refresh: () => showAssets(false) };
+
+const assetBitmapCanvas = async bmp => { const c = Object.assign(document.createElement('canvas'), { width: bmp.width, height: bmp.height }); c.getContext('2d').drawImage(bmp, 0, 0); return c; };
+const assetIsTile = u => (u.tags || []).includes('tile');
+// The strip of a cycle: its frames are in the pack as sprites already, so it is a file of its own and not on the sheet.
+const assetIsStrip = u => (u.tags || []).includes('animation strip');
+
+/* What is made, as Unity loads it: the sprites on one sheet, and every picture, sprite or tile, as a file of
+   its own, in one zip. Pictures are copied pixel for pixel, never resampled, so a pixel sprite stays
+   hard-edged (in Unity: Filter Mode Point, Compression None). */
+async function assetsPack() {
+  const btn = el('assetPack'), status = el(ASSET_UI.status);
+  btn.disabled = true;
+  try {
+    await loadSection('backup');   // makeZip lives there
+    const made = await assetsMade(), loaded = [];
+    for (const u of made) {
+      const blob = await storeFileBlob(u.file);
+      if (blob) loaded.push({ u, bmp: await createImageBitmap(blob), tile: assetIsTile(u), strip: assetIsStrip(u) });
+    }
+    const names = packNames(loaded.map(x => x.u.name));
+    loaded.forEach((x, i) => { x.name = names[i]; });
+    // A smooth sprite is as big as the model drew it; shrunk to the longest side chosen (halving, as a tile is), never enlarged.
+    const limit = Number(assetState.packSize) || 0;
+    for (const x of loaded) {
+      const k = !x.tile && limit ? Math.min(1, limit / Math.max(x.bmp.width, x.bmp.height)) : 1;
+      x.pic = k < 1 ? assetShrinkTo(await assetBitmapCanvas(x.bmp), Math.max(1, Math.round(x.bmp.width * k)), Math.max(1, Math.round(x.bmp.height * k))) : null;
+      x.w = x.pic ? x.pic.width : x.bmp.width; x.h = x.pic ? x.pic.height : x.bmp.height;
+    }
+    const sprites = loaded.filter(x => !x.tile && !x.strip), tiles = loaded.filter(x => x.tile), strips = loaded.filter(x => x.strip);
+    const png = async c => new Uint8Array(await (await new Promise(res => c.toBlob(res, 'image/png'))).arrayBuffer());
+    const canvasOf = (w, h) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
+    const entries = [];
+    for (const x of loaded) {
+      const [c, g] = canvasOf(x.w, x.h);
+      g.drawImage(x.pic || x.bmp, 0, 0);
+      entries.push({ name: `${x.tile ? 'tiles' : x.strip ? 'animations' : 'sprites'}/${x.name}.png`, data: await png(c) });
+    }
+    if (sprites.length) {
+      const sheet = packRects(sprites.map(x => ({ w: x.w, h: x.h })));
+      const [c, g] = canvasOf(sheet.w, sheet.h);
+      sprites.forEach((x, i) => g.drawImage(x.pic || x.bmp, sheet.at[i].x, sheet.at[i].y));
+      entries.push({ name: 'sheet.png', data: await png(c) });
+    }
+    for (const x of loaded) x.bmp.close();
+    if (!entries.length) { status.textContent = 'Nothing made yet to pack.'; return; }
+    const zip = makeZip(entries), a = document.createElement('a');
+    a.href = URL.createObjectURL(zip);
+    a.download = `game-assets-${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    status.textContent = `Packed ${sprites.length} sprite${sprites.length === 1 ? '' : 's'} and ${tiles.length} tile${tiles.length === 1 ? '' : 's'} (${fmtBytes(zip.size)}).`;
+  } catch (err) {
+    status.textContent = 'It could not be packed - ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 /* A character: one figure, turned. The depth map of the figure in Forms (the one Draw this pose
    uses) is taken once per direction with the camera sent round it; the maps are framed alike
@@ -337,7 +607,7 @@ const ASSET_UI = { go: 'assetGo', status: 'assetStatus', goText: 'Make', refresh
    one height, the feet set on one line (assetAlign). */
 async function assetsCharacterGo(s) {
   const status = el(ASSET_UI.status);
-  if (s.dirs === '1') { await assetsCharacterFree(s); return; }
+  if (s.act === 'own' && s.dirs === '1') { await assetsCharacterFree(s); return; }
   if (!genControlAvailable()) { status.textContent = 'A character is drawn through a depth ControlNet, and this server has none (COMFY_CONTROLNET).'; return; }
   status.textContent = 'Opening the 3D figure...';
   // The 3D view is a lazy section and starts its engine on first use; it is brought up here
@@ -350,24 +620,57 @@ async function assetsCharacterGo(s) {
     await openForms(() => { const b = document.querySelector('#formShapes [data-shape="figure"]'); if (b) b.focus(); });
     return;
   }
-  const dirs = CHAR_DIRS[s.dirs] || CHAR_DIRS[1], seed = Math.floor(Math.random() * 2 ** 31);
+  // Turned (4, 8 directions) or acting (the frames of a walk, all facing right): either way a list of turns, each a camera
+  // yaw and, for an action, the figure's pose for that frame.
+  const acts = s.act === 'own' ? null : charActionPoses(s.act, s.frames), rig = formRigOf(o.shape) || undefined;
+  const turns = acts ? acts.map((pose, i) => ({ dir: 'right', deg: CHAR_DIRS[1][0][1], pose: cleanFormPose(pose, rig), label: acts.length > 1 ? `${s.act} ${i + 1} of ${acts.length}` : s.act }))
+    : (CHAR_DIRS[s.dirs] || CHAR_DIRS[1]).map(([dir, deg]) => ({ dir, deg, label: dir }));
+  const seed = Math.floor(Math.random() * 2 ** 31);
   const scene = { ...formScene, fisheye: false, roll: 0, pitch: CHAR_PITCH[s.view] ?? CHAR_PITCH.side };
   status.textContent = 'Turning the figure...';
   const blobs = [];
-  for (const [, deg] of dirs) blobs.push(await formsDepthSnapshot({ ...scene, yaw: wrap180((o.ry || 0) + deg) }));
+  for (const t of turns) {
+    // The figure with this frame's pose, in a copy of the scene: the one in Forms is left as it was set.
+    const objects = t.pose ? scene.objects.map(x => x === o ? { ...o, pose: t.pose } : x) : scene.objects;
+    blobs.push(await formsDepthSnapshot({ ...scene, objects, yaw: wrap180((o.ry || 0) + t.deg) }));
+  }
   const boxes = (await Promise.all(blobs.map(genBoxOf))).filter(Boolean);
   if (!boxes.length) { status.textContent = 'The figure is not in view - the depth map is empty.'; return; }
   const x0 = Math.min(...boxes.map(b => b.x)), y0 = Math.min(...boxes.map(b => b.y));
   const union = { x: x0, y: y0, w: Math.max(...boxes.map(b => b.x + b.w)) - x0, h: Math.max(...boxes.map(b => b.y + b.h)) - y0 };
   const draft = s.draft === 'draft';
+  // The frames of a cycle are drawn together on one sheet, so that it is one girl in all of them (charSheetLayout);
+  // directions, and an idle or a hurt (one picture), are drawn one by one.
+  const sheeted = !!acts && turns.length > 1;
   const jobs = [];
-  for (let i = 0; i < dirs.length; i++) {
+  let plain = '';   // the words of one frame: what a frame is kept with, and redrawn from later
+  if (sheeted) {
+    const made = await assetSheetJob(s, blobs, union, seed, draft);
+    jobs.push(made.job); plain = made.plain;
+  } else for (let i = 0; i < turns.length; i++) {
     const frame = await genFrameImage(blobs[i], 'pose', { shape: 'portrait' }, union);
-    const { dir, ...r } = assetRequest({ ...s, dir: dirs[i][0] });
+    const { dir, ...r } = assetRequest({ ...s, dir: turns[i].dir });
     jobs.push({ ...r, image: frame.b64, control: true, strength: CHAR_STRENGTH, seed, tags: [...r.tags, 'pose'].slice(0, 24), ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) });
   }
   const cuts = [];
-  await runGenerate(jobs, (i, total) => `Drawing ${dirs[i - 1][0]} (${i} of ${total})...`, `${dirs.length} directions made - in Uploads, Assets.`, async made => {
+  let sheetDoc = null;
+  let at = 0;   // the job the callback is for: they come back in order, one by one
+  await runGenerate(jobs, (i, total) => sheeted ? `Drawing the ${turns.length} frames together...` : `Drawing ${turns[i - 1].label} (${i} of ${total})...`, acts ? `${turns.length} frame${turns.length === 1 ? '' : 's'} made - in Uploads, Assets.` : `${turns.length} directions made - in Uploads, Assets.`, async made => {
+    if (sheeted) {
+      // Cut back into its cells, each cut out on its own. The sheet itself is forgotten once the frames are kept.
+      let pic;
+      try { pic = await genLoadPicture(made.doc); } catch { return; }
+      sheetDoc = { ...made.doc, prompt: plain, shape: 'portrait' };
+      const cells = charSheetCells(pic, turns.length, CHAR_CELL_INSET);
+      cells.forEach((cell, frame) => {
+        const cut = assetCutFigure(cell);
+        if (cut.found) cuts.push({ doc: sheetDoc, canvas: assetFigureCanvas(cut), frame });
+      });
+      if (!cuts.length) await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) });
+      else await forgetUpload(made.doc);
+      return;
+    }
+    const frame = at++;
     let pic;
     try { pic = await genLoadPicture(made.doc); } catch { return; }
     const cut = assetCutFigure(pic);
@@ -377,18 +680,56 @@ async function assetsCharacterGo(s) {
       const canvas = assetFigureCanvas(cut);
       const f = await assetKeep(made.doc, canvas, ['cut out']);
       await forgetUpload(made.doc);
-      cuts.push({ doc: made.doc, file: f.id, canvas });
+      cuts.push({ doc: made.doc, file: f.id, canvas, frame });
     } else await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) });
   }, ASSET_UI);
   // Whatever was drawn is lined up, even if it was stopped or one failed.
   const lined = assetAlign(cuts.map(c => c.canvas));
   if (!lined) return;
+  const sprites = assetPixelFrames(lined.canvases, s);
   for (let i = 0; i < cuts.length; i++) {
-    await assetKeep(cuts[i].doc, lined.canvases[i], ['cut out', 'aligned', `${lined.width}x${lined.height}`]);
-    await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
+    const sprite = sprites[i];
+    await assetKeep(cuts[i].doc, sprite, ['cut out', 'aligned', `${sprite.width}x${sprite.height}`, ...(s.pix === 'off' ? [] : ['pixel']),
+      ...(acts && turns.length > 1 ? [s.act, `frame ${cuts[i].frame + 1} of ${turns.length}`] : acts ? [s.act] : [])]);
+    if (cuts[i].file) await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
+  }
+  // The frames of a cycle or a swing are also one strip, in the order they play - what a game cuts back by cell size.
+  if (acts && sprites.length > 1) {
+    const strip = charStrip(sprites), base = cuts[0].doc;
+    await assetKeep({ ...base, tags: (base.tags || []).filter(x => x !== 'pose') }, strip, ['cut out', 'aligned', 'animation strip', s.act, `${sprites.length} frames`, `${strip.width}x${strip.height}`,
+      ...(s.pix === 'off' ? [] : ['pixel'])], { name: `${(base.tags || [])[0] || 'character'} ${s.act} strip` });
+    assetAnimShow(sprites, s.act, s.pix !== 'off');
   }
   storeChanged();
   await ASSET_UI.refresh();
+}
+
+/* The one request that draws a whole cycle: the frames' depth maps laid out as the cells of a sheet (charSheetLayout),
+   each fitted whole into its cell, framed alike (`union`), on the colour of its own background. Returns the request and
+   the words of a single frame (the sheet's words say "poses of the same character" and are no use to one frame). */
+async function assetSheetJob(s, blobs, union, seed, draft) {
+  const n = blobs.length, lay = charSheetLayout(n), [W, H] = CHAR_SHEET;
+  const sheet = Object.assign(document.createElement('canvas'), { width: W, height: H }), g = sheet.getContext('2d');
+  const shape = lay.w / lay.h > 1.15 ? 'landscape' : lay.w / lay.h < 0.87 ? 'portrait' : 'square';
+  for (let i = 0; i < n; i++) {
+    const frame = await genFrameImage(blobs[i], 'pose', { shape }, union);
+    const img = await loadImg('data:image/jpeg;base64,' + frame.b64);
+    if (i === 0) {
+      // The sheet's own colour is the frames': the depth map's background - the corner pixel, not the picture's average, which
+      // is lighter by the figure and drew visible bars between the cells (the model made them panels with white gutters).
+      const px = Object.assign(document.createElement('canvas'), { width: 1, height: 1 }).getContext('2d', { willReadFrequently: true });
+      px.drawImage(img, 0, 0, 1, 1, 0, 0, 1, 1);
+      const [r, gg, b] = px.getImageData(0, 0, 1, 1).data;
+      g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(0, 0, W, H);
+    }
+    const k = Math.min(lay.w / img.naturalWidth, lay.h / img.naturalHeight), w = img.naturalWidth * k, h = img.naturalHeight * k;
+    g.drawImage(img, (i % lay.cols) * lay.w + (lay.w - w) / 2, Math.floor(i / lay.cols) * lay.h + (lay.h - h) / 2, w, h);
+  }
+  const { dir, ...r } = assetRequest({ ...s, dir: 'right' });
+  const words = `(character sheet:1.3), (${n} poses of the same character:1.3), same outfit and same hair in every pose, animation frames, `;
+  // One sheet must not be drawn as panels (borders, white gutters between the cells): the cut-out would take a panel for the figure.
+  return { plain: r.prompt, job: { ...r, prompt: words + r.prompt, avoid: `${r.avoid}, panel, panels, border, frame, grid, split screen, gutter`, shape: 'landscape', image: genEncode(sheet), control: true, strength: CHAR_STRENGTH, seed,
+    tags: [...r.tags, 'pose'].slice(0, 24), ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) } };
 }
 
 /* One side view needs no turning, so it needs no figure: the depth map made every hero the mannequin's
@@ -405,8 +746,8 @@ async function assetsCharacterFree(s) {
       try { pic = await genLoadPicture(made.doc); } catch { return; }
       const cut = assetCutFigure(pic);
       if (!cut.found) { await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) }); return; }
-      const canvas = assetFigureCanvas(cut);
-      await assetKeep(made.doc, canvas, ['cut out']);
+      const canvas = assetPixel(assetFigureCanvas(cut), s);
+      await assetKeep(made.doc, canvas, ['cut out', ...(s.pix === 'off' ? [] : ['pixel'])]);
       await forgetUpload(made.doc);
     }, ASSET_UI);
   storeChanged();
@@ -439,6 +780,8 @@ async function showAssets(check = true) {
   const host = el('assetResults');
   host.innerHTML = '';
   el('assetMadeCount').textContent = all.length ? String(all.length) : '';
+  el('assetPackBox').classList.toggle('hidden', !all.length);
+  el('assetPackSize').value = assetState.packSize;
   el('assetEmpty').classList.toggle('hidden', all.length > 0);
   for (const u of all.slice(0, 48)) {
     const li = document.createElement('li');
@@ -453,7 +796,12 @@ async function showAssets(check = true) {
         three.style.backgroundImage = `url("${url}")`;
         // A tile shrunk to a few pixels is enlarged without smoothing, or it is a blur.
         three.classList.toggle('pixel', (u.width || 512) <= 64);
-      } else li.querySelector('img').src = url;
+      } else {
+        const img = li.querySelector('img');
+        img.src = url;
+        // A sprite of a few dozen pixels is enlarged without smoothing, or it is a blur.
+        img.classList.toggle('pixel', (u.tags || []).includes('pixel'));
+      }
     });
     li.querySelector('.asset-open').addEventListener('click', () => openUpload(u));
     li.querySelector('.gen-del').addEventListener('click', async () => {
@@ -465,8 +813,69 @@ async function showAssets(check = true) {
   }
 }
 
+/* The frames just drawn, played: a loop at the speed chosen, so the cycle can be judged by looking
+   at it move - the strip is not a thing to judge a walk by. Paused it shows the frame at the slider's
+   place. Smooth pictures are scaled smoothly, pixel ones by whole cells. */
+let assetAnim = null;
+function assetAnimShow(frames, name, pixel) {
+  assetAnimStop();
+  const box = el('assetAnim'), cv = el('assetAnimCanvas');
+  cv.width = frames[0].width; cv.height = frames[0].height;
+  cv.style.imageRendering = pixel ? 'pixelated' : 'auto';
+  box.classList.remove('hidden');
+  el('assetAnimName').textContent = name + ', ' + frames.length + ' frames';
+  assetAnim = { frames, name, pixel, i: 0, last: 0, raf: 0, playing: true };
+  el('assetAnimPlay').textContent = 'Pause';
+  const draw = () => {
+    const g = cv.getContext('2d'), n = frames.length, i = assetAnim.i;
+    g.clearRect(0, 0, cv.width, cv.height);
+    // Onion skin: the neighbours faint underneath, the loop's own (the first follows the last).
+    if (el('assetAnimOnion').checked && n > 1) {
+      g.globalAlpha = 0.25;
+      g.drawImage(frames[(i + n - 1) % n], 0, 0);
+      if (n > 2) g.drawImage(frames[(i + 1) % n], 0, 0);
+      g.globalAlpha = 1;
+    }
+    g.drawImage(frames[i], 0, 0);
+  };
+  const tick = now => {
+    if (!assetAnim || !assetAnim.playing) return;
+    if (now - assetAnim.last >= 1000 / Number(el('assetAnimFps').value)) { assetAnim.last = now; assetAnim.i = (assetAnim.i + 1) % frames.length; draw(); }
+    assetAnim.raf = requestAnimationFrame(tick);
+  };
+  assetAnim.draw = draw; draw();
+  assetAnim.raf = requestAnimationFrame(tick); assetAnim.tick = tick;
+}
+function assetAnimStop() { if (assetAnim) cancelAnimationFrame(assetAnim.raf); assetAnim = null; }
+
 function initAssets() {
+  el('assetAnimPlay').addEventListener('click', () => {
+    if (!assetAnim) return;
+    assetAnim.playing = !assetAnim.playing;
+    el('assetAnimPlay').textContent = assetAnim.playing ? 'Pause' : 'Play';
+    if (assetAnim.playing) assetAnim.raf = requestAnimationFrame(assetAnim.tick);
+  });
+  el('assetAnimStep').addEventListener('click', () => {
+    if (!assetAnim) return;
+    // One frame on: pauses, so that a single pose can be looked at.
+    assetAnim.playing = false; el('assetAnimPlay').textContent = 'Play';
+    assetAnim.i = (assetAnim.i + 1) % assetAnim.frames.length; assetAnim.draw();
+  });
+  el('assetAnimOnion').addEventListener('change', () => { if (assetAnim) assetAnim.draw(); });
+  el('assetAnimGif').addEventListener('click', () => {
+    if (!assetAnim) return;
+    // A 32 px sprite is a speck in a viewer: pixel frames are enlarged by a whole number of pixels (never blurred) to about 256.
+    const { frames, name, pixel } = assetAnim, k = pixel ? Math.max(1, Math.round(256 / Math.max(frames[0].width, frames[0].height))) : 1;
+    const big = k === 1 ? frames : frames.map(f => {
+      const c = Object.assign(document.createElement('canvas'), { width: f.width * k, height: f.height * k }), g = c.getContext('2d');
+      g.imageSmoothingEnabled = false; g.drawImage(f, 0, 0, c.width, c.height);
+      return c;
+    });
+    saveBlob(new Blob([gifEncode(big, 1000 / Number(el('assetAnimFps').value))], { type: 'image/gif' }), `${name}.gif`);
+  });
+  el('assetAnimClose').addEventListener('click', () => { assetAnimStop(); el('assetAnim').classList.add('hidden'); });
   el('assetChoices').addEventListener('click', e => {
+    if (e.target.closest('[data-pixforget]')) { assetState.pixPalette = []; assetsSave(); renderAssetPixel(); return; }
     const t = e.target.closest('[data-thing]');
     if (t) { assetState.thing = t.dataset.thing; el('assetThing').value = t.dataset.thing; }
     const b = e.target.closest('[data-as]');
@@ -480,7 +889,9 @@ function initAssets() {
         assetsSave(); renderAssets(); return;
       }
       // The note and the count row depend on whether the figure is turned (4, 8) or not (1).
-      if (b.dataset.as === 'dirs') { assetsSave(); renderAssets(); return; }
+      if (b.dataset.as === 'dirs' || b.dataset.as === 'act') { assetsSave(); renderAssets(); return; }
+      // The pixel look has more to choose once it is on, and a tile has its size from the grid.
+      if (b.dataset.as.startsWith('pix')) { assetsSave(); renderAssets(); return; }
     } else if (!t) return;
     assetsSave();
     for (const x of el('assetChoices').querySelectorAll('[data-as],[data-thing]'))
@@ -488,6 +899,11 @@ function initAssets() {
     renderAssetPrompt();
   });
   el('assetChoices').addEventListener('input', e => {
+    if (e.target.id === 'assetFrames') {
+      assetState.frames = e.target.value; assetsSave();
+      el('assetFramesOut').textContent = e.target.value + ' frames';
+      return;
+    }
     if (e.target.id !== 'assetThing') return;
     assetState.thing = e.target.value;
     assetsSave();
@@ -496,6 +912,8 @@ function initAssets() {
   });
   el('assetChoices').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'assetThing') assetsGo(); });
   el('assetPrompt').addEventListener('toggle', renderAssetPrompt);
+  el('assetPack').addEventListener('click', assetsPack);
+  el('assetPackSize').addEventListener('change', e => { assetState.packSize = e.target.value; assetsSave(); });
   el('assetCount').addEventListener('change', e => { assetState.count = e.target.value; assetsSave(); });
   el('assetDraft').addEventListener('change', e => { assetState.draft = e.target.value; assetsSave(); });
   el('assetIcon').addEventListener('change', e => { assetState.icon = e.target.checked; assetsSave(); });

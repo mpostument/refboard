@@ -87,7 +87,7 @@ function openCompare(file) {
     // Moved on while it was being read: this drawing was for another pose.
     if (state.current !== pose) { URL.revokeObjectURL(url); return; }
     clearDrawing();
-    drawing = { photo: url, ink: URL.createObjectURL(inkBlob), w: img.naturalWidth, h: img.naturalHeight,
+    drawing = { photo: url, ink: URL.createObjectURL(inkBlob), img, w: img.naturalWidth, h: img.naturalHeight,
       t: [0, 0], s: 1, a: 0, align: null, hidden: false };
     fitDrawing();
     el('compareBar').classList.remove('hidden');
@@ -105,6 +105,7 @@ function openCompare(file) {
 
 function clearDrawing() {
   clearInterval(compareBlink); compareBlink = 0;
+  clearTimeout(diffTimer);
   if (drawing) { URL.revokeObjectURL(drawing.photo); URL.revokeObjectURL(drawing.ink); }
   drawing = null;
   el('drawWrap').classList.add('hidden');
@@ -146,6 +147,31 @@ function refToDrawing([x, y]) {
   return [c * dx + n * dy, -n * dx + c * dy];
 }
 
+/* Painting check (js/paintcheck.js): the modes that show not the photo but where it parts from the
+   reference. The map is in the reference's frame, so it is drawn untransformed over all of it, and
+   redone a moment after the photo stops moving (the reading is a few milliseconds, but not per drag step). */
+const DIFF_MODES = ['tones', 'warmth', 'colour'];
+let diffTimer = 0;
+function renderDiff(k, mode) {
+  const di = el('drawImg'), [W, H] = refSize();
+  Object.assign(di.style, { width: W * k + 'px', height: H * k + 'px', transform: 'none' });
+  const key = [mode, drawing.t.map(v => v.toFixed(1)).join(), drawing.s.toFixed(4), drawing.a.toFixed(4)].join('|');
+  const opacity = () => String(compareOpts.opacity[mode] ?? 0.85);
+  if (drawing.diffKey === key) { di.style.opacity = opacity(); return; }
+  di.style.opacity = '0';
+  clearTimeout(diffTimer);
+  diffTimer = setTimeout(() => {
+    if (!drawing || compareOpts.mode !== mode) return;
+    let diff;
+    try { diff = paintingCompare(drawing, el('img')); } catch { el('cmpHint').textContent = 'The reference could not be read for a comparison.'; return; }
+    if (!diff) { el('cmpHint').textContent = 'The photo and the reference share no ground - move the photo over the reference first.'; return; }
+    el('drawImg').src = paintingMapUrl(diff, mode);
+    drawing.diffKey = key; drawing.diff = diff;
+    el('drawImg').style.opacity = opacity();
+    el('cmpHint').textContent = paintingNote(diff, mode);
+  }, 150);
+}
+
 function renderDrawing() {
   const im = el('img'), wrap = el('drawWrap'), di = el('drawImg');
   if (!drawing || !im.naturalWidth || drawing.hidden) { wrap.classList.add('hidden'); return; }
@@ -157,16 +183,24 @@ function renderDrawing() {
   // Picking on the reference: the drawing out of the way. Picking on the
   // drawing: the photo itself, solid - the red lines alone can be too thin to
   // find a landmark on.
-  const onRef = al && al.step < 2, onDrawing = al && al.step >= 2;
+  const scan = drawing.scan;
+  const onRef = al && al.step < 2, onDrawing = (al && al.step >= 2) || !!scan;
   const mode = compareOpts.mode;
+  if (DIFF_MODES.includes(mode) && !al && !scan) {
+    clearInterval(compareBlink); compareBlink = 0; wrap.classList.remove('blink-off');
+    el('drawMarks').innerHTML = '';
+    renderDiff(k, mode);
+    return;
+  }
+  drawing.diffKey = null;
   const src = !onDrawing && mode === 'lines' ? drawing.ink : drawing.photo;
   if (di.getAttribute('src') !== src) di.src = src;
   di.style.width = drawing.w * k + 'px';
   di.style.height = drawing.h * k + 'px';
   di.style.transform = `translate(${drawing.t[0] * k}px, ${drawing.t[1] * k}px) rotate(${drawing.a}rad) scale(${drawing.s})`;
-  di.style.opacity = onRef ? '0' : onDrawing || mode === 'blink' ? '1' : String(compareOpts.opacity[mode]);
+  di.style.opacity = onRef ? '0' : onDrawing || mode === 'blink' ? '1' : String(compareOpts.opacity[mode] ?? 1);
 
-  const blink = mode === 'blink' && !al;
+  const blink = mode === 'blink' && !al && !scan;
   if (blink && !compareBlink) compareBlink = setInterval(() => wrap.classList.toggle('blink-off'), 700);
   if (!blink) { clearInterval(compareBlink); compareBlink = 0; wrap.classList.remove('blink-off'); }
 
@@ -178,6 +212,10 @@ function renderDrawing() {
       marks.push(`<div class="cmp-mark on-drawing" style="left:${x * k}px;top:${y * k}px">${i + 1}</div>`);
     });
   }
+  if (scan) scan.pts.forEach((d, i) => {
+    const [x, y] = drawingToRef(d);
+    marks.push(`<div class="cmp-mark on-drawing" style="left:${x * k}px;top:${y * k}px">${i + 1}</div>`);
+  });
   el('drawMarks').innerHTML = marks.join('');
 }
 
@@ -188,7 +226,75 @@ function syncCompareBar() {
   el('cmpOpacity').value = compareOpts.opacity[mode] ?? 1;
   el('cmpAlign').setAttribute('aria-pressed', String(!!(drawing && drawing.align)));
   el('session').classList.toggle('comparing', !!drawing && !drawing.hidden && !drawing.align);
+  el('cmpScan').setAttribute('aria-pressed', String(!!(drawing && drawing.scan)));
+  el('cmpPaper').value = compareOpts.paper || 'drawing';
   el('btnCompare').setAttribute('aria-pressed', String(!!drawing && !drawing.hidden));
+}
+
+/* Digitise (js/digitise.js): four clicks on the photo - the page's corners, in the order of SCAN_HINTS -
+   then the page is straightened and flattened, kept as a scan, and put in the photo's place. The points
+   are kept in the photo's own pixels, as lining up keeps the drawing's. */
+const SCAN_HINTS = [
+  'Click the page\'s top-left corner on your photo.',
+  'Now its top-right corner.',
+  'Now its bottom-right corner.',
+  'And its bottom-left corner.',
+];
+function startScan() {
+  if (!drawing) return;
+  drawing.hidden = false; drawing.align = null;
+  drawing.scan = { pts: [] };
+  el('cmpHint').className = 'step';
+  el('cmpHint').textContent = SCAN_HINTS[0] + ' (Esc cancels)';
+  syncCompareBar();
+  renderDrawing();
+}
+function cancelScan() {
+  if (!drawing || !drawing.scan) return;
+  drawing.scan = null;
+  el('cmpHint').className = '';
+  el('cmpHint').textContent = '';
+  syncCompareBar();
+  renderDrawing();
+}
+async function scanClick(p) {
+  const sc = drawing.scan;
+  sc.pts.push(refToDrawing(p));
+  if (sc.pts.length < 4) {
+    el('cmpHint').textContent = SCAN_HINTS[sc.pts.length] + ' (Esc cancels)';
+    renderDrawing();
+    return;
+  }
+  const pose = state.current, pts = sc.pts, d = drawing;
+  el('cmpHint').className = '';
+  el('cmpHint').textContent = 'Straightening the page...';
+  await new Promise(r => setTimeout(r, 30));   // let the hint paint before the pixels are worked
+  const kind = compareOpts.paper || 'drawing';
+  let canvas;
+  try { canvas = scanPage(d.img, pts, kind); } catch (e) { drawing.scan = null; el('cmpHint').textContent = 'The page could not be straightened: ' + e.message; renderDrawing(); return; }
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  if (drawing !== d || state.current !== pose) return;   // moved on while it was worked
+  const url = URL.createObjectURL(blob), img = new Image();
+  img.onload = async () => {
+    const inkBlob = await inkFromPhoto(img);
+    if (drawing !== d) { URL.revokeObjectURL(url); return; }
+    URL.revokeObjectURL(d.photo); URL.revokeObjectURL(d.ink);
+    Object.assign(d, { photo: url, ink: URL.createObjectURL(inkBlob), img, w: img.naturalWidth, h: img.naturalHeight, scan: null, diffKey: null });
+    fitDrawing();
+    syncCompareBar();
+    el('cmpHint').textContent = `Clean scan, ${img.naturalWidth} x ${img.naturalHeight}. Kept in My work as a digitised page.`;
+    keepScan(blob, pose);
+  };
+  img.src = url;
+}
+// The scan in My work (like the photo it came from: from 'work'), tagged, with the reference it was made beside.
+async function keepScan(blob, reference) {
+  try {
+    const kept = await keepUpload(blob, { name: 'scan.png', from: 'work' });
+    const { url, ...doc } = kept;
+    await storePutItem('uploads', uploadKey(doc.file), { ...doc, tags: [...new Set([...(doc.tags || []), 'digitised'])], reference });
+    storeChanged();
+  } catch (err) { console.warn('scan not kept:', err); }
 }
 
 function startAlign() {
@@ -243,7 +349,7 @@ function alignClick(p) {
 function compareKey() {
   if (!drawing) { el('cmpInput').click(); return; }
   drawing.hidden = !drawing.hidden;
-  if (drawing.hidden) drawing.align = null;
+  if (drawing.hidden) drawing.align = drawing.scan = null;
   syncCompareBar();
   renderDrawing();
 }
@@ -258,8 +364,10 @@ function initCompare() {
     if (f) openCompare(f);
   });
   el('cmpRemove').addEventListener('click', clearDrawing);
-  el('cmpFit').addEventListener('click', () => { cancelAlign(); fitDrawing(); });
+  el('cmpFit').addEventListener('click', () => { cancelAlign(); cancelScan(); fitDrawing(); });
   el('cmpAlign').addEventListener('click', () => (drawing && drawing.align) ? cancelAlign() : startAlign());
+  el('cmpScan').addEventListener('click', () => (drawing && drawing.scan) ? cancelScan() : startScan());
+  el('cmpPaper').addEventListener('change', e => { compareOpts.paper = e.target.value; saveCompareOpts(); });
   el('cmpMode').addEventListener('change', e => {
     compareOpts.mode = e.target.value; saveCompareOpts(); syncCompareBar(); renderDrawing();
   });
@@ -291,6 +399,7 @@ function initCompare() {
     const p = refPointAt(e.clientX, e.clientY);
     if (!p) return;
     if (drawing.align) { alignClick(p); return; }
+    if (drawing.scan) { scanClick(p); return; }
     drag = { p, t: [...drawing.t] };
     try { stage.setPointerCapture(e.pointerId); } catch {}
   });
@@ -308,7 +417,7 @@ function initCompare() {
   // a plain scroll still zooms the view. Capture phase, so this runs before
   // the zoom handler and can keep it from seeing the event.
   stage.addEventListener('wheel', e => {
-    if (!mine() || drawing.align || !(e.shiftKey || e.altKey)) return;
+    if (!mine() || drawing.align || drawing.scan || !(e.shiftKey || e.altKey)) return;
     e.preventDefault(); e.stopImmediatePropagation();
     const c = refPointAt(e.clientX, e.clientY), dy = e.deltaY || e.deltaX;
     if (!c) return;
@@ -467,6 +576,6 @@ document.addEventListener('keydown', e => {
     case 'Backspace':
       if (state.constructMode === 'persp' && state.persp && state.persp.length) { e.preventDefault(); state.persp.pop(); renderConstructOverlay(); }
       break;
-    case 'Escape':     if (drawing && drawing.align) cancelAlign(); else stopSession(); break;
+    case 'Escape':     if (drawing && drawing.scan) cancelScan(); else if (drawing && drawing.align) cancelAlign(); else stopSession(); break;
   }
 });

@@ -418,7 +418,7 @@ function assetPeel(canvas, rounds = 3) {
    edge is that kind of colour (a saturated one) the figure cannot own it, so: the gaps inside the figure
    (between the legs, under an arm) are cleared too, and the two steps that exist only for a pale background
    are left out - they would take the pale parts of the figure. Returns { found, canvas (trimmed), tolerance, keyed }. */
-const KEY_SATURATION = 100;   // the edge colour's strongest channel less its weakest: a flat key, not a cream or grey
+const KEY_SATURATION = 80;   // the edge colour's strongest channel less its weakest: a flat key, not a cream or grey (100 until the cells of a sheet, whose magenta is drawn paler: 196 118 210 is 92)
 const KEY_HOLES_UP_TO = 160;  // the widest tolerance gaps are cleared at - a wider one is a gradient, and would eat the figure
 function assetCutFigure(pic) {
   const w = pic.width, h = pic.height;
@@ -440,21 +440,95 @@ function assetCutFigure(pic) {
    the figure's own dark outline, and at anything coloured. Up to `passes` pixels, so a white
    garment with no outline loses at most that much. Returns a new canvas. */
 const FRINGE_LIGHT = 205;   // every channel at least this: a near-white pixel
-function assetDefringe(canvas, passes = 8) {
+const FRINGE_KEYED_LIGHT = 180;   // on a key colour the border's edge is blended with the key (a pink white on magenta), so it is paler by less
+const FRINGE_DARK = 110;   // a pixel this dark (every channel) is the figure's own outline
+const FRINGE_MAX = 7;   // how far a border may stand from the outline it hides: further, and what is there is not a border
+/* `behind` (for a picture drawn on a key colour, where a white cloak and a white border are both there) takes a
+   light edge pixel only if the figure's own dark outline lies within a few pixels (FRINGE_MAX + 2) inside it: a border
+   is a band between the outside and the outline, and a white garment with no outline is not. */
+function assetDefringe(canvas, passes = 8, { light = FRINGE_LIGHT, behind = false } = {}) {
   const w = canvas.width, h = canvas.height;
   const img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
   const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
+  const removed = [];
   for (let k = 0; k < passes; k++) {
     const gone = [];
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       if (!on(x, y)) continue;
       if (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1)) continue;
       const i = (y * w + x) * 4;
-      if (d[i] >= FRINGE_LIGHT && d[i + 1] >= FRINGE_LIGHT && d[i + 2] >= FRINGE_LIGHT) gone.push(i + 3);
+      if (d[i] >= light && d[i + 1] >= light && d[i + 2] >= light) gone.push(i);
     }
     if (!gone.length) break;
-    for (const i of gone) d[i] = 0;
+    for (const i of gone) { removed.push([i, d[i + 3]]); d[i + 3] = 0; }
   }
+  if (behind && removed.length) {
+    // The outline's reach: a pixel is near one if a dark, solid pixel is within r, found by two sweeps (across, then down).
+    const r = Math.min(passes, FRINGE_MAX) + 2, near = new Uint8Array(w * h), across = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      let last = -1e9;
+      for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; if (d[i + 3] > ASSET_ALPHA && d[i] < FRINGE_DARK && d[i + 1] < FRINGE_DARK && d[i + 2] < FRINGE_DARK) last = x; across[y * w + x] = x - last <= r ? 1 : 0; }
+      last = 1e9;
+      for (let x = w - 1; x >= 0; x--) { const i = (y * w + x) * 4; if (d[i + 3] > ASSET_ALPHA && d[i] < FRINGE_DARK && d[i + 1] < FRINGE_DARK && d[i + 2] < FRINGE_DARK) last = x; if (last - x <= r) across[y * w + x] = 1; }
+    }
+    for (let x = 0; x < w; x++) {
+      let last = -1e9;
+      for (let y = 0; y < h; y++) { if (across[y * w + x]) last = y; if (y - last <= r) near[y * w + x] = 1; }
+      last = 1e9;
+      for (let y = h - 1; y >= 0; y--) { if (across[y * w + x]) last = y; if (last - y <= r) near[y * w + x] = 1; }
+    }
+    // Put back what has no outline near it: that was the figure's own, not a border.
+    for (const [i, a] of removed) if (!near[i >> 2]) d[i + 3] = a;
+  }
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
+  out.getContext('2d').putImageData(img, 0, 0);
+  return out;
+}
+
+/* The shadow the model draws on the floor under a figure however it is told not to: a flat dark ellipse,
+   wider than her feet. It cuts out with her, makes the picture wider than she is, and sets the feet line
+   a few pixels low in one frame of a walk and not in the next. What marks it: a column whose lowest solid
+   pixels are dark and few (SHADOW_HIGH of the height at most) and have nothing above them - a sliver on the
+   ground, where a leg, a boot's toe or a heel is joined to what is above. A toe tip is such a sliver too, but
+   a few pixels wide: only when the slivers add up to SHADOW_SPAN of the height is it a shadow. Takes the
+   slivers off (what is under a foot is joined to it and stays). Returns a new canvas, or the same one if
+   there is none. */
+const SHADOW_HIGH = 0.04, SHADOW_SPAN = 0.12, SHADOW_DARK = 80, SHADOW_GREY = 170, SHADOW_FRINGE = 3;
+function assetDropShadow(canvas) {
+  const w = canvas.width, h = canvas.height, img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
+  const solid = (x, y) => y >= 0 && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
+  const shade = (x, y) => { const i = (y * w + x) * 4; return Math.max(d[i], d[i + 1], d[i + 2]); };
+  let low = -1, top = h;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (solid(x, y)) { low = Math.max(low, y); top = Math.min(top, y); }
+  if (low < 0) return canvas;
+  const tall = low - top + 1, most = Math.max(2, Math.round(tall * SHADOW_HIGH));
+  // The column's sliver on the ground: { x, y, n } (n rows up from y), or null. A pixel is the line when its brightest channel is under `limit`.
+  const sliver = (x, limit) => {
+    // The lowest solid pixel of the column, and the run of dark pixels up from it.
+    let y = h - 1; while (y >= 0 && !solid(x, y)) y--;
+    if (y < 0) return null;
+    // The model's soft edge leaves a row or two of pale pixels under a dark line (found on a real idle: 2 rows
+    // under a 4-row line): they are skipped, and go with it.
+    let f = 0; while (f < SHADOW_FRINGE && y - f >= 0 && solid(x, y - f) && shade(x, y - f) >= limit) f++;
+    const yy = y - f;
+    let n = 0; while (yy - n >= 0 && solid(x, yy - n) && shade(x, yy - n) < limit) n++;
+    if (n === 0 || n > most) return null;
+    // Isolated: above it comes nothing - not a pixel of a leg, a boot or a skirt for a few rows (the line's soft
+    // edge is pale on top as well, so a few pale rows above it do not count).
+    let g = 0; while (g < SHADOW_FRINGE && solid(x, yy - n - g) && shade(x, yy - n - g) >= limit) g++;
+    for (let k = 0; k < 3; k++) if (solid(x, yy - n - g - k)) return null;
+    return { x, y, n: n + f + g };   // the pale rows above the line go with it, as those under it do
+  };
+  // Only what is on the ground: a fingertip or a lock of hair is a sliver too, high up. The shadow is in pieces (the feet
+  // are joined to what is above and are not slivers), so what counts is how many columns there are in all.
+  const onGround = r => r && r.y > low - 2 * most;
+  const runs = [];
+  for (let x = 0; x < w; x++) { const r = sliver(x, SHADOW_DARK); if (onGround(r)) runs.push(r); }
+  if (runs.length < tall * SHADOW_SPAN) return canvas;
+  // It is a shadow: where its line thins to a grey 1-2 rows, between the dark stretches, those columns go too.
+  const got = new Set(runs.map(r => r.x));
+  for (let x = 0; x < w; x++) if (!got.has(x)) { const r = sliver(x, SHADOW_GREY); if (onGround(r)) runs.push(r); }
+  for (const r of runs) for (let k = 0; k < r.n; k++) d[((r.y - k) * w + r.x) * 4 + 3] = 0;
   const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
   out.getContext('2d').putImageData(img, 0, 0);
   return out;
@@ -467,22 +541,40 @@ function assetDefringe(canvas, passes = 8) {
 
    assetAlign takes the cut-out canvases (each trimmed to its figure), scales every one to the
    median height - the middle one, so a single odd picture does not drag the others - and sets
-   them in canvases of one size, feet on the bottom line, the figure's box centred. Returns
-   { canvases, width, height }, or null if there is nothing to align. The box centre is not the
-   body's centre for a figure with a bow held out to one side: the known limit. */
+   them in canvases of one size, feet on the bottom line, the body on the middle line. Returns
+   { canvases, width, height }, or null if there is nothing to align.
+
+   The middle line is the body's, not the figure box's: a bow held out to one side widens the box
+   on that side only, and centring the box would slide the body the other way. assetBodyCentre
+   finds the body; the frame is as wide as the widest left side plus the widest right side. */
+const BODY_BAND = [0.15, 0.85];   // the rows (as a share of the height) the body's centre is read from: head to hip, not the feet
+function assetBodyCentre(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const mids = [];
+  for (let y = Math.floor(h * BODY_BAND[0]); y < Math.ceil(h * BODY_BAND[1]); y++) {
+    let l = -1, r = -1;
+    for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > ASSET_ALPHA) { if (l < 0) l = x; r = x; }
+    if (l >= 0) mids.push((l + r + 1) / 2);
+  }
+  if (!mids.length) return w / 2;
+  mids.sort((a, b) => a - b);
+  // The median: the few rows a bow or a sword reaches into do not move it, as they would an average.
+  return mids.length % 2 ? mids[mids.length >> 1] : (mids[(mids.length >> 1) - 1] + mids[mids.length >> 1]) / 2;
+}
 function assetAlign(canvases, pad = CUT_PAD) {
   const list = canvases.filter(Boolean);
   if (!list.length) return null;
   const heights = list.map(c => c.height).sort((a, b) => a - b);
   const mid = heights.length >> 1, target = heights.length % 2 ? heights[mid] : (heights[mid - 1] + heights[mid]) / 2;
-  const scaled = list.map(c => ({ c, k: target / c.height }));
-  const inner = Math.max(...scaled.map(({ c, k }) => Math.round(c.width * k)));
-  const width = inner + 2 * pad, height = Math.round(target) + 2 * pad;
-  const out = scaled.map(({ c, k }) => {
+  const scaled = list.map(c => { const k = target / c.height, cx = assetBodyCentre(c) * k; return { c, k, cx, rest: c.width * k - cx }; });
+  const left = Math.round(Math.max(...scaled.map(s => s.cx))), right = Math.round(Math.max(...scaled.map(s => s.rest)));
+  const width = left + right + 2 * pad, height = Math.round(target) + 2 * pad;
+  const out = scaled.map(({ c, k, cx }) => {
     const o = Object.assign(document.createElement('canvas'), { width, height }), g = o.getContext('2d');
     const w = Math.max(1, Math.round(c.width * k)), h = Math.max(1, Math.round(c.height * k));
     g.imageSmoothingQuality = 'high';
-    g.drawImage(c, Math.round((width - w) / 2), height - pad - h, w, h);
+    g.drawImage(c, pad + left - Math.round(cx), height - pad - h, w, h);
     return o;
   });
   return { canvases: out, width, height };
@@ -520,6 +612,32 @@ function tileCross(w, h, band) {
   return out;
 }
 
+/* The mended cross, in the tone of the rest. The model draws it again from the words and comes back a
+   shade off (a real run: a lighter green band through a grass tile, a darker one through dirt - a grid
+   of lines at 3 x 3). Each channel under the mask is moved by the difference between the mean outside
+   it and the mean inside, so the band is no lighter or darker than what it joins; the texture in it is
+   left as drawn. Returns a new canvas. */
+function tileMatch(canvas, mask) {
+  const w = canvas.width, h = canvas.height;
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = out.getContext('2d', { willReadFrequently: true });
+  g.drawImage(canvas, 0, 0);
+  const img = g.getImageData(0, 0, w, h), d = img.data;
+  const m = mask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const inside = [0, 0, 0], outside = [0, 0, 0];
+  let ni = 0, no = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const into = m[i] > 127 ? inside : outside;
+    for (let c = 0; c < 3; c++) into[c] += d[i + c];
+    if (m[i] > 127) ni++; else no++;
+  }
+  if (!ni || !no) return out;
+  const shift = [0, 1, 2].map(c => outside[c] / no - inside[c] / ni);
+  for (let i = 0; i < d.length; i += 4) if (m[i] > 127)
+    for (let c = 0; c < 3; c++) d[i + c] = Math.max(0, Math.min(255, Math.round(d[i + c] + shift[c])));
+  g.putImageData(img, 0, 0);
+  return out;
+}
+
 /* How much the wrap-around edge differs from the picture's own inside: the mean difference of
    the last column from the first, over the mean difference of the two pairs of columns on each
    side of it (and the same for rows); the worse of the two. 1 is a seamless tile - the step
@@ -541,6 +659,20 @@ function tileSeam(canvas) {
   return Math.max(cols, rows);
 }
 
+/* How much a tile varies: the standard deviation of its lightness (0 - 255), from every 4th pixel
+   each way. The model draws grass or snow nearly flat on some seeds (one colour, and at 32 px
+   one pixel colour); a real texture is 8 or more, a flat fill 1 - 4. */
+function tileFlatness(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  let n = 0, sum = 0, sq = 0;
+  for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) {
+    const i = (y * w + x) * 4, l = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+    n++; sum += l; sq += l * l;
+  }
+  return n ? Math.sqrt(Math.max(0, sq / n - (sum / n) ** 2)) : 0;
+}
+
 /* The tile laid n x n, to look at. */
 function tileGrid(canvas, n = 3) {
   const out = Object.assign(document.createElement('canvas'), { width: canvas.width * n, height: canvas.height * n }), g = out.getContext('2d');
@@ -550,17 +682,97 @@ function tileGrid(canvas, n = 3) {
 
 /* The tile at size x size, halved while it is more than twice too big so that every pixel is
    the mean of the ones it covers (one jump from 1024 to 16 would keep one pixel in sixty-four). */
-function tileShrink(canvas, size) {
+function tileShrink(canvas, size) { return assetShrinkTo(canvas, size, size); }
+
+/* The same for any shape: w x h, halved while either side is more than twice too big. */
+function assetShrinkTo(canvas, w, h) {
   let c = canvas;
-  while (c.width > size * 2) {
+  while (c.width > w * 2 && c.height > h * 2) {
     const half = Object.assign(document.createElement('canvas'), { width: c.width >> 1, height: c.height >> 1 });
     const g = half.getContext('2d'); g.imageSmoothingQuality = 'high';
     g.drawImage(c, 0, 0, half.width, half.height);
     c = half;
   }
-  if (c.width === size) return c;
-  const out = Object.assign(document.createElement('canvas'), { width: size, height: size }), g = out.getContext('2d');
+  if (c.width === w && c.height === h) return c;
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = out.getContext('2d');
   g.imageSmoothingQuality = 'high';
-  g.drawImage(c, 0, 0, size, size);
+  g.drawImage(c, 0, 0, w, h);
   return out;
+}
+
+/* ---- The pixel look (ROADMAP Game assets, phase 6) ----
+   What the model drew is a painting; a pixel game wants a sprite. Three steps, none of
+   which needs the model: shrink to a grid (the mean of the pixels each cell covers, then
+   the edge made hard - alpha is on or off, never half), cut the colours to a few (median
+   cut: the widest box of colours is split at its median until there are enough), and a
+   one-pixel outline in the palette's darkest colour round the shape. A game's palette is
+   handed in and handed back, so that the sprite, the tile and the icon of one game draw
+   from the same colours: a pixel already near one of them takes it, and only the colours
+   the palette does not have yet are cut anew - at most a third of what room is left (and at least four, while there is room), or the
+   first picture would use them all and the tile of grass after it find none. */
+
+const PIX_NEAR = 3000;   // weighted RGB distance (pixDist) within which a pixel is "in" the palette already
+const PIX_ALPHA = 128;
+const PIX_SPLIT = 20;   // a box of colours narrower than this (on every channel) is one colour: it is not cut again
+const PIX_SPLIT_TILE = 6;   // a tile is its texture: fine shades of one green are kept apart
+
+// Redmean-ish: green counts most, blue least, as the eye does.
+const pixDist = (a, b) => 2 * (a[0] - b[0]) ** 2 + 4 * (a[1] - b[1]) ** 2 + 3 * (a[2] - b[2]) ** 2;
+
+/* `pixels` ([r, g, b] each) cut into at most n colours: the mean of each box. */
+function pixelMedianCut(pixels, n, split = PIX_SPLIT) {
+  if (!pixels.length || n <= 0) return [];
+  const boxes = [pixels];
+  while (boxes.length < n) {
+    let at = -1, ch = 0, widest = 0;
+    boxes.forEach((b, i) => {
+      if (b.length < 2) return;
+      for (let c = 0; c < 3; c++) {
+        let lo = 255, hi = 0;
+        for (const p of b) { if (p[c] < lo) lo = p[c]; if (p[c] > hi) hi = p[c]; }
+        if (hi - lo > widest) { widest = hi - lo; at = i; ch = c; }
+      }
+    });
+    if (at < 0 || widest < split) break;   // every box is (near enough) one colour
+    const b = boxes[at].slice().sort((p, q) => p[ch] - q[ch]), mid = b.length >> 1;
+    boxes.splice(at, 1, b.slice(0, mid), b.slice(mid));
+  }
+  return boxes.map(b => [0, 1, 2].map(c => Math.round(b.reduce((s, p) => s + p[c], 0) / b.length)));
+}
+
+/* The canvas as pixel art: longest side `grid` cells (outline included), `colours` at most,
+   a one-cell outline when `outline`. `palette` ([r, g, b] list, may be empty) is the game's:
+   it is used first and grown, up to `colours`, when `shared`; when not, it is only the
+   picture's own and starts empty. Returns { canvas, palette } - the palette afterwards. */
+function assetPixelate(canvas, { grid = 32, colours = 16, outline = true, palette = [], shared = false, split = PIX_SPLIT } = {}) {
+  const pad = outline ? 1 : 0, k = (grid - 2 * pad) / Math.max(canvas.width, canvas.height);
+  const w = Math.max(1, Math.round(canvas.width * k)), h = Math.max(1, Math.round(canvas.height * k));
+  const small = assetShrinkTo(canvas, w, h);
+  const src = small.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const W = w + 2 * pad, H = h + 2 * pad;
+  const on = new Uint8Array(W * H), rgb = new Array(W * H);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    if (src[i + 3] >= PIX_ALPHA) { on[(y + pad) * W + x + pad] = 1; rgb[(y + pad) * W + x + pad] = [src[i], src[i + 1], src[i + 2]]; }
+  }
+  const pal = palette.map(c => c.slice());
+  const nearest = c => { let best = 0, d = Infinity; for (let j = 0; j < pal.length; j++) { const e = pixDist(c, pal[j]); if (e < d) { d = e; best = j; } } return [best, d]; };
+  const room = Math.max(0, colours - pal.length);
+  const take = shared ? Math.min(room, Math.max(4, Math.ceil(room / 3))) : room;
+  const unseen = [];
+  for (let i = 0; i < W * H; i++) if (on[i] && (!pal.length || nearest(rgb[i])[1] > PIX_NEAR)) unseen.push(rgb[i]);
+  pal.push(...pixelMedianCut(unseen, take, split));
+  const out = Object.assign(document.createElement('canvas'), { width: W, height: H }), g = out.getContext('2d');
+  if (!pal.length) return { canvas: out, palette: pal };
+  const dark = pal.reduce((a, c) => (c[0] + c[1] + c[2] < a[0] + a[1] + a[2] ? c : a));
+  const img = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    let c = null;
+    if (on[i]) c = pal[nearest(rgb[i])[0]];
+    else if (outline && ((x > 0 && on[i - 1]) || (x < W - 1 && on[i + 1]) || (y > 0 && on[i - W]) || (y < H - 1 && on[i + W]))) c = dark;
+    if (c) img.data.set([c[0], c[1], c[2], 255], i * 4);
+  }
+  g.putImageData(img, 0, 0);
+  return { canvas: out, palette: pal };
 }
