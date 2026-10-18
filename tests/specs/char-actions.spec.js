@@ -265,3 +265,48 @@ test('the pixel look cuts the colours once for all the frames of a cycle, so the
   expect(r.each, 'cut frame by frame, the palettes drift apart').toBeGreaterThan(8);
   expect(r.off, 'pixel look off: the frames are as they were').toBe(true);
 });
+
+// ---- The GIF (js/gif.js). Chromium decodes a GIF itself, so the encoder is checked by what the browser sees.
+test('a GIF made of canvases is read back by the browser: same size, same colours, see-through where it was', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(async () => {
+    const mk = (fill) => { const c = Object.assign(document.createElement('canvas'), { width: 40, height: 30 }), g = c.getContext('2d'); fill(g); return c; };
+    const few = mk(g => { g.fillStyle = '#e03030'; g.fillRect(4, 4, 10, 10); g.fillStyle = '#3050e0'; g.fillRect(20, 10, 12, 12); });
+    // A noisy frame: far more than 255 colours and a long stream, so the dictionary fills and is cleared.
+    const noisy = mk(g => { for (let y = 0; y < 30; y++) for (let x = 0; x < 40; x++) { g.fillStyle = `rgb(${(x * 37 + y * 11) % 256},${(x * 5 + y * 53) % 256},${(x * y) % 256})`; g.fillRect(x, y, 1, 1); } });
+    const bytes = gifEncode([few, few], 100);
+    const bmp = await createImageBitmap(new Blob([bytes], { type: 'image/gif' }));
+    const out = mk(g => g.drawImage(bmp, 0, 0)).getContext('2d').getImageData(0, 0, 40, 30).data;
+    const at = (x, y) => [...out.slice((y * 40 + x) * 4, (y * 40 + x) * 4 + 4)];
+    const nb = await createImageBitmap(new Blob([gifEncode([noisy], 100)], { type: 'image/gif' }));
+    const want = noisy.getContext('2d').getImageData(0, 0, 40, 30).data, got = mk(g => g.drawImage(nb, 0, 0)).getContext('2d').getImageData(0, 0, 40, 30).data;
+    let far = 0;
+    for (let i = 0; i < want.length; i += 4) far = Math.max(far, Math.abs(want[i] - got[i]), Math.abs(want[i + 1] - got[i + 1]), Math.abs(want[i + 2] - got[i + 2]));
+    return { head: String.fromCharCode(...bytes.slice(0, 6)), tail: bytes.at(-1), size: [bmp.width, bmp.height], red: at(8, 8), blue: at(25, 15), clear: at(0, 0), noisy: [nb.width, nb.height], far };
+  });
+  expect(r.head).toBe('GIF89a');
+  expect(r.tail).toBe(0x3B);
+  expect(r.size).toEqual([40, 30]);
+  expect(r.red).toEqual([224, 48, 48, 255]);
+  expect(r.blue).toEqual([48, 80, 224, 255]);
+  expect(r.clear[3], 'where nothing was drawn, the GIF is see-through').toBe(0);
+  expect(r.noisy).toEqual([40, 30]);
+  expect(r.far, 'a frame of many colours is cut to 255 and still near the original').toBeLessThan(60);
+});
+
+test('Save GIF in the player downloads the frames as one file; a small pixel sprite is enlarged by whole pixels', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate**', r => r.fulfill({ json: { available: true, control: true, checkpoint: 'test.safetensors', quality: 'masterpiece' } }));
+  await openApp(page);
+  await openSection(page, 'assets');
+  await page.evaluate(() => {
+    const frames = [0, 1, 2].map(i => { const c = Object.assign(document.createElement('canvas'), { width: 16, height: 24 }), g = c.getContext('2d'); g.fillStyle = '#c33'; g.fillRect(2 + i, 2, 6, 20); return c; });
+    assetAnimShow(frames, 'walk', true);
+  });
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#assetAnimGif')]);
+  expect(dl.suggestedFilename()).toBe('walk.gif');
+  const bytes = require('fs').readFileSync(await dl.path());
+  expect(bytes.subarray(0, 6).toString()).toBe('GIF89a');
+  // 24 px tall -> x11 (256 / 24 rounded): 16 x 11 wide, 24 x 11 tall.
+  expect([bytes.readUInt16LE(6), bytes.readUInt16LE(8)]).toEqual([176, 264]);
+});

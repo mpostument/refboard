@@ -771,7 +771,7 @@ function assetAnimShow(frames, name, pixel) {
   cv.style.imageRendering = pixel ? 'pixelated' : 'auto';
   box.classList.remove('hidden');
   el('assetAnimName').textContent = name + ', ' + frames.length + ' frames';
-  assetAnim = { frames, i: 0, last: 0, raf: 0, playing: true };
+  assetAnim = { frames, name, pixel, i: 0, last: 0, raf: 0, playing: true };
   el('assetAnimPlay').textContent = 'Pause';
   const draw = () => { const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(frames[assetAnim.i], 0, 0); };
   const tick = now => {
@@ -796,6 +796,17 @@ function initAssets() {
     // One frame on: pauses, so that a single pose can be looked at.
     assetAnim.playing = false; el('assetAnimPlay').textContent = 'Play';
     assetAnim.i = (assetAnim.i + 1) % assetAnim.frames.length; assetAnim.draw();
+  });
+  el('assetAnimGif').addEventListener('click', () => {
+    if (!assetAnim) return;
+    // A 32 px sprite is a speck in a viewer: pixel frames are enlarged by a whole number of pixels (never blurred) to about 256.
+    const { frames, name, pixel } = assetAnim, k = pixel ? Math.max(1, Math.round(256 / Math.max(frames[0].width, frames[0].height))) : 1;
+    const big = k === 1 ? frames : frames.map(f => {
+      const c = Object.assign(document.createElement('canvas'), { width: f.width * k, height: f.height * k }), g = c.getContext('2d');
+      g.imageSmoothingEnabled = false; g.drawImage(f, 0, 0, c.width, c.height);
+      return c;
+    });
+    saveBlob(new Blob([gifEncode(big, 1000 / Number(el('assetAnimFps').value))], { type: 'image/gif' }), `${name}.gif`);
   });
   el('assetAnimClose').addEventListener('click', () => { assetAnimStop(); el('assetAnim').classList.add('hidden'); });
   el('assetChoices').addEventListener('click', e => {
