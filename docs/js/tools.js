@@ -693,7 +693,6 @@ const MIX_NOTES = {
   watercolour: 'Parts of paint; the wash says how much water - lighter is more water, and white is the paper.',
   opaque: 'Parts by volume, white included.',
   wcPencil: 'The pigments to look for in your set - wetted, they mix like watercolour. Layer the first one first.',
-  wcMarker: 'The pigments to look for in your markers - thinned with water, they mix like watercolour.',
 };
 function renderMixGuide(rgb) {
   const box = el('mixGuide');

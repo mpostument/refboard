@@ -26,23 +26,22 @@
 "use strict";
 
 // Lightest first. L: an estimate, on white paper.
+// Copic Sketch's three grey families, N (neutral), C (cool) and W (warm), each
+// numbered 0 to 10 by value: the same number is about the same lightness in
+// all three, so one ladder serves them - which is a guess, not a measurement
+// (the cool and warm ones are told apart by hue only, and a chip here is drawn
+// grey whichever it is).
+const COPIC_GREYS = [95, 90, 85, 79, 73, 66, 59, 51, 43, 34, 26];
+const copicSet = (letter, name) => ({
+  label: `Copic Sketch - ${name} Gray (${letter}0-${letter}10)`,
+  markers: COPIC_GREYS.map((L, i) => ({ code: `${letter}${i}`, name: `${name} Gray ${i}`, L })),
+});
 const MARKER_SETS = {
-  tombow10: { label: 'Tombow Dual Brush - grayscale set (10)', markers: [
-    { code: 'N95', name: 'Cool Gray 1', L: 90 }, { code: 'N89', name: 'Warm Gray 1', L: 85 },
-    { code: 'N79', name: 'Warm Gray 2', L: 79 }, { code: 'N75', name: 'Cool Gray 3', L: 74 },
-    { code: 'N65', name: 'Cool Gray 5', L: 65 }, { code: 'N60', name: 'Cool Gray 6', L: 59 },
-    { code: 'N55', name: 'Cool Gray 7', L: 52 }, { code: 'N45', name: 'Cool Gray 10', L: 40 },
-    { code: 'N25', name: 'Lamp Black', L: 22 }, { code: 'N15', name: 'Black', L: 12 },
-  ] },
-  tombow12: { label: 'Tombow ABT - grey colours (12)', markers: [
-    { code: 'N95', name: 'Cool Gray 1', L: 90 }, { code: 'N89', name: 'Warm Gray 1', L: 85 },
-    { code: 'N79', name: 'Warm Gray 2', L: 79 }, { code: 'N75', name: 'Cool Gray 3', L: 74 },
-    { code: 'N65', name: 'Cool Gray 5', L: 65 }, { code: 'N57', name: 'Cool Gray 5', L: 60 },
-    { code: 'N55', name: 'Cool Gray 7', L: 52 }, { code: 'N45', name: 'Cool Gray 10', L: 40 },
-    { code: 'N35', name: 'Cool Gray 12', L: 31 }, { code: 'N25', name: 'Lamp Black', L: 22 },
-    { code: 'N15', name: 'Black', L: 12 },
-  ] },
+  copicN: copicSet('N', 'Neutral'),
+  copicC: copicSet('C', 'Cool'),
+  copicW: copicSet('W', 'Warm'),
 };
+const MARKER_SET_LABELS = { copicN: 'Neutral', copicC: 'Cool', copicW: 'Warm' };
 const MARKER_KEY = 'refboard.greyMarkers.v1';
 const MARKER_COUNTS = [3, 5, 7];       // and 0: every grey in the set
 const MARKER_MIN_AREA = 0.006;          // of the picture, for an area to be labelled
@@ -52,7 +51,7 @@ function markersLoad() {
     const v = JSON.parse(localStorage.getItem(MARKER_KEY));
     if (v && MARKER_SETS[v.set] && (v.n === 0 || MARKER_COUNTS.includes(v.n))) return { set: v.set, n: v.n };
   } catch { /* fall through */ }
-  return { set: 'tombow10', n: 5 };
+  return { set: 'copicN', n: 5 };
 }
 function markersSave(c) {
   try { localStorage.setItem(MARKER_KEY, JSON.stringify(c)); } catch { /* private mode */ }
@@ -87,7 +86,7 @@ function markersPick(set, n, lo, hi) {
      share  per pick, then the paper last: percent of the picture;
      spots  where each labelled area's code goes: { i, x, y, size } - the
             pixel of the area nearest its middle, and its side (sqrt of area). */
-function markersOf(p, { set = 'tombow10', n = 5, picks: given } = {}) {
+function markersOf(p, { set = 'copicN', n = 5, picks: given } = {}) {
   const { w, h } = p, px = w * h, S = Math.max(w, h);
   const sorted = Float32Array.from(p.L).sort();
   const lo = sorted[Math.floor(px * 0.02)], hi = sorted[Math.min(px - 1, Math.floor(px * 0.98))];
@@ -185,7 +184,7 @@ function markersKey(m) {
 
 function markersNote(m, c) {
   const sets = Object.entries(MARKER_SETS).map(([k, s]) =>
-    `<button type="button" class="chip" data-mk-set="${k}" aria-pressed="${c.set === k}" title="${esc(s.label)}">${k === 'tombow10' ? 'Tombow 10' : 'ABT 12'}</button>`).join('');
+    `<button type="button" class="chip" data-mk-set="${k}" aria-pressed="${c.set === k}" title="${esc(s.label)}">${MARKER_SET_LABELS[k]}</button>`).join('');
   const counts = [...MARKER_COUNTS, 0].map(n =>
     `<button type="button" class="chip" data-mk-n="${n}" aria-pressed="${c.n === n}">${n || 'All'}</button>`).join('');
   return `<div class="tone-bar"><span>Set</span>${sets}<span>Greys</span>${counts}</div>` +

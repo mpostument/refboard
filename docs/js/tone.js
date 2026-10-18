@@ -109,7 +109,7 @@ const toneShare = v => v < 1 ? '<1%' : Math.round(v) + '%';
 // and cannot go lighter than its paper, so its white is body colour.
 function toneWhite(key = materialsProfile().main) {
   return { watercolour: 'white gouache', opaque: 'white paint', inkWash: 'white gouache or a white gel pen',
-    wcPencil: 'a white pencil', wcMarker: 'a white gel pen or gouache' }[key] || 'a white pencil or gel pen';
+    wcPencil: 'a white pencil', copic: 'a white gel pen or gouache - Copic cannot go lighter than the paper' }[key] || 'a white pencil or gel pen';
 }
 function toneDarkest(key = materialsProfile().main) {
   return { watercolour: 'a strong wash', opaque: 'dark paint', inkWash: 'ink', liner: 'hatching',

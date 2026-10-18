@@ -28,6 +28,26 @@ function stageToolHtml(b, proxy) {
     `<span><b>${esc(b.getAttribute('aria-label'))}</b>${more ? `<small>${esc(more)}</small>` : ''}</span></button>`;
 }
 
+/* One rail button for sections that belong together, the others as tabs in the view
+   (renderViewTabs): the rail had a button for each of them. The first of a group is its
+   rail button and keeps the rail's "current" mark while any of them is open; the rest
+   stay in the page, hidden from the rail by CSS (.rail-sub) and not by the class the app
+   and Sections you use read - so their dashboard cards, their entry in that list and
+   Ctrl+K are as they were. */
+const VIEW_GROUPS = [['generate', 'assets'], ['colour', 'palette'], ['perspective', 'sky'], ['all', 'museum']];
+const VIEW_TAB_LABELS = { generate: 'References', assets: 'Game assets', colour: 'Colour studio', palette: 'Palettes',
+  perspective: 'Perspective grid', sky: 'Sky and weather', all: 'Images', museum: 'Museums' };
+const viewGroupOf = kind => VIEW_GROUPS.find(g => g.includes(kind)) || [kind];
+
+// The tabs of the open view's group - those whose section is on (a ComfyUI for Gen AI, not hidden by you).
+function renderViewTabs() {
+  const host = el('viewTabs'), group = viewGroupOf(view.kind);
+  const on = group.filter(k => { const b = document.querySelector(`.nav-item[data-view="${k}"]`); return b && railShown(b); });
+  host.classList.toggle('hidden', on.length < 2 || !group.includes(view.kind));
+  host.innerHTML = on.length < 2 ? '' : on.map(k =>
+    `<button type="button" class="chip" data-view="${k}" aria-pressed="${k === view.kind}">${esc(VIEW_TAB_LABELS[k])}</button>`).join('');
+}
+
 // Hidden by the app (All images, with no library) or by you.
 const railShown = b => !b.classList.contains('hidden') && !b.classList.contains('user-hidden');
 
@@ -98,6 +118,12 @@ function initStages() {
     if (!b) return;
     const [gi, bi] = b.dataset.proxy.split(':').map(Number);
     el('rail').querySelectorAll('.rail-stage')[gi].querySelectorAll('button')[bi].click();
+  });
+  // A tab presses the rail button of its section, as a card on the dashboard does: whatever that
+  // button does on the way (a lazy load, the view's own set-up) is done once, in one place.
+  el('viewTabs').addEventListener('click', e => {
+    const t = e.target.closest('[data-view]');
+    if (t) document.querySelector(`.nav-item[data-view="${t.dataset.view}"]`).click();
   });
   el('btnPaint').addEventListener('click', paintNow);
   new MutationObserver(syncPaintNote).observe(el('start'), { attributes: true, attributeFilter: ['disabled'] });
