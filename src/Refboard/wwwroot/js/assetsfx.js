@@ -493,30 +493,41 @@ function assetDefringe(canvas, passes = 8, { light = FRINGE_LIGHT, behind = fals
    a few pixels wide: only when the slivers add up to SHADOW_SPAN of the height is it a shadow. Takes the
    slivers off (what is under a foot is joined to it and stays). Returns a new canvas, or the same one if
    there is none. */
-const SHADOW_HIGH = 0.04, SHADOW_SPAN = 0.12, SHADOW_DARK = 80;
+const SHADOW_HIGH = 0.04, SHADOW_SPAN = 0.12, SHADOW_DARK = 80, SHADOW_GREY = 170, SHADOW_FRINGE = 3;
 function assetDropShadow(canvas) {
   const w = canvas.width, h = canvas.height, img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
   const solid = (x, y) => y >= 0 && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
-  const dark = (x, y) => { const i = (y * w + x) * 4; return Math.max(d[i], d[i + 1], d[i + 2]) < SHADOW_DARK; };
+  const shade = (x, y) => { const i = (y * w + x) * 4; return Math.max(d[i], d[i + 1], d[i + 2]); };
   let low = -1, top = h;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (solid(x, y)) { low = Math.max(low, y); top = Math.min(top, y); }
   if (low < 0) return canvas;
-  const tall = low - top + 1, most = Math.max(2, Math.round(tall * SHADOW_HIGH)), runs = [];
-  for (let x = 0; x < w; x++) {
-    // The lowest solid pixel of the column, and the dark run up from it.
+  const tall = low - top + 1, most = Math.max(2, Math.round(tall * SHADOW_HIGH));
+  // The column's sliver on the ground: { x, y, n } (n rows up from y), or null. A pixel is the line when its brightest channel is under `limit`.
+  const sliver = (x, limit) => {
+    // The lowest solid pixel of the column, and the run of dark pixels up from it.
     let y = h - 1; while (y >= 0 && !solid(x, y)) y--;
-    if (y < 0) continue;
-    let n = 0; while (y - n >= 0 && solid(x, y - n) && dark(x, y - n)) n++;
-    // Isolated: it is short, and above it comes nothing - not a pixel of a leg, a boot or a skirt for a few rows.
-    let clear = n > 0 && n <= most;
-    for (let k = 1; clear && k <= 3; k++) if (solid(x, y - n - k + 1)) clear = false;
-    if (clear) runs.push({ x, y, n });
-  }
+    if (y < 0) return null;
+    // The model's soft edge leaves a row or two of pale pixels under a dark line (found on a real idle: 2 rows
+    // under a 4-row line): they are skipped, and go with it.
+    let f = 0; while (f < SHADOW_FRINGE && y - f >= 0 && solid(x, y - f) && shade(x, y - f) >= limit) f++;
+    const yy = y - f;
+    let n = 0; while (yy - n >= 0 && solid(x, yy - n) && shade(x, yy - n) < limit) n++;
+    if (n === 0 || n > most) return null;
+    // Isolated: above it comes nothing - not a pixel of a leg, a boot or a skirt for a few rows (the line's soft
+    // edge is pale on top as well, so a few pale rows above it do not count).
+    let g = 0; while (g < SHADOW_FRINGE && solid(x, yy - n - g) && shade(x, yy - n - g) >= limit) g++;
+    for (let k = 0; k < 3; k++) if (solid(x, yy - n - g - k)) return null;
+    return { x, y, n: n + f + g };   // the pale rows above the line go with it, as those under it do
+  };
   // Only what is on the ground: a fingertip or a lock of hair is a sliver too, high up. The shadow is in pieces (the feet
   // are joined to what is above and are not slivers), so what counts is how many columns there are in all.
-  const ground = runs.filter(r => r.y > low - 2 * most);
-  if (ground.length < tall * SHADOW_SPAN) return canvas;
-  runs.length = 0; runs.push(...ground);
+  const onGround = r => r && r.y > low - 2 * most;
+  const runs = [];
+  for (let x = 0; x < w; x++) { const r = sliver(x, SHADOW_DARK); if (onGround(r)) runs.push(r); }
+  if (runs.length < tall * SHADOW_SPAN) return canvas;
+  // It is a shadow: where its line thins to a grey 1-2 rows, between the dark stretches, those columns go too.
+  const got = new Set(runs.map(r => r.x));
+  for (let x = 0; x < w; x++) if (!got.has(x)) { const r = sliver(x, SHADOW_GREY); if (onGround(r)) runs.push(r); }
   for (const r of runs) for (let k = 0; k < r.n; k++) d[((r.y - k) * w + r.x) * 4 + 3] = 0;
   const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
   out.getContext('2d').putImageData(img, 0, 0);

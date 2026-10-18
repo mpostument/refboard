@@ -336,3 +336,23 @@ test('Onion skin shows the frames before and after faintly behind this one, and 
   await page.uncheck('#assetAnimOnion');
   expect(await alphas()).toEqual([0, 255, 0]);
 });
+
+// A standing figure (idle) came with a floor LINE, not an ellipse: 4 dark rows with a grey row above and two pale rows
+// under, all from the model's soft edge. Only the dark rows were taken off and the grey ones stayed (real run, 2026-10-18).
+test('a thin floor line with a soft edge goes whole, grey rows and all, and what is under the foot stays', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const c = Object.assign(document.createElement('canvas'), { width: 300, height: 420 }), g = c.getContext('2d');
+    g.fillStyle = 'rgb(40,90,200)'; g.fillRect(100, 10, 100, 396);        // the figure
+    g.fillStyle = 'rgb(140,140,150)'; g.fillRect(0, 406, 300, 1);          // grey row above the line
+    g.fillStyle = 'rgb(15,12,16)'; g.fillRect(0, 407, 300, 4);             // the line, 4 rows
+    g.fillStyle = 'rgba(160,150,160,0.5)'; g.fillRect(0, 411, 300, 2);     // pale rows under it
+    const out = assetDropShadow(c);
+    const a = (x, y) => out.getContext('2d').getImageData(x, y, 1, 1).data[3];
+    return { left: [406, 407, 410, 411, 412].map(y => a(10, y)), right: [406, 409, 412].map(y => a(290, y)), foot: [a(150, 300), a(150, 409)] };
+  });
+  expect(r.left, 'every row of the line, the grey one above and the pale ones under, is gone left of the foot').toEqual([0, 0, 0, 0, 0]);
+  expect(r.right).toEqual([0, 0, 0]);
+  expect(r.foot[0], 'the body stays').toBe(255);
+  expect(r.foot[1], 'the line under the foot is joined to it and stays').toBe(255);
+});
