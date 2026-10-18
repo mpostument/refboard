@@ -660,6 +660,24 @@ the pictures looked at - as the Generate features were):
    the view now says to name what she holds. Hurt: the first pose (spine -14, head -22) came out as a calm
    stance with a hand on the hip; thrown back as far as the joints go (spine -25, chest -18, head -25, arms
    flung out and back, knees folded) the head is back and the face reacts. **Not tried:** idle; the pixel look over frames.
+   **One sheet, not one picture a frame (2026-10-18, the user: "the character jerks in different directions").**
+   Measured on a 6-frame smooth walk drawn frame by frame: bottoms and tops of the frames within 4 px, so the
+   lining-up was fine, but six different girls (skirt, hair, armour, the sword's place all changed). SDXL does not
+   keep a person between pictures; there is no IP-Adapter or LoRA on this ComfyUI. So the frames of a cycle are
+   drawn **together**: their depth maps are laid in a grid on one 1216 x 832 control picture (4 frames 2 x 2, 6 is
+   3 x 2, 8 is 4 x 2; `charSheetLayout`, `assetSheetJob`), drawn once ("character sheet, N poses of the same
+   character, same outfit and same hair in every pose"), and cut back into cells (`charSheetCells`, 3% in from each
+   edge). Real run, 6 frames: the same girl in all six, legs read as a walk, centred to within a pixel. Cost: a
+   frame is about 330 px tall (a cell), and a sword "sheathed on the hip" is not drawn. Idle, Hurt and the directions
+   (4 / 8 turns) are still one picture each. Found on the way, all fixed: the sheet's fill was the *average* of the
+   first depth map (grey) and not its corner (black), so the model drew six panels with white gutters and the cut-out
+   kept each panel whole; the paler magenta of a cell (196 118 210, 92 between channels) fell under KEY_SATURATION 100,
+   so it was not taken for a key (now 80; a cream is 25, a grey 0); and the white-border removal took 8 px off a figure
+   a third of the old size and ate pale skin in blocks (now 1 px in 125 of the figure's height, 2 to 8). Idle on the model:
+   18 s, clean; a thin floor line with a soft edge outlived the shadow cut (`assetDropShadow` now skips the pale rows above and
+   under a dark line and takes grey slivers once a shadow is sure). Also in the player: Save GIF (own LZW encoder, `js/gif.js`),
+   onion skin, one pixel palette over all frames of a cycle (`assetPixelFrames`). **Not yet:** the sheet in the pack as an
+   animation; Run / Attack / Hurt drawn as sheets on the model (only Walk was); the user has not watched the loop play.
 5. **Backgrounds.** Biome and time of day; far / middle / near layers made
    in order, each told what is in front of it; a layer that loops sideways;
    Extend (already built) for a longer one; a room or map from above. *Done

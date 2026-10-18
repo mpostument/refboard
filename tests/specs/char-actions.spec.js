@@ -115,19 +115,19 @@ test('a bad saved action or frame count falls back to the defaults', async ({ pa
 
 // The whole run with the 3D figure stood in for: each frame is drawn with its own pose, the same seed, the
 // facing right; the frames come back lined up, with a strip, and the player shows them.
-test('Make with Walk draws one request per frame, each with its own pose and one seed, and keeps a strip', async ({ page }) => {
+test('Make with Walk draws one request, a sheet of the four poses with one seed, cuts it into frames and keeps a strip', async ({ page }) => {
   const server = await fakeServer(page);
-  const id = 'c'.repeat(64), posted = [], poses = [];
+  const id = 'c'.repeat(64), posted = [];
   let made = 0;
-  // A red figure on cream, 200 x 300, for the cut-out to find.
-  const disc = makePng(200, 300, (x, y) => Math.abs(x - 100) < 40 && y > 40 && y < 280 ? [200, 0, 0] : [255, 250, 230]);
-  await page.route(/api\/uploads\/c{64}\.png/, r => r.fulfill({ contentType: 'image/png', body: disc }));
+  // The sheet the model would send back: 1216 x 832, four cells of 608 x 416, a red figure on cream in each.
+  const sheet = makePng(1216, 832, (x, y) => { const cx = x % 608, cy = y % 416; return Math.abs(cx - 304) < 40 && cy > 50 && cy < 380 ? [200, 0, 0] : [255, 250, 230]; });
+  await page.route(/api\/uploads\/c{64}\.png/, r => r.fulfill({ contentType: 'image/png', body: sheet }));
   await page.route('**/api/generate**', async r => {
     const req = r.request(), url = new URL(req.url());
     if (req.method() === 'POST' && url.pathname.endsWith('/api/generate')) { posted.push(JSON.parse(req.postData())); return r.fulfill({ status: 202, json: { id: 'job' + ++made } }); }
     if (url.pathname.endsWith('/api/generate')) return r.fulfill({ json: { available: true, control: true, checkpoint: 'test.safetensors', quality: 'masterpiece' } });
     const doc = { file: id + '.png', name: 'girl knight, character, right', type: 'image/png', from: 'generate', bytes: 100, t: Date.now(), folder: 'assets',
-      asset: 'character', tags: posted.at(-1).tags, prompt: posted.at(-1).prompt, avoid: posted.at(-1).avoid, shape: 'portrait', seed: posted.at(-1).seed };
+      asset: 'character', tags: posted.at(-1).tags, prompt: posted.at(-1).prompt, avoid: posted.at(-1).avoid, shape: 'landscape', seed: posted.at(-1).seed };
     server.items.set('uploads/' + id, doc);
     return r.fulfill({ json: { state: 'done', upload: { doc, url: 'uploads/' + id + '.png' } } });
   });
@@ -146,24 +146,43 @@ test('Make with Walk draws one request per frame, each with its own pose and one
     window.__poses = [];
     window.formsDepthSnapshot = async sc => { window.__poses.push({ pose: sc.objects[0].pose, yaw: sc.yaw }); return new Blob(['x'], { type: 'image/png' }); };
     window.genBoxOf = async () => ({ x: 0, y: 0, w: 10, h: 20 });
-    window.genFrameImage = async () => ({ b64: 'AAAA' });
+    // A depth map as the page would frame it: a picture the sheet can draw (a real 64 px JPEG), the shape asked for noted.
+    window.__shapes = [];
+    window.genFrameImage = async (blob, mode, extra) => {
+      window.__shapes.push(extra.shape);
+      // Black with a white figure in the middle: its corner is black, its average a dark grey.
+      const c = Object.assign(document.createElement('canvas'), { width: 64, height: 64 }), g = c.getContext('2d');
+      g.fillStyle = '#000'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#fff'; g.fillRect(22, 22, 20, 20);
+      return { b64: c.toDataURL('image/jpeg').split(',')[1] };
+    };
     // Every upload gets one id from the fake server and overwrites the last: what is kept is watched here.
     window.__kept = [];
     const keep = window.assetKeep;
-    window.assetKeep = async (doc, canvas, extra, over) => { window.__kept.push({ extra, size: [canvas.width, canvas.height], over }); return keep(doc, canvas, extra, over); };
+    window.assetKeep = async (doc, canvas, extra, over) => { window.__kept.push({ extra, size: [canvas.width, canvas.height], over, prompt: doc.prompt, shape: doc.shape }); return keep(doc, canvas, extra, over); };
   });
   await page.click('#assetChoices [data-as="kind"][data-opt="character"]');
   await page.click('#assetChoices [data-as="act"][data-opt="walk"]');
   await page.locator('#assetFrames').fill('4');
   await page.click('#assetGo');
   await expect(page.locator('#assetStatus')).toHaveText('4 frames made - in Uploads, Assets.', { timeout: 40000 });
-  expect(posted).toHaveLength(4);
-  expect(new Set(posted.map(p => p.seed)).size).toBe(1);
-  for (const p of posted) {
-    expect(p).toMatchObject({ asset: 'character', control: true });
-    expect(p.prompt).toContain('walking');
-    expect(p.prompt).toContain('facing right');
-  }
+  // One request for the whole cycle: a sheet, one picture, the control drawn from the four depth maps.
+  expect(posted).toHaveLength(1);
+  expect(posted[0]).toMatchObject({ asset: 'character', control: true, shape: 'landscape' });
+  expect(posted[0].prompt).toContain('walking');
+  expect(posted[0].prompt).toContain('facing right');
+  expect(posted[0].prompt).toContain('4 poses of the same character');
+  expect(posted[0].width, 'the server refuses a free size together with a picture').toBeUndefined();
+  expect(posted[0].avoid, 'a sheet is not to be drawn as panels: the cut-out took a panel for the figure').toContain('panel');
+  // The control sheet is one flat colour between the figures - the frames' own background (their corner), not their average:
+  // a lighter band between the cells was drawn as white gutters, and every panel was cut out whole (real run, 2026-10-18).
+  const gap = await page.evaluate(async b64 => {
+    const img = await loadImg('data:image/jpeg;base64,' + b64);
+    const c = Object.assign(document.createElement('canvas'), { width: img.naturalWidth, height: img.naturalHeight }), g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    return { size: [c.width, c.height], bars: [[10, 10], [608, 410], [1200, 820]].map(([x, y]) => g.getImageData(x, y, 1, 1).data[0]) };
+  }, posted[0].image);
+  expect(gap.size).toEqual([1216, 832]);
+  expect(Math.max(...gap.bars), 'the sheet between the figures is as dark as the depth map around them').toBeLessThan(8);
   const seen = await page.evaluate(() => window.__poses);
   expect(seen).toHaveLength(4);
   // 270 degrees round is -90 once wrapped: the camera on the figure's right.
@@ -171,19 +190,58 @@ test('Make with Walk draws one request per frame, each with its own pose and one
   // Four different poses, and the figure the user set is as it was.
   expect(new Set(seen.map(s => JSON.stringify(s.pose))).size).toBe(4);
   expect(await page.evaluate(() => window.__figure.pose)).toEqual({ head: [1, 2, 3] });
-  // The player is up, with the frames; the strip is kept beside them.
+  // 2 x 2 cells of 608 x 416 are landscape: the depth maps are framed for that.
+  expect(await page.evaluate(() => window.__shapes)).toEqual(['landscape', 'landscape', 'landscape', 'landscape']);
+  // The player is up, with the four frames cut from the sheet; the strip is kept beside them.
   await expect(page.locator('#assetAnim')).toBeVisible();
   expect(await page.evaluate(() => assetAnim.frames.length)).toBe(4);
   const kept = await page.evaluate(() => window.__kept);
   const strip = kept.filter(k => k.extra.includes('animation strip'));
   expect(strip).toHaveLength(1);
   expect(strip[0].extra).toEqual(expect.arrayContaining(['walk', '4 frames']));
-  // The strip is the four lined-up frames in a row.
   const aligned = kept.filter(k => k.extra.includes('aligned') && !k.extra.includes('animation strip'));
   expect(aligned.map(k => k.extra.find(t => /^frame [0-9] of 4$/.test(t)))).toEqual(['frame 1 of 4', 'frame 2 of 4', 'frame 3 of 4', 'frame 4 of 4']);
   expect(strip[0].size).toEqual([aligned[0].size[0] * 4, aligned[0].size[1]]);
+  // A frame is kept with the words of one frame, not the sheet's, and as a portrait: redrawn later it is one girl, not a sheet.
+  expect(aligned.every(k => !k.prompt.includes('poses of the same character') && k.shape === 'portrait')).toBe(true);
   await page.click('#assetAnimClose');
   await expect(page.locator('#assetAnim')).toBeHidden();
+});
+
+test('a cycle on one sheet: 4 frames are 2 x 2, 6 are 3 x 2, 8 are 4 x 2, and the sheet is cut back into cells in reading order', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const lay = [4, 6, 8].map(n => charSheetLayout(n));
+    // A 1216 x 832 sheet whose 6 cells are each a flat colour: the cells must come back whole and in order.
+    const sheet = Object.assign(document.createElement('canvas'), { width: 1216, height: 832 }), g = sheet.getContext('2d');
+    const lay6 = charSheetLayout(6);
+    for (let i = 0; i < 6; i++) { g.fillStyle = 'rgb(' + (i * 40) + ',10,10)'; g.fillRect(Math.round((i % 3) * lay6.w), Math.round(Math.floor(i / 3) * lay6.h), Math.ceil(lay6.w), Math.ceil(lay6.h)); }
+    const cells = charSheetCells(sheet, 6);
+    return { lay, sizes: cells.map(c => [c.width, c.height]), reds: cells.map(c => c.getContext('2d').getImageData(c.width >> 1, c.height >> 1, 1, 1).data[0]),
+      widths: cells.slice(0, 3).reduce((a, c) => a + c.width, 0) };
+  });
+  expect(r.lay.map(l => [l.cols, l.rows])).toEqual([[2, 2], [3, 2], [4, 2]]);
+  expect(r.lay.map(l => [l.w, l.h])).toEqual([[608, 416], [1216 / 3, 416], [304, 416]]);
+  expect(r.reds, 'reading order: left to right, then the next row').toEqual([0, 40, 80, 120, 160, 200]);
+  expect(r.widths, 'a row of cells is the whole width of the sheet: no pixel lost or doubled').toBe(1216);
+  expect(r.sizes).toHaveLength(6);
+});
+
+test('cells are cut in from their edges when asked, so a border or gutter the model drew there is not in the frame', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    // A sheet of 4 cells (2 x 2), each with a white 6 px rim and a red middle.
+    const sheet = Object.assign(document.createElement('canvas'), { width: 1216, height: 832 }), g = sheet.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 1216, 832);
+    g.fillStyle = '#c00';
+    for (let i = 0; i < 4; i++) g.fillRect((i % 2) * 608 + 6, Math.floor(i / 2) * 416 + 6, 596, 404);
+    const plain = charSheetCells(sheet, 4)[0], cut = charSheetCells(sheet, 4, CHAR_CELL_INSET)[0];
+    const edge = c => { const d = c.getContext('2d').getImageData(0, 0, c.width, 1).data; return [d[0], d[1], d[2]]; };
+    return { plain: [plain.width, plain.height, edge(plain)], cut: [cut.width, cut.height, edge(cut)], inset: CHAR_CELL_INSET };
+  });
+  expect(r.plain).toEqual([608, 416, [255, 255, 255]]);   // as it was: the white rim is in the cell
+  // 3% of the shorter side (416) is 12 px, off every side: 584 x 392, and its edge is the red middle.
+  expect(r.cut).toEqual([584, 392, [204, 0, 0]]);
 });
 
 // ---- The border the model draws round a figure on a key colour (found by a real run, 2026-10-18: a frame of a walk
@@ -194,14 +252,15 @@ test('on a key colour, the pink-white border over her outline goes, and a white 
     const make = (w, h, draw) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); draw(g); return c; };
     const px = (c, x, y) => Array.from(c.getContext('2d').getImageData(x, y, 1, 1).data);
     // From the left: 4 px of a pink white (230 204 226 - blended with a magenta key), 2 px of dark outline, then blue.
-    const bordered = make(60, 40, g => {
-      g.fillStyle = 'rgb(236,210,230)'; g.fillRect(10, 5, 40, 30);
-      g.fillStyle = 'rgb(10,10,16)'; g.fillRect(14, 9, 32, 22);
-      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(16, 11, 28, 18);
+    // A figure 520 px tall: the border is about 1 px in 125 of that (assetFringePasses), so 4 px of it come off.
+    const bordered = make(400, 560, g => {
+      g.fillStyle = 'rgb(236,210,230)'; g.fillRect(20, 20, 360, 520);
+      g.fillStyle = 'rgb(10,10,16)'; g.fillRect(24, 24, 352, 512);
+      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(26, 26, 348, 508);
     });
     const a = assetFigureCanvas({ keyed: true, canvas: bordered });
     // A white cloak, nothing dark anywhere near: all of it is hers.
-    const cloak = make(60, 40, g => { g.fillStyle = 'rgb(245,245,245)'; g.fillRect(10, 5, 40, 30); });
+    const cloak = make(400, 560, g => { g.fillStyle = 'rgb(245,245,245)'; g.fillRect(20, 20, 360, 520); });
     const b = assetFigureCanvas({ keyed: true, canvas: cloak });
     // Trimmed: the first column that is on is the edge of what is left.
     const edge = c => { const d = c.getContext('2d').getImageData(0, c.height >> 1, c.width, 1).data; for (let x = 0; x < c.width; x++) if (d[x * 4 + 3] > 8) return [x, Array.from(d.slice(x * 4, x * 4 + 3))]; return null; };
@@ -355,4 +414,26 @@ test('a thin floor line with a soft edge goes whole, grey rows and all, and what
   expect(r.right).toEqual([0, 0, 0]);
   expect(r.foot[0], 'the body stays').toBe(255);
   expect(r.foot[1], 'the line under the foot is joined to it and stays').toBe(255);
+});
+
+// A sheet's cells came back with a paler magenta (196 118 210: 92 between its channels) than a lone picture's (232 72 181: 160): under the
+// old limit of 100 it was not taken for a key, so the gaps between the legs stayed and skin was cut away (real run, 2026-10-18).
+test('a paler key colour is still a key; a cream or a grey is not; and the white border comes off less on a smaller figure', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const on = (rgb, w = 200, h = 300) => {
+      const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d');
+      g.fillStyle = `rgb(${rgb})`; g.fillRect(0, 0, w, h);
+      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(70, 40, 60, 220);
+      return assetCutFigure(c);
+    };
+    const tall = h => Object.assign(document.createElement('canvas'), { width: 10, height: h });
+    return { lavender: on('196,118,210').keyed, pink: on('232,72,181').keyed, cream: on('255,250,230').keyed, grey: on('200,200,200').keyed,
+      passes: [1000, 330, 100, 2000].map(h => assetFringePasses(tall(h))) };
+  });
+  expect(r.lavender, 'the paler magenta of a sheet\'s cell').toBe(true);
+  expect(r.pink).toBe(true);
+  expect(r.cream, 'a cream is a plain background, not a key').toBe(false);
+  expect(r.grey).toBe(false);
+  expect(r.passes, '8 px on a figure of 1000, 3 on 330, never fewer than 2 or more than 8').toEqual([8, 3, 2, 8]);
 });

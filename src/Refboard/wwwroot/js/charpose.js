@@ -111,3 +111,36 @@ function charStrip(canvases) {
   list.forEach((c, i) => g.drawImage(c, i * w + Math.round((w - c.width) / 2), h - c.height));
   return out;
 }
+
+/* ---- A cycle drawn on one sheet ----
+   SDXL does not keep a person from one picture to the next: six frames drawn one by one were six
+   different girls (real run, 2026-10-18: skirt, hair, armour and sword all changed). Drawn together,
+   in one picture, as the cells of a sheet, it is the same girl. So the frames' depth maps are laid
+   in a grid on one control picture, drawn once, and the picture is cut back into cells. The server
+   takes a free size only without a picture, so the sheet is the landscape shape (1216 x 832). */
+const CHAR_SHEET = [1216, 832];
+
+/* The grid of `n` frames on the sheet: columns and rows, and the cell's size. 4 frames are 2 x 2,
+   5 or 6 are 3 x 2, 7 or 8 are 4 x 2: the cells stay near the figure's own proportions, so that she
+   is drawn as large as the sheet allows. */
+function charSheetLayout(n) {
+  const cols = n <= 4 ? 2 : n <= 6 ? 3 : 4, rows = Math.ceil(n / cols);
+  return { cols, rows, w: CHAR_SHEET[0] / cols, h: CHAR_SHEET[1] / rows };
+}
+
+const CHAR_CELL_INSET = 0.03;   // a cell is cut this much (of its shorter side) in from each edge: where a panel border or a gutter would be
+
+/* The sheet picture cut into its `n` cells, in reading order (left to right, top to bottom), as
+   canvases. The edges are rounded to whole pixels, so neighbours neither overlap nor leave a gap;
+   `inset` (a share of the cell's shorter side) is then taken off every side, so what the model drew
+   at the cells' edges - a border, a white gutter - is not in the cell. */
+function charSheetCells(sheet, n, inset = 0) {
+  const { cols, rows } = charSheetLayout(n), cw = sheet.width / cols, ch = sheet.height / rows, ins = Math.round(inset * Math.min(cw, ch));
+  return Array.from({ length: n }, (_, i) => {
+    const x0 = Math.round((i % cols) * cw) + ins, x1 = Math.round((i % cols + 1) * cw) - ins;
+    const y0 = Math.round(Math.floor(i / cols) * ch) + ins, y1 = Math.round((Math.floor(i / cols) + 1) * ch) - ins;
+    const c = Object.assign(document.createElement('canvas'), { width: x1 - x0, height: y1 - y0 });
+    c.getContext('2d').drawImage(sheet, x0, y0, x1 - x0, y1 - y0, 0, 0, x1 - x0, y1 - y0);
+    return c;
+  });
+}

@@ -118,7 +118,10 @@ function charLook(look) {
 // every near-white edge pixel goes; on a key colour only the ones with her own dark outline behind them (a white cloak with none stays),
 // and at a lower light, since the border there is blended with the key (a pink white on magenta, 230 204 226). Then the shadow
 // the model draws on the floor is taken off (assetDropShadow).
-const assetFigureCanvas = cut => assetTrim(assetDropShadow(cut.keyed ? assetDefringe(cut.canvas, 8, { light: FRINGE_KEYED_LIGHT, behind: true }) : assetDefringe(cut.canvas))) || cut.canvas;
+// The border is a band about 1 px in 125 of the figure's height (8 px on a figure of 1000): a figure of a sheet's cell is a third of that
+// size, and 8 px off it took the pale skin of a thigh in blocks (real run, 2026-10-18).
+const assetFringePasses = canvas => Math.max(2, Math.min(8, Math.round(canvas.height / 125)));
+const assetFigureCanvas = cut => assetTrim(assetDropShadow(cut.keyed ? assetDefringe(cut.canvas, assetFringePasses(cut.canvas), { light: FRINGE_KEYED_LIGHT, behind: true }) : assetDefringe(cut.canvas, assetFringePasses(cut.canvas)))) || cut.canvas;
 
 const ASSET_THEMES = [
   { id: 'any', label: 'Any', tags: '' },
@@ -404,8 +407,8 @@ function assetActionHtml(s) {
     ? `<div class="gen-row"><label class="gen-extra" for="assetFrames">Frames <input type="range" id="assetFrames" min="4" max="8" step="2" value="${esc(s.frames)}">` +
       `<output id="assetFramesOut" for="assetFrames">${esc(s.frames)} frames</output></label></div>`
     : '') +
-    `<p class="gen-note">${a.frames ? 'Each frame is the 3D figure from Forms set to one step of the ' + esc(a.label.toLowerCase()) + ', facing right, drawn with the same words and seed' +
-      (s.act === 'attack' ? '.' : ' - the last frame leads back to the first.') : 'The 3D figure from Forms set to a ' + esc(a.label.toLowerCase()) + ', facing right.'} ` +
+    `<p class="gen-note">${a.frames ? 'The frames are drawn together, as the cells of one sheet, so that it is one girl in all of them (drawn one by one they were different girls). Each cell is the 3D figure from Forms set to one step of the ' + esc(a.label.toLowerCase()) + ', facing right' +
+      (s.act === 'attack' ? '.' : ' - the last frame leads back to the first.') + ' The sheet is cut back into frames of about 400 px: more frames, narrower ones.' : 'The 3D figure from Forms set to a ' + esc(a.label.toLowerCase()) + ', facing right.'} ` +
     'Its build and clothes come from the figure and the look you describe - the pose you set in Forms is replaced. Name every garment and its colour' +
     (s.act === 'attack' ? ', and what she holds ("holding a longsword"): a weapon the look does not name is drawn in some frames and not in others' : '') +
     '. Whether the faces match is for you to judge.</p>';
@@ -636,15 +639,37 @@ async function assetsCharacterGo(s) {
   const x0 = Math.min(...boxes.map(b => b.x)), y0 = Math.min(...boxes.map(b => b.y));
   const union = { x: x0, y: y0, w: Math.max(...boxes.map(b => b.x + b.w)) - x0, h: Math.max(...boxes.map(b => b.y + b.h)) - y0 };
   const draft = s.draft === 'draft';
+  // The frames of a cycle are drawn together on one sheet, so that it is one girl in all of them (charSheetLayout);
+  // directions, and an idle or a hurt (one picture), are drawn one by one.
+  const sheeted = !!acts && turns.length > 1;
   const jobs = [];
-  for (let i = 0; i < turns.length; i++) {
+  let plain = '';   // the words of one frame: what a frame is kept with, and redrawn from later
+  if (sheeted) {
+    const made = await assetSheetJob(s, blobs, union, seed, draft);
+    jobs.push(made.job); plain = made.plain;
+  } else for (let i = 0; i < turns.length; i++) {
     const frame = await genFrameImage(blobs[i], 'pose', { shape: 'portrait' }, union);
     const { dir, ...r } = assetRequest({ ...s, dir: turns[i].dir });
     jobs.push({ ...r, image: frame.b64, control: true, strength: CHAR_STRENGTH, seed, tags: [...r.tags, 'pose'].slice(0, 24), ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) });
   }
   const cuts = [];
+  let sheetDoc = null;
   let at = 0;   // the job the callback is for: they come back in order, one by one
-  await runGenerate(jobs, (i, total) => `Drawing ${turns[i - 1].label} (${i} of ${total})...`, acts ? `${turns.length} frame${turns.length === 1 ? '' : 's'} made - in Uploads, Assets.` : `${turns.length} directions made - in Uploads, Assets.`, async made => {
+  await runGenerate(jobs, (i, total) => sheeted ? `Drawing the ${turns.length} frames together...` : `Drawing ${turns[i - 1].label} (${i} of ${total})...`, acts ? `${turns.length} frame${turns.length === 1 ? '' : 's'} made - in Uploads, Assets.` : `${turns.length} directions made - in Uploads, Assets.`, async made => {
+    if (sheeted) {
+      // Cut back into its cells, each cut out on its own. The sheet itself is forgotten once the frames are kept.
+      let pic;
+      try { pic = await genLoadPicture(made.doc); } catch { return; }
+      sheetDoc = { ...made.doc, prompt: plain, shape: 'portrait' };
+      const cells = charSheetCells(pic, turns.length, CHAR_CELL_INSET);
+      cells.forEach((cell, frame) => {
+        const cut = assetCutFigure(cell);
+        if (cut.found) cuts.push({ doc: sheetDoc, canvas: assetFigureCanvas(cut), frame });
+      });
+      if (!cuts.length) await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) });
+      else await forgetUpload(made.doc);
+      return;
+    }
     const frame = at++;
     let pic;
     try { pic = await genLoadPicture(made.doc); } catch { return; }
@@ -666,7 +691,7 @@ async function assetsCharacterGo(s) {
     const sprite = sprites[i];
     await assetKeep(cuts[i].doc, sprite, ['cut out', 'aligned', `${sprite.width}x${sprite.height}`, ...(s.pix === 'off' ? [] : ['pixel']),
       ...(acts && turns.length > 1 ? [s.act, `frame ${cuts[i].frame + 1} of ${turns.length}`] : acts ? [s.act] : [])]);
-    await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
+    if (cuts[i].file) await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
   }
   // The frames of a cycle or a swing are also one strip, in the order they play - what a game cuts back by cell size.
   if (acts && sprites.length > 1) {
@@ -677,6 +702,34 @@ async function assetsCharacterGo(s) {
   }
   storeChanged();
   await ASSET_UI.refresh();
+}
+
+/* The one request that draws a whole cycle: the frames' depth maps laid out as the cells of a sheet (charSheetLayout),
+   each fitted whole into its cell, framed alike (`union`), on the colour of its own background. Returns the request and
+   the words of a single frame (the sheet's words say "poses of the same character" and are no use to one frame). */
+async function assetSheetJob(s, blobs, union, seed, draft) {
+  const n = blobs.length, lay = charSheetLayout(n), [W, H] = CHAR_SHEET;
+  const sheet = Object.assign(document.createElement('canvas'), { width: W, height: H }), g = sheet.getContext('2d');
+  const shape = lay.w / lay.h > 1.15 ? 'landscape' : lay.w / lay.h < 0.87 ? 'portrait' : 'square';
+  for (let i = 0; i < n; i++) {
+    const frame = await genFrameImage(blobs[i], 'pose', { shape }, union);
+    const img = await loadImg('data:image/jpeg;base64,' + frame.b64);
+    if (i === 0) {
+      // The sheet's own colour is the frames': the depth map's background - the corner pixel, not the picture's average, which
+      // is lighter by the figure and drew visible bars between the cells (the model made them panels with white gutters).
+      const px = Object.assign(document.createElement('canvas'), { width: 1, height: 1 }).getContext('2d', { willReadFrequently: true });
+      px.drawImage(img, 0, 0, 1, 1, 0, 0, 1, 1);
+      const [r, gg, b] = px.getImageData(0, 0, 1, 1).data;
+      g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(0, 0, W, H);
+    }
+    const k = Math.min(lay.w / img.naturalWidth, lay.h / img.naturalHeight), w = img.naturalWidth * k, h = img.naturalHeight * k;
+    g.drawImage(img, (i % lay.cols) * lay.w + (lay.w - w) / 2, Math.floor(i / lay.cols) * lay.h + (lay.h - h) / 2, w, h);
+  }
+  const { dir, ...r } = assetRequest({ ...s, dir: 'right' });
+  const words = `(character sheet:1.3), (${n} poses of the same character:1.3), same outfit and same hair in every pose, animation frames, `;
+  // One sheet must not be drawn as panels (borders, white gutters between the cells): the cut-out would take a panel for the figure.
+  return { plain: r.prompt, job: { ...r, prompt: words + r.prompt, avoid: `${r.avoid}, panel, panels, border, frame, grid, split screen, gutter`, shape: 'landscape', image: genEncode(sheet), control: true, strength: CHAR_STRENGTH, seed,
+    tags: [...r.tags, 'pose'].slice(0, 24), ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) } };
 }
 
 /* One side view needs no turning, so it needs no figure: the depth map made every hero the mannequin's

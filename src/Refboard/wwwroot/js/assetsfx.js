@@ -418,7 +418,7 @@ function assetPeel(canvas, rounds = 3) {
    edge is that kind of colour (a saturated one) the figure cannot own it, so: the gaps inside the figure
    (between the legs, under an arm) are cleared too, and the two steps that exist only for a pale background
    are left out - they would take the pale parts of the figure. Returns { found, canvas (trimmed), tolerance, keyed }. */
-const KEY_SATURATION = 100;   // the edge colour's strongest channel less its weakest: a flat key, not a cream or grey
+const KEY_SATURATION = 80;   // the edge colour's strongest channel less its weakest: a flat key, not a cream or grey (100 until the cells of a sheet, whose magenta is drawn paler: 196 118 210 is 92)
 const KEY_HOLES_UP_TO = 160;  // the widest tolerance gaps are cleared at - a wider one is a gradient, and would eat the figure
 function assetCutFigure(pic) {
   const w = pic.width, h = pic.height;
