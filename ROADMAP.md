@@ -419,8 +419,15 @@ lying on the skull and hanging from the widest point it passed; the ring worked
 out as hair shines (Kajiya-Kay), broken into a sawtooth at each lock, cel shaded
 on an Anime head with the fringe's hard shadow on the forehead. Colours named
 as Generate names them, or a character sheet's; Draw it at this angle sends the
-style and colour. Still to come on it: ponytail and twin tails, a parting to
-choose, and locks you can move.
+style and colour.
+In place too: Ponytail and Twin tails (`HAIR_STYLES.ponytail`, `.twintails`; ids as Generate's Hair row
+has them) - each tail is nine locks run down a shared axis (a ring of eight about one down the middle,
+`tails` in `hairLocks()`): out from a tie behind the head or behind each ear, swelling, then hanging 2.9
+head-units, so it has a body seen from any side (a first pass with the locks side by side was a ribbon
+seen edge-on). And a Parting row (`HAIR_PARTS`, `hairPart` on the object: Free, Centre, Side): the
+fringe's locks swing apart where it parts. Looked at in 3D from the front, side, back and three-quarters;
+not drawn on a model. Still to come on it: a hair tie, a side parting that shows more gap, Generate's
+words for a parting, and locks you can move.
 
 Line and background:
 

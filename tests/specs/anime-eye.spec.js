@@ -110,7 +110,7 @@ test('the Face tab: eye styles and colours, and a character gives both', async (
   await page.click('[data-ftab="face"]');
   const group = page.locator('.fgroup:has([data-group="Face"])');
   await expect(group).toBeVisible();
-  await expect(group.locator('h4')).toHaveText(['Hair', 'Eyes', 'Expression']);
+  await expect(group.locator('h4')).toHaveText(['Hair', 'Parting', 'Eyes', 'Expression']);
   await expect(group.locator('[data-eyes="tv"]')).toHaveAttribute('aria-pressed', 'true');
   await group.locator('[data-eyes="sharp"]').click();
   await expect(group.locator('[data-eyes="sharp"]')).toHaveAttribute('aria-pressed', 'true');

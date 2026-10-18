@@ -126,6 +126,58 @@ test('hair in locks: on the anime head only, in styles, round the head and down 
   expect(r.sphere).toBeNull();
 });
 
+test('hair tied in tails: a ponytail behind, two at the sides - hanging well past the chin, named as Generate names them', async ({ page }) => {
+  await openForms(page);
+  const r = await page.evaluate(() => {
+    const T = forms.T, look = hair => {
+      formScene.objects = [{ ...FORM_OBJECT_DEFAULTS, shape: 'anime', hair }];
+      formScene.active = 0;
+      formsRender(formScene, 320, 240);
+      const box = new T.Box3().setFromBufferAttribute(forms.meshes[0].userData.hair.geometry.attributes.position);
+      return { min: box.min.toArray(), max: box.max.toArray() };
+    };
+    const genIds = GEN_CHOICES.find(c => c.id === 'hair').options.map(o => o.id).filter(id => HAIR_STYLES[id] && /tail/.test(id));
+    return { pony: look('ponytail'), twin: look('twintails'), short: look('short'), genIds,
+      chin: new T.Box3().setFromBufferAttribute(formGeometry('anime').attributes.position).min.y };
+  });
+  expect(r.genIds).toEqual(['ponytail', 'twintails']);
+  for (const s of ['pony', 'twin']) expect(r[s].min[1], s).toBeLessThan(r.chin - 0.4);
+  // A ponytail hangs behind the head (the face is +z) and is centred; twin tails reach out to both sides.
+  expect(r.pony.min[2]).toBeLessThan(r.short.min[2] - 0.2);
+  expect(Math.abs(r.pony.min[0] + r.pony.max[0])).toBeLessThan(0.15);
+  expect(r.twin.min[0]).toBeLessThan(r.short.min[0] - 0.2);
+  expect(r.twin.max[0]).toBeGreaterThan(r.short.max[0] + 0.2);
+});
+
+test('the parting: the fringe opens in the middle or to one side, a choice kept with the head and shown only while there is hair', async ({ page }) => {
+  await openForms(page);
+  await page.click('#formShapes [data-shape="anime"]');
+  await page.locator('[data-ftab="face"]').click();
+  const parts = page.locator('#formHairParts');
+  await expect(parts.locator('[data-hair-part="natural"]')).toHaveAttribute('aria-pressed', 'true');
+  // The fringe's two middle locks lie either side of the centre only when parted there.
+  const gap = () => page.evaluate(() => {
+    formsRender(formScene, 64, 64);
+    const g = forms.meshes[formScene.active].userData.hair.geometry, pos = g.attributes.position;
+    // Fringe tips: the fringe is the first ten locks, 9 x 30 vertices each; the last ring of each is its tip.
+    const tips = []; for (let l = 0; l < 10; l++) tips.push(pos.getX((l * 30 + 29) * 9));
+    tips.sort((a, b) => a - b);
+    return Math.max(...tips.slice(1).map((x, i) => x - tips[i]));
+  });
+  const natural = await gap();
+  await parts.locator('[data-hair-part="centre"]').click();
+  await expect(parts.locator('[data-hair-part="centre"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => [activeFormObject().hairPart, forms.meshes[formScene.active].userData.hair.userData.part])).toEqual(['centre', 'centre']);
+  expect(await gap()).toBeGreaterThan(natural + 0.05);
+  // Kept through a save and load; a hand-edited value falls back to Free.
+  expect(await page.evaluate(() => [
+    normalizeFormScene(JSON.parse(JSON.stringify(formScene))).objects[0].hairPart,
+    normalizeFormScene({ objects: [{ shape: 'anime', hairPart: 'zigzag' }] }).objects[0].hairPart,
+  ])).toEqual(['centre', 'natural']);
+  await page.locator('[data-hair="none"]').click();
+  await expect(parts).toBeHidden();
+});
+
 test('the hair panel: styles, named colours, a character sheet\'s colour, and Skin', async ({ page }) => {
   await openApp(page);
   await page.evaluate(() => storePutItem('characters', 'c1', { name: 'Mika', t: 1, parts: { hair: { base: [96, 150, 200] } } }));

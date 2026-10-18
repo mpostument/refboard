@@ -35,6 +35,7 @@ function normalizeFormScene(raw) {
     if (!isFormShape(n.shape)) n.shape = 'cube';
     if (!FORM_FINISHES[n.finish]) n.finish = 'matte';
     if (!HAIR_STYLES[n.hair]) n.hair = FORM_OBJECT_DEFAULTS.hair;
+    if (!HAIR_PARTS[n.hairPart]) n.hairPart = FORM_OBJECT_DEFAULTS.hairPart;
     if (!/^#[0-9a-f]{6}$/i.test(n.hairColor)) n.hairColor = FORM_OBJECT_DEFAULTS.hairColor;
     if (!ANIME_EYES[n.eyes]) n.eyes = FORM_OBJECT_DEFAULTS.eyes;
     if (!/^#[0-9a-f]{6}$/i.test(n.eyeColor)) n.eyeColor = FORM_OBJECT_DEFAULTS.eyeColor;
@@ -924,15 +925,16 @@ function injectHairRing(sh) {
 }
 
 function syncFormHair(m, def, o) {
-  const has = m.userData.hair, want = def.face && o.hair !== 'none' ? o.hair : null;
-  if (has && has.userData.style === want) return;
+  const has = m.userData.hair, want = def.face && o.hair !== 'none' ? o.hair : null, part = o.hairPart;
+  if (has && has.userData.style === want && has.userData.part === part) return;
   if (has) { m.remove(has); m.userData.hair = null; }
   if (!want) return;
-  const F = forms, key = 'hair:' + want;
-  const geo = F.geometries[key] || (F.geometries[key] = formAnimeHairGeometry(F.T, want));
+  const F = forms, key = `hair:${want}:${part}`;
+  const geo = F.geometries[key] || (F.geometries[key] = formAnimeHairGeometry(F.T, want, part));
   const hair = new F.T.Mesh(geo, m.userData.hairMat || (m.userData.hairMat = formHairMaterial()));
   hair.castShadow = hair.receiveShadow = true;
   hair.userData.style = want;
+  hair.userData.part = part;
   m.add(hair);
   m.userData.hair = hair;
 }
@@ -3266,6 +3268,7 @@ function formsPanelHtml() {
       return `<div class="chips" id="formHairChars"></div>
       <h4 title="Its light is a ring round the head, broken at each lock - turn the head or move the light to see it slide">Hair</h4>` +
         chips('formHair', Object.entries(HAIR_STYLES), 'hair') +
+        '<h4 id="formPartHead">Parting</h4>' + chips('formHairParts', Object.entries(HAIR_PARTS), 'hair-part', p => p.hint) +
         swatches('formHairColours', HAIR_COLOURS, 'hair-colour', 'hairColor', 'hair') +
         '<h4>Eyes</h4>' + chips('formEyes', Object.entries(ANIME_EYES), 'eyes', e => e.hint) +
         swatches('formEyeColours', EYE_COLOURS, 'eye-colour', 'eyeColor', 'eyes') +
@@ -3438,7 +3441,9 @@ function syncFormsPanel() {
   if (face) {
     for (const b of panel.querySelectorAll('[data-hair]')) b.setAttribute('aria-pressed', String(b.dataset.hair === o.hair));
     for (const b of panel.querySelectorAll('[data-hair-colour]')) b.setAttribute('aria-pressed', String(b.dataset.hairColour === o.hairColor));
-    el('formHairColours').classList.toggle('hidden', o.hair === 'none');
+    for (const b of panel.querySelectorAll('[data-hair-part]')) b.setAttribute('aria-pressed', String(b.dataset.hairPart === o.hairPart));
+    // No hair: nothing to part or colour.
+    for (const id of ['formHairColours', 'formHairParts', 'formPartHead']) el(id).classList.toggle('hidden', o.hair === 'none');
     for (const b of panel.querySelectorAll('[data-eyes]')) b.setAttribute('aria-pressed', String(b.dataset.eyes === o.eyes));
     for (const b of panel.querySelectorAll('[data-eye-colour]')) b.setAttribute('aria-pressed', String(b.dataset.eyeColour === o.eyeColor));
     for (const b of panel.querySelectorAll('[data-expression]')) b.setAttribute('aria-pressed', String(b.dataset.expression === o.expression));
@@ -3588,6 +3593,7 @@ function bindFormsPanel() {
       return;
     }
     if ((b = hit('[data-hair]'))) { activeFormObject().hair = b.dataset.hair; formsChanged(); return; }
+    if ((b = hit('[data-hair-part]'))) { activeFormObject().hairPart = b.dataset.hairPart; formsChanged(); return; }
     if ((b = hit('[data-hair-colour]'))) { activeFormObject().hairColor = b.dataset.hairColour; formsChanged(); return; }
     if ((b = hit('[data-eyes]'))) { activeFormObject().eyes = b.dataset.eyes; formsChanged(); return; }
     if ((b = hit('[data-eye-colour]'))) { activeFormObject().eyeColor = b.dataset.eyeColour; formsChanged(); return; }
