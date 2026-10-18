@@ -355,9 +355,11 @@ const gcd = (a, b) => b ? gcd(b, a % b) : a;
    and only ones that land within reach of the best: for white, "white" is
    the answer, and a yellowish tint is not a second way to mix it. */
 const PAINT_PARTS = [1, 2, 3, 4, 6, 8, 12, 16, 24];
-function paintRecipes(rgb, paletteKey = paintPaletteKey(), count = 4, medium = paintMedium()) {
+function paintRecipes(rgb, paletteKey = paintPaletteKey(), count = 4, medium = paintMedium(), only = null) {
   if (!paintInit()) return [];
-  const keys = paintKeys(paletteKey, medium), water = medium === 'water';
+  // `only`: these paints instead of the palette's - what a set of three chosen
+  // from a box can mix (js/fewpaints.js).
+  const keys = only || paintKeys(paletteKey, medium), water = medium === 'water';
   const target = new spectral.Color(rgb).OKLab;
   const dist = lab => 100 * Math.hypot(lab[0] - target[0], lab[1] - target[1], lab[2] - target[2]);
   // Only the best mixture of each set of pigments is ever offered, so only

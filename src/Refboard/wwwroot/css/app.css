@@ -1643,6 +1643,17 @@ section { margin-bottom: 20px; }
 .pg-shades ~ .pg-label { visibility: hidden; }
 .pg-tools { position: relative; z-index: 2; }
 .pg-mix { font-size: 12px; min-height: 2.6em; padding: 0 2px; }
+/* Fewest paints (js/fewpaints.js): the answer panel under the palette row. */
+.pg-few { margin: 12px 0 4px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.pg-few h4 { margin: 0 0 8px; }
+.pg-few p { margin: 8px 0; }
+.pg-few-paints { display: flex; flex-wrap: wrap; gap: 6px; }
+.pg-few-paint { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; border: 1px solid var(--line); border-radius: 14px; font-size: 13px; }
+.pg-few-paint i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(128,128,128,.5); flex: none; }
+.pg-few-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px 18px; }
+.pg-few-row { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; }
+.pg-few-row > i { flex: none; width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(128,128,128,.5); }
+.pg-few-row .mix-row { align-items: flex-start; flex: 1; min-width: 0; }
 .pg-mix .mix-row { align-items: flex-start; }
 .pg-mix .mix-row i { margin-top: 1px; }
 .pg-mix .mix-row em { white-space: nowrap; }

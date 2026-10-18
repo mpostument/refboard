@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'fewest-paints', title: 'Which few paints are enough',
+    text: "Palettes > Fewest paints: choose 2 to 5 and the app picks, from the paints you have set up (your Holbein box, say), the ones that mix every colour of the palette best in watercolour - the paper being the white - and gives the recipe for each colour from only those. If fewer would do, it says so. A reference's colours come to Palettes from the Colour studio.",
+    act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
   { id: 'colour-search', title: 'Search the library by colour',
     text: "Library > Colour, beside the search box: pick up to three colours (any colour, twelve named ones, or a mood like warm dusk) and the grid keeps the pictures that have all of them, the best match first. \"Like this\" on a picture shows the ones closest to it in colour. Needs the server to have measured the library (palettes.json); it does that by itself after the features pass.",
     act: 'Open the library', run: () => setView({ kind: 'all' }) },

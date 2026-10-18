@@ -1211,9 +1211,22 @@ the wash.
   the golden hour, a desert, the sea), a scene's palette made from a picture's
   own season, and a scene that suits the reference you are working from.
 
-- **The best limited palette for a reference.** Choose "3 paints" or
-  "5 markers": from your own materials, the ones that cover the most of
-  the picture's colours - a limited palette makes a study hold together.
+- **The best limited palette for a reference, the rest.** In place for
+  watercolour (`js/fewpaints.js`, Palettes > Fewest paints, a reference's
+  colours come there from the Colour studio's "To the palette generator"):
+  at most 2 to 5 paints from the paints chosen above (the Holbein box, or any
+  other palette), the paper being the white. Each colour is mixed as well as a
+  set can (`paintRecipes` given only those paints, scored in the recipes' own
+  OKLab x 100), the set built one paint at a time and then each paint tried
+  against every other; a paint that brings the mean closer by under 0.5 is
+  dropped, so "one paint is enough" is an answer. It says how many colours land
+  close (under 4), the furthest, and the recipe for each from the chosen paints
+  only. A few seconds in the full box (1 s for three paints, 5 s for four).
+  Still to come: "5 markers" and pencils (no mixing: the nearest ready-made
+  colours, and for Copic its families), oil and acrylic, weighting the colours
+  by how much of the picture they cover (the palette carries none), and
+  checking the answer against painted swatches of the real tubes - the box's
+  colours are still estimates.
 - **What to buy next.** From your reference library and your materials:
   the one pigment, pencil or marker that would widen your reach the most
   ("85% of your references are landscapes and greens are short - add
