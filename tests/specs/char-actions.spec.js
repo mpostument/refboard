@@ -1,0 +1,187 @@
+// A character's actions (js/charpose.js; the Pose row, the frames slider and the player in js/assets.js):
+// the poses of a walk, a run and an attack, the strip they are laid out in, and the view that runs them.
+// The model is not involved, and neither is the 3D engine: the figure and its depth map are stood in for.
+const { openSection, test, expect, openApp, fakeServer, makePng } = require('../helpers');
+
+test('a cycle is n frames that do not end on a copy of the first, with the legs and arms opposite', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const out = {};
+    for (const a of ['walk', 'run', 'attack']) for (const n of CHAR_FRAMES) out[`${a}${n}`] = charActionPoses(a, n).length;
+    const w = charActionPoses('walk', 8);
+    return { out, idle: charActionPoses('idle', 8).length, hurt: charActionPoses('hurt', 4).length, own: charActionPoses('own', 6), odd: charActionPoses('walk', 5).length,
+      frames: w.map(p => p['thigh.L'][0]), half: [w[0]['thigh.L'][0], w[4]['thigh.R'][0]], arm: [w[0]['upperArm.L'][0], w[0]['thigh.L'][0]],
+      first: JSON.stringify(w[0]), last: JSON.stringify(w[7]) };
+  });
+  for (const a of ['walk', 'run', 'attack']) for (const n of [4, 6, 8]) expect(r.out[`${a}${n}`], a + n).toBe(n);
+  expect([r.idle, r.hurt, r.odd]).toEqual([1, 1, 6]);   // one picture each; 5 frames is not a stop of the slider, so 6
+  expect(r.own).toBeNull();
+  // Half a cycle on, the legs have traded places: the loop's seam is the last frame leading to the first.
+  expect(r.half[0]).toBeCloseTo(r.half[1], 5);
+  expect(r.first).not.toBe(r.last);
+  // The leg furthest forward (a negative bend) is the left one at frame 0, and its arm is back (positive).
+  expect(r.arm[1]).toBeLessThan(0);
+  expect(r.arm[0]).toBeGreaterThan(0);
+});
+
+test('a run swings further than a walk, and every pose stays inside what the figure can do', async ({ page }) => {
+  await openApp(page);
+  // The joints and their limits are the 3D forms' own, loaded with that section.
+  await page.evaluate(() => loadSection('forms'));
+  const r = await page.evaluate(() => {
+    const reach = a => Math.max(...charActionPoses(a, 8).map(p => p['thigh.L'][0])) - Math.min(...charActionPoses(a, 8).map(p => p['thigh.L'][0]));
+    const bad = [];
+    for (const a of CHAR_ACTIONS.map(x => x.id)) for (const pose of charActionPoses(a, 8) || []) {
+      const clean = cleanFormPose(pose);
+      for (const j of Object.keys(pose)) {
+        if (!clean[j]) { bad.push(`${a}: ${j} is not a joint`); continue; }
+        const lim = formJointLimits(j);
+        clean[j].forEach((v, k) => { if (v < lim[k][0] - 0.5 || v > lim[k][1] + 0.5) bad.push(`${a}: ${j}[${k}] = ${v} outside ${lim[k]}`); });
+      }
+    }
+    return { walk: reach('walk'), run: reach('run'), bad };
+  });
+  expect(r.run).toBeGreaterThan(r.walk);
+  expect(r.bad).toEqual([]);
+});
+
+test('an attack starts at its ready pose, ends at its follow-through, and the wind-up lifts the sword arm', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const p = charActionPoses('attack', 8);
+    return { first: p[0]['upperArm.R'][0], last: p[7]['upperArm.R'][0], key: CHAR_ATTACK[0]['upperArm.R'][0], end: CHAR_ATTACK[3]['upperArm.R'][0],
+      high: Math.min(...p.map(x => x['upperArm.R'][0])), four: charActionPoses('attack', 4).map(x => x['upperArm.R'][0]), keys: CHAR_ATTACK.map(x => x['upperArm.R'][0]) };
+  });
+  expect([r.first, r.last]).toEqual([r.key, r.end]);
+  expect(r.high).toBeLessThan(-100);   // the arm goes back over the shoulder
+  expect(r.four).toEqual(r.keys);      // at 4 frames the frames are the four keys
+});
+
+test('the strip is the frames side by side in cells of one size, feet on one line', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const make = (w, h, c) => { const k = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = k.getContext('2d'); g.fillStyle = c; g.fillRect(0, 0, w, h); return k; };
+    const s = charStrip([make(20, 40, '#f00'), make(16, 40, '#0f0'), make(20, 36, '#00f')]);
+    const px = (x, y) => Array.from(s.getContext('2d').getImageData(x, y, 1, 1).data);
+    return { size: [s.width, s.height], first: px(10, 20), second: px(20 + 10, 20), narrowEdge: px(20 + 1, 20), shortTop: px(40 + 10, 1), shortFeet: px(40 + 10, 39), none: charStrip([]) };
+  });
+  expect(r.size).toEqual([60, 40]);
+  expect(r.first).toEqual([255, 0, 0, 255]);
+  expect(r.second).toEqual([0, 255, 0, 255]);
+  expect(r.narrowEdge[3]).toBe(0);   // a narrower frame is centred in its cell, not stretched
+  expect(r.shortTop[3]).toBe(0);     // a shorter one stands on the bottom line
+  expect(r.shortFeet).toEqual([0, 0, 255, 255]);
+  expect(r.none).toBeNull();
+});
+
+test.describe.configure({ timeout: 60000 });
+test('an action replaces the turn: the frames slider has three stops, the idle has none, and the words say what she does', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate', r => r.request().method() === 'GET' ? r.fulfill({ json: { available: true, control: true, checkpoint: 'test.safetensors', quality: 'masterpiece' } }) : r.fallback());
+  await openApp(page);
+  await openSection(page, 'assets');
+  await page.click('#assetChoices [data-as="kind"][data-opt="character"]');
+  await expect(page.locator('#assetChoices [data-as="dirs"]').first()).toBeVisible();
+  await expect(page.locator('#assetFrames')).toHaveCount(0);
+  await page.click('#assetChoices [data-as="act"][data-opt="walk"]');
+  await expect(page.locator('#assetChoices [data-as="dirs"]')).toHaveCount(0);
+  await expect(page.locator('#assetCountRow')).toBeHidden();
+  const slider = page.locator('#assetFrames');
+  expect(await slider.evaluate(e => [e.min, e.max, e.step, e.value])).toEqual(['4', '8', '2', '6']);
+  await slider.fill('8');
+  await expect(page.locator('#assetFramesOut')).toHaveText('8 frames');
+  expect(await page.evaluate(() => assetState.frames)).toBe('8');
+  const words = await page.evaluate(() => assetRequest({ ...assetState, dir: 'right' }).prompt);
+  expect(words).toContain('walking');
+  expect(words).not.toContain('standing');
+  expect(words).toContain('facing right');
+  await page.click('#assetChoices [data-as="act"][data-opt="idle"]');
+  await expect(page.locator('#assetFrames')).toHaveCount(0);
+  await page.click('#assetChoices [data-as="act"][data-opt="own"]');
+  await expect(page.locator('#assetChoices [data-as="dirs"]').first()).toBeVisible();
+  expect(await page.evaluate(() => assetRequest({ ...assetState, dir: 'front' }).prompt)).toContain('standing');
+});
+
+test('a bad saved action or frame count falls back to the defaults', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    localStorage.setItem(ASSET_KEY, JSON.stringify({ act: 'moonwalk', frames: '5' }));
+    assetState.act = 'x'; assetState.frames = '99';
+    assetsLoad();
+    return [assetState.act, assetState.frames];
+  });
+  expect(r).toEqual(['own', '6']);
+});
+
+// The whole run with the 3D figure stood in for: each frame is drawn with its own pose, the same seed, the
+// facing right; the frames come back lined up, with a strip, and the player shows them.
+test('Make with Walk draws one request per frame, each with its own pose and one seed, and keeps a strip', async ({ page }) => {
+  const server = await fakeServer(page);
+  const id = 'c'.repeat(64), posted = [], poses = [];
+  let made = 0;
+  // A red figure on cream, 200 x 300, for the cut-out to find.
+  const disc = makePng(200, 300, (x, y) => Math.abs(x - 100) < 40 && y > 40 && y < 280 ? [200, 0, 0] : [255, 250, 230]);
+  await page.route(/api\/uploads\/c{64}\.png/, r => r.fulfill({ contentType: 'image/png', body: disc }));
+  await page.route('**/api/generate**', async r => {
+    const req = r.request(), url = new URL(req.url());
+    if (req.method() === 'POST' && url.pathname.endsWith('/api/generate')) { posted.push(JSON.parse(req.postData())); return r.fulfill({ status: 202, json: { id: 'job' + ++made } }); }
+    if (url.pathname.endsWith('/api/generate')) return r.fulfill({ json: { available: true, control: true, checkpoint: 'test.safetensors', quality: 'masterpiece' } });
+    const doc = { file: id + '.png', name: 'girl knight, character, right', type: 'image/png', from: 'generate', bytes: 100, t: Date.now(), folder: 'assets',
+      asset: 'character', tags: posted.at(-1).tags, prompt: posted.at(-1).prompt, avoid: posted.at(-1).avoid, shape: 'portrait', seed: posted.at(-1).seed };
+    server.items.set('uploads/' + id, doc);
+    return r.fulfill({ json: { state: 'done', upload: { doc, url: 'uploads/' + id + '.png' } } });
+  });
+  await openApp(page);
+  await openSection(page, 'assets');
+  await page.evaluate(() => {
+    const fig = { shape: 'figure', ry: 0, pose: { head: [1, 2, 3] } };
+    window.__figure = fig;
+    window.formScene = { objects: [fig], active: 0, yaw: 0, pitch: 0, fisheye: false, roll: 0 };
+    window.loadSection = async () => {};
+    window.showForms = () => {};
+    window.formsReady = async () => {};
+    window.formShotSubject = () => fig;
+    window.cleanFormPose = p => p;
+    window.formRigOf = () => undefined;
+    window.__poses = [];
+    window.formsDepthSnapshot = async sc => { window.__poses.push({ pose: sc.objects[0].pose, yaw: sc.yaw }); return new Blob(['x'], { type: 'image/png' }); };
+    window.genBoxOf = async () => ({ x: 0, y: 0, w: 10, h: 20 });
+    window.genFrameImage = async () => ({ b64: 'AAAA' });
+    // Every upload gets one id from the fake server and overwrites the last: what is kept is watched here.
+    window.__kept = [];
+    const keep = window.assetKeep;
+    window.assetKeep = async (doc, canvas, extra, over) => { window.__kept.push({ extra, size: [canvas.width, canvas.height], over }); return keep(doc, canvas, extra, over); };
+  });
+  await page.click('#assetChoices [data-as="kind"][data-opt="character"]');
+  await page.click('#assetChoices [data-as="act"][data-opt="walk"]');
+  await page.locator('#assetFrames').fill('4');
+  await page.click('#assetGo');
+  await expect(page.locator('#assetStatus')).toHaveText('4 frames made - in Uploads, Assets.', { timeout: 40000 });
+  expect(posted).toHaveLength(4);
+  expect(new Set(posted.map(p => p.seed)).size).toBe(1);
+  for (const p of posted) {
+    expect(p).toMatchObject({ asset: 'character', control: true });
+    expect(p.prompt).toContain('walking');
+    expect(p.prompt).toContain('facing right');
+  }
+  const seen = await page.evaluate(() => window.__poses);
+  expect(seen).toHaveLength(4);
+  // 270 degrees round is -90 once wrapped: the camera on the figure's right.
+  expect(seen.every(s => s.yaw === -90)).toBe(true);
+  // Four different poses, and the figure the user set is as it was.
+  expect(new Set(seen.map(s => JSON.stringify(s.pose))).size).toBe(4);
+  expect(await page.evaluate(() => window.__figure.pose)).toEqual({ head: [1, 2, 3] });
+  // The player is up, with the frames; the strip is kept beside them.
+  await expect(page.locator('#assetAnim')).toBeVisible();
+  expect(await page.evaluate(() => assetAnim.frames.length)).toBe(4);
+  const kept = await page.evaluate(() => window.__kept);
+  const strip = kept.filter(k => k.extra.includes('animation strip'));
+  expect(strip).toHaveLength(1);
+  expect(strip[0].extra).toEqual(expect.arrayContaining(['walk', '4 frames']));
+  // The strip is the four lined-up frames in a row.
+  const aligned = kept.filter(k => k.extra.includes('aligned') && !k.extra.includes('animation strip'));
+  expect(aligned.map(k => k.extra.find(t => /^frame [0-9] of 4$/.test(t)))).toEqual(['frame 1 of 4', 'frame 2 of 4', 'frame 3 of 4', 'frame 4 of 4']);
+  expect(strip[0].size).toEqual([aligned[0].size[0] * 4, aligned[0].size[1]]);
+  await page.click('#assetAnimClose');
+  await expect(page.locator('#assetAnim')).toBeHidden();
+});

@@ -633,6 +633,18 @@ the pictures looked at - as the Generate features were):
    glow round some cut-outs (frontLeft, backLeft: the model draws a coloured halo
    `cutOut` takes as part of the figure); the front's face went red once; nothing says in the view that two directions
    differ - it only tells you to judge the faces.
+   **Poses, 2026-10-18** (`js/charpose.js`; the Pose row in the Character kind): Idle, Walk, Run, Attack, Hurt.
+   A cycle (walk, run) is 4, 6 or 8 frames (a slider), found from one angle round the circle: the legs
+   in opposite phase, an arm opposite its leg, a knee folded only while its leg swings forward; the
+   last frame leads back to the first, not to a copy of it. An attack is four keys (ready, wind-up,
+   strike, follow-through) blended to the frames chosen. Each frame is the figure with that pose in a
+   copy of the scene (the one in Forms is not touched), facing right, drawn with one seed and the same
+   words but what she is doing; cut out, lined up, kept tagged `walk`, `frame 3 of 6`. Looked at: the
+   8 poses of each action rendered by the real 3D engine (walk, run and attack read right; hurt was
+   reworked once), and a test holds every pose inside the figure's joint limits (it found a chest
+   twist of 35 against a limit of 30). **Not tried on the real model:** whether the ControlNet keeps
+   the legs of a walk apart (at strength 0.5 they may blur), and whether the face and clothes hold
+   across 8 frames; onion-skinning is not done.
 5. **Backgrounds.** Biome and time of day; far / middle / near layers made
    in order, each told what is in front of it; a layer that loops sideways;
    Extend (already built) for a longer one; a room or map from above. *Done
@@ -673,6 +685,11 @@ the pictures looked at - as the Generate features were):
    with a preview that plays, a GIF of it; the asset pack as one zip. *Done
    when* a pack loads in Godot and Phaser without a hand edit (tried, not
    assumed).
+   **In place** (first slices 2026-10-17/18): Pack for a game (zip of a sheet, sprites, tiles) for Unity, and
+   the animation strip: the frames of an action in one row of equal cells (`charStrip`), kept as one
+   picture tagged `animation strip` and packed to `animations/`, not on the sheet (its frames are there);
+   a player after Make (loop, pause, next frame, 4 - 12 fps) to judge the cycle by seeing it move. **Not
+   done:** the GIF (no encoder in the app), playing an old strip again later, a Unity .anim.
 8. **Blob autotile and UI.** The 47-tile terrain set from two textures; panels
    and buttons with a 9-slice; icon sets (a theme, 12 icons, one frame).
 9. **Models, if the above wants them** (each is the user's install, and an item

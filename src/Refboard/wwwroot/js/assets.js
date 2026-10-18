@@ -212,7 +212,7 @@ const WEAPON_SWORD_WORDS = ['full length', 'centered', 'vertical', 'pointing up'
 const ASSET_BACKDROP = 'border, frame, card, plaque, panel, backdrop, background pattern';
 
 const ASSET_LOOK_MAX = 120;   // the longest look a character is named by
-const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1',
+const ASSET_DEFAULTS = { kind: 'prop', view: 'side', thing: 'treasure chest', theme: 'fantasy', material: 'any', simple: 'simple', size: '512', count: '4', draft: '', icon: true, dirs: '1', act: 'own', frames: '6',
   // The pixel look: the grid ('off' = the picture as it is), colours, outline, and the game's palette (#rrggbb list, kept).
   pix: 'off', packSize: '0', pixColours: '16', pixOutline: 'yes', pixShared: 'own', pixPalette: [] };
 let assetState = { ...ASSET_DEFAULTS };
@@ -268,7 +268,8 @@ function assetRequest(s) {
   const thing = (s.thing || '').trim().toLowerCase().slice(0, kind.character ? ASSET_LOOK_MAX : 40) || kind.things[0];
   const short = kind.character ? thing.split(',')[0].trim().slice(0, 40) : thing;
   // Several directions are several pictures that must agree, so the colours in the look are weighted (charLook).
-  const named = [kind.tile || kind.character ? '' : material.word, kind.character && Number(s.dirs) > 1 ? charLook(thing) : thing].filter(Boolean).join(' ');
+  // Frames of one action, like directions, are pictures that must agree.
+  const named = [kind.tile || kind.character ? '' : material.word, kind.character && (Number(s.dirs) > 1 || (s.act && s.act !== 'own')) ? charLook(thing) : thing].filter(Boolean).join(' ');
   const box = ASSET_CONTAINER.test(thing);
   const own = assetRecipe(kind.id, thing);
   const tags = kind.character ? [] : ['no humans'], avoid = [kind.tile ? TILE_AVOID : kind.character ? CHAR_NOT : ASSET_AVOID, kind.character ? `${CHAR_AVOID}, ${GEN_POSE_AVOID}` : ASSET_ALONE];
@@ -279,7 +280,7 @@ function assetRequest(s) {
     if (ground.avoid) avoid.push(ground.avoid);
   } else if (kind.character) {
     const key = charKey(thing);
-    tags.push('solo', named, 'full body', 'standing', CHAR_FACE[dir], ...(view.id === 'top' ? ['from above'] : []), `(${key} background:1.2)`, `solid ${key} background`, 'simple background');
+    tags.push('solo', named, 'full body', CHAR_ACT_WORDS[s.act] || 'standing', CHAR_FACE[dir], ...(view.id === 'top' ? ['from above'] : []), `(${key} background:1.2)`, `solid ${key} background`, 'simple background');
   } else if (kind.id === 'weapon') {
     // The model draws a set of four to six, or a rack on a panel: ask for one, and keep the set out.
     tags.push('solo', `(single ${named}:1.3)`, ...(own ? own.tags : WEAPON_SWORD_WORDS));
@@ -315,6 +316,8 @@ function assetRequest(s) {
 function assetsLoad() {
   try { Object.assign(assetState, JSON.parse(localStorage.getItem(ASSET_KEY)) || {}); } catch { /* defaults */ }
   if (!ASSET_KINDS.some(k => k.id === assetState.kind)) assetState.kind = ASSET_DEFAULTS.kind;
+  if (!CHAR_ACTIONS.some(a => a.id === assetState.act)) assetState.act = ASSET_DEFAULTS.act;
+  if (!CHAR_FRAMES.includes(Number(assetState.frames))) assetState.frames = ASSET_DEFAULTS.frames;
   if (typeof assetState.thing !== 'string' || !assetState.thing) assetState.thing = assetKind(assetState.kind).things[0];
 }
 function assetsSave() {
@@ -344,10 +347,12 @@ function renderAssets() {
     kind.things.map(t => `<button type="button" class="chip" data-thing="${esc(t)}" aria-pressed="${s.thing.trim().toLowerCase() === t}">${esc(t)}</button>`).join('') + '</div></div>' +
     assetRecipeNote(kind) +
     (kind.views ? assetChips('view', 'View', ASSET_VIEWS, s.view, () => '') : '') +
-    (kind.character ? assetChips('dirs', 'Turned to', CHAR_CHOICES, s.dirs) +
-      (s.dirs === '1'
-        ? '<p class="gen-note">One side view, drawn freely from the words - no 3D figure, so the pose and build are the model\'s own. Make several and keep the one you like.</p>'
-        : '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Name every garment and its colour, trousers and boots too: what the look leaves out the model invents again in each direction. Whether the faces match is for you to judge.</p>') : '') + '</section>' +
+    (kind.character ? assetChips('act', 'Pose', CHAR_ACTIONS, s.act) +
+      (s.act !== 'own' ? assetActionHtml(s) :
+        assetChips('dirs', 'Turned to', CHAR_CHOICES, s.dirs) +
+        (s.dirs === '1'
+          ? '<p class="gen-note">One side view, drawn freely from the words - no 3D figure, so the pose and build are the model\'s own. Make several and keep the one you like.</p>'
+          : '<p class="gen-note">Drawn from the figure and pose set in Forms (3D forms): the figure is turned round and each turn drawn with the same words and seed. Name every garment and its colour, trousers and boots too: what the look leaves out the model invents again in each direction. Whether the faces match is for you to judge.</p>')) : '') + '</section>' +
     `<section class="gen-group">${assetChips('theme', 'Theme', ASSET_THEMES, s.theme, () => '')}` +
     (kind.tile || kind.character ? '' : assetChips('material', 'Material', ASSET_MATERIALS, s.material, () => '')) +
     assetChips('simple', 'How simple', ASSET_SIMPLE, s.simple) +
@@ -356,11 +361,24 @@ function renderAssets() {
   el('assetIconRow').classList.toggle('hidden', !kind.icon);
   // The directions are the count of a character - except the one-sided kind, drawn free: there the
   // count is how many candidates to choose from.
-  el('assetCountRow').classList.toggle('hidden', !!kind.character && s.dirs !== '1');
+  el('assetCountRow').classList.toggle('hidden', !!kind.character && (s.act !== 'own' || s.dirs !== '1'));
   el('assetIcon').checked = !!s.icon;
   el('assetCount').value = s.count;
   el('assetDraft').value = s.draft;
   renderAssetPrompt();
+}
+
+/* What an action adds to the choices: how many frames (a slider, 4 - 6 - 8) for the actions that
+   move, and what is done with the figure. Always facing right: a side-on game mirrors it for left. */
+function assetActionHtml(s) {
+  const a = charAction(s.act);
+  return (a.frames
+    ? `<div class="gen-row"><label class="gen-extra" for="assetFrames">Frames <input type="range" id="assetFrames" min="4" max="8" step="2" value="${esc(s.frames)}">` +
+      `<output id="assetFramesOut" for="assetFrames">${esc(s.frames)} frames</output></label></div>`
+    : '') +
+    `<p class="gen-note">${a.frames ? 'Each frame is the 3D figure from Forms set to one step of the ' + esc(a.label.toLowerCase()) + ', facing right, drawn with the same words and seed' +
+      (s.act === 'attack' ? '.' : ' - the last frame leads back to the first.') : 'The 3D figure from Forms set to a ' + esc(a.label.toLowerCase()) + ', facing right.'} ` +
+    'Its build and clothes come from the figure and the look you describe - the pose you set in Forms is replaced. Name every garment and its colour. Whether the faces match is for you to judge.</p>';
 }
 
 /* The pixel look's choices. The colours, outline and palette only when it is on; a tile has no
@@ -492,6 +510,8 @@ const ASSET_UI = { go: 'assetGo', status: 'assetStatus', goText: 'Make', refresh
 
 const assetBitmapCanvas = async bmp => { const c = Object.assign(document.createElement('canvas'), { width: bmp.width, height: bmp.height }); c.getContext('2d').drawImage(bmp, 0, 0); return c; };
 const assetIsTile = u => (u.tags || []).includes('tile');
+// The strip of a cycle: its frames are in the pack as sprites already, so it is a file of its own and not on the sheet.
+const assetIsStrip = u => (u.tags || []).includes('animation strip');
 
 /* What is made, as Unity loads it: the sprites on one sheet, and every picture, sprite or tile, as a file of
    its own, in one zip. Pictures are copied pixel for pixel, never resampled, so a pixel sprite stays
@@ -504,7 +524,7 @@ async function assetsPack() {
     const made = await assetsMade(), loaded = [];
     for (const u of made) {
       const blob = await storeFileBlob(u.file);
-      if (blob) loaded.push({ u, bmp: await createImageBitmap(blob), tile: assetIsTile(u) });
+      if (blob) loaded.push({ u, bmp: await createImageBitmap(blob), tile: assetIsTile(u), strip: assetIsStrip(u) });
     }
     const names = packNames(loaded.map(x => x.u.name));
     loaded.forEach((x, i) => { x.name = names[i]; });
@@ -515,14 +535,14 @@ async function assetsPack() {
       x.pic = k < 1 ? assetShrinkTo(await assetBitmapCanvas(x.bmp), Math.max(1, Math.round(x.bmp.width * k)), Math.max(1, Math.round(x.bmp.height * k))) : null;
       x.w = x.pic ? x.pic.width : x.bmp.width; x.h = x.pic ? x.pic.height : x.bmp.height;
     }
-    const sprites = loaded.filter(x => !x.tile), tiles = loaded.filter(x => x.tile);
+    const sprites = loaded.filter(x => !x.tile && !x.strip), tiles = loaded.filter(x => x.tile), strips = loaded.filter(x => x.strip);
     const png = async c => new Uint8Array(await (await new Promise(res => c.toBlob(res, 'image/png'))).arrayBuffer());
     const canvasOf = (w, h) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
     const entries = [];
     for (const x of loaded) {
       const [c, g] = canvasOf(x.w, x.h);
       g.drawImage(x.pic || x.bmp, 0, 0);
-      entries.push({ name: `${x.tile ? 'tiles' : 'sprites'}/${x.name}.png`, data: await png(c) });
+      entries.push({ name: `${x.tile ? 'tiles' : x.strip ? 'animations' : 'sprites'}/${x.name}.png`, data: await png(c) });
     }
     if (sprites.length) {
       const sheet = packRects(sprites.map(x => ({ w: x.w, h: x.h })));
@@ -554,7 +574,7 @@ async function assetsPack() {
    one height, the feet set on one line (assetAlign). */
 async function assetsCharacterGo(s) {
   const status = el(ASSET_UI.status);
-  if (s.dirs === '1') { await assetsCharacterFree(s); return; }
+  if (s.act === 'own' && s.dirs === '1') { await assetsCharacterFree(s); return; }
   if (!genControlAvailable()) { status.textContent = 'A character is drawn through a depth ControlNet, and this server has none (COMFY_CONTROLNET).'; return; }
   status.textContent = 'Opening the 3D figure...';
   // The 3D view is a lazy section and starts its engine on first use; it is brought up here
@@ -567,24 +587,35 @@ async function assetsCharacterGo(s) {
     await openForms(() => { const b = document.querySelector('#formShapes [data-shape="figure"]'); if (b) b.focus(); });
     return;
   }
-  const dirs = CHAR_DIRS[s.dirs] || CHAR_DIRS[1], seed = Math.floor(Math.random() * 2 ** 31);
+  // Turned (4, 8 directions) or acting (the frames of a walk, all facing right): either way a list of turns, each a camera
+  // yaw and, for an action, the figure's pose for that frame.
+  const acts = s.act === 'own' ? null : charActionPoses(s.act, s.frames), rig = formRigOf(o.shape) || undefined;
+  const turns = acts ? acts.map((pose, i) => ({ dir: 'right', deg: CHAR_DIRS[1][0][1], pose: cleanFormPose(pose, rig), label: acts.length > 1 ? `${s.act} ${i + 1} of ${acts.length}` : s.act }))
+    : (CHAR_DIRS[s.dirs] || CHAR_DIRS[1]).map(([dir, deg]) => ({ dir, deg, label: dir }));
+  const seed = Math.floor(Math.random() * 2 ** 31);
   const scene = { ...formScene, fisheye: false, roll: 0, pitch: CHAR_PITCH[s.view] ?? CHAR_PITCH.side };
   status.textContent = 'Turning the figure...';
   const blobs = [];
-  for (const [, deg] of dirs) blobs.push(await formsDepthSnapshot({ ...scene, yaw: wrap180((o.ry || 0) + deg) }));
+  for (const t of turns) {
+    // The figure with this frame's pose, in a copy of the scene: the one in Forms is left as it was set.
+    const objects = t.pose ? scene.objects.map(x => x === o ? { ...o, pose: t.pose } : x) : scene.objects;
+    blobs.push(await formsDepthSnapshot({ ...scene, objects, yaw: wrap180((o.ry || 0) + t.deg) }));
+  }
   const boxes = (await Promise.all(blobs.map(genBoxOf))).filter(Boolean);
   if (!boxes.length) { status.textContent = 'The figure is not in view - the depth map is empty.'; return; }
   const x0 = Math.min(...boxes.map(b => b.x)), y0 = Math.min(...boxes.map(b => b.y));
   const union = { x: x0, y: y0, w: Math.max(...boxes.map(b => b.x + b.w)) - x0, h: Math.max(...boxes.map(b => b.y + b.h)) - y0 };
   const draft = s.draft === 'draft';
   const jobs = [];
-  for (let i = 0; i < dirs.length; i++) {
+  for (let i = 0; i < turns.length; i++) {
     const frame = await genFrameImage(blobs[i], 'pose', { shape: 'portrait' }, union);
-    const { dir, ...r } = assetRequest({ ...s, dir: dirs[i][0] });
+    const { dir, ...r } = assetRequest({ ...s, dir: turns[i].dir });
     jobs.push({ ...r, image: frame.b64, control: true, strength: CHAR_STRENGTH, seed, tags: [...r.tags, 'pose'].slice(0, 24), ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) });
   }
   const cuts = [];
-  await runGenerate(jobs, (i, total) => `Drawing ${dirs[i - 1][0]} (${i} of ${total})...`, `${dirs.length} directions made - in Uploads, Assets.`, async made => {
+  let at = 0;   // the job the callback is for: they come back in order, one by one
+  await runGenerate(jobs, (i, total) => `Drawing ${turns[i - 1].label} (${i} of ${total})...`, acts ? `${turns.length} frame${turns.length === 1 ? '' : 's'} made - in Uploads, Assets.` : `${turns.length} directions made - in Uploads, Assets.`, async made => {
+    const frame = at++;
     let pic;
     try { pic = await genLoadPicture(made.doc); } catch { return; }
     const cut = assetCutFigure(pic);
@@ -594,16 +625,26 @@ async function assetsCharacterGo(s) {
       const canvas = assetFigureCanvas(cut);
       const f = await assetKeep(made.doc, canvas, ['cut out']);
       await forgetUpload(made.doc);
-      cuts.push({ doc: made.doc, file: f.id, canvas });
+      cuts.push({ doc: made.doc, file: f.id, canvas, frame });
     } else await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) });
   }, ASSET_UI);
   // Whatever was drawn is lined up, even if it was stopped or one failed.
   const lined = assetAlign(cuts.map(c => c.canvas));
   if (!lined) return;
+  const sprites = [];
   for (let i = 0; i < cuts.length; i++) {
     const sprite = assetPixel(lined.canvases[i], s);
-    await assetKeep(cuts[i].doc, sprite, ['cut out', 'aligned', `${sprite.width}x${sprite.height}`, ...(s.pix === 'off' ? [] : ['pixel'])]);
+    sprites.push(sprite);
+    await assetKeep(cuts[i].doc, sprite, ['cut out', 'aligned', `${sprite.width}x${sprite.height}`, ...(s.pix === 'off' ? [] : ['pixel']),
+      ...(acts && turns.length > 1 ? [s.act, `frame ${cuts[i].frame + 1} of ${turns.length}`] : acts ? [s.act] : [])]);
     await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
+  }
+  // The frames of a cycle or a swing are also one strip, in the order they play - what a game cuts back by cell size.
+  if (acts && sprites.length > 1) {
+    const strip = charStrip(sprites), base = cuts[0].doc;
+    await assetKeep({ ...base, tags: (base.tags || []).filter(x => x !== 'pose') }, strip, ['cut out', 'aligned', 'animation strip', s.act, `${sprites.length} frames`, `${strip.width}x${strip.height}`,
+      ...(s.pix === 'off' ? [] : ['pixel'])], { name: `${(base.tags || [])[0] || 'character'} ${s.act} strip` });
+    assetAnimShow(sprites, s.act, s.pix !== 'off');
   }
   storeChanged();
   await ASSET_UI.refresh();
@@ -690,7 +731,44 @@ async function showAssets(check = true) {
   }
 }
 
+/* The frames just drawn, played: a loop at the speed chosen, so the cycle can be judged by looking
+   at it move - the strip is not a thing to judge a walk by. Paused it shows the frame at the slider's
+   place. Smooth pictures are scaled smoothly, pixel ones by whole cells. */
+let assetAnim = null;
+function assetAnimShow(frames, name, pixel) {
+  assetAnimStop();
+  const box = el('assetAnim'), cv = el('assetAnimCanvas');
+  cv.width = frames[0].width; cv.height = frames[0].height;
+  cv.style.imageRendering = pixel ? 'pixelated' : 'auto';
+  box.classList.remove('hidden');
+  el('assetAnimName').textContent = name + ', ' + frames.length + ' frames';
+  assetAnim = { frames, i: 0, last: 0, raf: 0, playing: true };
+  el('assetAnimPlay').textContent = 'Pause';
+  const draw = () => { const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(frames[assetAnim.i], 0, 0); };
+  const tick = now => {
+    if (!assetAnim || !assetAnim.playing) return;
+    if (now - assetAnim.last >= 1000 / Number(el('assetAnimFps').value)) { assetAnim.last = now; assetAnim.i = (assetAnim.i + 1) % frames.length; draw(); }
+    assetAnim.raf = requestAnimationFrame(tick);
+  };
+  assetAnim.draw = draw; draw();
+  assetAnim.raf = requestAnimationFrame(tick); assetAnim.tick = tick;
+}
+function assetAnimStop() { if (assetAnim) cancelAnimationFrame(assetAnim.raf); assetAnim = null; }
+
 function initAssets() {
+  el('assetAnimPlay').addEventListener('click', () => {
+    if (!assetAnim) return;
+    assetAnim.playing = !assetAnim.playing;
+    el('assetAnimPlay').textContent = assetAnim.playing ? 'Pause' : 'Play';
+    if (assetAnim.playing) assetAnim.raf = requestAnimationFrame(assetAnim.tick);
+  });
+  el('assetAnimStep').addEventListener('click', () => {
+    if (!assetAnim) return;
+    // One frame on: pauses, so that a single pose can be looked at.
+    assetAnim.playing = false; el('assetAnimPlay').textContent = 'Play';
+    assetAnim.i = (assetAnim.i + 1) % assetAnim.frames.length; assetAnim.draw();
+  });
+  el('assetAnimClose').addEventListener('click', () => { assetAnimStop(); el('assetAnim').classList.add('hidden'); });
   el('assetChoices').addEventListener('click', e => {
     if (e.target.closest('[data-pixforget]')) { assetState.pixPalette = []; assetsSave(); renderAssetPixel(); return; }
     const t = e.target.closest('[data-thing]');
@@ -706,7 +784,7 @@ function initAssets() {
         assetsSave(); renderAssets(); return;
       }
       // The note and the count row depend on whether the figure is turned (4, 8) or not (1).
-      if (b.dataset.as === 'dirs') { assetsSave(); renderAssets(); return; }
+      if (b.dataset.as === 'dirs' || b.dataset.as === 'act') { assetsSave(); renderAssets(); return; }
       // The pixel look has more to choose once it is on, and a tile has its size from the grid.
       if (b.dataset.as.startsWith('pix')) { assetsSave(); renderAssets(); return; }
     } else if (!t) return;
@@ -716,6 +794,11 @@ function initAssets() {
     renderAssetPrompt();
   });
   el('assetChoices').addEventListener('input', e => {
+    if (e.target.id === 'assetFrames') {
+      assetState.frames = e.target.value; assetsSave();
+      el('assetFramesOut').textContent = e.target.value + ' frames';
+      return;
+    }
     if (e.target.id !== 'assetThing') return;
     assetState.thing = e.target.value;
     assetsSave();
