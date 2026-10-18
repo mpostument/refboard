@@ -471,9 +471,16 @@ shoulder and other two-figure shots, and a lens's distortion on a photo.
 - **Pose library for the mannequin.** Dynamic poses ready - running,
   jumping, striking, falling, anime sitting - from any angle, not only
   from photos.
-- **Simplified hands.** The anime construction of a hand (a mitten with
-  fingers) on the existing 3D hand: drawing it in a few shapes rather than
-  joint by joint.
+- **Simplified hands.** In place: 3D forms > Figure and head > Anime hand
+  (`handAnime`, `FORM_HAND_ANIME_JOINTS` in `js/forms-models.js`) - the hand
+  the anime way, a soft mitten (an egg and a bar for the knuckles) with long
+  fingers of two shapes each, a base and a bend, and a thumb of two: eleven
+  joints for the hand's sixteen. Its poses are the full hand's folded (the
+  middle and tip joints add up to the one bend), so Relaxed, Spread, Fist,
+  Point, Pinch and Grip are the same gestures. Looked at in 3D, not drawn on a
+  model. Still to come: the fingers still pinch a little at the bend, the
+  figure's own hands are still the egg, and a hand in a pose set for a
+  figure (the pose library below).
 - **Japanese settings in 3D.** In place (`js/forms-settings.js`, 3D forms >
   View > Setting): a classroom, a train carriage, a lane with power poles and
   a shrine with its torii, as simple volumes in metres round the forms, with

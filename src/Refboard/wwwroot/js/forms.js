@@ -2853,7 +2853,7 @@ function randomFormScene(base, anyShape) {
       // tipped over, it is not a pose any more. A hand turns every way, a
       // foot a little (it is placed on its lowest toe or heel).
       o.pose = randomFormPose(FORM_RIGS[def.rig]);
-      const [tx, tz] = { hand: [60, 40], foot: [25, 20] }[def.rig] || [0, 0];
+      const [tx, tz] = { hand: [60, 40], handAnime: [60, 40], foot: [25, 20] }[def.rig] || [0, 0];
       o.rx = Math.round(r(-tx, tx));
       o.rz = Math.round(r(-tz, tz));
       o.ry = Math.round(r(-180, 180));

@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-hand', title: 'An anime hand to pose',
+    text: "3D forms > Figure and head > Anime hand: the hand the way an anime artist blocks it in - a soft mitten for the palm, long fingers of two shapes each (a base and a bend) and a thumb of two, eleven joints instead of sixteen. The same poses as the full hand (Relaxed, Spread, Fist, Point, Pinch, Grip), so you can swap one for the other and keep the gesture. Turn it, light it, draw it.",
+    act: 'Open 3D forms', run: () => setView({ kind: 'forms' }) },
   { id: 'anime-hair-tails', title: 'Anime head: ponytail, twin tails and a parting',
     text: "The anime head's Hair row has two more styles, Ponytail and Twin tails, each a bundle of locks tied on and hanging past the chin; a new Parting row (Free, Centre, Side) opens the fringe where you choose. Both are named as Generate names them, so Draw it at this angle sends a ponytail or twin tails.",
     act: 'Open 3D forms', run: () => setView({ kind: 'forms' }) },

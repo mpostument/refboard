@@ -311,6 +311,8 @@ const FORM_SHAPES = {
   curtain:  { label: 'Curtain', lines: [14, 14], cloth: true, build: T => formClothGeometry(T, 'curtain') },
   // A mannequin hand, posable finger by finger - FORM_HAND_JOINTS.
   hand:     { label: 'Hand',     lines: [8, 6], rig: 'hand', build: T => new T.SphereGeometry(0.04, 8, 6) },
+  // The same hand the anime way: a mitten and fingers of two joints - FORM_HAND_ANIME_JOINTS.
+  handAnime: { label: 'Anime hand', lines: [8, 6], rig: 'handAnime', build: T => new T.SphereGeometry(0.04, 8, 6) },
   // A mannequin foot, posable toe by toe - FORM_FOOT_JOINTS.
   foot:     { label: 'Foot',     lines: [8, 6], rig: 'foot', build: T => new T.SphereGeometry(0.04, 8, 6) },
 };
@@ -1339,6 +1341,48 @@ const FORM_HAND_POSES = {
     [[30, 0, 20], [15, 0, 0], [10, 0, 0]]) },
 };
 
+/* ---- the anime hand. The same right hand, palm to +z, fingers up, drawn the
+   way an anime artist blocks one in: the palm a soft mitten (one egg and a bar
+   for the knuckles, no box corners), the fingers long, nearly as thick at the
+   tip as at the root and lying side by side, each in two shapes - a base and a
+   bend - not three; the thumb two. Eleven joints for the hand's sixteen: the
+   pose is a few big gestures, which is what the line is made of.
+   Its poses are the full hand's, folded: the middle and tip joints of a finger
+   add up to its one bend (a tip is about half as free as the middle). */
+const FORM_HAND_ANIME_ROOT = FORM_HAND_ROOT;
+const FORM_HAND_ANIME_JOINTS = [
+  ['wrist', null, [0, 0.02, 0], 'Wrist', [rigEll([0, 0.5, 0], [0.5, 0.5, 0.14]), rigEll([0, 0.9, 0], [0.44, 0.13, 0.11]), rigEll([0.26, 0.28, 0.07], [0.2, 0.28, 0.13])]],
+  ['thumb1', 'wrist', [0.3, 0.18, 0.08], 'Thumb base', [rigBall([0, 0, 0], 0.115), rigLimb(0.46 + 0.08, 0.115, 1)], [20, -35, -38]],
+  ['thumb2', 'thumb1', [0, 0.46, 0], 'Thumb tip', [rigLimb(0.5, 0.1, 1)]],
+  ...[['index', 'Index', 0.27, 0.96, 0.55, 0.45, 0.088],
+      ['middle', 'Middle', 0.09, 0.98, 0.6, 0.48, 0.09],
+      ['ring', 'Ring', -0.09, 0.96, 0.56, 0.45, 0.086],
+      ['little', 'Little', -0.27, 0.92, 0.44, 0.36, 0.076]].flatMap(([k, n, x, y, a, b, r]) => [
+    // Each shape runs a little past its joint, into the next: two capsules
+    // end to end pinch at the joint and the finger reads as beads.
+    [`${k}1`, 'wrist', [x, y, 0], `${n} base`, [rigBall([0, 0, 0], r), rigLimb(a + r * 0.7, r, 1)]],
+    [`${k}2`, `${k}1`, [0, a, 0], `${n} bend`, [rigLimb(b, r * 0.92, 1)]],
+  ]),
+];
+const FORM_HAND_ANIME_LIMITS = {
+  wrist: FORM_HAND_LIMITS.wrist, thumb1: FORM_HAND_LIMITS.thumb1, thumb2: [[0, 100], [0, 0], [0, 0]],
+  // Lean to 22: the full hand's own Spread leans the little finger 20.
+  finger1: [[-20, 90], [-5, 5], [-22, 22]], finger2: [[0, 135], [0, 0], [0, 0]],
+};
+const FORM_HAND_ANIME_POSES = Object.fromEntries(Object.entries(FORM_HAND_POSES).map(([id, { label, pose: p }]) => {
+  const q = {};
+  for (const j of Object.keys(p)) {
+    const m = /^(\w+?)([123])$/.exec(j);
+    if (!m || m[2] === '3') continue;   // the tip joint is folded into the one before it
+    const tip = p[m[1] + '3'] || [0, 0, 0];
+    q[j] = m[2] === '2' ? [p[j][0] + tip[0] * 0.5, p[j][1], p[j][2]] : p[j];
+  }
+  if (p.wrist) q.wrist = p.wrist;
+  // A thumb's three joints become two: the tip takes the middle's and the tip's bend.
+  if (p.thumb2) q.thumb2 = [p.thumb2[0] + (p.thumb3 ? p.thumb3[0] : 0) * 0.6, p.thumb2[1], p.thumb2[2]];
+  return [id, { label, pose: q }];
+}));
+
 /* ---- the foot. A right foot, sole down, toes toward +z, the big toe on the
    +x side (a right foot seen from the front has its inside to the right of
    the picture). Built the way the hand is, from what a drawing book teaches:
@@ -1423,6 +1467,10 @@ const FORM_RIGS = {
   hand:   { root: FORM_HAND_ROOT, joints: FORM_HAND_JOINTS, poses: FORM_HAND_POSES,
             limits: j => FORM_HAND_LIMITS[j.replace(/^(index|middle|ring|little)(\d)$/, 'finger$2')],
             random: Object.keys(FORM_HAND_POSES), shake: [14, 4, 5],
+            whole: 'Whole hand', noun: 'hand', mirror: false, reset: 'Open and flat' },
+  handAnime: { root: FORM_HAND_ANIME_ROOT, joints: FORM_HAND_ANIME_JOINTS, poses: FORM_HAND_ANIME_POSES,
+            limits: j => FORM_HAND_ANIME_LIMITS[j.replace(/^(index|middle|ring|little)(\d)$/, 'finger$2')],
+            random: Object.keys(FORM_HAND_ANIME_POSES), shake: [14, 4, 5],
             whole: 'Whole hand', noun: 'hand', mirror: false, reset: 'Open and flat' },
   foot:   { root: FORM_FOOT_ROOT, joints: FORM_FOOT_JOINTS, poses: FORM_FOOT_POSES,
             limits: j => FORM_FOOT_LIMITS[j.replace(/^(big|second|third|fourth|little)(\d)$/, 'toe$2')],
