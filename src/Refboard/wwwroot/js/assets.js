@@ -408,7 +408,7 @@ function assetActionHtml(s) {
       `<output id="assetFramesOut" for="assetFrames">${esc(s.frames)} frames</output></label></div>`
     : '') +
     `<p class="gen-note">${a.frames ? 'The frames are drawn together, as the cells of one sheet, so that it is one girl in all of them (drawn one by one they were different girls). Each cell is the 3D figure from Forms set to one step of the ' + esc(a.label.toLowerCase()) + ', facing right' +
-      (s.act === 'attack' ? '.' : ' - the last frame leads back to the first.') + ' The sheet is cut back into frames of about 400 px: more frames, narrower ones.' : 'The 3D figure from Forms set to a ' + esc(a.label.toLowerCase()) + ', facing right.'} ` +
+      (s.act === 'attack' ? '.' : ' - the last frame leads back to the first.') + ' The sheet is cut back into frames 300 to 400 px tall: more frames, narrower ones.' : 'The 3D figure from Forms set to a ' + esc(a.label.toLowerCase()) + ', facing right.'} ` +
     'Its build and clothes come from the figure and the look you describe - the pose you set in Forms is replaced. Name every garment and its colour' +
     (s.act === 'attack' ? ', and what she holds ("holding a longsword"): a weapon the look does not name is drawn in some frames and not in others' : '') +
     '. Whether the faces match is for you to judge.</p>';
