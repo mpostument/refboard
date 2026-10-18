@@ -15,7 +15,7 @@ kind of control. The interface is never left for a big redesign at the end.
 Fifty-odd more features will not fit the present layout, where each tool
 lives in the one place it was first built (the pose skeleton and the
 eyedropper only in a session, palettes only in the Colour studio). A
-clickable mock-up of it - workspace, easel mode, settings - is agreed.
+clickable mock-up of it - workspace, settings - is agreed.
 
 - **One workspace for an image.** Any picture - from a session, the
   library, a museum, a photo of your own work - opens in one place, and
@@ -31,8 +31,6 @@ clickable mock-up of it - workspace, easel mode, settings - is agreed.
   gaze (Figure; see Eye and gaze construction) and a painting check and
   likeness (My work; see Checking your own work, and Likeness and figure
   checks).
-- **Easel mode for a tablet.** Big controls, gestures, one hand, the
-  screen kept awake; a left-handed layout.
 
 In place: themes - the four Catppuccin flavours (Mocha by default), Studio
 dark and Daylight - with a theme editor that saves, exports and imports
@@ -143,10 +141,6 @@ refboard setting in localStorage, every document, every upload - as one
 
 Hands full of paint: ways to run a session without touching the screen.
 
-- **A phone as a second screen.** In the local version, over the home
-  network: the session is run from the computer, and a phone or tablet by
-  the paper shows the reference in sync. Needs the backend - not
-  possible on GitHub Pages.
 - **A remote or a foot pedal.** Bluetooth page-turners and foot pedals to
   change pose and pause.
 
