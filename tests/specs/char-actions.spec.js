@@ -240,3 +240,28 @@ test('a dark ellipse on the floor, wider than her feet, is taken off; a boot\'s 
   expect(r.toeTip).toEqual([255, 255]);     // a toe is a few pixels wide: not a shadow
   expect(r.same).toBe(true);                // nothing to take off: the same canvas comes back
 });
+
+test('the pixel look cuts the colours once for all the frames of a cycle, so the loop does not flicker', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    // Four frames of one figure whose shades drift a little from frame to frame, as the model's do.
+    const frame = i => {
+      const c = Object.assign(document.createElement('canvas'), { width: 120, height: 160 }), g = c.getContext('2d');
+      const k = g.createLinearGradient(0, 0, 120, 0); k.addColorStop(0, `rgb(${220 + i * 5},50,50)`); k.addColorStop(1, `rgb(40,${60 + i * 6},${210 - i * 7})`);
+      g.fillStyle = k; g.beginPath(); g.ellipse(60, 80, 48, 64, 0, 0, 7); g.fill();
+      return c;
+    };
+    const colours = cs => {
+      const seen = new Set();
+      for (const c of cs) { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 0; i < d.length; i += 4) if (d[i + 3]) seen.add(d[i] + ',' + d[i + 1] + ',' + d[i + 2]); }
+      return seen.size;
+    };
+    const frames = [0, 1, 2, 3].map(frame);
+    const s = { pix: '32', pixColours: '8', pixOutline: 'no', pixShared: 'own', pixPalette: [] };
+    return { each: colours(frames.map(c => assetPixel(c, s))), together: colours(assetPixelFrames(frames, s)),
+      off: assetPixelFrames(frames, { ...s, pix: 'off' })[0] === frames[0] };
+  });
+  expect(r.together, 'one palette of at most the colours asked, over every frame').toBeLessThanOrEqual(8);
+  expect(r.each, 'cut frame by frame, the palettes drift apart').toBeGreaterThan(8);
+  expect(r.off, 'pixel look off: the frames are as they were').toBe(true);
+});

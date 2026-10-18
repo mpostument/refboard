@@ -258,6 +258,31 @@ function assetPixel(canvas, s, { outline = true, split } = {}) {
   return r.canvas;
 }
 
+/* The frames of one cycle as the pixel look asks. Each frame cut to its own colours would round the
+   same patch of skirt to a different shade from frame to frame - in the loop it flickers. So the
+   colours are cut once, from every frame together (on top of the game's, when one is kept), and
+   every frame is drawn from that. */
+function assetPixelFrames(canvases, s) {
+  if (s.pix === 'off' || s.pixShared === 'box' || canvases.length < 2) return canvases.map(c => assetPixel(c, s));
+  const game = s.pixShared === 'game', n = Number(s.pixColours);
+  const seed = game ? (assetState.pixPalette || []).map(rgbOfHex) : [];
+  const fresh = [];
+  for (const c of canvases) {
+    // Only to read the pixels the frame would have (no outline: that is the palette's darkest, not a colour of its own).
+    const r = assetPixelate(c, { grid: Number(s.pix), colours: 64, outline: false });
+    const d = r.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, r.canvas.width, r.canvas.height).data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (!d[i + 3]) continue;
+      const p = [d[i], d[i + 1], d[i + 2]];
+      if (!seed.length || seed.every(q => pixDist(p, q) > PIX_NEAR)) fresh.push(p);
+    }
+  }
+  const room = Math.max(0, n - seed.length);
+  const pal = seed.concat(pixelMedianCut(fresh, game ? Math.min(room, Math.max(4, Math.ceil(room / 3))) : room));
+  if (game) { assetState.pixPalette = pal.map(hexOf); assetsSave(); renderAssetPixel(); }
+  return canvases.map(c => assetPixelate(c, { grid: Number(s.pix), colours: pal.length, outline: s.pixOutline === 'yes', palette: pal, shared: true }).canvas);
+}
+
 const assetKind = id => ASSET_KINDS.find(k => k.id === id) || ASSET_KINDS[0];
 const assetPick = (list, id) => list.find(x => x.id === id) || list[0];
 
@@ -636,10 +661,9 @@ async function assetsCharacterGo(s) {
   // Whatever was drawn is lined up, even if it was stopped or one failed.
   const lined = assetAlign(cuts.map(c => c.canvas));
   if (!lined) return;
-  const sprites = [];
+  const sprites = assetPixelFrames(lined.canvases, s);
   for (let i = 0; i < cuts.length; i++) {
-    const sprite = assetPixel(lined.canvases[i], s);
-    sprites.push(sprite);
+    const sprite = sprites[i];
     await assetKeep(cuts[i].doc, sprite, ['cut out', 'aligned', `${sprite.width}x${sprite.height}`, ...(s.pix === 'off' ? [] : ['pixel']),
       ...(acts && turns.length > 1 ? [s.act, `frame ${cuts[i].frame + 1} of ${turns.length}`] : acts ? [s.act] : [])]);
     await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
