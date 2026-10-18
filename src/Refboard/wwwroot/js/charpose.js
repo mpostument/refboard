@@ -22,8 +22,8 @@ const charAction = id => CHAR_ACTIONS.find(a => a.id === id) || CHAR_ACTIONS[0];
 
 // What the model is told the figure is doing, in place of "standing".
 const CHAR_ACT_WORDS = {
-  idle: 'standing', walk: 'walking', run: 'running, dynamic pose',
-  attack: 'attacking, fighting stance', hurt: 'recoiling, flinching',
+  idle: 'standing', walk: 'walking', run: 'running, mid-stride',
+  attack: 'attacking, fighting stance', hurt: 'recoiling, flinching, in pain, grimacing',
 };
 
 const CHAR_STAND = { 'upperArm.L': [0, 0, 8], 'upperArm.R': [0, 0, -8], 'forearm.L': [-12, 0, 0], 'forearm.R': [-12, 0, 0] };
@@ -62,9 +62,9 @@ const CHAR_ATTACK = [
 ];
 
 const CHAR_HURT = {
-  spine: [-18, 0, 0], chest: [-10, 0, 0], head: [-25, 0, 0],
-  'upperArm.L': [38, 0, 32], 'forearm.L': [-45, 0, 0], 'upperArm.R': [30, 0, -32], 'forearm.R': [-50, 0, 0],
-  'thigh.L': [-22, 0, 0], 'shin.L': [38, 0, 0], 'thigh.R': [14, 0, 0], 'shin.R': [14, 0, 0], 'foot.R': [20, 0, 0],
+  spine: [-25, 0, 0], chest: [-18, 0, 0], head: [-25, 0, 0],
+  'upperArm.L': [50, 0, 45], 'forearm.L': [-40, 0, 0], 'upperArm.R': [48, 0, -45], 'forearm.R': [-45, 0, 0],
+  'thigh.L': [-24, 0, 0], 'shin.L': [45, 0, 0], 'thigh.R': [20, 0, 0], 'shin.R': [16, 0, 0], 'foot.R': [25, 0, 0],
 };
 
 // Poses `a` and `b`, `t` of the way from one to the other, joint by joint (a missing joint is 0).

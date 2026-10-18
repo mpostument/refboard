@@ -653,6 +653,13 @@ the pictures looked at - as the Generate features were):
    is not one). **Still there:** the model drifts a little between frames (skirt length, hair, the torso of a
    passing frame drawn wider); the loop playing, run / attack / hurt on the model, and the pixel look over
    frames are not tried; onion-skinning is not done.
+   **Run, attack, hurt on the model (same day, final quality, 4 frames each):** run reads as a run in every frame;
+   its first words (`running, dynamic pose`) blew the hair out long in half the frames against "short brown
+   hair", now `running, mid-stride` (the hair still drifts, less). Attack: the model draws the weapon only in
+   the frames where the hand happens to hold one - with "holding a longsword" in the look it is in all four, so
+   the view now says to name what she holds. Hurt: the first pose (spine -14, head -22) came out as a calm
+   stance with a hand on the hip; thrown back as far as the joints go (spine -25, chest -18, head -25, arms
+   flung out and back, knees folded) the head is back and the face reacts. **Not tried:** idle; the pixel look over frames.
 5. **Backgrounds.** Biome and time of day; far / middle / near layers made
    in order, each told what is in front of it; a layer that loops sideways;
    Extend (already built) for a longer one; a room or map from above. *Done

@@ -381,7 +381,9 @@ function assetActionHtml(s) {
     : '') +
     `<p class="gen-note">${a.frames ? 'Each frame is the 3D figure from Forms set to one step of the ' + esc(a.label.toLowerCase()) + ', facing right, drawn with the same words and seed' +
       (s.act === 'attack' ? '.' : ' - the last frame leads back to the first.') : 'The 3D figure from Forms set to a ' + esc(a.label.toLowerCase()) + ', facing right.'} ` +
-    'Its build and clothes come from the figure and the look you describe - the pose you set in Forms is replaced. Name every garment and its colour. Whether the faces match is for you to judge.</p>';
+    'Its build and clothes come from the figure and the look you describe - the pose you set in Forms is replaced. Name every garment and its colour' +
+    (s.act === 'attack' ? ', and what she holds ("holding a longsword"): a weapon the look does not name is drawn in some frames and not in others' : '') +
+    '. Whether the faces match is for you to judge.</p>';
 }
 
 /* The pixel look's choices. The colours, outline and palette only when it is on; a tile has no
