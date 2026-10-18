@@ -437,3 +437,124 @@ test('a paler key colour is still a key; a cream or a grey is not; and the white
   expect(r.grey).toBe(false);
   expect(r.passes, '8 px on a figure of 1000, 3 on 330, never fewer than 2 or more than 8').toEqual([8, 3, 2, 8]);
 });
+
+// ---- What a real sheet did that the tests above never drew (2026-10-18, after the one-sheet release: "characters look bad, many
+// artifacts, especially in the animation"). Four causes, each seen on the real model and each with its own test.
+
+// A sheet asked for 6 poses came back as 10, in 5 columns. Cut as 3 x 2 it was figures sliced through: a boot with no leg, specks in the air.
+test('the figures of a sheet are found wherever the model drew them, and more than asked are spaced out', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    // A figure: a body whose colour is its number (so the order can be read back), two legs and an arm reaching out, on a lavender.
+    const sheet = (cols, rows, count) => {
+      const c = Object.assign(document.createElement('canvas'), { width: 1216, height: 832 }), g = c.getContext('2d');
+      g.fillStyle = 'rgb(163,155,195)'; g.fillRect(0, 0, c.width, c.height);
+      for (let i = 0; i < count; i++) {
+        const cx = (i % cols + 0.5) * c.width / cols, cy = (Math.floor(i / cols) + 0.5) * c.height / rows;
+        g.fillStyle = `rgb(${20 + i * 20},70,190)`; g.fillRect(cx - 20, cy - 60, 40, 80);
+        g.fillStyle = 'rgb(30,40,120)'; g.fillRect(cx - 20, cy + 20, 14, 60); g.fillRect(cx + 6, cy + 20, 14, 60);
+        g.fillRect(cx + 20, cy - 50, 40, 8);   // the arm
+      }
+      return c;
+    };
+    const body = f => { const d = f.getContext('2d').getImageData(0, 0, f.width, f.height).data; for (let i = 0; i < d.length; i += 4) if (d[i + 1] === 70 && d[i + 2] === 190) return d[i]; return -1; };
+    const asked = sheet(3, 2, 6), tenth = sheet(5, 2, 10), few = sheet(3, 2, 4);
+    const a = charSheetFigures(asked, 6), b = charSheetFigures(tenth, 6), c = charSheetFigures(few, 6);
+    const plain = Object.assign(document.createElement('canvas'), { width: 600, height: 400 });
+    plain.getContext('2d').fillStyle = 'rgb(40,90,200)'; plain.getContext('2d').fillRect(0, 0, 600, 400);
+    return { a: [a.found, a.frames.length, a.frames.map(body)], b: [b.found, b.frames.length, b.frames.map(body)], c: [c.found, c.frames.length], none: charSheetFigures(plain, 6),
+      wide: Math.max(...b.frames.map(f => f.width)) };
+  });
+  expect(r.a[0]).toBe(6);
+  expect(r.a[2], 'reading order: left to right, top to bottom').toEqual([20, 40, 60, 80, 100, 120]);
+  expect([r.b[0], r.b[1]], '10 drawn, 6 kept').toEqual([10, 6]);
+  expect(r.b[2], 'evenly spaced through the 10, not the first 6').toEqual([20, 40, 80, 120, 140, 180]);
+  expect(r.c, '4 drawn, 4 found (and the caller says so)').toEqual([4, 4]);
+  expect(r.none, 'a picture with no plain background has no figures to find').toBeNull();
+  expect(r.wide, 'each is its own figure and not a slice of the sheet').toBeLessThan(250);
+});
+
+// The cells of a sheet came back on a pale lavender (163 155 195: 40 between its channels), under the 80 that makes a key: it was cut as a paper,
+// so the gaps in a figure stayed. A sheet is known to be on a key; a cream or a grey still is not one.
+test('on a sheet a pale lavender is a key, so a gap inside the figure goes; a cream is not, even there', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const on = (rgb, sheet) => {
+      const c = Object.assign(document.createElement('canvas'), { width: 300, height: 400 }), g = c.getContext('2d');
+      g.fillStyle = `rgb(${rgb})`; g.fillRect(0, 0, 300, 400);
+      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(90, 60, 120, 280);
+      g.fillStyle = `rgb(${rgb})`; g.fillRect(140, 190, 20, 20);   // a window the figure encloses (an arm on a hip)
+      const cut = assetCutFigure(c, { sheet });
+      return { keyed: cut.keyed, window: cut.found ? cut.canvas.getContext('2d').getImageData(cut.canvas.width >> 1, cut.canvas.height >> 1, 1, 1).data[3] : -1 };
+    };
+    return { sheet: on('163,155,195', true), lone: on('163,155,195', false), cream: on('255,250,230', true), grey: on('200,200,200', true) };
+  });
+  expect(r.sheet.keyed).toBe(true);
+  expect(r.sheet.window, 'the window is background').toBe(0);
+  expect(r.lone.keyed, 'a lone picture keeps the saturated test').toBe(false);
+  expect(r.cream.keyed).toBe(false);
+  expect(r.grey.keyed).toBe(false);
+});
+
+// The gap under a heel was 150 px of magenta; a cut-out leaves a gap under 0.05% of the picture (500 px of a million), so it stayed pink.
+test('on a key colour even a small gap inside the figure is background', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const c = Object.assign(document.createElement('canvas'), { width: 1000, height: 1100 }), g = c.getContext('2d');
+    g.fillStyle = 'rgb(227,20,197)'; g.fillRect(0, 0, 1000, 1100);
+    g.fillStyle = 'rgb(10,10,16)'; g.fillRect(400, 300, 200, 500);
+    g.fillStyle = 'rgb(227,20,197)'; g.fillRect(490, 540, 12, 12);   // 144 px
+    const cut = assetCutFigure(c);
+    const d = cut.canvas.getContext('2d').getImageData(0, 0, cut.canvas.width, cut.canvas.height).data;
+    let tinted = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 8 && d[i] > 150 && d[i + 1] < 80 && d[i + 2] > 120) tinted++;
+    return { keyed: cut.keyed, tinted };
+  });
+  expect(r.keyed).toBe(true);
+  expect(r.tinted, 'no magenta left in the figure').toBe(0);
+});
+
+// Where the outline meets the key colour the model blends them: a black line on magenta is a dark magenta, which is not near enough the key
+// for the cut-out and not light enough for the border test, so it stayed as a coloured hem (and a pixel grid made it a palette colour).
+test('the hem the key colour leaves on the outside goes, a blue skirt does not, and a pale key is not despilled', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const key = [227, 20, 197], mk = () => {
+      const c = Object.assign(document.createElement('canvas'), { width: 60, height: 60 }), g = c.getContext('2d');
+      g.fillStyle = 'rgb(110,10,95)'; g.fillRect(10, 10, 3, 40);   // the hem, 3 px, on the outside
+      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(13, 10, 30, 40);  // blue, as a skirt is
+      return c;
+    };
+    const col = (c, x) => c.getContext('2d').getImageData(x, 30, 1, 1).data[3];
+    const out = assetDespill(mk(), key, 4), pale = mk();
+    return { hem: [10, 11, 12].map(x => col(out, x)), blue: col(out, 13), paleSame: assetDespill(pale, [163, 155, 195]) === pale, noKey: assetDespill(pale, undefined) === pale };
+  });
+  expect(r.hem, 'the three columns of hem').toEqual([0, 0, 0]);
+  expect(r.blue, 'the blue next to it is hers').toBe(255);
+  expect(r.paleSame, 'a lavender key has too weak a hue to despill by').toBe(true);
+  expect(r.noKey).toBe(true);
+});
+
+// A sheet drawn without the white border: taking "the border" off bit the pale skin of a leg and the grey of an armour plate out in steps.
+test('the border is taken off only when the model drew one', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const make = border => {
+      const c = Object.assign(document.createElement('canvas'), { width: 300, height: 560 }), g = c.getContext('2d');
+      if (border) { g.fillStyle = 'rgb(240,235,245)'; g.fillRect(20, 20, 260, 520); g.fillStyle = 'rgb(10,10,16)'; g.fillRect(24, 24, 252, 512); }   // the border, then her outline inside it
+      g.fillStyle = 'rgb(40,90,200)'; g.fillRect(border ? 26 : 20, border ? 26 : 20, border ? 248 : 260, border ? 508 : 520);
+      // a pale leg that stands out of the figure on the right, no outline of its own
+      g.fillStyle = 'rgb(250,230,220)'; g.fillRect(border ? 276 : 280, 300, 12, 100);
+      return c;
+    };
+    const opaque = c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 8) n++; return n; };
+    const bare = make(false), bordered = make(true), key = [227, 20, 197];
+    return { shareBare: assetRimPale(bare), shareBordered: assetRimPale(bordered),
+      bareKept: opaque(assetFigureCanvas({ keyed: true, canvas: bare, key })) / opaque(bare),
+      borderedKept: opaque(assetFigureCanvas({ keyed: true, canvas: bordered, key })) / opaque(bordered) };
+  });
+  expect(r.shareBare, 'a few pale pixels on an edge of one limb').toBeLessThan(0.5);
+  expect(r.shareBordered, 'a ring of them').toBeGreaterThan(0.9);
+  expect(r.bareKept, 'with no border, nothing comes off').toBeGreaterThan(0.995);
+  expect(r.borderedKept, 'with one, it does').toBeLessThan(0.98);
+});

@@ -144,3 +144,53 @@ function charSheetCells(sheet, n, inset = 0) {
     return c;
   });
 }
+
+/* The figures of a sheet, found and not assumed. The sheet is asked for as n cells (charSheetLayout), and the model draws
+   what it likes: a sheet asked for 6 poses came back as 10, in 5 columns, and cut as 3 x 2 it was figures sliced through,
+   a boot with no leg and specks in the air (real run, 2026-10-18). So the figure's pixels (cutOut: whatever is not the
+   background) are projected: the rows they fill make bands, and in each band the columns they fill make figures, read left
+   to right, top to bottom. A gap narrower than SHEET_GAP of the sheet joins (a hand away from the body is still hers); a
+   figure with under SHEET_SPECK of the biggest one's pixels is a speck. Each is cut out of the sheet with SHEET_PAD of
+   its own size round it, so that its edge is background and assetCutFigure can find the key. More than n found: n of them,
+   evenly spaced, so that a cycle drawn long is still a cycle. Returns { frames, found } (found: how many there were), or
+   null when the sheet has no plain background (the cells of the layout are then the only thing to cut). */
+const CHAR_SHEET_TRIES = 3;   // a sheet with the wrong number of figures is drawn again, with another seed, this many times in all
+const SHEET_GAP = 0.015, SHEET_SPECK = 0.08, SHEET_PAD = 0.12;
+function charSheetFigures(sheet, n) {
+  const cut = cutOut(sheet, { trim: false, specks: false });
+  if (!cut.found) return null;
+  const w = sheet.width, h = sheet.height, a = cut.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  // [first, last] of every run of a profile above `min`, a run continuing over a gap of up to `gap`.
+  const runs = (profile, gap, min) => {
+    const out = [];
+    for (let i = 0; i < profile.length; i++) {
+      if (profile[i] <= min) continue;
+      const last = out[out.length - 1];
+      if (last && i - last[1] <= gap) last[1] = i; else out.push([i, i]);
+    }
+    return out;
+  };
+  const rows = new Uint32Array(h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (a[(y * w + x) * 4 + 3] > ASSET_ALPHA) rows[y]++;
+  const boxes = [];
+  for (const [y0, y1] of runs(rows, Math.max(6, Math.round(h * SHEET_GAP)), 2)) {
+    const cols = new Uint32Array(w);
+    for (let y = y0; y <= y1; y++) for (let x = 0; x < w; x++) if (a[(y * w + x) * 4 + 3] > ASSET_ALPHA) cols[x]++;
+    for (const [x0, x1] of runs(cols, Math.max(6, Math.round(w * SHEET_GAP)), 0)) {
+      let mass = 0;
+      for (let x = x0; x <= x1; x++) mass += cols[x];
+      boxes.push({ x0, x1, y0, y1, mass });
+    }
+  }
+  const biggest = boxes.reduce((m, b) => Math.max(m, b.mass), 0), figures = boxes.filter(b => b.mass >= biggest * SHEET_SPECK);
+  if (!figures.length) return null;
+  const chosen = figures.length > n ? Array.from({ length: n }, (_, i) => figures[Math.floor(i * figures.length / n)]) : figures;
+  const frames = chosen.map(b => {
+    const pad = Math.round(SHEET_PAD * Math.max(b.x1 - b.x0, b.y1 - b.y0)), x0 = Math.max(0, b.x0 - pad), y0 = Math.max(0, b.y0 - pad);
+    const x1 = Math.min(w, b.x1 + 1 + pad), y1 = Math.min(h, b.y1 + 1 + pad);
+    const c = Object.assign(document.createElement('canvas'), { width: x1 - x0, height: y1 - y0 });
+    c.getContext('2d').drawImage(sheet, x0, y0, x1 - x0, y1 - y0, 0, 0, x1 - x0, y1 - y0);
+    return c;
+  });
+  return { frames, found: figures.length };
+}

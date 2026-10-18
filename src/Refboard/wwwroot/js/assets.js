@@ -120,8 +120,18 @@ function charLook(look) {
 // the model draws on the floor is taken off (assetDropShadow).
 // The border is a band about 1 px in 125 of the figure's height (8 px on a figure of 1000): a figure of a sheet's cell is a third of that
 // size, and 8 px off it took the pale skin of a thigh in blocks (real run, 2026-10-18).
-const assetFringePasses = canvas => Math.max(2, Math.min(8, Math.round(canvas.height / 125)));
-const assetFigureCanvas = cut => assetTrim(assetDropShadow(cut.keyed ? assetDefringe(cut.canvas, assetFringePasses(cut.canvas), { light: FRINGE_KEYED_LIGHT, behind: true }) : assetDefringe(cut.canvas, assetFringePasses(cut.canvas)))) || cut.canvas;
+// A cell of a sheet is drawn with a border that is wider for its size (about 1 px in 85), so it takes one pass more.
+const assetFringePasses = (canvas, sheet = false) => Math.max(2, Math.min(8, Math.round(canvas.height / (sheet ? 85 : 125))));
+function assetFigureCanvas(cut) {
+  const passes = assetFringePasses(cut.canvas, cut.sheet);
+  let plain;
+  if (cut.keyed) {
+    const clean = assetDespill(cut.canvas, cut.key, passes);
+    // The border is taken off only where the model drew one (assetRimPale): a figure with none loses pale limbs to it.
+    plain = assetRimPale(clean) >= BORDER_SHARE ? assetDefringe(clean, passes, { light: FRINGE_KEYED_LIGHT, behind: true, dark: cut.sheet ? FRINGE_SHEET_DARK : FRINGE_DARK }) : clean;
+  } else plain = assetDefringe(cut.canvas, passes);
+  return assetTrim(assetDropShadow(plain)) || cut.canvas;
+}
 
 const ASSET_THEMES = [
   { id: 'any', label: 'Any', tags: '' },
@@ -653,21 +663,36 @@ async function assetsCharacterGo(s) {
     jobs.push({ ...r, image: frame.b64, control: true, strength: CHAR_STRENGTH, seed, tags: [...r.tags, 'pose'].slice(0, 24), ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) });
   }
   const cuts = [];
-  let sheetDoc = null;
+  let sheetDoc = null, sheetDrew = 0;   // sheetDrew: how many poses the model drew on the sheet
   let at = 0;   // the job the callback is for: they come back in order, one by one
   await runGenerate(jobs, (i, total) => sheeted ? `Drawing the ${turns.length} frames together...` : `Drawing ${turns[i - 1].label} (${i} of ${total})...`, acts ? `${turns.length} frame${turns.length === 1 ? '' : 's'} made - in Uploads, Assets.` : `${turns.length} directions made - in Uploads, Assets.`, async made => {
     if (sheeted) {
+      // The model draws as many poses as it likes (6 asked, 10, 13 and 20 came back): a sheet with the wrong number is drawn again
+      // with another seed, up to CHAR_SHEET_TRIES in all, and the one nearest the number asked for is kept.
+      const tried = [];
+      let doc = made.doc;
+      for (let t = 1; ; t++) {
+        let pic;
+        try { pic = await genLoadPicture(doc); } catch { return; }
+        // The figures are found on the sheet; the layout's cells are only for a sheet with no plain background to find them against.
+        const figures = charSheetFigures(pic, turns.length);
+        tried.push({ doc, pic, figures });
+        if (!figures || figures.found === turns.length || t >= CHAR_SHEET_TRIES) break;
+        el(ASSET_UI.status).textContent = `The model drew ${figures.found} poses, not ${turns.length}: drawing the sheet again (${t + 1} of ${CHAR_SHEET_TRIES})...`;
+        doc = (await generateOne({ ...jobs[0], seed: Math.floor(Math.random() * 2 ** 31) })).doc;
+      }
+      const miss = t => t.figures ? Math.abs(t.figures.found - turns.length) : turns.length;
+      const best = tried.reduce((b, t) => miss(t) < miss(b) ? t : b);
+      for (const t of tried) if (t !== best) await forgetUpload(t.doc);
       // Cut back into its cells, each cut out on its own. The sheet itself is forgotten once the frames are kept.
-      let pic;
-      try { pic = await genLoadPicture(made.doc); } catch { return; }
-      sheetDoc = { ...made.doc, prompt: plain, shape: 'portrait' };
-      const cells = charSheetCells(pic, turns.length, CHAR_CELL_INSET);
-      cells.forEach((cell, frame) => {
-        const cut = assetCutFigure(cell);
+      sheetDoc = { ...best.doc, prompt: plain, shape: 'portrait' };
+      sheetDrew = best.figures ? best.figures.found : turns.length;
+      (best.figures ? best.figures.frames : charSheetCells(best.pic, turns.length, CHAR_CELL_INSET)).forEach((cell, frame) => {
+        const cut = assetCutFigure(cell, { sheet: true });
         if (cut.found) cuts.push({ doc: sheetDoc, canvas: assetFigureCanvas(cut), frame });
       });
-      if (!cuts.length) await storePutItem('uploads', uploadKey(made.doc.file), { ...made.doc, tags: [...(made.doc.tags || []), 'not cut out'].slice(0, 24) });
-      else await forgetUpload(made.doc);
+      if (!cuts.length) await storePutItem('uploads', uploadKey(best.doc.file), { ...best.doc, tags: [...(best.doc.tags || []), 'not cut out'].slice(0, 24) });
+      else await forgetUpload(best.doc);
       return;
     }
     const frame = at++;
@@ -690,7 +715,7 @@ async function assetsCharacterGo(s) {
   for (let i = 0; i < cuts.length; i++) {
     const sprite = sprites[i];
     await assetKeep(cuts[i].doc, sprite, ['cut out', 'aligned', `${sprite.width}x${sprite.height}`, ...(s.pix === 'off' ? [] : ['pixel']),
-      ...(acts && turns.length > 1 ? [s.act, `frame ${cuts[i].frame + 1} of ${turns.length}`] : acts ? [s.act] : [])]);
+      ...(acts && turns.length > 1 ? [s.act, `frame ${cuts[i].frame + 1} of ${sprites.length}`] : acts ? [s.act] : [])]);
     if (cuts[i].file) await forgetUpload({ ...cuts[i].doc, file: cuts[i].file });
   }
   // The frames of a cycle or a swing are also one strip, in the order they play - what a game cuts back by cell size.
@@ -702,6 +727,8 @@ async function assetsCharacterGo(s) {
   }
   storeChanged();
   await ASSET_UI.refresh();
+  // Said after the refresh, which leaves the status as it was: the sheet is the model's, and its count is not always the one asked for.
+  if (sheeted && sheetDrew && sheetDrew !== turns.length) status.textContent = `The model drew ${sheetDrew} poses on the sheet, not ${turns.length}: ${sprites.length} kept${sheetDrew > turns.length ? ', evenly spaced' : ''}.`;
 }
 
 /* The one request that draws a whole cycle: the frames' depth maps laid out as the cells of a sheet (charSheetLayout),
@@ -728,7 +755,7 @@ async function assetSheetJob(s, blobs, union, seed, draft) {
   const { dir, ...r } = assetRequest({ ...s, dir: 'right' });
   const words = `(character sheet:1.3), (${n} poses of the same character:1.3), same outfit and same hair in every pose, animation frames, `;
   // One sheet must not be drawn as panels (borders, white gutters between the cells): the cut-out would take a panel for the figure.
-  return { plain: r.prompt, job: { ...r, prompt: words + r.prompt, avoid: `${r.avoid}, panel, panels, border, frame, grid, split screen, gutter`, shape: 'landscape', image: genEncode(sheet), control: true, strength: CHAR_STRENGTH, seed,
+  return { plain: r.prompt, job: { ...r, prompt: words + r.prompt, avoid: `${r.avoid}, panel, panels, border, frame, grid, split screen, gutter, white outline, white border, sticker, die-cut, halo`, shape: 'landscape', image: genEncode(sheet), control: true, strength: CHAR_STRENGTH, seed,
     tags: [...r.tags, 'pose'].slice(0, 24), ...(draft ? { steps: GEN_DRAFT_STEPS } : {}) } };
 }
 

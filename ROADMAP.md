@@ -686,6 +686,26 @@ the pictures looked at - as the Generate features were):
    under a dark line and takes grey slivers once a shadow is sure). Also in the player: Save GIF (own LZW encoder, `js/gif.js`),
    onion skin, one pixel palette over all frames of a cycle (`assetPixelFrames`). **Not yet:** the sheet in the pack as an
    animation; Run / Attack / Hurt drawn as sheets on the model (only Walk was); the user has not watched the loop play.
+   **Artifacts after the one-sheet release (2026-10-18, the user: "characters look bad, many artifacts, especially in the
+   animation, but not only").** Found on the real model, by keeping the raw picture and replaying the cut-out on it, with a
+   count of the pixels still the key's colour (1157 to 7292 a character before; every one was looked at). Four causes, each
+   with a test. (1) **The sheet was cut as 3 x 2 whatever the model drew**: 6 asked came back as 10, 13 and 20 poses; sliced
+   through, a figure was a boot with no leg and specks in the air. Now the figures are found (`charSheetFigures`: the rows
+   they fill make bands, the columns in a band make figures), more than asked are spaced out, and a sheet with the wrong
+   count is drawn again with another seed, up to 3 times, the nearest kept; the status says what the model drew. (2) **A
+   sheet's key came back lavender** (163 155 195, saturation 40), under the 80 that makes a key, so it was cut as a paper:
+   the gap between the legs and the border stayed. A sheet is known to be on a key (`assetCutFigure(.., { sheet: true })`);
+   a cream or a grey still is not one. (3) **Small gaps and a hem of the key**: the gap under a heel (150 px) was under the
+   cut-out's floor of 0.05% of the picture, and the blend of outline and key (a black line on magenta is a dark magenta)
+   stayed on hair and skirt, a palette colour once pixelled. A key colour has no part of her in it: gaps of 6 px up are
+   background (`KEY_HOLE_MIN`), and pixels with the key's hue on the outside are peeled (`assetDespill`; not for a pale key,
+   whose hue is too weak to tell from her blue). (4) **The border came off where there was none**: the sticker border is
+   taken off by light pixels on the edge, which bit pale legs and grey armour out in steps once the sheet's words stopped
+   drawing one (white outline, sticker, halo are in its avoid list now). It is taken off only when the ring of the figure is
+   near-white (`assetRimPale`: 0.95 to 0.98 with a border, 0.07 to 0.19 without; the line is 0.5). **Not fixed, the
+   model's:** magenta painted into the figure (a pink thigh, a pink tunic), a face lost at 48 px, hands that touch on a
+   sheet and so are one figure to the projection (the redraw covers it), and the sheet's lower detail (armour often
+   comes back as a grey jumper).
 5. **Backgrounds.** Biome and time of day; far / middle / near layers made
    in order, each told what is in front of it; a layer that loops sideways;
    Extend (already built) for a longer one; a room or map from above. *Done
