@@ -232,8 +232,16 @@ function keepUploadQuietly(blob, opts) {
 // Newest first.
 async function listUploads() {
   await initStore();
-  const docs = Object.values(await storeItems('uploads'));
-  return docs.filter(d => d && d.file).sort((a, b) => (b.t || 0) - (a.t || 0));
+  const docs = Object.values(await storeItems('uploads')).filter(d => d && d.file);
+  // A file deleted behind the app's back (from the uploads folder) leaves its
+  // document, which would show as a picture that cannot be found: drop those.
+  // A file is always stored before its document, so a document with no file
+  // is never one still being written. If the file list cannot be had, keep all.
+  let present;
+  try { present = new Set((await storeFiles()).map(f => f.id)); } catch { present = null; }
+  const kept = present ? docs.filter(d => present.has(d.file)) : docs;
+  for (const d of docs) if (!kept.includes(d)) storeDeleteItem('uploads', uploadKey(d.file)).catch(() => { /* next time */ });
+  return kept.sort((a, b) => (b.t || 0) - (a.t || 0));
 }
 
 async function forgetUpload(doc) {

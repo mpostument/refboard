@@ -57,9 +57,13 @@ const test = base.test.extend({
   // turns this off - test.use({ seenTour: false }).
   seenTour: [true, { option: true }],
   seenNews: [true, { option: true }],
+  // One dropped image opens as a value study unless the box under the drop zone is off (the app's own default);
+  // the many specs that start from a dropped picture want the study, so it is on here - uploads.spec.js turns it off.
+  dropStudy: [true, { option: true }],
   // A test that breaks something on purpose names the error it expects.
   allowErrors: [null, { option: true }],
-  page: async ({ page, seenTour, seenNews, allowErrors }, use) => {
+  page: async ({ page, seenTour, seenNews, dropStudy, allowErrors }, use) => {
+    if (dropStudy) await page.addInitScript(() => localStorage.setItem('refboard.dropStudy.v1', '1'));
     if (seenTour) await page.addInitScript(() => localStorage.setItem('refboard.tour.v1', 'seen'));
     if (seenNews) await page.addInitScript(ids => localStorage.setItem('refboard.news.v1', JSON.stringify(ids)), NEWS_IDS);
     const errors = [];
@@ -106,7 +110,10 @@ async function fakeServer(page) {
     }
     if (method === 'DELETE') { files.delete(id); return r.fulfill({ status: 204 }); }
     if (method === 'GET' && id) return r.fulfill({ body: png, contentType: 'image/png' });
-    return r.fulfill({ json: [...files.keys()].map(k => ({ id: k, bytes: png.length })) });
+    // As the server has it, a document's file is on disk too - unless the test says the file was deleted behind the app's back.
+    const ids = new Set(files.keys());
+    for (const [k, d] of items) if (k.startsWith('uploads/') && d.file && !d.orphan) ids.add(d.file);
+    return r.fulfill({ json: [...ids].map(k => ({ id: k, bytes: png.length })) });
   });
   await page.route('**/api/items/**', async r => {
     const [, kind, id] = new URL(r.request().url()).pathname.match(/api\/items\/([^/]+)\/?([^/]*)$/) || [];

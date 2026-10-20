@@ -1949,10 +1949,10 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #whatsNewEarlier .news { margin-top: 8px; }
 
 /* Your uploads (js/uploads.js) and Your data (js/backup.js). */
-#uploads h3 { margin: 0; font-size: 14px; font-weight: 600; }
+#uploads h3, #generated h3 { margin: 0; font-size: 14px; font-weight: 600; }
 #uploadsWhere.unsaved { color: var(--bad); }
-#uploadsList { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
-#uploadsList:empty { display: none; }
+#uploadsList, #generatedList { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+#uploadsList:empty, #generatedList:empty { display: none; }
 .up-tile { position: relative; }
 .up-open {
   display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 1px solid var(--line); border-radius: 8px;

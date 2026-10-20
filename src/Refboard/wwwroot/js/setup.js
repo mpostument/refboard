@@ -664,18 +664,18 @@ function initDropZone() {
 
   function showOne(file) {
     sessionInfo.classList.add('hidden');
-    // A dropped image with nothing chosen to check it against yet would just
-    // show a plain copy of an image already sitting in front of you - the
-    // one useless outcome here. 3 is the middle of VALUE_STEPS and the most
-    // commonly taught value-study split (dark / mid / light).
-    if (!state.valueSteps) { selectValueSteps(3); saveSettings(); }
+    // Only when asked for (the box under the drop zone): the picture is
+    // otherwise shown whole, and the value split is one click away.
+    // 3 is the middle of VALUE_STEPS and the most commonly taught
+    // value-study split (dark / mid / light).
+    const study = el('optDropStudy').checked;
+    if (study && !state.valueSteps) { selectValueSteps(3); saveSettings(); }
 
     startSession([{ frames: [URL.createObjectURL(file)], pack: 'Dropped', group: 'Dropped' }]);
     // "Look at this," not a timed drill - startSession() always starts
     // unpaused, so this is the one place that immediately reverses it.
     if (!state.paused) togglePause();
-    // Split into values already - the panel opens at that question.
-    showWorkspaceAt('value');
+    if (study) showWorkspaceAt('value');
   }
 
   function showMany(files) {
@@ -724,6 +724,13 @@ function initDropZone() {
       (images.length ? ` and ${images.length} image${images.length === 1 ? '' : 's'}` : '') + ' ready';
     start.disabled = false;
   }
+
+  // Remembered on its own, not in the synced settings: a per-viewer habit.
+  const STUDY_KEY = 'refboard.dropStudy.v1';
+  try { el('optDropStudy').checked = localStorage.getItem(STUDY_KEY) === '1'; } catch { /* private mode */ }
+  el('optDropStudy').addEventListener('change', e => {
+    try { localStorage.setItem(STUDY_KEY, e.target.checked ? '1' : '0'); } catch { /* private mode */ }
+  });
 
   el('startDropped').addEventListener('click', () => {
     if (!droppedUrls.length) return;

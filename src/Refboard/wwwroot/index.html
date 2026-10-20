@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=89148837">
+<link rel="stylesheet" href="css/app.css?v=5afcb51a">
 </head>
 <body>
 <div id="setup">
@@ -245,10 +245,13 @@
           <h2>Check your own image</h2>
           <div id="dropZone" tabindex="0" role="button"
                style="border:1px dashed var(--line); border-radius:8px; padding:26px; text-align:center; color:var(--dim); font-size:13px; cursor:pointer;">
-            Drop one image to view it full-screen with the tonal-value tools, or several to draw a timed session from them -
+            Drop one image to view it full-screen, or several to draw a timed session from them -
             or a video, to draw from frames taken at random through it.
           </div>
           <input type="file" id="dropInput" accept="image/*,video/*" multiple class="hidden">
+          <!-- Off: the picture as it is. On: it opens already split into
+               three values, with the Value tools beside it. -->
+          <label class="opt" style="margin-top:8px"><input type="checkbox" id="optDropStudy"> Open one image as a value study (notan)</label>
           <!-- Uses the Interval/Schedule/Options sections in the inspector
                exactly as they are - a dropped-file session is not a different
                kind of session, just one whose pool came from the browser
@@ -268,6 +271,12 @@
             <p class="count hidden" id="uploadsSorting" aria-live="polite" style="margin:0 0 6px"></p>
             <label class="opt hidden" id="keepWrap"><input type="checkbox" id="optKeep"> Keep in this browser</label>
             <ul id="uploadsList" aria-labelledby="uploadsTitle"></ul>
+          </div>
+          <!-- What the app drew itself (Generate, Game assets) - kept the same
+               way, but not among what you gave it. -->
+          <div id="generated" class="hidden">
+            <h3 id="generatedTitle" style="margin-top:20px">Generated</h3>
+            <ul id="generatedList" aria-labelledby="generatedTitle"></ul>
           </div>
         </section>
 
@@ -2280,10 +2289,10 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=62a37cf1"></script>
-<script src="js/setup.js?v=3141638d"></script>
+<script src="js/setup.js?v=dbd36f34"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
-<script src="js/store.js?v=ea07afe9"></script>
-<script src="js/uploads.js?v=a59c8f0e"></script>
+<script src="js/store.js?v=3136007f"></script>
+<script src="js/uploads.js?v=9c23696a"></script>
 <script src="js/session.js?v=a539a2e3"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=dc15b6b7"></script>

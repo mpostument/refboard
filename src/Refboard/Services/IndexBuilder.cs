@@ -29,6 +29,12 @@ public static class IndexBuilder
     /// <summary>The group the uploads not yet sorted into a folder are in.</summary>
     public const string UnsortedGroup = "Unsorted";
 
+    /// <summary>The pack the generated pictures take, and the two folders
+    /// (UserStore.Folders) that go in it.</summary>
+    public const string GeneratedPack = "Generated";
+    private const string GeneratedGroup = "Generated";
+    private const string AssetsGroup = "Assets";
+
     /// <param name="uploads">What the app was given to keep (UserStore), as
     /// one more pack after the mounted ones - so an uploaded reference can be
     /// ticked and drawn from like any other - each folder it has been sorted
@@ -79,13 +85,17 @@ public static class IndexBuilder
                 if (uploadTags != null)
                     foreach (var img in g.Images) img.Tags = uploadTags(img.Src[(img.Src.LastIndexOf('/') + 1)..]);
             }
-            var count = ordered.Sum(g => g.Images.Count);
-            if (count > 0)
+            // What the app drew is not something the user gave it: its own pack.
+            var made = ordered.Where(g => g.Name is GeneratedGroup or AssetsGroup).ToList();
+            ordered = ordered.Except(made).ToList();
+            foreach (var (groupsOf, baseName) in new[] { (ordered, UploadsPack), (made, GeneratedPack) })
             {
-                // A mounted folder already called "Uploads" keeps its name.
-                var name = packs.Any(p => p.Name == UploadsPack) ? UploadsPack + " (kept by Refboard)" : UploadsPack;
+                var count = groupsOf.Sum(g => g.Images.Count);
+                if (count == 0) continue;
+                // A mounted folder already called that keeps its name.
+                var name = packs.Any(p => p.Name == baseName) ? baseName + " (kept by Refboard)" : baseName;
                 totalImages += count;
-                packs.Add(new PackRecord { Name = name, Count = count, Groups = ordered });
+                packs.Add(new PackRecord { Name = name, Count = count, Groups = groupsOf });
             }
         }
 
