@@ -62,7 +62,7 @@ function cutEdgeColour(src, w, h, reach = 60) {
 /* pic: a canvas. Returns { found: false, share, bgShare } for a picture with no plain
    background, else { found: true, canvas (RGBA, cropped if trim), ref, bgShare, x, y }
    where x, y are where the crop's corner was in the picture. */
-function cutOut(pic, { tolerance = CUT_TOLERANCE, holes = false, trim = true, specks = true } = {}) {
+function cutOut(pic, { tolerance = CUT_TOLERANCE, holes = false, holeMin = 0, trim = true, specks = true } = {}) {
   const w = pic.width, h = pic.height, n = w * h;
   const src = pic.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
   const { c: ref, share } = cutEdgeColour(src, w, h, Math.max(60, tolerance));
@@ -91,7 +91,7 @@ function cutOut(pic, { tolerance = CUT_TOLERANCE, holes = false, trim = true, sp
 
   // 3. The gaps inside: pieces of the figure's own area that are the background's colour.
   if (holes) {
-    const seen = new Uint8Array(n), near = tolerance * 0.75, minArea = Math.max(30, n * 0.0005);
+    const seen = new Uint8Array(n), near = tolerance * 0.75, minArea = holeMin || Math.max(30, n * 0.0005);
     for (let s = 0; s < n; s++) {
       if (bg[s] || seen[s] || far[s] > near) continue;
       const piece = [s];
@@ -419,16 +419,23 @@ function assetPeel(canvas, rounds = 3) {
    (between the legs, under an arm) are cleared too, and the two steps that exist only for a pale background
    are left out - they would take the pale parts of the figure. Returns { found, canvas (trimmed), tolerance, keyed }. */
 const KEY_SATURATION = 80;   // the edge colour's strongest channel less its weakest: a flat key, not a cream or grey (100 until the cells of a sheet, whose magenta is drawn paler: 196 118 210 is 92)
+const KEY_HOLE_MIN = 6;      // the smallest gap cleared on a key colour, in pixels: no part of her is that colour, so even the gap under a heel is background (a cut-out's usual floor of 0.05% of the picture left it pink)
 const KEY_HOLES_UP_TO = 160;  // the widest tolerance gaps are cleared at - a wider one is a gradient, and would eat the figure
-function assetCutFigure(pic) {
+/* Whether an edge colour is a key and not a paper: a saturated one. A cell of a sheet is asked for on the key too, and
+   comes back a pale lavender (163 155 195, saturation 40) that the saturated test took for a cream: the gaps between
+   the legs stayed, and so did the white border. There the picture is known to be on a key, so any colour that is
+   not near white or grey (KEY_SHEET_SATURATION, and some channel under KEY_PAPER) is one. */
+const KEY_SHEET_SATURATION = 30, KEY_PAPER = 200;
+const keyColour = (c, sheet) => { const sat = Math.max(...c) - Math.min(...c); return sat >= KEY_SATURATION || (sheet && sat >= KEY_SHEET_SATURATION && Math.min(...c) < KEY_PAPER); };
+function assetCutFigure(pic, { sheet = false } = {}) {
   const w = pic.width, h = pic.height;
   const edge = cutEdgeColour(pic.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data, w, h);
-  const keyed = edge.share >= CUT_EDGE_SHARE && Math.max(...edge.c) - Math.min(...edge.c) >= KEY_SATURATION;
+  const keyed = edge.share >= CUT_EDGE_SHARE && keyColour(edge.c, sheet);
   for (const tolerance of FIGURE_TOLERANCES) {
-    const cut = cutOut(pic, { tolerance, trim: false, holes: keyed && tolerance <= KEY_HOLES_UP_TO });
+    const cut = cutOut(pic, { tolerance, trim: false, holes: keyed && tolerance <= KEY_HOLES_UP_TO, holeMin: KEY_HOLE_MIN });
     if (!cut.found || assetBorderClear(cut.canvas) < FIGURE_EDGE_CLEAR) continue;
     const canvas = assetTrim(keyed ? cut.canvas : assetPeel(cut.canvas));
-    if (canvas) return { found: true, canvas, tolerance, keyed };
+    if (canvas) return { found: true, canvas, tolerance, keyed, key: cut.ref, sheet };
   }
   return { found: false };
 }
@@ -441,12 +448,13 @@ function assetCutFigure(pic) {
    garment with no outline loses at most that much. Returns a new canvas. */
 const FRINGE_LIGHT = 205;   // every channel at least this: a near-white pixel
 const FRINGE_KEYED_LIGHT = 180;   // on a key colour the border's edge is blended with the key (a pink white on magenta), so it is paler by less
-const FRINGE_DARK = 110;   // a pixel this dark (every channel) is the figure's own outline
+const FRINGE_DARK = 110;
+const FRINGE_SHEET_DARK = 170;   // a cell of a sheet draws its outline thin and grey-blue, not black: darker than this is an outline there   // a pixel this dark (every channel) is the figure's own outline
 const FRINGE_MAX = 7;   // how far a border may stand from the outline it hides: further, and what is there is not a border
 /* `behind` (for a picture drawn on a key colour, where a white cloak and a white border are both there) takes a
    light edge pixel only if the figure's own dark outline lies within a few pixels (FRINGE_MAX + 2) inside it: a border
    is a band between the outside and the outline, and a white garment with no outline is not. */
-function assetDefringe(canvas, passes = 8, { light = FRINGE_LIGHT, behind = false } = {}) {
+function assetDefringe(canvas, passes = 8, { light = FRINGE_LIGHT, behind = false, dark = FRINGE_DARK } = {}) {
   const w = canvas.width, h = canvas.height;
   const img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
   const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
@@ -467,9 +475,9 @@ function assetDefringe(canvas, passes = 8, { light = FRINGE_LIGHT, behind = fals
     const r = Math.min(passes, FRINGE_MAX) + 2, near = new Uint8Array(w * h), across = new Uint8Array(w * h);
     for (let y = 0; y < h; y++) {
       let last = -1e9;
-      for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; if (d[i + 3] > ASSET_ALPHA && d[i] < FRINGE_DARK && d[i + 1] < FRINGE_DARK && d[i + 2] < FRINGE_DARK) last = x; across[y * w + x] = x - last <= r ? 1 : 0; }
+      for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; if (d[i + 3] > ASSET_ALPHA && d[i] < dark && d[i + 1] < dark && d[i + 2] < dark) last = x; across[y * w + x] = x - last <= r ? 1 : 0; }
       last = 1e9;
-      for (let x = w - 1; x >= 0; x--) { const i = (y * w + x) * 4; if (d[i + 3] > ASSET_ALPHA && d[i] < FRINGE_DARK && d[i + 1] < FRINGE_DARK && d[i + 2] < FRINGE_DARK) last = x; if (last - x <= r) across[y * w + x] = 1; }
+      for (let x = w - 1; x >= 0; x--) { const i = (y * w + x) * 4; if (d[i + 3] > ASSET_ALPHA && d[i] < dark && d[i + 1] < dark && d[i + 2] < dark) last = x; if (last - x <= r) across[y * w + x] = 1; }
     }
     for (let x = 0; x < w; x++) {
       let last = -1e9;
@@ -479,6 +487,57 @@ function assetDefringe(canvas, passes = 8, { light = FRINGE_LIGHT, behind = fals
     }
     // Put back what has no outline near it: that was the figure's own, not a border.
     for (const [i, a] of removed) if (!near[i >> 2]) d[i + 3] = a;
+  }
+  const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
+  out.getContext('2d').putImageData(img, 0, 0);
+  return out;
+}
+
+/* Whether the model drew a white border (a sticker's) round the figure: the share of its outermost pixels that are near-white.
+   A border is the whole ring - 0.95 to 0.98 measured on the sheets that had one - and a figure with none has a dark or a coloured
+   edge, with only a pale limb or a white sleeve here and there (0.07 to 0.19 on the sheets without). Taking a border off is
+   taking light pixels off the edge, so it is done only where there is one: where there is none it bites the pale skin of a leg and
+   the grey of an armour plate out in steps (real run, 2026-10-18). */
+const BORDER_SHARE = 0.5;
+function assetRimPale(canvas) {
+  const w = canvas.width, h = canvas.height, d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
+  let edge = 0, pale = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!on(x, y) || (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1))) continue;
+    edge++;
+    const i = (y * w + x) * 4;
+    if (d[i] >= FRINGE_LIGHT && d[i + 1] >= FRINGE_LIGHT && d[i + 2] >= FRINGE_LIGHT) pale++;
+  }
+  return edge ? pale / edge : 0;
+}
+
+/* A key colour's last traces. Where the figure's outline meets the key colour the model blends them (a black line
+   on magenta is a dark magenta), and those pixels are further from the key than the cut-out reaches, so they stay
+   as a coloured hem on the hair and the skirt - and a pixel grid makes each one a palette colour. The key is a colour
+   her look does not name, so a pixel with the key's hue (the same direction away from grey, whatever the lightness)
+   is the key's, not hers. Peels such pixels off the outside, one pixel a pass, up to `passes`. A pale pink skin
+   or a blue skirt points elsewhere (cosine under KEY_HUE); only a pixel on the outside is taken, so an inner one stays. */
+const KEY_HUE = 0.85, KEY_CHROMA = 20;
+function assetDespill(canvas, key, passes = 4) {
+  // A pale key (a lavender) has a hue too weak to tell from the figure's own blue: only the defringe takes its border.
+  if (!key || Math.max(...key) - Math.min(...key) < KEY_SATURATION) return canvas;
+  const w = canvas.width, h = canvas.height, img = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h), d = img.data;
+  const mk = (key[0] + key[1] + key[2]) / 3, ck = [key[0] - mk, key[1] - mk, key[2] - mk], nk = Math.hypot(...ck);
+  const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > ASSET_ALPHA;
+  const tinted = i => {
+    const m = (d[i] + d[i + 1] + d[i + 2]) / 3, a = d[i] - m, b = d[i + 1] - m, c = d[i + 2] - m, n = Math.hypot(a, b, c);
+    return n >= KEY_CHROMA && (a * ck[0] + b * ck[1] + c * ck[2]) / (n * nk) >= KEY_HUE;
+  };
+  for (let k = 0; k < passes; k++) {
+    const gone = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!on(x, y) || (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1))) continue;
+      const i = (y * w + x) * 4;
+      if (tinted(i)) gone.push(i);
+    }
+    if (!gone.length) break;
+    for (const i of gone) d[i + 3] = 0;
   }
   const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
   out.getContext('2d').putImageData(img, 0, 0);

@@ -15,6 +15,20 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'uploads-apart', title: 'Uploads: generated pictures apart, and the picture opens whole',
+    text: "What the app drew (Generate, Game assets) has its own pack in the library and its own section under your uploads, so it no longer sits among what you gave it. A picture whose file you deleted by hand is no longer listed as 'not found'. And one dropped image now opens as it is: the value study (notan) and the Value panel come only when you tick the box under the drop zone." },
+  { id: 'fewest-paints', title: 'Which few paints are enough',
+    text: "Palettes > Fewest paints: choose 2 to 5 and the app picks, from the paints you have set up (your Holbein box, say), the ones that mix every colour of the palette best in watercolour - the paper being the white - and gives the recipe for each colour from only those. If fewer would do, it says so. A reference's colours come to Palettes from the Colour studio.",
+    act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
+  { id: 'colour-search', title: 'Search the library by colour',
+    text: "Library > Colour, beside the search box: pick up to three colours (any colour, twelve named ones, or a mood like warm dusk) and the grid keeps the pictures that have all of them, the best match first. \"Like this\" on a picture shows the ones closest to it in colour. Needs the server to have measured the library (palettes.json); it does that by itself after the features pass.",
+    act: 'Open the library', run: () => setView({ kind: 'all' }) },
+  { id: 'anime-hand', title: 'An anime hand to pose',
+    text: "3D forms > Figure and head > Anime hand: the hand the way an anime artist blocks it in - a soft mitten for the palm, long fingers of two shapes each (a base and a bend) and a thumb of two, eleven joints instead of sixteen. The same poses as the full hand (Relaxed, Spread, Fist, Point, Pinch, Grip), so you can swap one for the other and keep the gesture. Turn it, light it, draw it.",
+    act: 'Open 3D forms', run: () => setView({ kind: 'forms' }) },
+  { id: 'anime-hair-tails', title: 'Anime head: ponytail, twin tails and a parting',
+    text: "The anime head's Hair row has two more styles, Ponytail and Twin tails, each a bundle of locks tied on and hanging past the chin; a new Parting row (Free, Centre, Side) opens the fringe where you choose. Both are named as Generate names them, so Draw it at this angle sends a ponytail or twin tails.",
+    act: 'Open 3D forms', run: () => setView({ kind: 'forms' }) },
   { id: 'game-poses', title: 'Game assets: a character walks, runs, attacks',
     text: "A Character has a Pose row: Idle, Walk, Run, Attack, Hurt. A cycle is 4, 6 or 8 frames, all drawn together on one sheet so that it is one character in all of them (drawn one by one they came out as different girls). The sheet is cut back into frames, cut out, lined up and laid in a strip, and a player runs them: pause, step, speed, an Onion skin that shows the frame before and after faintly, and Save GIF. With the pixel look on, one palette is cut for all the frames, so the colours do not flicker. A frame is 300 to 400 px tall; name what she holds in the look (\"holding a longsword\") or an attack draws it in some frames only.",
     act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },

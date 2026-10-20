@@ -62,7 +62,7 @@ const FORM_OBJECT_DEFAULTS = {
   shape: 'cube', sx: 1, sy: 1, sz: 1, rx: 0, ry: 0, rz: 0, x: 0, y: 0, z: 0,
   color: '#d4cec4', finish: 'matte', gloss: 0.05,
   // The anime head's hair (HAIR_STYLES) and its colour - brown, from HAIR_COLOURS.
-  hair: 'bob', hairColor: '#6e4a37',
+  hair: 'bob', hairColor: '#6e4a37', hairPart: 'natural',
   // Its eyes: a style from ANIME_EYES (js/vision.js), and a colour from EYE_COLOURS.
   eyes: 'tv', eyeColor: '#3f6fb5',
   // And its expression, from ANIME_EXPRESSIONS - at rest.
@@ -311,6 +311,8 @@ const FORM_SHAPES = {
   curtain:  { label: 'Curtain', lines: [14, 14], cloth: true, build: T => formClothGeometry(T, 'curtain') },
   // A mannequin hand, posable finger by finger - FORM_HAND_JOINTS.
   hand:     { label: 'Hand',     lines: [8, 6], rig: 'hand', build: T => new T.SphereGeometry(0.04, 8, 6) },
+  // The same hand the anime way: a mitten and fingers of two joints - FORM_HAND_ANIME_JOINTS.
+  handAnime: { label: 'Anime hand', lines: [8, 6], rig: 'handAnime', build: T => new T.SphereGeometry(0.04, 8, 6) },
   // A mannequin foot, posable toe by toe - FORM_FOOT_JOINTS.
   foot:     { label: 'Foot',     lines: [8, 6], rig: 'foot', build: T => new T.SphereGeometry(0.04, 8, 6) },
 };
@@ -864,6 +866,28 @@ const HAIR_STYLES = {
   short: { label: 'Short', side: -0.5, back: -0.55, flare: 0.04, under: 0, ahoge: true },
   bob:   { label: 'Bob', side: -1.1, back: -1.05, flare: 0.1, under: 0.14 },
   long:  { label: 'Long', side: -1.95, back: -2.15, flare: 0.16, under: 0.05 },
+  // Short on the head, with tails tied on: `tails` are the places they are tied
+  // (az round from the face, + to the head's left; y, height), `out` how far
+  // each swings away from the head, `len` how far it hangs from the tie.
+  // Named as Generate's Hair row names them.
+  ponytail:  { label: 'Ponytail', side: -0.55, back: -0.5, flare: 0.04, under: 0, ahoge: true,
+    tails: [{ az: 180, y: 0.62 }], out: 0.5, len: 2.9, girth: 1.7 },
+  twintails: { label: 'Twin tails', side: -0.55, back: -0.5, flare: 0.04, under: 0,
+    tails: [{ az: 112, y: 0.6 }, { az: -112, y: 0.6 }], out: 0.55, len: 2.9, girth: 1 },
+};
+/* Where the fringe parts. Each part is the fringe's locks - [az, tip] as in
+   hairLocks() - and how far they swing round (`curl`, degrees, by the lock's
+   az: + toward the head's left): the gap opens where the locks swing apart. */
+const HAIR_PARTS = {
+  natural: { label: 'Free', hint: 'No parting - the fringe falls as it likes',
+    fringe: [[-62, -0.62], [-46, -0.14], [-32, -0.1], [-19, -0.16], [-7, -0.3], [6, -0.24], [18, -0.12], [31, -0.16], [45, -0.08], [62, -0.62]],
+    curl: az => -Math.sign(az) * 4 },
+  centre: { label: 'Centre', hint: 'Parted in the middle, the two halves swept out to each side',
+    fringe: [[-62, -0.62], [-50, -0.2], [-38, -0.18], [-26, -0.16], [-14, -0.1], [14, -0.1], [26, -0.16], [38, -0.18], [50, -0.2], [62, -0.62]],
+    curl: az => Math.sign(az) * 11 },
+  side: { label: 'Side', hint: 'Parted off the middle, the long side swept across the forehead',
+    fringe: [[-62, -0.62], [-47, -0.16], [-35, -0.12], [-17, -0.2], [-5, -0.18], [8, -0.15], [21, -0.14], [34, -0.14], [47, -0.1], [62, -0.62]],
+    curl: az => az < -24 ? -8 : 12 },
 };
 // Named as Generate's Hair colour row names them, so the head's hair can be
 // asked for there by name.
@@ -932,7 +956,7 @@ const hairOut = (T, p) => new T.Vector3(p.x, Math.max(p.y, 0), p.z).normalize();
    head's left), root, tip (heights), w (half-width), curl (how far the tip
    swings round, degrees), layer (how far over the others it lies) } - or,
    for the one that stands up, `path`: the points it runs through. */
-function hairLocks(style) {
+function hairLocks(style, T, reach, part) {
   const S = HAIR_STYLES[style], locks = [];
   // Seeded, so a style is always the same hair.
   let seed = 7;
@@ -940,11 +964,10 @@ function hairLocks(style) {
   // The fringe, from the crown over the forehead. The tips stop above the
   // eyes where the eyes are, reach between them in the middle, and the two
   // outermost frame the face down to the cheek.
-  const fringe = [[-62, -0.62], [-46, -0.14], [-32, -0.1], [-19, -0.16], [-7, -0.3], [6, -0.24], [18, -0.12],
-    [31, -0.16], [45, -0.08], [62, -0.62]];
-  for (const [az, tip] of fringe) {
+  const P = HAIR_PARTS[part] || HAIR_PARTS.natural;
+  for (const [az, tip] of P.fringe) {
     locks.push({ az, root: 0.97, tip: style === 'short' && Math.abs(az) > 55 ? -0.3 : tip, w: 0.16 + rnd() * 0.04,
-      curl: -Math.sign(az) * (4 + rnd() * 6), layer: 0.085 + rnd() * 0.012, under: 0.05 });
+      curl: P.curl(az) * (part === 'natural' ? 1 + rnd() * 1.5 : 1 + rnd() * 0.3), layer: 0.085 + rnd() * 0.012, under: 0.05 });
   }
   // The sides, over the ears.
   for (const sx of [-1, 1]) {
@@ -967,10 +990,29 @@ function hairLocks(style) {
   }
   // The ahoge: the one lock that stands up off the crown.
   if (S.ahoge) locks.push({ path: [[0, 0.98, -0.05], [0.02, 1.18, 0.02], [0.08, 1.3, 0.2], [0.16, 1.24, 0.38]], w: 0.06 });
+  // The tails: each a bundle of locks run down a shared axis - out from the
+  // tie, then hanging - spread round that axis (a ring of eight about a
+  // ninth down its middle) so it has a body from every side, not a ribbon
+  // seen edge-on. The axis swells below the tie and narrows to the tip.
+  for (const tail of S.tails || []) {
+    const az = tail.az * THREE_DEG, u = new T.Vector3(Math.sin(az), 0, Math.cos(az)), t = new T.Vector3(Math.cos(az), 0, -Math.sin(az));
+    const tie = new T.Vector3(reach(az, tail.y) * u.x, tail.y, reach(az, tail.y) * u.z).addScaledVector(u, 0.08);
+    // Along the axis: how far out, how far down (of S.len), how thick.
+    const rows = [[0, 0, 0.05], [0.25, 0.04, 0.15], [0.9, 0.3, 0.2], [1, 0.62, 0.17], [0.85, 1, 0.07]];
+    for (let k = 0; k < 9; k++) {
+      const phi = 2 * Math.PI * k / 8, ring = k === 8 ? 0 : 1;
+      const pts = rows.map(([out, down, r]) => {
+        const c = tie.clone().addScaledVector(u, out * S.out).add(new T.Vector3(0, -down * S.len, 0));
+        const g = r * S.girth * ring * (0.85 + 0.3 * (k % 2));
+        return [c.x + g * (t.x * Math.cos(phi) + u.x * Math.sin(phi)), c.y, c.z + g * (t.z * Math.cos(phi) + u.z * Math.sin(phi))];
+      });
+      locks.push({ path: pts, w: 0.14 * S.girth + 0.02 });
+    }
+  }
   return locks;
 }
 
-function formAnimeHairGeometry(T, style) {
+function formAnimeHairGeometry(T, style, part = 'natural') {
   const head = formGeometry('anime'), reach = formHeadReach(head);
   const P = [], N = [], TA = [], SH = [], U = [], I = [];
   const K = 9, M = 30; // round each lock, and along it
@@ -1039,7 +1081,7 @@ function formAnimeHairGeometry(T, style) {
     return out;
   };
 
-  for (const L of hairLocks(style)) {
+  for (const L of hairLocks(style, T, reach, part)) {
     const pts = L.path
       ? spaced(new T.CatmullRomCurve3(L.path.map(q => new T.Vector3(...q))).getPoints(200))
       : path(L);
@@ -1299,6 +1341,48 @@ const FORM_HAND_POSES = {
     [[30, 0, 20], [15, 0, 0], [10, 0, 0]]) },
 };
 
+/* ---- the anime hand. The same right hand, palm to +z, fingers up, drawn the
+   way an anime artist blocks one in: the palm a soft mitten (one egg and a bar
+   for the knuckles, no box corners), the fingers long, nearly as thick at the
+   tip as at the root and lying side by side, each in two shapes - a base and a
+   bend - not three; the thumb two. Eleven joints for the hand's sixteen: the
+   pose is a few big gestures, which is what the line is made of.
+   Its poses are the full hand's, folded: the middle and tip joints of a finger
+   add up to its one bend (a tip is about half as free as the middle). */
+const FORM_HAND_ANIME_ROOT = FORM_HAND_ROOT;
+const FORM_HAND_ANIME_JOINTS = [
+  ['wrist', null, [0, 0.02, 0], 'Wrist', [rigEll([0, 0.5, 0], [0.5, 0.5, 0.14]), rigEll([0, 0.9, 0], [0.44, 0.13, 0.11]), rigEll([0.26, 0.28, 0.07], [0.2, 0.28, 0.13])]],
+  ['thumb1', 'wrist', [0.3, 0.18, 0.08], 'Thumb base', [rigBall([0, 0, 0], 0.115), rigLimb(0.46 + 0.08, 0.115, 1)], [20, -35, -38]],
+  ['thumb2', 'thumb1', [0, 0.46, 0], 'Thumb tip', [rigLimb(0.5, 0.1, 1)]],
+  ...[['index', 'Index', 0.27, 0.96, 0.55, 0.45, 0.088],
+      ['middle', 'Middle', 0.09, 0.98, 0.6, 0.48, 0.09],
+      ['ring', 'Ring', -0.09, 0.96, 0.56, 0.45, 0.086],
+      ['little', 'Little', -0.27, 0.92, 0.44, 0.36, 0.076]].flatMap(([k, n, x, y, a, b, r]) => [
+    // Each shape runs a little past its joint, into the next: two capsules
+    // end to end pinch at the joint and the finger reads as beads.
+    [`${k}1`, 'wrist', [x, y, 0], `${n} base`, [rigBall([0, 0, 0], r), rigLimb(a + r * 0.7, r, 1)]],
+    [`${k}2`, `${k}1`, [0, a, 0], `${n} bend`, [rigLimb(b, r * 0.92, 1)]],
+  ]),
+];
+const FORM_HAND_ANIME_LIMITS = {
+  wrist: FORM_HAND_LIMITS.wrist, thumb1: FORM_HAND_LIMITS.thumb1, thumb2: [[0, 100], [0, 0], [0, 0]],
+  // Lean to 22: the full hand's own Spread leans the little finger 20.
+  finger1: [[-20, 90], [-5, 5], [-22, 22]], finger2: [[0, 135], [0, 0], [0, 0]],
+};
+const FORM_HAND_ANIME_POSES = Object.fromEntries(Object.entries(FORM_HAND_POSES).map(([id, { label, pose: p }]) => {
+  const q = {};
+  for (const j of Object.keys(p)) {
+    const m = /^(\w+?)([123])$/.exec(j);
+    if (!m || m[2] === '3') continue;   // the tip joint is folded into the one before it
+    const tip = p[m[1] + '3'] || [0, 0, 0];
+    q[j] = m[2] === '2' ? [p[j][0] + tip[0] * 0.5, p[j][1], p[j][2]] : p[j];
+  }
+  if (p.wrist) q.wrist = p.wrist;
+  // A thumb's three joints become two: the tip takes the middle's and the tip's bend.
+  if (p.thumb2) q.thumb2 = [p.thumb2[0] + (p.thumb3 ? p.thumb3[0] : 0) * 0.6, p.thumb2[1], p.thumb2[2]];
+  return [id, { label, pose: q }];
+}));
+
 /* ---- the foot. A right foot, sole down, toes toward +z, the big toe on the
    +x side (a right foot seen from the front has its inside to the right of
    the picture). Built the way the hand is, from what a drawing book teaches:
@@ -1383,6 +1467,10 @@ const FORM_RIGS = {
   hand:   { root: FORM_HAND_ROOT, joints: FORM_HAND_JOINTS, poses: FORM_HAND_POSES,
             limits: j => FORM_HAND_LIMITS[j.replace(/^(index|middle|ring|little)(\d)$/, 'finger$2')],
             random: Object.keys(FORM_HAND_POSES), shake: [14, 4, 5],
+            whole: 'Whole hand', noun: 'hand', mirror: false, reset: 'Open and flat' },
+  handAnime: { root: FORM_HAND_ANIME_ROOT, joints: FORM_HAND_ANIME_JOINTS, poses: FORM_HAND_ANIME_POSES,
+            limits: j => FORM_HAND_ANIME_LIMITS[j.replace(/^(index|middle|ring|little)(\d)$/, 'finger$2')],
+            random: Object.keys(FORM_HAND_ANIME_POSES), shake: [14, 4, 5],
             whole: 'Whole hand', noun: 'hand', mirror: false, reset: 'Open and flat' },
   foot:   { root: FORM_FOOT_ROOT, joints: FORM_FOOT_JOINTS, poses: FORM_FOOT_POSES,
             limits: j => FORM_FOOT_LIMITS[j.replace(/^(big|second|third|fourth|little)(\d)$/, 'toe$2')],

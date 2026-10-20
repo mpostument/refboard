@@ -9,6 +9,8 @@ const UPLOADS_SHOWN = 24;
 // What the portfolio site is made of (js/portfolio.js): the photos Compare takes of
 // your drawing, and anything sorted into My work.
 const isWork = u => u.type.startsWith('image/') && (u.from === 'work' || u.folder === 'my-work');
+// Drawn by the app (ComfyUI, Game assets) rather than given to it.
+const isGenerated = u => u.from === 'generate' || u.folder === 'generated' || u.folder === 'assets';
 const PORTFOLIO_KEY = 'refboard.portfolioTitle.v1';
 // A size to read, not to compute with: "340 KB", "12.5 MB".
 const fmtBytes = n => n < 1048576 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1048576).toFixed(1)} MB`;
@@ -31,10 +33,22 @@ async function renderUploads() {
   renderWhere();
   let list = [];
   try { list = await listUploads(); } catch (err) { console.warn('uploads:', err); }
-  uploadsShown = list.slice(0, UPLOADS_SHOWN);
-  const host = el('uploadsList');
+  // What the app drew has its own list below; one array behind both, so a
+  // tile's data-i finds its upload whichever list it is in.
+  const given = list.filter(u => !isGenerated(u)).slice(0, UPLOADS_SHOWN);
+  const drawn = list.filter(isGenerated).slice(0, UPLOADS_SHOWN);
+  uploadsShown = [...given, ...drawn];
+  drawTiles(el('uploadsList'), given, 0);
+  drawTiles(el('generatedList'), drawn, given.length);
+  el('generated').classList.toggle('hidden', !drawn.length);
+  el('uploads').classList.toggle('hidden', !list.length && storeMode === 'memory' && !canKeepInBrowser());
+  return list;
+}
+
+function drawTiles(host, items, offset) {
   host.innerHTML = '';
-  for (const [i, u] of uploadsShown.entries()) {
+  for (const [n, u] of items.entries()) {
+    const i = offset + n;
     const li = document.createElement('li');
     li.className = 'up-tile';
     const video = u.type.startsWith('video/');
@@ -50,8 +64,6 @@ async function renderUploads() {
     host.appendChild(li);
     if (!video) storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
   }
-  el('uploads').classList.toggle('hidden', !list.length && storeMode === 'memory' && !canKeepInBrowser());
-  return list;
 }
 
 async function openUpload(u) {
@@ -125,11 +137,11 @@ function dataMessage(text, bad = false) {
 }
 
 function initUploads() {
-  el('uploadsList').addEventListener('click', e => {
+  for (const id of ['uploadsList', 'generatedList']) el(id).addEventListener('click', e => {
     const forget = e.target.closest('[data-forget]');
     if (forget) {
       const u = uploadsShown[Number(forget.dataset.forget)];
-      if (u) forgetUpload(u).then(() => el('uploadsList').querySelector('.up-open')?.focus());
+      if (u) forgetUpload(u).then(() => el(id).querySelector('.up-open')?.focus());
       return;
     }
     const open = e.target.closest('[data-i]');
