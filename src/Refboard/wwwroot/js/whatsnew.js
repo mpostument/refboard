@@ -15,6 +15,8 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'uploads-apart', title: 'Uploads: generated pictures apart, and the picture opens whole',
+    text: "What the app drew (Generate, Game assets) has its own pack in the library and its own section under your uploads, so it no longer sits among what you gave it. A picture whose file you deleted by hand is no longer listed as 'not found'. And one dropped image now opens as it is: the value study (notan) and the Value panel come only when you tick the box under the drop zone." },
   { id: 'fewest-paints', title: 'Which few paints are enough',
     text: "Palettes > Fewest paints: choose 2 to 5 and the app picks, from the paints you have set up (your Holbein box, say), the ones that mix every colour of the palette best in watercolour - the paper being the white - and gives the recipe for each colour from only those. If fewer would do, it says so. A reference's colours come to Palettes from the Colour studio.",
     act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
