@@ -15,6 +15,17 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'game-poses', title: 'Game assets: a character walks, runs, attacks',
+    text: "A Character has a Pose row: Idle, Walk, Run, Attack, Hurt. A cycle is 4, 6 or 8 frames, all drawn together on one sheet so that it is one character in all of them (drawn one by one they came out as different girls). The sheet is cut back into frames, cut out, lined up and laid in a strip, and a player runs them: pause, step, speed, an Onion skin that shows the frame before and after faintly, and Save GIF. With the pixel look on, one palette is cut for all the frames, so the colours do not flicker. A frame is 300 to 400 px tall; name what she holds in the look (\"holding a longsword\") or an attack draws it in some frames only.",
+    act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },
+  { id: 'game-pixel', title: 'Game assets: pixel look, tiles, and a pack for Unity',
+    text: "The pixel look shrinks a picture to a grid (16 to 64), cuts it to a few colours, adds one outline, and keeps one palette for the whole game - your Holbein box can be that palette. Tiles are drawn from what the ground is made of (pebbles, cracks, blades) and shown 3 x 3 so a seam would show. Pack for a game makes one zip for Unity: a sheet of the sprites, a file for each picture, tiles and animation strips in their own folders. No .meta files: Unity makes its own on import (Filter Mode Point for pixel art).",
+    act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },
+  { id: 'paint-check', title: 'Compare: Painting check and Clean scan',
+    text: "Painting check: the Compare modes Darker / lighter, Warmer / cooler and Stronger / greyer map where your painting differs from its reference, after the overall light is matched, with a note for each ninth of the picture. Clean scan: a phone photo of a sketchbook page, four clicks on its corners, is straightened and the shadow and the paper's tint are divided out; it is kept in My work, tagged digitised, with its reference. Both are in Compare, after you drop a photo of your drawing." },
+  { id: 'gen-look', title: 'Generate references: Era, and her hair and eyes',
+    text: "A named character now has an Era (Ancient, Medieval, Kyivan Rus, Victorian...) as well as a Setting, so when is said apart from where. Her hair and eyes are said once, in your words (\"silver hair, green eyes\"), and kept with her for every picture.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'game-character', title: 'Game assets: a character, and the rail in groups',
     text: "Game assets now makes a Character: describe the look in English (hair, clothes and their colours) and it draws one side view, facing right - a game mirrors it for left - as up to four candidates to choose from, each cut out. It is drawn on a flat colour that is not in the look, so a white cloak is not lost with the background. For 4 or 8 directions it turns the 3D figure from Forms and draws each turn with one seed; whether the faces match is yours to judge. The left rail has fewer buttons: Gen AI holds References and Game assets as tabs, and Colour, Perspective grid and Images do the same with the views that go with them.",
     act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },
