@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-drafts-parting', title: 'Generate: drafts to choose from, and a parting',
+    text: "Make drafts (As: Drafts) and they wait in a row under Generate instead of among what you made: Finish this turns the one worth keeping into the picture, Drop deletes one, Drop all the lot. And once a hair is chosen, a Parting row asks for the fringe parted in the middle or swept from the side.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'uploads-apart', title: 'Uploads: generated pictures apart, and the picture opens whole',
     text: "What the app drew (Generate, Game assets) has its own pack in the library and its own section under your uploads, so it no longer sits among what you gave it. A picture whose file you deleted by hand is no longer listed as 'not found'. And one dropped image now opens as it is: the value study (notan) and the Value panel come only when you tick the box under the drop zone." },
   { id: 'fewest-paints', title: 'Which few paints are enough',

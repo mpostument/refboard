@@ -293,6 +293,10 @@ const FORM_SHAPES = {
   // An artist's wooden mannequin: its body is FORM_RIG, hung off this tiny
   // ball at the pelvis (hidden inside it) - see buildFormRig().
   figure:   { label: 'Figure',   lines: [8, 6], rig: 'figure', build: T => new T.SphereGeometry(0.04, 8, 6) },
+  // The same figure with a real human body (MakeHuman's, skinned to the same
+  // joints - see FORM_RIGS.human and buildFormRig()). The mannequin stays
+  // the plain view for practising forms.
+  human:    { label: 'Human',    lines: [8, 6], rig: 'human', build: T => new T.SphereGeometry(0.04, 8, 6) },
   // The head, twice from one real head scan (formHeadScan()): as it is, and
   // cut into planes the way the Asaro planes head is - large flat facets, so
   // each turn of the form is one value. Until the scan has arrived (and if
@@ -1176,13 +1180,19 @@ function figureScale(build, joint, sc) {
 /* Standing straight, in the figure's own frame: the top of the head, the
    soles, a head's height and how many heads the whole is. The Height slider
    stretches the head with the rest, so it never changes the count. */
-function figureHeights(build, sy = 1) {
-  const row = j => FORM_RIG.find(r => r[0] === j), up = (j, parent) => row(j)[2][1] * figureScale(build, parent, [1, sy, 1])[1];
-  const head = row('head')[4][0], foot = row('foot.L')[4][1], hs = figureScale(build, 'head', [1, sy, 1])[1];
-  const top = up('spine', null) + up('chest', 'spine') + up('neck', 'chest') + up('head', 'neck') + (head.at[1] + head.size[1]) * hs;
-  const bottom = up('thigh.L', null) + up('shin.L', 'thigh.L') + up('foot.L', 'shin.L') +
-    (foot.at[1] - foot.size[1] / 2) * figureScale(build, 'foot', [1, sy, 1])[1];
-  const unit = 2 * head.size[1] * hs;
+function figureHeights(build, sy = 1, rig = FORM_RIGS.figure) {
+  const row = j => rig.joints.find(r => r[0] === j), up = (j, parent) => row(j)[2][1] * figureScale(build, parent, [1, sy, 1])[1];
+  const hs = figureScale(build, 'head', [1, sy, 1])[1], fs = figureScale(build, 'foot', [1, sy, 1])[1];
+  // The mannequin's crown and sole are its head's and foot's own parts; a
+  // skinned body says them outright (rig.extent).
+  let crown, sole, unit;
+  if (rig.extent) { crown = rig.extent.crown * hs; sole = -rig.extent.sole * fs; unit = rig.extent.unit * hs; }
+  else {
+    const head = row('head')[4][0], foot = row('foot.L')[4][1];
+    crown = (head.at[1] + head.size[1]) * hs; sole = (foot.at[1] - foot.size[1] / 2) * fs; unit = 2 * head.size[1] * hs;
+  }
+  const top = up('spine', null) + up('chest', 'spine') + up('neck', 'chest') + up('head', 'neck') + crown;
+  const bottom = up('thigh.L', null) + up('shin.L', 'thigh.L') + up('foot.L', 'shin.L') + sole;
   return { top, bottom, unit, heads: (top - bottom) / unit };
 }
 // Of the joint being named, on the rig being posed - see FORM_RIGS.
@@ -1454,6 +1464,32 @@ const FORM_FOOT_POSES = {
   spread: { label: 'Spread', pose: footPose(footToes(-18, 0, 0, 10)) },
 };
 
+/* The human body's joints - the figure's own, by name and by parent, but
+   where MakeHuman's real body has them. Written by scripts/make-human.js
+   together with models/human.glb, which is skinned to exactly these. */
+/* human-rig:begin */
+const FORM_HUMAN_RIG = [
+  ['spine', null, [0, 0.057, 0.005], 'Waist', []],
+  ['chest', 'spine', [0, 0.272, 0.001], 'Chest', []],
+  ['neck', 'chest', [0, 0.96, -0.019], 'Neck', []],
+  ['head', 'neck', [0, 0.259, 0.022], 'Head', []],
+  ['upperArm.L', 'chest', [0.4, 0.806, -0.001], 'Left upper arm', []],
+  ['forearm.L', 'upperArm.L', [0, -0.543, 0], 'Left forearm', []],
+  ['hand.L', 'forearm.L', [0, -0.54, 0], 'Left hand', []],
+  ['thigh.L', null, [0.263, 0, 0], 'Left thigh', []],
+  ['shin.L', 'thigh.L', [0, -1.008, 0], 'Left shin', []],
+  ['foot.L', 'shin.L', [0, -0.911, 0], 'Left foot', []],
+  ['upperArm.R', 'chest', [-0.4, 0.806, -0.001], 'Right upper arm', []],
+  ['forearm.R', 'upperArm.R', [0, -0.543, 0], 'Right forearm', []],
+  ['hand.R', 'forearm.R', [0, -0.54, 0], 'Right hand', []],
+  ['thigh.R', null, [-0.263, 0, 0], 'Right thigh', []],
+  ['shin.R', 'thigh.R', [0, -1.008, 0], 'Right shin', []],
+  ['foot.R', 'shin.R', [0, -0.911, 0], 'Right foot', []],
+];
+// From the head's pivot up to the crown, from the foot's pivot down to the sole, and a head's height.
+const FORM_HUMAN_EXTENT = { crown: 0.362, sole: 0.172, unit: 0.557 };
+/* human-rig:end */
+
 /* Every posable form, by the key its FORM_SHAPES entry names in `rig`.
    root: the parts on the form itself; joints: FORM_RIG-style rows; limits:
    a joint's [min, max] per axis, for random poses; random: the poses those
@@ -1463,8 +1499,14 @@ const FORM_FOOT_POSES = {
 const FORM_RIGS = {
   figure: { root: FORM_RIG_PELVIS, joints: FORM_RIG, limits: formFigureLimits, poses: FORM_POSES,
             random: ['stand', 'contra', 'walk', 'kneel', 'reach'], shake: [14, 10, 14],
-            whole: 'Whole figure', noun: 'figure', mirror: true, reset: 'Standing straight, arms down' },
-  hand:   { root: FORM_HAND_ROOT, joints: FORM_HAND_JOINTS, poses: FORM_HAND_POSES,
+            whole: 'Whole figure', noun: 'figure', mirror: true, reset: 'Standing straight, arms down', figure: true },
+  // The same joints, names and limits, at a real body's places, and no parts
+  // of their own: the body is one skinned mesh (skin), whose weights are in the file.
+  human:  { root: [], joints: FORM_HUMAN_RIG, limits: formFigureLimits, poses: FORM_POSES,
+            random: ['stand', 'contra', 'walk', 'kneel', 'reach'], shake: [14, 10, 14],
+            whole: 'Whole figure', noun: 'figure', mirror: true, reset: 'Standing straight, arms down', figure: true,
+            skin: 'models/human.glb', extent: FORM_HUMAN_EXTENT },
+  hand:  { root: FORM_HAND_ROOT, joints: FORM_HAND_JOINTS, poses: FORM_HAND_POSES,
             limits: j => FORM_HAND_LIMITS[j.replace(/^(index|middle|ring|little)(\d)$/, 'finger$2')],
             random: Object.keys(FORM_HAND_POSES), shake: [14, 4, 5],
             whole: 'Whole hand', noun: 'hand', mirror: false, reset: 'Open and flat' },

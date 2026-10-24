@@ -46,15 +46,17 @@ const POSE_BONES = [['lSh', 'rSh'], ['lSh', 'lEl'], ['lEl', 'lWr'], ['rSh', 'rEl
    style and vary the build instead - a body type, not an art style - so
    either kind can be reached from the Body row without the other
    disappearing. */
+// mannequinOnly: stylised proportions that only make sense on the wooden mannequin - scaled
+// onto a real body (the Human form) they give an adult face on a child's or a doll's body.
 const FIGURE_BUILDS = {
   real: { label: 'Realistic', hint: 'A real body, about eight heads tall: the crotch halfway down, the elbow at the waist.' },
-  anime: { label: 'Anime', chest: [0.9, 0.9], waist: [0.9, 0.9], arm: [0.85, 0.98], hand: [0.85, 0.9], leg: [0.88, 1.1], foot: [0.8, 0.9], head: [1.15, 1.15],
+  anime: { label: 'Anime', mannequinOnly: true, chest: [0.9, 0.9], waist: [0.9, 0.9], arm: [0.85, 0.98], hand: [0.85, 0.9], leg: [0.88, 1.1], foot: [0.8, 0.9], head: [1.15, 1.15],
     hint: 'Standard anime, about seven heads: a bigger head, a shorter torso and longer, slimmer legs - a little more than half the height.' },
-  tall: { label: 'Long-legged', chest: [0.85, 0.92], waist: [0.85, 0.92], neck: [0.9, 1.15], arm: [0.85, 1.08], hand: [0.85, 0.95], leg: [0.85, 1.25], head: [0.95, 0.95],
+  tall: { label: 'Long-legged', mannequinOnly: true, chest: [0.85, 0.92], waist: [0.85, 0.92], neck: [0.9, 1.15], arm: [0.85, 1.08], hand: [0.85, 0.95], leg: [0.85, 1.25], head: [0.95, 0.95],
     hint: 'Stylised, about nine heads, as fashion drawing and some anime do it: a small head and legs more than half the height.' },
-  chibi: { label: 'Chibi', chest: [0.85, 0.45], waist: [0.85, 0.45], neck: [0.8, 0.3], arm: [1.05, 0.5], hand: [1.1, 0.7], leg: [1.05, 0.5], foot: [1.1, 0.8], head: [2.2, 2.2],
+  chibi: { label: 'Chibi', mannequinOnly: true, chest: [0.85, 0.45], waist: [0.85, 0.45], neck: [0.8, 0.3], arm: [1.05, 0.5], hand: [1.1, 0.7], leg: [1.05, 0.5], foot: [1.1, 0.8], head: [2.2, 2.2],
     hint: 'Chibi, about two and a half heads: the head is as big as the body under it, the limbs short stubs with no elbows or knees to speak of.' },
-  child: { label: 'Child', chest: [0.95, 0.62], waist: [1, 0.62], neck: [0.85, 0.65], arm: [0.92, 0.65], hand: [1, 0.85], leg: [0.95, 0.67], foot: [1, 0.9],
+  child: { label: 'Child', mannequinOnly: true, chest: [0.95, 0.62], waist: [1, 0.62], neck: [0.85, 0.65], arm: [0.92, 0.65], hand: [1, 0.85], leg: [0.95, 0.67], foot: [1, 0.9],
     hint: "About five and a half heads - a six or seven year old's proportion: the head is already near full size, and the rest of the body has not yet caught up to it." },
   elderly: { label: 'Older', chest: [0.95, 0.94], waist: [1.05, 0.92], neck: [0.9, 0.94], arm: [0.92, 0.98], leg: [0.92, 0.96],
     hint: 'A little shorter than the realistic figure and narrower through the shoulders, with a fuller waist - the height loss and softening of later life.' },

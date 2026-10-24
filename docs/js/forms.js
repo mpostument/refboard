@@ -854,6 +854,57 @@ function buildFormRig(m, kind) {
     addParts(node, name, parts);
   }
   m.userData.rig = rig;
+  if (def.skin) formSkinBody(m, rig);
+}
+
+/* A skinned body in place of the parts. models/human.glb (written by
+   scripts/make-human.js) is one mesh weighted to the figure's own joints, in
+   the pose the figure stands in at zero - so it needs no pose of its own: a
+   bone of its skeleton is a small object hung on each joint's node, and the
+   joints' rotations, which are the figure's pose, are what skin it. The bone
+   carries the joint's own scale (Height, Width, the build), as the parts
+   did, and sits on the node, not on the pivot: scaling the body's bone must
+   not move the joints below it.
+   The file loads once and is shared; until it has, the figure is not drawn. */
+let formBodyLoading = null;
+function formBodyLoad(url) {
+  const F = forms;
+  return formBodyLoading || (formBodyLoading = (async () => {
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    let src = null;
+    (await new GLTFLoader().loadAsync(url)).scene.traverse(o => { if (o.isSkinnedMesh && !src) src = o; });
+    if (!src) throw new Error('no body in ' + url);
+    const g = src.geometry, p = g.getAttribute('position');
+    // Contour lines are drawn from UVs and the file has none: round the body, and up it.
+    g.computeBoundingBox();
+    const { min, max } = g.boundingBox, uv = new Float32Array(p.count * 2);
+    for (let i = 0; i < p.count; i++) {
+      uv[i * 2] = Math.atan2(p.getX(i), p.getZ(i)) / (2 * Math.PI) + 0.5;
+      uv[i * 2 + 1] = (p.getY(i) - min.y) / (max.y - min.y);
+    }
+    g.setAttribute('uv', new F.T.BufferAttribute(uv, 2));
+    return F.body = { geometry: g, joints: src.skeleton.bones.map(b => b.userData.joint), inverses: src.skeleton.boneInverses.map(b => b.clone()) };
+  })().catch(err => { formBodyLoading = null; throw err; }));
+}
+async function formSkinBody(m, rig) {
+  const T = forms.T;
+  let body;
+  try { body = await formBodyLoad(rig.def.skin); } catch (err) { console.error('human body (none is drawn):', err); return; }
+  if (m.userData.rig !== rig) return;   // the form became something else meanwhile
+  const bones = body.joints.map(j => {
+    const bone = new T.Bone();
+    (j === 'pelvis' ? m : rig.nodes[j]).add(bone);
+    return bone;
+  });
+  rig.skin = { joints: body.joints, bones };
+  const mesh = new T.SkinnedMesh(body.geometry, m.material);
+  mesh.castShadow = mesh.receiveShadow = true;
+  // Its bounding sphere is the standing body's: a raised arm is outside it.
+  mesh.frustumCulled = false;
+  m.add(mesh);
+  mesh.bind(new T.Skeleton(bones, body.inverses.map(b => b.clone())), new T.Matrix4());
+  rig.skin.mesh = mesh;
+  formsChanged();
 }
 function dropFormRig(m) {
   for (const c of [...m.children]) m.remove(c);
@@ -959,9 +1010,15 @@ function formCelUniforms(u, color, gloss, sc, rimDir) {
    raised arm would come out wide instead of long. A figure's build
    (FIGURE_BUILDS) scales each part the same way: a joint sits where its
    parent's scale puts it, its own parts take its own. */
+// The build a figure is drawn in. A real body takes only the real ones: an
+// Anime or Chibi object switched to Human (or saved so) is drawn Realistic.
+// `def` is the rig's FORM_RIGS entry.
+const formBuildOf = (o, def) => def.skin && FIGURE_BUILDS[o.build].mannequinOnly ? 'real' : o.build;
 function poseFormRig(m, o) {
-  const rig = m.userData.rig, base = [o.sx, o.sy, o.sz];
-  const scaleOf = rig.kind === 'figure' ? j => figureScale(o.build, j, base) : () => base;
+  const rig = m.userData.rig, base = [o.sx, o.sy, o.sz], build = formBuildOf(o, rig.def);
+  const scaleOf = rig.def.figure ? j => figureScale(build, j, base) : () => base;
+  // The skinned body's bones take their joint's scale, as its parts would.
+  if (rig.skin) rig.skin.joints.forEach((j, i) => rig.skin.bones[i].scale.set(...scaleOf(j === 'pelvis' ? null : j)));
   for (const [name, parent, at] of rig.def.joints) {
     const node = rig.nodes[name], r = o.pose[name] || [0, 0, 0], sc = scaleOf(parent);
     rig.pivots[name].position.set(at[0] * sc[0], at[1] * sc[1], at[2] * sc[2]);
@@ -976,7 +1033,7 @@ function poseFormRig(m, o) {
 
 async function poseFromPhoto(file) {
   const note = el('formPhotoNote'), b = el('formPosePhoto'), o = activeFormObject();
-  if (formRigOf(o.shape) !== FORM_RIGS.figure || !file.type.startsWith('image/')) return;
+  if (!(formRigOf(o.shape) || {}).figure || !file.type.startsWith('image/')) return;
   b.disabled = true;
   note.textContent = visionModels.pose ? 'Reading the pose...' : 'Loading the pose model - about 6 MB, once. The photo stays in this browser.';
   const url = URL.createObjectURL(file);
@@ -1607,8 +1664,9 @@ function drawFormHeads(ctx, dpr, toScreen) {
   ctx.lineWidth = 1 * dpr;
   formScene.objects.forEach((o, i) => {
     const m = forms.meshes[i];
-    if (!m || formShapeDef(o.shape).rig !== 'figure') return;
-    const h = figureHeights(o.build, o.sy), tall = h.top - h.bottom, half = 0.6 * o.sx;
+    const rig = m && formRigOf(o.shape);
+    if (!rig || !rig.figure) return;
+    const h = figureHeights(formBuildOf(o, rig), o.sy, rig), tall = h.top - h.bottom, half = 0.6 * o.sx;
     const ry = o.ry * THREE_DEG, across = new T.Vector3(Math.cos(ry), 0, -Math.sin(ry));
     const at = (y, side) => toScreen(new T.Vector3(m.position.x, o.y + y, m.position.z).addScaledVector(across, side * half));
     const levels = [];
@@ -2757,7 +2815,7 @@ function showAnimeShot(k) {
 // Who the shot is of: the selected form if it is a figure or a head, else
 // the first one in the scene that is.
 function formShotSubject(sc = formScene) {
-  const who = o => o && (formRigOf(o.shape) === FORM_RIGS.figure || !!formShapeDef(o.shape).subject);
+  const who = o => o && ((formRigOf(o.shape) || {}).figure || !!formShapeDef(o.shape).subject);
   return who(sc.objects[sc.active]) ? sc.objects[sc.active] : sc.objects.find(who) || null;
 }
 
@@ -3411,12 +3469,17 @@ function syncFormsPanel() {
     const poses = Object.entries(rig.poses).map(([k, p]) =>
       `<button class="chip" type="button" data-pose-preset="${k}">${esc(p.label)}</button>`).join('');
     if (el('formPoses').dataset.rig !== rig.whole) { el('formPoses').innerHTML = poses; el('formPoses').dataset.rig = rig.whole; }
-    const figure = rig === FORM_RIGS.figure;
+    const figure = !!rig.figure;
     el('formBuildWrap').classList.toggle('hidden', !figure);
     if (figure) {
-      for (const b of panel.querySelectorAll('[data-build]')) b.setAttribute('aria-pressed', String(b.dataset.build === o.build));
-      const B = FIGURE_BUILDS[o.build];
-      el('formBuildNote').innerHTML = `<b>${figureHeights(o.build).heads.toFixed(1)} heads.</b> ${esc(B.hint)}`;
+      const build = formBuildOf(o, rig);
+      for (const b of panel.querySelectorAll('[data-build]')) {
+        b.setAttribute('aria-pressed', String(b.dataset.build === build));
+        // The stylised ones stay on the Figure: scaled onto a real body they look wrong.
+        b.classList.toggle('hidden', !!rig.skin && !!FIGURE_BUILDS[b.dataset.build].mannequinOnly);
+      }
+      el('formBuildNote').innerHTML = `<b>${figureHeights(build, 1, rig).heads.toFixed(1)} heads.</b> ${esc(FIGURE_BUILDS[build].hint)}` +
+        (rig.skin ? ' Anime, Long-legged, Chibi and Child are on the Figure - a real body does not take them.' : '');
     }
     el('formPoseMirror').classList.toggle('hidden', !rig.mirror);
     el('formPosePhoto').classList.toggle('hidden', !figure);
@@ -3480,6 +3543,14 @@ function syncFormsPanel() {
     ['occlusion', 'How much the forms shut the sky out of what is beside them: a soft dark halo on the floor, and a dark seam where one form meets another or rests on the floor - darkest at the touch, none far away. Only the sky is dimmed - the light itself is not. Off in Anime and the zones view.']]) {
     const r = panel.querySelector('[data-k="' + k + '"]');
     if (r) r.closest('.frow, .opt').title = tip;
+  }
+  // Both are marked on the mannequin's own forms; a real body has its own
+  // anatomy and they have nothing to sit on. Off while no mannequin is in the scene.
+  const mannequin = formScene.objects.some(ob => formShapeDef(ob.shape).rig === 'figure');
+  for (const k of ['bones', 'muscles']) {
+    const r = panel.querySelector('[data-k="' + k + '"]');
+    r.disabled = !mannequin;
+    if (!mannequin) r.closest('.opt').title = 'These are marked on the Figure (the wooden mannequin) - a Human body has anatomy of its own. Add a Figure to see them.';
   }
   for (const b of panel.querySelectorAll('[data-preset]')) {
     const p = LIGHT_PRESETS[b.dataset.preset];
@@ -3967,7 +4038,14 @@ function formHit(clientX, clientY) {
   if (!hit) return null;
   let o = hit.object;
   while (o && !forms.meshes.includes(o)) o = o.parent;
-  return { i: forms.meshes.indexOf(o), joint: hit.object.userData.joint ?? null };
+  // A skinned body is one mesh: its joint is the one that moves the face most.
+  let joint = hit.object.userData.joint ?? null;
+  const skin = hit.object.isSkinnedMesh && o && o.userData.rig && o.userData.rig.skin;
+  if (skin && hit.face) {
+    const j = skin.joints[hit.object.geometry.getAttribute('skinIndex').getX(hit.face.a)];
+    joint = j === 'pelvis' ? null : j;
+  }
+  return { i: forms.meshes.indexOf(o), joint };
 }
 // Which form is under a point on the screen, or -1.
 function formAt(clientX, clientY) {

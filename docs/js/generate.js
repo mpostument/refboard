@@ -36,6 +36,12 @@ const BEGIN_FIGURE = '(minimalist:1.2), simple drawing, simple coloring, clean l
 const BEGIN_AVOID = '(detailed:1.3), intricate details, complex background, gradient, shiny skin, shiny hair';
 // Clothes that differ for a girl and a boy: a ball gown or a prince's cape.
 const wear = (girl, boy) => ch => ch.who === 'boy' ? boy : girl;
+// Slavic is always before Christianity, whatever the Era, but to the model a Slavic girl in white with
+// embroidery and a necklace is an Orthodox one: it hung a cross on her every
+// time. Kept out by Setting, and by the Clothes that stand in for it (`owns`
+// drops the Setting's avoid with its tags).
+const SLAVIC_AVOID = 'cross, cross necklace, latin cross, christianity, nun';
+const slavicAvoid = a => ({ slavic: [a, SLAVIC_AVOID].filter(Boolean).join(', '), _: a || '' });
 // Close-fitting clothes are for seeing the figure's shape, as in a life
 // class - never revealing ones.
 const MODEST = 'cleavage, underwear, lingerie, see-through, bikini, highleg, midriff';
@@ -70,6 +76,13 @@ const GEN_CHOICES = [
     { id: 'long', label: 'Long', tags: 'long hair' },
     { id: 'ponytail', label: 'Ponytail', tags: 'ponytail' },
     { id: 'twintails', label: 'Twin tails', tags: 'twintails' },
+  ] },
+  // Where the fringe parts, by Danbooru's tags: parted bangs open in the middle,
+  // swept bangs lie across the forehead from one side. Asked once a hair is chosen.
+  { id: 'parting', label: 'Parting', for: PERSON, when: ch => ch.hair !== 'any', options: [
+    ANY,
+    { id: 'centre', label: 'Centre', tags: 'parted bangs', words: 'centre parting', hint: 'Parted in the middle, the fringe open over the forehead' },
+    { id: 'side', label: 'Side', tags: 'swept bangs', words: 'side parting', hint: 'Parted off the middle, the long side swept across the forehead' },
   ] },
   { id: 'colour', label: 'Hair colour', for: PERSON, options: [
     ANY,
@@ -118,7 +131,8 @@ const GEN_CHOICES = [
       fantasy: 'fantasy, tunic, cloak, boots, satchel',
       scifi: 'science fiction, jacket, cargo pants, headphones',
       steampunk: 'steampunk, vest, white shirt, goggles on head, boots',
-      postapoc: 'survivor, dirty clothes, torn clothes, hooded jacket, scarf, backpack' } },
+      postapoc: 'survivor, dirty clothes, torn clothes, hooded jacket, scarf, backpack' },
+      avoid: slavicAvoid('') },
     { id: 'festive', label: 'Festive', words: 'festive clothes', owns: 'setting', tags: {
       _: wear('formal, long dress, long sleeves', 'formal, suit, necktie'),
       slavic: wear('embroidered dress, white dress, red embroidery, (flower wreath:1.2), ribbon, necklace, ancient',
@@ -132,7 +146,7 @@ const GEN_CHOICES = [
       scifi: 'science fiction, sleek, formal, high collar, glowing',
       steampunk: wear('steampunk, victorian, corset, bustle, top hat', 'steampunk, victorian, tailcoat, top hat, monocle'),
       postapoc: 'survivor, patchwork clothes, feathers, beads, cape' },
-      avoid: 'cleavage' },
+      avoid: slavicAvoid('cleavage') },
     { id: 'uniform', label: 'Uniform', words: 'uniform', owns: 'setting',
       hint: "The dress of a calling - a school uniform, a mage's robe, a pilot's suit", tags: {
       _: wear('school uniform, blazer, pleated skirt', 'school uniform, blazer, necktie'),
@@ -144,7 +158,8 @@ const GEN_CHOICES = [
       fantasy: 'fantasy, mage, robe, cloak, staff',
       scifi: 'science fiction, pilot suit, military uniform, jacket',
       steampunk: 'steampunk, aviator cap, goggles, leather jacket, military uniform',
-      postapoc: 'survivor, military jacket, cargo pants, gas mask around neck' } },
+      postapoc: 'survivor, military jacket, cargo pants, gas mask around neck' },
+      avoid: slavicAvoid('') },
     { id: 'armour', label: 'Armour', words: 'armour', owns: 'setting', tags: {
       _: 'armor, breastplate, gauntlets',
       slavic: 'chainmail, round shield, spear, ancient',
@@ -158,7 +173,7 @@ const GEN_CHOICES = [
       modern: 'tactical clothes, bulletproof vest, helmet',
       steampunk: 'steampunk, armor, brass, gears',
       postapoc: 'survivor, makeshift armor, shoulder pads, gas mask' },
-      avoid: 'bikini armor, cleavage' },
+      avoid: slavicAvoid('bikini armor, cleavage') },
     { id: 'winter', label: 'Winter', words: 'winter clothes', owns: 'setting', tags: {
       _: 'winter clothes, coat, scarf, gloves',
       modern: 'winter coat, scarf, beanie, gloves',
@@ -171,7 +186,8 @@ const GEN_CHOICES = [
       fantasy: 'fantasy, fur-trimmed cloak, hood',
       scifi: 'science fiction, parka, glowing',
       steampunk: 'steampunk, greatcoat, goggles, scarf',
-      postapoc: 'survivor, tattered coat, hood, scarf, gloves' } },
+      postapoc: 'survivor, tattered coat, hood, scarf, gloves' },
+      avoid: slavicAvoid('') },
     { id: 'sport', label: 'Sportswear', group: 'Figure study', words: 'sportswear', owns: 'setting',
       tags: 'sportswear, track jacket, shorts, sneakers', avoid: MODEST },
     { id: 'tight', label: 'Close-fitting', words: 'close-fitting', owns: 'setting', hint: 'A bodysuit or leggings - the shape of the figure',
@@ -304,7 +320,8 @@ const GEN_CHOICES = [
     // Before Christianity: the gord behind its palisade, log houses, the
     // wooden idols of a shrine in an oak grove - no churches, no onion
     // domes, and no sunflowers (they came from America in the 1700s).
-    { id: 'slavic', label: 'Slavic', group: 'The world', words: 'slavic', tags: {
+    { id: 'slavic', label: 'Slavic', group: 'The world', words: 'slavic',
+      avoid: { character: SLAVIC_AVOID, _: 'church, cross, onion dome' }, tags: {
       character: 'embroidered linen tunic, white tunic, flower wreath, head wreath, braid, amber necklace, sash, ancient',
       landscape: 'birch, oak tree, primeval forest, river, wooden idol, log house, thatched roof, mist',
       building: 'log house, thatched roof, wooden palisade, wooden fortress, wooden idol, pagan shrine, ancient village' } },
@@ -364,7 +381,9 @@ const GEN_CHOICES = [
     { id: 'kyivanrus', label: 'Kyivan Rus', words: 'kyivan rus', avoid: 'onion dome, sunflower, modern, gothic architecture, spire', tags: {
       character: wear('medieval, long tunic, embroidered hem, fur-trimmed cloak, head veil, temple rings, belt', 'medieval, long tunic, embroidered hem, fur-trimmed cloak, fur hat, sash, boots'),
       landscape: 'medieval, steppe, wide river, oak forest, wooden fortress on a hill',
-      building: 'medieval, wooden fortress, palisade, log house, small stone church, helmet dome, thatched roof' } },
+      // Slavic stays pagan in Kyivan Rus too: the idols, not the church.
+      building: ch => 'medieval, wooden fortress, palisade, log house, ' +
+        (ch.setting === 'slavic' ? 'wooden idol, pagan shrine' : 'small stone church, helmet dome') + ', thatched roof' } },
     { id: 'victorian', label: 'Victorian', words: 'victorian', tags: {
       character: wear('victorian, long dress, bustle, bonnet, lace gloves, lace collar', 'victorian, tailcoat, waistcoat, top hat, cravat, pocket watch'),
       landscape: 'victorian, gas lamp, cobblestone street, fog, 19th century',
@@ -487,13 +506,13 @@ const GEN_CHOICES = [
    prompt keeps GEN_CHOICES' own, which puts "1girl, solo" first. */
 const GEN_GROUPS = [
   ['what', 'What', ['style', 'subject', 'setting', 'era']],
-  ['who', 'The character', ['who', 'hair', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
+  ['who', 'The character', ['who', 'hair', 'parting', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
   ['picture', 'The picture', ['medium', 'edges', 'colours', 'lock', 'detail', 'ground']],
 ];
 
-const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', look: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
+const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', look: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', parting: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', detail: 'simple',
   ground: 'plain' };
@@ -1035,8 +1054,48 @@ const genMade = async () => (await listUploads()).filter(u => u.from === 'genera
 async function showGenerate(check = true) {
   if (!el('genChoices').children.length) renderGenerate();
   if (check) genCheck();     // not awaited: the view does not wait on a slow answer
-  const all = await genMade();
-  renderGenResults(all.slice(0, 24), all.length);
+  const all = await genMade(), drafts = genDraftsOf(all);
+  renderGenDrafts(drafts);
+  const rest = all.filter(u => !drafts.includes(u));
+  renderGenResults(rest.slice(0, 24), rest.length);
+}
+
+/* Drafts waiting for a choice: made as drafts and not yet finished (no picture
+   names one as its parent). They are a strip under Generate, each with Finish
+   this and Drop on it, and stay out of Made here until one is finished. */
+const GEN_DRAFTS_SHOWN = 8;
+function genDraftsOf(all) {
+  const used = new Set(all.map(u => u.parent).filter(Boolean));
+  return all.filter(u => (u.tags || []).includes('draft') && !used.has(u.file));
+}
+function renderGenDrafts(drafts) {
+  const box = el('genDrafts'), host = el('genDraftList');
+  box.classList.toggle('hidden', !drafts.length);
+  el('genDraftsCount').textContent = drafts.length > GEN_DRAFTS_SHOWN ? `${GEN_DRAFTS_SHOWN} of ${drafts.length}` : String(drafts.length);
+  host.innerHTML = '';
+  for (const u of drafts.slice(0, GEN_DRAFTS_SHOWN)) {
+    const li = document.createElement('li');
+    li.innerHTML = `<button type="button" class="gen-open" title="${esc((u.tags || []).join(', '))}" aria-label="Open ${esc(u.name)}"><img alt="" loading="lazy"></button>` +
+      `<div class="gen-draft-do"><button type="button" class="gen-draft-finish" title="This one as the picture: 1.5 times the size, with the detail that size has room for">Finish this</button>` +
+      `<button type="button" class="gen-draft-drop" aria-label="Drop ${esc(u.name)}" title="Not this one - deleted, from Uploads too">Drop</button></div>`;
+    storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
+    li.querySelector('.gen-open').addEventListener('click', () => openUpload(u));
+    li.querySelector('.gen-draft-finish').addEventListener('click', () => genFinish(u));
+    li.querySelector('.gen-draft-drop').addEventListener('click', async () => {
+      await forgetUpload(u);
+      await showGenerate(false);
+      (el('genDraftList').querySelector('.gen-draft-finish') || el('genGo')).focus();
+    });
+    host.appendChild(li);
+  }
+}
+// Drop all: every draft still waiting, not only the ones shown - drafts are quick to make again.
+async function dropGenDrafts() {
+  const drafts = genDraftsOf(await genMade());
+  for (const u of drafts) await forgetUpload(u);
+  await showGenerate(false);
+  el('genStatus').textContent = `${drafts.length} ${drafts.length === 1 ? 'draft' : 'drafts'} dropped.`;
+  el('genGo').focus();
 }
 
 /* A picture's menu: one open at a time, placed by the button that opened it and
@@ -1240,7 +1299,8 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null, ui 
   go.title = 'Stop making pictures - the one in hand is cancelled, the rest are not started';
   const n = jobs ? jobs.length : Number(el('genCount').value) || 1;
   const req = jobs ? null : genRequest();
-  if (req && el('genQuality').value === 'draft') { req.steps = GEN_DRAFT_STEPS; req.tags = [...req.tags, 'draft'].slice(0, 24); }
+  const drafting = req && el('genQuality').value === 'draft';
+  if (drafting) { req.steps = GEN_DRAFT_STEPS; req.tags = [...req.tags, 'draft'].slice(0, 24); }
   const status = el(ui.status);
   try {
     for (let i = 1; i <= n; i++) {
@@ -1252,7 +1312,8 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null, ui 
       storeChanged();
       await ui.refresh();
     }
-    status.textContent = genStopped ? 'Stopped.' : jobs ? done : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
+    status.textContent = genStopped ? 'Stopped.' : jobs ? done
+      : drafting ? (n > 1 ? `${n} drafts - finish the one worth keeping.` : 'A draft - finish it if it is worth keeping.') : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
     if (!jobs && genChoices.subject === 'character') { genCharsRemember(genChoices.character); genLooksRemember(genChoices.character, genChoices.look); renderGenRecent(); }
   } catch (err) {
     status.textContent = err.message;
@@ -1284,7 +1345,7 @@ async function initGenerate() {
     saveGenChoices();
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
-    if (['subject', 'setting', 'medium', 'framing', 'detail', 'colours'].includes(b.dataset.gen)) syncGenRows();
+    if (['subject', 'hair', 'setting', 'medium', 'framing', 'detail', 'colours'].includes(b.dataset.gen)) syncGenRows();
     renderGenPrompt();
   });
   el('genChoices').addEventListener('input', e => {
@@ -1327,6 +1388,7 @@ async function initGenerate() {
   strip.addEventListener('dragleave', () => strip.classList.remove('over'));
   strip.addEventListener('drop', async e => { e.preventDefault(); strip.classList.remove('over'); await genPicked(e.dataTransfer.files[0]); });
   el('genClear').addEventListener('click', clearGenerated);
+  el('genDraftsDrop').addEventListener('click', dropGenDrafts);
   el('genExtra').addEventListener('keydown', e => { if (e.key === 'Enter') runGenerate(); });
 
   el('genRetry').addEventListener('click', async () => {

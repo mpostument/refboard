@@ -2024,6 +2024,16 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .gen-open:hover { border-color: var(--accent); }
 .gen-open img { width: 100%; height: 100%; object-fit: cover; display: block; }
 #genResults li { position: relative; }
+/* Drafts: one row of them under Generate, bigger than Made here's, to choose from. */
+.gen-drafts { margin-top: 16px; }
+#genDraftList { list-style: none; margin: 0; padding: 0 0 4px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(120px, 160px); gap: 10px; overflow-x: auto; }
+#genDraftList li { display: grid; gap: 6px; }
+.gen-draft-do { display: flex; gap: 6px; }
+.gen-draft-do button { flex: 1; font-size: 12px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.gen-draft-do .gen-draft-finish { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+.gen-draft-do .gen-draft-drop:hover, .gen-draft-do .gen-draft-drop:focus-visible { border-color: var(--bad); }
+#genDraftsDrop { font-size: 12px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--dim); cursor: pointer; }
+#genDraftsDrop:hover, #genDraftsDrop:focus-visible { color: var(--ink); border-color: var(--bad); }
 .gen-made-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .asset-pack { display: flex; align-items: center; gap: 6px; }
 .asset-anim { display: grid; gap: 8px; justify-items: start; padding: 10px; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
