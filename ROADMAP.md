@@ -222,7 +222,9 @@ change), Finish it (`ImageScaleBy` 1.5, tiled VAE, denoise 0.4: on Animagine XL
 and Drafts (`steps` 14). Run against a real ComfyUI: a box over one eye made it
 green and left every other pixel alone, with no seam to see. Still to come:
 a Finish that picks 2x for a big card, a mask from "the hands" found by the
-pose model, and a draft strip to pick from instead of the grid.
+pose model. In place too: the draft strip (`renderGenDrafts()` in `js/generate.js`) - drafts not yet
+finished (no picture names one as its parent) are a row under Generate, apart from Made here, each with
+Finish this and Drop, and Drop all for the lot. Tried in tests only.
 In place too, in the same menu: New background (`genBackgroundMask()` - the
 colour at the picture's edge spread inward over pixels that change little
 from their neighbour, on a 200-px copy; "Completely" erases the masked part
@@ -426,8 +428,9 @@ has them) - each tail is nine locks run down a shared axis (a ring of eight abou
 head-units, so it has a body seen from any side (a first pass with the locks side by side was a ribbon
 seen edge-on). And a Parting row (`HAIR_PARTS`, `hairPart` on the object: Free, Centre, Side): the
 fringe's locks swing apart where it parts. Looked at in 3D from the front, side, back and three-quarters;
-not drawn on a model. Still to come on it: a hair tie, a side parting that shows more gap, Generate's
-words for a parting, and locks you can move.
+not drawn on a model. Generate has a Parting row of its own (Centre: `parted bangs`, Side: `swept
+bangs`; asked once a hair is chosen), not tied to the 3D head; the tags are Danbooru's, not yet tried on
+the model. Still to come on it: a hair tie, a side parting that shows more gap, and locks you can move.
 
 Line and background:
 

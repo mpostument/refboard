@@ -100,9 +100,41 @@ test('Drafts are the choices in fewer steps, tagged, to be finished later', asyn
   expect(asked[0].steps).toBeUndefined();
   await page.selectOption('#genQuality', 'draft');
   await page.click('#genGo');
-  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  await expect(page.locator('#genStatus')).toHaveText('A draft - finish it if it is worth keeping.');
   expect(asked[1].steps).toBe(14);
   expect(asked[1].tags).toContain('draft');
+});
+
+test('drafts wait in a strip of their own: Finish this makes the picture, Drop deletes one, Drop all every one', async ({ page }) => {
+  const asked = await setup(page);
+  await expect(page.locator('#genDrafts')).toBeHidden();
+  await page.selectOption('#genCount', '1');
+  await page.selectOption('#genQuality', 'draft');
+  await page.click('#genGo');
+  // The draft is in the strip, not in Made here.
+  await expect(page.locator('#genDraftList li')).toHaveCount(1);
+  await expect(page.locator('#genDraftsCount')).toHaveText('1');
+  await expect(page.locator('#genResults .gen-open')).toHaveCount(1);
+  await page.locator('#genDraftList .gen-draft-finish').click();
+  await expect(page.locator('#genStatus')).toHaveText('Finished - in Uploads, Generated.');
+  expect(asked[1].scale).toBe(1.5);
+  expect(asked[1].parent).toBe('c'.repeat(64) + '.png');
+  expect(asked[1].tags).not.toContain('draft');
+  // Finished, it is a picture of Made here's and the strip is gone.
+  await expect(page.locator('#genDrafts')).toBeHidden();
+  await expect(page.locator('#genResults .gen-open')).toHaveCount(2);
+
+  // A draft dropped is deleted.
+  await page.click('#genGo');
+  await expect(page.locator('#genDraftList li')).toHaveCount(1);
+  await page.locator('#genDraftList .gen-draft-drop').click();
+  await expect(page.locator('#genDrafts')).toBeHidden();
+  await expect(page.locator('#genResults .gen-open')).toHaveCount(1);
+  await page.click('#genGo');
+  await page.click('#genDraftsDrop');
+  await expect(page.locator('#genStatus')).toHaveText('1 draft dropped.');
+  await expect(page.locator('#genDrafts')).toBeHidden();
+  await expect(page.locator('#genResults .gen-open')).toHaveCount(1);
 });
 
 test('Light it four ways: four requests, each with its own light weighted and the old one gone', async ({ page }) => {

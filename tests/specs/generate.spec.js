@@ -47,6 +47,17 @@ test('Era says when, apart from where: tags per subject, after the Setting\'s, n
   expect((await p({ subject: 'animal', era: 'victorian' })).prompt).not.toContain('victorian');
 });
 
+test('Parting: the fringe parted in the middle or swept from the side - asked once a hair is chosen', async ({ page }) => {
+  await openApp(page);
+  const p = c => page.evaluate(c => genPrompt({ ...GEN_DEFAULTS, ...c }), c);
+  const centre = await p({ hair: 'long', parting: 'centre' });
+  expect(centre.prompt).toContain('long hair, parted bangs');
+  expect(centre.tags).toContain('centre parting');
+  expect((await p({ hair: 'bob', parting: 'side' })).prompt).toContain('swept bangs');
+  // With Any hair the row is not asked, so its choice is left out.
+  expect((await p({ hair: 'any', parting: 'centre' })).prompt).not.toContain('parted bangs');
+});
+
 test('a character sheet made again: her eyes, and a turnaround, wide', async ({ page }) => {
   await openApp(page);
   const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, colour: 'purple', eyes: 'aqua', framing: 'sheet' }));
@@ -133,7 +144,10 @@ test('with a ComfyUI behind the server: made, kept, shown, opened', async ({ pag
   await page.click('[data-gen="medium"][data-opt="ink"]');
   await expect(page.locator('[data-row="edges"]')).toBeHidden();
   await page.click('[data-gen="medium"][data-opt="watercolour"]');
+  // Parting is asked once there is a hair to part.
+  await expect(page.locator('[data-row="parting"]')).toBeHidden();
   await page.click('[data-gen="hair"][data-opt="long"]');
+  await expect(page.locator('[data-row="parting"]')).toBeVisible();
   await page.fill('#genExtra', 'hat');
   await page.selectOption('#genCount', '2');
   await page.click('#genGo');
