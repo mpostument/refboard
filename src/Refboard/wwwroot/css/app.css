@@ -2304,3 +2304,5 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #assetResults li:hover .asset-edges, .asset-edges:focus-visible { opacity: 1; }
 .asset-edges:disabled { opacity: .5; cursor: wait; }
 @media (hover: none) { .asset-edges { opacity: 1; } }
+
+.pg-few-how { flex: 1; min-width: 0; line-height: 1.7; }

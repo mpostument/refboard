@@ -1237,7 +1237,7 @@ the wash.
   **Markers in place** (the "Copic markers" chip over the count): from a list of 45
   Copic Sketch colours (`COPIC_COLOURS`, my short list, hex estimated by eye - not the whole range
   of 358, and not measured), each palette colour takes its NEAREST single marker (no mixing; OKLab x
-  100) and the set is chosen by the same greedy-and-swap search. Still to come: pencils, the rest of
+  100) and the set is chosen by the same greedy-and-swap search. **Pencils in place** (the "Pencils" chip): 46 Faber-Castell Albrecht Duerer watercolour pencils (`PENCIL_COLOURS`, my short list of the 120, hex estimated, not measured). A colour is matched by one pencil, light (paper half shows) or firm, or by two laid one over the other (a glaze model: the under colour times the pencil, by the pressure); the answer says which first, which over, and to go over with a damp brush. Same greedy-and-swap choice. Not modelled: what wetting does to the colour (it goes deeper), a third layer, the pencil sets other than this one (Inktense, Supracolor). Still to come: the rest of
   the Copic range and its families, oil and acrylic, weighting the colours
   by how much of the picture they cover (the palette carries none), and
   checking the answer against painted swatches of the real tubes - the box's

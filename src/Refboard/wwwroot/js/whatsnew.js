@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'few-pencils', title: 'Which few pencils are enough',
+    text: "Palettes > Fewest paints now has a Pencils choice: the app picks the 2 to 5 watercolour pencils (a short Albrecht Duerer list) that come nearest to your palette, and for each colour says which pencil to lay first, which over it, and how hard to press. The pencils' colours are my estimate.",
+    act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
   { id: 'edge-tiles', title: 'Edge tiles for a tilemap',
     text: "Game assets > Made here: hover a tile and press Edges. You get the 47 cells a tilemap needs to lay that ground in any shape - islands, rounded corners, bitten-out corners - on one sheet, with a rim where it ends. Pack for a game puts the sheet in autotiles/ with a text saying which neighbours each cell is for. Made from one tile; the edge is cut by eye, not tried in Unity yet.",
     act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },

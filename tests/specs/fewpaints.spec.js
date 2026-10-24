@@ -64,3 +64,32 @@ test('Copic markers: tints of one blue take one marker, a green and an orange tw
   await expect(page.locator('#pgFew h4')).toContainText('2 markers', { timeout: 30_000 });
   await expect(page.locator('#pgFew .pg-few-row')).toHaveCount(2);
 });
+
+test('Pencils: a pencil colour is matched by one pencil, a green by two laid over each other', async ({ page }) => {
+  await palette(page, ['#3a63b0', '#3d6e3a']);
+  await page.click('#pgFewFor [data-few-for="pencils"]');
+  await page.click('#pgFewN [data-few="3"]');
+  await page.click('#pgFewGo');
+  await expect(page.locator('#pgFew h4')).toContainText('pencil', { timeout: 30_000 });
+  await expect(page.locator('#pgFew .pg-few-row')).toHaveCount(2);
+  // Every recipe names only chosen pencils, with a pressure.
+  const chosen = await page.evaluate(() => few.result.keys);
+  const rows = await page.evaluate(() => pg.swatches.map(s => fewLayers(s.rgb, few.result.keys)));
+  for (const r of rows) {
+    expect(chosen).toContain(r.key);
+    if (r.over) expect(chosen).toContain(r.over);
+    expect(['light', 'firm']).toContain(r.press);
+  }
+  await expect(page.locator('#pgFew')).toContainText('damp brush');
+});
+
+test('Pencils: a yellow laid over a blue gives a green nearer than either alone', async ({ page }) => {
+  await palette(page, ['#5aa046']);
+  const r = await page.evaluate(() => {
+    const both = fewLayers([90, 160, 70], ['104', '143']);
+    few.medium = 'pencils';
+    return { both, alone: Math.min(fewLayers([90, 160, 70], ['104']).dE, fewLayers([90, 160, 70], ['143']).dE) };
+  });
+  expect(r.both.over).toBeTruthy();
+  expect(r.both.dE).toBeLessThan(r.alone);
+});
