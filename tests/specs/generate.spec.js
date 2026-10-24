@@ -33,6 +33,13 @@ test('Era says when, apart from where: tags per subject, after the Setting\'s, n
   // Christian but before the onion dome.
   expect(girl.avoid).toContain('onion dome');
   expect(girl.tags).toContain('kyivan rus');
+  // Slavic is always before Christianity: a Slavic town of Kyivan Rus has idols, no church, no cross on her.
+  expect(girl.avoid).toContain('cross necklace');
+  const town = await p({ subject: 'building', setting: 'slavic', era: 'kyivanrus' });
+  expect(town.prompt).not.toContain('church');
+  expect(town.prompt).toContain('wooden idol');
+  expect(town.avoid).toContain('church');
+  expect((await p({ subject: 'building', era: 'kyivanrus' })).prompt).toContain('small stone church');
   // Landscape and building have their own words; Any adds nothing.
   expect((await p({ subject: 'landscape', era: 'victorian' })).prompt).toContain('gas lamp, cobblestone street');
   expect((await p({ subject: 'building', era: 'medieval' })).prompt).toContain('stone castle');

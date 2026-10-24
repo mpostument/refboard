@@ -36,6 +36,12 @@ const BEGIN_FIGURE = '(minimalist:1.2), simple drawing, simple coloring, clean l
 const BEGIN_AVOID = '(detailed:1.3), intricate details, complex background, gradient, shiny skin, shiny hair';
 // Clothes that differ for a girl and a boy: a ball gown or a prince's cape.
 const wear = (girl, boy) => ch => ch.who === 'boy' ? boy : girl;
+// Slavic is always before Christianity, whatever the Era, but to the model a Slavic girl in white with
+// embroidery and a necklace is an Orthodox one: it hung a cross on her every
+// time. Kept out by Setting, and by the Clothes that stand in for it (`owns`
+// drops the Setting's avoid with its tags).
+const SLAVIC_AVOID = 'cross, cross necklace, latin cross, christianity, nun';
+const slavicAvoid = a => ({ slavic: [a, SLAVIC_AVOID].filter(Boolean).join(', '), _: a || '' });
 // Close-fitting clothes are for seeing the figure's shape, as in a life
 // class - never revealing ones.
 const MODEST = 'cleavage, underwear, lingerie, see-through, bikini, highleg, midriff';
@@ -125,7 +131,8 @@ const GEN_CHOICES = [
       fantasy: 'fantasy, tunic, cloak, boots, satchel',
       scifi: 'science fiction, jacket, cargo pants, headphones',
       steampunk: 'steampunk, vest, white shirt, goggles on head, boots',
-      postapoc: 'survivor, dirty clothes, torn clothes, hooded jacket, scarf, backpack' } },
+      postapoc: 'survivor, dirty clothes, torn clothes, hooded jacket, scarf, backpack' },
+      avoid: slavicAvoid('') },
     { id: 'festive', label: 'Festive', words: 'festive clothes', owns: 'setting', tags: {
       _: wear('formal, long dress, long sleeves', 'formal, suit, necktie'),
       slavic: wear('embroidered dress, white dress, red embroidery, (flower wreath:1.2), ribbon, necklace, ancient',
@@ -139,7 +146,7 @@ const GEN_CHOICES = [
       scifi: 'science fiction, sleek, formal, high collar, glowing',
       steampunk: wear('steampunk, victorian, corset, bustle, top hat', 'steampunk, victorian, tailcoat, top hat, monocle'),
       postapoc: 'survivor, patchwork clothes, feathers, beads, cape' },
-      avoid: 'cleavage' },
+      avoid: slavicAvoid('cleavage') },
     { id: 'uniform', label: 'Uniform', words: 'uniform', owns: 'setting',
       hint: "The dress of a calling - a school uniform, a mage's robe, a pilot's suit", tags: {
       _: wear('school uniform, blazer, pleated skirt', 'school uniform, blazer, necktie'),
@@ -151,7 +158,8 @@ const GEN_CHOICES = [
       fantasy: 'fantasy, mage, robe, cloak, staff',
       scifi: 'science fiction, pilot suit, military uniform, jacket',
       steampunk: 'steampunk, aviator cap, goggles, leather jacket, military uniform',
-      postapoc: 'survivor, military jacket, cargo pants, gas mask around neck' } },
+      postapoc: 'survivor, military jacket, cargo pants, gas mask around neck' },
+      avoid: slavicAvoid('') },
     { id: 'armour', label: 'Armour', words: 'armour', owns: 'setting', tags: {
       _: 'armor, breastplate, gauntlets',
       slavic: 'chainmail, round shield, spear, ancient',
@@ -165,7 +173,7 @@ const GEN_CHOICES = [
       modern: 'tactical clothes, bulletproof vest, helmet',
       steampunk: 'steampunk, armor, brass, gears',
       postapoc: 'survivor, makeshift armor, shoulder pads, gas mask' },
-      avoid: 'bikini armor, cleavage' },
+      avoid: slavicAvoid('bikini armor, cleavage') },
     { id: 'winter', label: 'Winter', words: 'winter clothes', owns: 'setting', tags: {
       _: 'winter clothes, coat, scarf, gloves',
       modern: 'winter coat, scarf, beanie, gloves',
@@ -178,7 +186,8 @@ const GEN_CHOICES = [
       fantasy: 'fantasy, fur-trimmed cloak, hood',
       scifi: 'science fiction, parka, glowing',
       steampunk: 'steampunk, greatcoat, goggles, scarf',
-      postapoc: 'survivor, tattered coat, hood, scarf, gloves' } },
+      postapoc: 'survivor, tattered coat, hood, scarf, gloves' },
+      avoid: slavicAvoid('') },
     { id: 'sport', label: 'Sportswear', group: 'Figure study', words: 'sportswear', owns: 'setting',
       tags: 'sportswear, track jacket, shorts, sneakers', avoid: MODEST },
     { id: 'tight', label: 'Close-fitting', words: 'close-fitting', owns: 'setting', hint: 'A bodysuit or leggings - the shape of the figure',
@@ -311,7 +320,8 @@ const GEN_CHOICES = [
     // Before Christianity: the gord behind its palisade, log houses, the
     // wooden idols of a shrine in an oak grove - no churches, no onion
     // domes, and no sunflowers (they came from America in the 1700s).
-    { id: 'slavic', label: 'Slavic', group: 'The world', words: 'slavic', tags: {
+    { id: 'slavic', label: 'Slavic', group: 'The world', words: 'slavic',
+      avoid: { character: SLAVIC_AVOID, _: 'church, cross, onion dome' }, tags: {
       character: 'embroidered linen tunic, white tunic, flower wreath, head wreath, braid, amber necklace, sash, ancient',
       landscape: 'birch, oak tree, primeval forest, river, wooden idol, log house, thatched roof, mist',
       building: 'log house, thatched roof, wooden palisade, wooden fortress, wooden idol, pagan shrine, ancient village' } },
@@ -371,7 +381,9 @@ const GEN_CHOICES = [
     { id: 'kyivanrus', label: 'Kyivan Rus', words: 'kyivan rus', avoid: 'onion dome, sunflower, modern, gothic architecture, spire', tags: {
       character: wear('medieval, long tunic, embroidered hem, fur-trimmed cloak, head veil, temple rings, belt', 'medieval, long tunic, embroidered hem, fur-trimmed cloak, fur hat, sash, boots'),
       landscape: 'medieval, steppe, wide river, oak forest, wooden fortress on a hill',
-      building: 'medieval, wooden fortress, palisade, log house, small stone church, helmet dome, thatched roof' } },
+      // Slavic stays pagan in Kyivan Rus too: the idols, not the church.
+      building: ch => 'medieval, wooden fortress, palisade, log house, ' +
+        (ch.setting === 'slavic' ? 'wooden idol, pagan shrine' : 'small stone church, helmet dome') + ', thatched roof' } },
     { id: 'victorian', label: 'Victorian', words: 'victorian', tags: {
       character: wear('victorian, long dress, bustle, bonnet, lace gloves, lace collar', 'victorian, tailcoat, waistcoat, top hat, cravat, pocket watch'),
       landscape: 'victorian, gas lamp, cobblestone street, fog, 19th century',

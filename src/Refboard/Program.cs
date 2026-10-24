@@ -55,8 +55,13 @@ app.UseDefaultFiles();
 // scripts/stamp-assets.js) - so those can be cached for good: a changed
 // file is a new URL. Together a browser never runs a new page with an old
 // script, or an old page with a new one.
+// .glb (the skinned human in models/) is not a type ASP.NET knows: left alone
+// it would be a 404, not a model.
+var wwwTypes = new FileExtensionContentTypeProvider();
+wwwTypes.Mappings[".glb"] = "model/gltf-binary";
 app.UseStaticFiles(new StaticFileOptions
 {
+    ContentTypeProvider = wwwTypes,
     OnPrepareResponse = ctx =>
     {
         var req = ctx.Context.Request;

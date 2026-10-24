@@ -1597,15 +1597,21 @@ the wash.
   hour and under overcast, side by side on one grid - a Monet series.
 - **Clothes on the figure.** Cloth simulated over the mannequin's pose:
   folds at elbows, knees and waist. Drapery exists; on a body it does not.
-- **A real human body for the figure.** The mannequin is ellipsoids and capsules (`FORM_RIG` in
-  `js/forms-models.js`): no muscle, no fingers, no shape to a calf or a hip. Replace its look with a
-  real human mesh (glTF - MakeHuman or another CC0 / CC-BY base) skinned to the same joints, so the
-  poses, the Body builds, the Proportions sliders, Pose from a photo and the depth map Character
-  draws from all keep working on a body with real anatomy. The open points: which licence and which
-  base mesh; how its bones map onto `FORM_RIG`'s ten joint kinds; how a build (Child, Older,
-  Heavier, Muscular...) scales a skinned body; hands with fingers; and the size of the mesh in a
-  page that loads lazily. The mannequin stays as the plain view for practising forms. Asked for
-  2026-10-16, after the figure's depth map made every character a mannequin's silhouette.
+- **A real human body for the figure, the rest.** In place (3D forms > Shape > Human,
+  `models/human.glb`, built by `scripts/make-human.js`): MakeHuman's CC0 base body, with fingers,
+  straightened to stand arms-down and skinned to the figure's own 17 joints - the same names,
+  limits and parents as the mannequin, at a real body's places - so the poses, the Body builds,
+  Pose from a photo and the heads grid work on it unchanged (about 7.2 heads). The mannequin
+  (Figure) stays as the plain view for practising forms. Still to come: a male body (MakeHuman's
+  gender targets - the base is the neutral-female one), fingers that bend (they are rigid with
+  the hand now), Character's depth map drawn from this body (not tried), the Bony landmarks and
+  Muscle groups marked on it (they are switched off with no Figure in the scene), clothes over
+  it, and Figure and Human as one switch beside Body instead of two forms. Anime, Long-legged,
+  Chibi and Child are offered on the Figure only (`mannequinOnly` in `FIGURE_BUILDS`): scaled onto
+  a real body they gave an adult face on a doll's or a child's body, so a Human is drawn
+  Realistic whatever build it was saved in - an anime body would need a stylised base mesh of its
+  own, not a scale. Asked for 2026-10-16,
+  after the figure's depth map made every character a mannequin's silhouette.
 - **Features.** The eye, nose, mouth and ear close up from the head scan,
   in the planes view - how light sits on each form alone.
 - **Hatching, the rest.** In place (3D forms > Guides > Hatching along the
