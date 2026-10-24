@@ -15,6 +15,12 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'edge-tiles', title: 'Edge tiles for a tilemap',
+    text: "Game assets > Made here: hover a tile and press Edges. You get the 47 cells a tilemap needs to lay that ground in any shape - islands, rounded corners, bitten-out corners - on one sheet, with a rim where it ends. Pack for a game puts the sheet in autotiles/ with a text saying which neighbours each cell is for. Made from one tile; the edge is cut by eye, not tried in Unity yet.",
+    act: 'Open Game assets', run: () => setView({ kind: 'assets' }) },
+  { id: 'few-markers', title: 'Which few markers are enough',
+    text: "Palettes > Fewest paints now has a Copic markers choice beside Paints: the app picks the 2 to 5 markers of a short Copic list that come nearest to the colours of your palette. The markers' colours are my estimate from a short list, not the whole range.",
+    act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
   { id: 'gen-drafts-parting', title: 'Generate: drafts to choose from, and a parting',
     text: "Make drafts (As: Drafts) and they wait in a row under Generate instead of among what you made: Finish this turns the one worth keeping into the picture, Drop deletes one, Drop all the lot. And once a hair is chosen, a Parting row asks for the fringe parted in the middle or swept from the side.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

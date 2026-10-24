@@ -552,13 +552,37 @@ const assetsMade = async () => (await listUploads()).filter(u => u.asset && u.fo
 const ASSET_UI = { go: 'assetGo', status: 'assetStatus', goText: 'Make', refresh: () => showAssets(false) };
 
 const assetBitmapCanvas = async bmp => { const c = Object.assign(document.createElement('canvas'), { width: bmp.width, height: bmp.height }); c.getContext('2d').drawImage(bmp, 0, 0); return c; };
-const assetIsTile = u => (u.tags || []).includes('tile');
+const assetIsTile = u => (u.tags || []).includes('tile') && !(u.tags || []).includes('edge tiles');
+// The 47 edge tiles of a ground (autotile.js): one sheet, a file of its own in the pack, not a sprite.
+const assetIsAuto = u => (u.tags || []).includes('edge tiles');
 // The strip of a cycle: its frames are in the pack as sprites already, so it is a file of its own and not on the sheet.
 const assetIsStrip = u => (u.tags || []).includes('animation strip');
 
 /* What is made, as Unity loads it: the sprites on one sheet, and every picture, sprite or tile, as a file of
    its own, in one zip. Pictures are copied pixel for pixel, never resampled, so a pixel sprite stays
    hard-edged (in Unity: Filter Mode Point, Compression None). */
+/* A tile's edge tiles (autotile.js): the 47 cells on one sheet, kept in Made here beside the tile.
+   A tile bigger than 256 px is halved first - 47 cells of 512 would be a 4096 px sheet. */
+async function assetEdges(u) {
+  const status = el(ASSET_UI.status);
+  try {
+    const blob = await storeFileBlob(u.file);
+    if (!blob) return;
+    let tile = await assetBitmapCanvas(await createImageBitmap(blob));
+    if (tile.width > 256) tile = tileShrink(tile, 256);
+    const pixel = (u.tags || []).includes('pixel');
+    const sheet = autoSheet(tile, { hard: pixel });
+    const name = (u.name || 'tile') + ' edges', drop = new Set(['tile', 'seamless', 'seam visible', 'flat', 'edge tiles']);
+    await assetKeep(u, sheet, [], { name,
+      tags: [...(u.tags || []).filter(t => !drop.has(t) && !/^\d+x\d+$/.test(t)), 'edge tiles', `${tile.width}x${tile.height}`].slice(0, 24) });
+    storeChanged();
+    await showAssets(false);
+    status.textContent = `${name} - ${AUTO_MASKS.length} cells of ${tile.width} px, made.`;
+  } catch (err) {
+    status.textContent = 'The edge tiles could not be made - ' + err.message;
+  }
+}
+
 async function assetsPack() {
   const btn = el('assetPack'), status = el(ASSET_UI.status);
   btn.disabled = true;
@@ -567,25 +591,26 @@ async function assetsPack() {
     const made = await assetsMade(), loaded = [];
     for (const u of made) {
       const blob = await storeFileBlob(u.file);
-      if (blob) loaded.push({ u, bmp: await createImageBitmap(blob), tile: assetIsTile(u), strip: assetIsStrip(u) });
+      if (blob) loaded.push({ u, bmp: await createImageBitmap(blob), tile: assetIsTile(u), strip: assetIsStrip(u), auto: assetIsAuto(u) });
     }
     const names = packNames(loaded.map(x => x.u.name));
     loaded.forEach((x, i) => { x.name = names[i]; });
     // A smooth sprite is as big as the model drew it; shrunk to the longest side chosen (halving, as a tile is), never enlarged.
     const limit = Number(assetState.packSize) || 0;
     for (const x of loaded) {
-      const k = !x.tile && limit ? Math.min(1, limit / Math.max(x.bmp.width, x.bmp.height)) : 1;
+      const k = !x.tile && !x.auto && limit ? Math.min(1, limit / Math.max(x.bmp.width, x.bmp.height)) : 1;
       x.pic = k < 1 ? assetShrinkTo(await assetBitmapCanvas(x.bmp), Math.max(1, Math.round(x.bmp.width * k)), Math.max(1, Math.round(x.bmp.height * k))) : null;
       x.w = x.pic ? x.pic.width : x.bmp.width; x.h = x.pic ? x.pic.height : x.bmp.height;
     }
-    const sprites = loaded.filter(x => !x.tile && !x.strip), tiles = loaded.filter(x => x.tile), strips = loaded.filter(x => x.strip);
+    const sprites = loaded.filter(x => !x.tile && !x.strip && !x.auto), tiles = loaded.filter(x => x.tile), strips = loaded.filter(x => x.strip);
     const png = async c => new Uint8Array(await (await new Promise(res => c.toBlob(res, 'image/png'))).arrayBuffer());
     const canvasOf = (w, h) => { const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
     const entries = [];
     for (const x of loaded) {
       const [c, g] = canvasOf(x.w, x.h);
       g.drawImage(x.pic || x.bmp, 0, 0);
-      entries.push({ name: `${x.tile ? 'tiles' : x.strip ? 'animations' : 'sprites'}/${x.name}.png`, data: await png(c) });
+      entries.push({ name: `${x.tile ? 'tiles' : x.strip ? 'animations' : x.auto ? 'autotiles' : 'sprites'}/${x.name}.png`, data: await png(c) });
+      if (x.auto) entries.push({ name: `autotiles/${x.name}.txt`, data: new TextEncoder().encode(autoMapText(x.u.name, Math.round(x.w / AUTO_COLS))) });
     }
     if (sprites.length) {
       const sheet = packRects(sprites.map(x => ({ w: x.w, h: x.h })));
@@ -815,6 +840,7 @@ async function showAssets(check = true) {
     const tile = (u.tags || []).includes('tile');
     li.innerHTML = `<button type="button" class="asset-open${tile ? ' asset-tile' : ''}" title="${esc((u.tags || []).join(', '))}" aria-label="Open ${esc(u.name)}">${tile ? '<span class="asset-3x3"></span>' : '<img alt="" loading="lazy">'}</button>` +
       `<button type="button" class="gen-del" aria-label="Delete ${esc(u.name)}" title="Delete it - from Uploads too">${iconSvg('close')}</button>` +
+      (tile ? `<button type="button" class="asset-edges" title="Make the 47 edge tiles of this ground, for a tilemap" aria-label="Edge tiles of ${esc(u.name)}">Edges</button>` : '') +
       `<span class="asset-name">${esc(u.name)}</span>`;
     storeFileUrl(u.file).then(url => {
       if (!url) return;
@@ -831,6 +857,7 @@ async function showAssets(check = true) {
       }
     });
     li.querySelector('.asset-open').addEventListener('click', () => openUpload(u));
+    li.querySelector('.asset-edges')?.addEventListener('click', e => { e.currentTarget.disabled = true; assetEdges(u); });
     li.querySelector('.gen-del').addEventListener('click', async () => {
       await forgetUpload(u);
       storeChanged();
