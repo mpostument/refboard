@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'light-weather', title: 'Light and weather: glow, rays, sparkles, rain, snow, a wet street',
+    text: "Practise > Handbook, a third chapter: six effects in the manner of a Shinkai sky. Each says where to leave the paper, where the edges go soft and in what order the layers go, for watercolour and for ink with markers, and has a small picture to move - the glow round a lamp, beams of light, sparkles on water, rain leaning with the wind, snow in three depths, neon in a wet road.",
+    act: 'Open it', run: () => setView({ kind: 'handbook' }) },
   { id: 'few-pencils', title: 'Which few pencils are enough',
     text: "Palettes > Fewest paints now has a Pencils choice: the app picks the 2 to 5 watercolour pencils (a short Albrecht Duerer list) that come nearest to your palette, and for each colour says which pencil to lay first, which over it, and how hard to press. The pencils' colours are my estimate.",
     act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },

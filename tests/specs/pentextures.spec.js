@@ -102,7 +102,7 @@ test('the chapter: six lessons under "Pen textures", each moves a demonstration 
   const titles = await page.evaluate(() => HB_LESSONS.filter(l => l.group === PT_GROUP).map(l => l.title));
   expect(titles).toEqual(['Wood', 'Stone', 'Foliage', 'Fur', 'Water', 'Brick']);
   await page.evaluate(() => { window.__printed = null; window.printHtml = html => { window.__printed = html; }; });
-  await page.locator('#hbList button', { hasText: 'Water' }).click();
+  await page.locator('[data-hb-lesson="pen-water"]').click();
   await expect(page.locator('#hbLesson h3')).toHaveText('Water');
   const before = await page.locator('#hbRead').textContent();
   await page.locator('#hbRip').fill('100');

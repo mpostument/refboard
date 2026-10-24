@@ -125,10 +125,10 @@ test('masking: the whites are pure paper under any wash; softening lightens the 
 
 test('the lessons: a second chapter under its own heading, numbered on, each with a demonstration that moves and a note that says so', async ({ page }) => {
   await open(page);
-  await expect(page.locator('#hbList .hb-group')).toHaveText(['The basics', 'Watercolour techniques', 'Pen textures']);
-  await expect(page.locator('#hbList .hb-item')).toHaveCount(15);
+  await expect(page.locator('#hbList .hb-group')).toHaveText(['The basics', 'Watercolour techniques', 'Pen textures', 'Light and weather']);
+  await expect(page.locator('#hbList .hb-item')).toHaveCount(21);
   await expect(page.locator('#hbList .hb-item .hb-n').nth(4)).toHaveText('5');
-  await expect(page.locator('#viewMeta')).toContainText('0 of 15');
+  await expect(page.locator('#viewMeta')).toContainText('0 of 21');
 
   await page.click('[data-hb-lesson="salt"]');
   await expect(page.locator('#hbLesson h3')).toHaveText('Salt');
@@ -157,8 +157,8 @@ test('the lessons: a second chapter under its own heading, numbered on, each wit
   await expect(page.locator('#hbRead')).toContainText('hard edges');
   await page.check('#hbSoft');
   await expect(page.locator('#hbRead')).toContainText('Softened');
-  // The next chapter (pen textures) follows; the last lesson of all has no "next".
+  // The next chapters (pen textures, light and weather) follow; the last lesson of all has no "next".
   await expect(page.locator('#hbNext')).toHaveText('Next: Wood');
-  await page.click('[data-hb-lesson="pen-brick"]');
+  await page.click('[data-hb-lesson="street"]');
   await expect(page.locator('#hbNext')).toHaveCount(0);
 });
