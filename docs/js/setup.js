@@ -187,6 +187,8 @@ async function boot() {
         if (f && f.images && Object.keys(f.images).length) FEATURES = f;
       }
     } catch { /* no features: originals and no filters, exactly as before */ }
+    // The colour search's file: the same rule, no file and no button.
+    await cfLoad();
   }
 
   // Awaited rather than left to a race. /state.js is deferred, so it has not
@@ -242,6 +244,7 @@ async function boot() {
   renderUploads();
   initEyedropper();
   initShell(saved);
+  initColourFind();
   // Last, so the tree it highlights and the grid it may draw both exist. The
   // dashboard is the landing view either way: with no library there is
   // nothing else to show, and with one, "what did I draw last, and what is
@@ -661,18 +664,18 @@ function initDropZone() {
 
   function showOne(file) {
     sessionInfo.classList.add('hidden');
-    // A dropped image with nothing chosen to check it against yet would just
-    // show a plain copy of an image already sitting in front of you - the
-    // one useless outcome here. 3 is the middle of VALUE_STEPS and the most
-    // commonly taught value-study split (dark / mid / light).
-    if (!state.valueSteps) { selectValueSteps(3); saveSettings(); }
+    // Only when asked for (the box under the drop zone): the picture is
+    // otherwise shown whole, and the value split is one click away.
+    // 3 is the middle of VALUE_STEPS and the most commonly taught
+    // value-study split (dark / mid / light).
+    const study = el('optDropStudy').checked;
+    if (study && !state.valueSteps) { selectValueSteps(3); saveSettings(); }
 
     startSession([{ frames: [URL.createObjectURL(file)], pack: 'Dropped', group: 'Dropped' }]);
     // "Look at this," not a timed drill - startSession() always starts
     // unpaused, so this is the one place that immediately reverses it.
     if (!state.paused) togglePause();
-    // Split into values already - the panel opens at that question.
-    showWorkspaceAt('value');
+    if (study) showWorkspaceAt('value');
   }
 
   function showMany(files) {
@@ -721,6 +724,13 @@ function initDropZone() {
       (images.length ? ` and ${images.length} image${images.length === 1 ? '' : 's'}` : '') + ' ready';
     start.disabled = false;
   }
+
+  // Remembered on its own, not in the synced settings: a per-viewer habit.
+  const STUDY_KEY = 'refboard.dropStudy.v1';
+  try { el('optDropStudy').checked = localStorage.getItem(STUDY_KEY) === '1'; } catch { /* private mode */ }
+  el('optDropStudy').addEventListener('change', e => {
+    try { localStorage.setItem(STUDY_KEY, e.target.checked ? '1' : '0'); } catch { /* private mode */ }
+  });
 
   el('startDropped').addEventListener('click', () => {
     if (!droppedUrls.length) return;
@@ -979,6 +989,7 @@ function viewImages() {
    Each word on its own, anywhere: "sitting lit left" finds a seated pose lit
    from the left, however the words fall across name, folder and tags. */
 function filterImages(list) {
+  list = cfFilter(list);
   const words = el('imgFilter').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return list;
   return list.filter(i => {
@@ -1027,6 +1038,8 @@ function brightness(src) {
 }
 
 function gridSort(list) {
+  // A colour search is ordered by how well each picture matches, whatever the order box says.
+  if (cfActive()) return cfSort(list);
   if (gridOrder === 'index') return list;
   const out = [...list];
   if (gridOrder === 'name') {
@@ -1052,6 +1065,7 @@ function refreshGrid() {
   el('thumbGrid').innerHTML = '';
   renderGridPage();
   updateViewMeta();
+  cfSync();
 }
 
 function renderGridPage() {
@@ -1109,6 +1123,7 @@ function gridCell(item, i) {
     (view.kind === 'group' ? '' : `<span class="cell-tag">${esc(item.group)}</span>`) +
     (item.rotation ? '<span class="cell-tag">rotation</span>' : '');
   cell.appendChild(meta);
+  cfCell(cell, item);
 
   return cell;
 }
@@ -1504,6 +1519,7 @@ function initShell(saved = {}) {
     if (!cell) return;
     const i = Number(cell.dataset.i);
     if (e.target.closest('.cell-skip')) { toggleCellSkip(i, cell); return; }
+    if (e.target.closest('.cell-like')) { cfLikeThis(gridItems[i]); return; }
     openViewer(i);
   });
   // role=button carries no implicit keyboard activation of its own, and a

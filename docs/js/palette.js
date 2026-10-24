@@ -239,6 +239,7 @@ function palgenRender() {
   el('pgPaintHint').textContent = `Recipes for ${PAINT_PALETTES[paintPaletteKey()].label.toLowerCase()} in ${PAINT_MEDIA[paintMedium()].toLowerCase()} - the same as the Colour studio's and the eyedropper's.` +
     (pg.fit ? ' Only what they mix is on: every new colour is pulled in to what these paints can reach, its value kept.' : '');
   palgenRenderSaved();
+  fewSync();
   if (typeof seasonsSync === 'function') seasonsSync();
   palgenMixes();
 }
@@ -277,6 +278,7 @@ function initPalette() {
   paintChips(el('pgMedium'), el('pgPaints'), palgenRender);
   document.addEventListener('refboard:materials', () => { if (pg && view.kind === 'palette') palgenRender(); });
 
+  initFewPaints();
   el('pgGenerate').addEventListener('click', palgenGenerate);
   el('pgUndo').addEventListener('click', palgenUndo);
   el('pgFit').addEventListener('click', () => {

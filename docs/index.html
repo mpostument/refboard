@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=067c4ef0">
+<link rel="stylesheet" href="css/app.css?v=5afcb51a">
 </head>
 <body>
 <div id="setup">
@@ -178,8 +178,13 @@
           <option value="dark" data-needs-features>Darkest first</option>
           <option value="random">Shuffle</option>
         </select>
+        <!-- Hidden until palettes.json is found (js/colourfind.js): without the
+             server's colour measurements there is nothing to search. -->
+        <button class="ghost hidden" type="button" id="btnColour" aria-expanded="false" aria-controls="colourPanel"
+                title="Find pictures by colour - pick colours, or a mood like warm dusk">Colour</button>
         <button class="ghost" type="button" id="btnBrowseDraw"
                 title="Start a timed session from exactly what this grid is showing">Draw these</button>
+        <div class="colourbar hidden" id="colourPanel"></div>
       </div>
     </header>
 
@@ -240,10 +245,13 @@
           <h2>Check your own image</h2>
           <div id="dropZone" tabindex="0" role="button"
                style="border:1px dashed var(--line); border-radius:8px; padding:26px; text-align:center; color:var(--dim); font-size:13px; cursor:pointer;">
-            Drop one image to view it full-screen with the tonal-value tools, or several to draw a timed session from them -
+            Drop one image to view it full-screen, or several to draw a timed session from them -
             or a video, to draw from frames taken at random through it.
           </div>
           <input type="file" id="dropInput" accept="image/*,video/*" multiple class="hidden">
+          <!-- Off: the picture as it is. On: it opens already split into
+               three values, with the Value tools beside it. -->
+          <label class="opt" style="margin-top:8px"><input type="checkbox" id="optDropStudy"> Open one image as a value study (notan)</label>
           <!-- Uses the Interval/Schedule/Options sections in the inspector
                exactly as they are - a dropped-file session is not a different
                kind of session, just one whose pool came from the browser
@@ -263,6 +271,12 @@
             <p class="count hidden" id="uploadsSorting" aria-live="polite" style="margin:0 0 6px"></p>
             <label class="opt hidden" id="keepWrap"><input type="checkbox" id="optKeep"> Keep in this browser</label>
             <ul id="uploadsList" aria-labelledby="uploadsTitle"></ul>
+          </div>
+          <!-- What the app drew itself (Generate, Game assets) - kept the same
+               way, but not among what you gave it. -->
+          <div id="generated" class="hidden">
+            <h3 id="generatedTitle" style="margin-top:20px">Generated</h3>
+            <ul id="generatedList" aria-labelledby="generatedTitle"></ul>
           </div>
         </section>
 
@@ -804,6 +818,8 @@
           <button class="ghost hidden" type="button" id="pgToGenerate" title="Generate a reference in these colours">Use in Generate</button>
         </div>
         <div id="pgRow" class="pg-row" role="group" aria-label="The palette"></div>
+        <!-- Filled by js/fewpaints.js when asked: which few of the paints below are enough. -->
+        <div id="pgFew" class="pg-few hidden" aria-live="polite"></div>
         <div class="pg-under">
           <div>
             <h4>Seasons and times of day</h4>
@@ -819,6 +835,12 @@
               <button class="chip" type="button" id="pgFit" aria-pressed="false" title="Make only colours these paints can mix">Only what my paints mix</button>
             </div>
             <div class="count" id="pgPaintHint"></div>
+            <h4>Fewest paints</h4>
+            <div class="chips" id="pgFewN" role="group" aria-label="At most this many paints"></div>
+            <div class="chips">
+              <button class="chip" type="button" id="pgFewGo" title="Which few of the paints above are enough to mix every colour of this palette - in watercolour, the paper being the white">Which paints?</button>
+            </div>
+            <div class="count">At most this many, from the paints above; fewer if the rest would add nothing.</div>
           </div>
           <div>
             <h4>Saved</h4>
@@ -2266,18 +2288,19 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=62a37cf1"></script>
-<script src="js/setup.js?v=22b4a0a5"></script>
+<script src="js/core.js?v=99eda378"></script>
+<script src="js/setup.js?v=dbd36f34"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
-<script src="js/store.js?v=ea07afe9"></script>
-<script src="js/uploads.js?v=a59c8f0e"></script>
+<script src="js/store.js?v=3136007f"></script>
+<script src="js/uploads.js?v=9c23696a"></script>
 <script src="js/session.js?v=a539a2e3"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
-<script src="js/paint.js?v=a36cd59d"></script>
+<script src="js/paint.js?v=dc15b6b7"></script>
 <script src="js/tools.js?v=dfdbd425"></script>
 <script src="js/materials.js?v=aea2cd23"></script>
 <script src="js/vision.js?v=5c0f8101"></script>
 <script src="js/sort.js?v=6b40f3d5"></script>
+<script src="js/colourfind.js?v=d51aa014"></script>
 <script src="js/study.js?v=90053b55"></script>
 <script src="js/layers.js?v=29c0c0af"></script>
 <script src="js/stages.js?v=eee7c2f5"></script>
@@ -2287,7 +2310,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=7d7929fe"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=afeb2a5b"></script>
+<script src="js/whatsnew.js?v=80b072be"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=73f7eb91"></script>
@@ -2316,21 +2339,21 @@
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
 <script src="js/generate.js?v=8d6f197c"></script>
-<script src="js/assetsfx.js?v=4e28b31f"></script>
+<script src="js/assetsfx.js?v=d1db7100"></script>
 <script src="js/genedit.js?v=bfdd1fea"></script>
 <script src="js/assetpack.js?v=bdc88bd4"></script>
-<script src="js/charpose.js?v=98bc17c7"></script>
+<script src="js/charpose.js?v=67c4d5e0"></script>
 <script src="js/gif.js?v=6916a571"></script>
-<script src="js/assets.js?v=eefc2f85"></script>
+<script src="js/assets.js?v=6ce5f707"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
 <script src="js/posefit.js?v=789abeff"></script>
-<script src="js/forms-models.js?v=f5e1042a"></script>
+<script src="js/forms-models.js?v=3db6cf44"></script>
 <script src="js/forms-settings.js?v=47a50035"></script>
-<script src="js/forms.js?v=70772ccd"></script>
-<script src="js/forms-api.js?v=26a7a46c"></script>
+<script src="js/forms.js?v=d4aa41eb"></script>
+<script src="js/forms-api.js?v=445e5a7b"></script>
 </template>
 <template id="lazy-backup">
 <script src="js/portfolio.js?v=6dcc64d8"></script>
@@ -2353,7 +2376,8 @@
 <script src="js/pentextures.js?v=0c39a7af"></script>
 </template>
 <template id="lazy-palette">
-<script src="js/palette.js?v=6b231276"></script>
+<script src="js/palette.js?v=c2dc3f09"></script>
+<script src="js/fewpaints.js?v=d5ac40d5"></script>
 <script src="js/seasons.js?v=16c922c8"></script>
 </template>
 <template id="lazy-colour">
