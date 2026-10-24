@@ -49,3 +49,18 @@ test('the count is kept; a changed palette clears the answer, which no longer fi
   await expect(page.locator('#pgFew')).toBeHidden();
   await expect(page.locator('#pgFewGo')).toBeEnabled();
 });
+
+test('Copic markers: tints of one blue take one marker, a green and an orange two', async ({ page }) => {
+  await palette(page, ['#2f6fc0', '#2c6cbd']);
+  await page.click('#pgFewFor [data-few-for="copic"]');
+  await page.click('#pgFewN [data-few="3"]');
+  await page.click('#pgFewGo');
+  await expect(page.locator('#pgFew h4')).toHaveText('One marker for this palette', { timeout: 30_000 });
+  await expect(page.locator('#pgFew .pg-few-paint').first()).toContainText('B29');
+  await palette(page, ['#7fbf4a', '#ef7a2c']);
+  await page.click('#pgFewFor [data-few-for="copic"]');
+  await page.click('#pgFewN [data-few="3"]');
+  await page.click('#pgFewGo');
+  await expect(page.locator('#pgFew h4')).toContainText('2 markers', { timeout: 30_000 });
+  await expect(page.locator('#pgFew .pg-few-row')).toHaveCount(2);
+});

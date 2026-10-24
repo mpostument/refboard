@@ -988,3 +988,87 @@ test('Pack shrinks sprites to the longest side chosen and leaves a tile as it is
   expect(got['tiles/grass-tile.png']).toEqual([200, 200]);
   expect(got['sheet.png'][0]).toBeGreaterThanOrEqual(136);   // 128 and the padding either side
 });
+
+// ---- Edge tiles (js/autotile.js): one ground becomes the 47 cells a tilemap needs.
+test('there are 47 edge tiles, a corner counting only beside both its sides', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => ({ n: AUTO_MASKS.length, first: AUTO_MASKS[0], last: AUTO_MASKS.at(-1),
+    cut: autoReduce(AUTO_BIT.NE), kept: autoReduce(AUTO_BIT.N | AUTO_BIT.E | AUTO_BIT.NE) }));
+  expect(r).toEqual({ n: 47, first: 0, last: 255, cut: 0, kept: 7 });
+});
+
+test('an edge tile is round where the ground ends and whole where it goes on', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const tile = Object.assign(document.createElement('canvas'), { width: 32, height: 32 });
+    const g = tile.getContext('2d'); g.fillStyle = '#4a8a3a'; g.fillRect(0, 0, 32, 32);
+    const alpha = (m, x, y) => autoCell(tile, m, { hard: true, rim: 0 }).getContext('2d').getImageData(x, y, 1, 1).data[3];
+    return {
+      field: alpha(255, 0, 0),                 // inside a field: the whole cell, its corner too
+      island: [alpha(0, 16, 16), alpha(0, 0, 0), alpha(0, 16, 0), alpha(0, 3, 16)],   // the middle only
+      bite: [alpha(255 & ~AUTO_BIT.NW, 0, 0), alpha(255 & ~AUTO_BIT.NW, 16, 16), alpha(255 & ~AUTO_BIT.NW, 31, 0)],
+      topOpen: [alpha(255 & ~AUTO_BIT.N & ~AUTO_BIT.NE & ~AUTO_BIT.NW, 16, 1), alpha(255 & ~AUTO_BIT.N & ~AUTO_BIT.NE & ~AUTO_BIT.NW, 16, 8)],
+    };
+  });
+  expect(r.field).toBe(255);
+  expect(r.island).toEqual([255, 0, 0, 0]);
+  expect(r.bite).toEqual([0, 255, 255]);
+  expect(r.topOpen).toEqual([0, 255]);
+});
+
+test('neighbouring edge tiles meet: the outline leaves one cell where the next takes it up', async ({ page }) => {
+  await openApp(page);
+  // A cell with ground to its east and one with ground to its west: the boundary they cut at the shared side
+  // lies on the same rows (a ground that ends at the top, both cells inset the same).
+  const r = await page.evaluate(() => {
+    const E = AUTO_BIT.E | AUTO_BIT.S | AUTO_BIT.SE, W = AUTO_BIT.W | AUTO_BIT.S | AUTO_BIT.SW, s = 40;
+    const a = autoField(E, s), b = autoField(W, s);
+    return Array.from({ length: s }, (_, y) => [a[y * s + s - 1] >= 0, b[y * s] >= 0]);
+  });
+  for (const [left, right] of r) expect(left).toBe(right);
+});
+
+test('a sheet of the 47 and a text of what each is for', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    const tile = Object.assign(document.createElement('canvas'), { width: 16, height: 16 });
+    const sheet = autoSheet(tile, {});
+    const text = autoMapText('grass', 16);
+    return { w: sheet.width, h: sheet.height, lines: text.trim().split('\n').length, row0: text.split('\n')[4] };
+  });
+  expect([r.w, r.h]).toEqual([8 * 16, 6 * 16]);
+  expect(r.lines).toBe(4 + 47);
+  expect(r.row0).toContain('mask   0');
+});
+
+test('Edges on a tile keeps the sheet of 47, and the pack puts it in autotiles', async ({ page }) => {
+  const s = await setup(page);
+  const doc = { file: 'c'.repeat(64) + '.png', name: 'grass, tile', type: 'image/png', from: 'generate', bytes: 100, t: Date.now(), folder: 'assets', asset: 'tile', tags: ['grass', 'tile', 'seamless', '32x32'], width: 32, height: 32 };
+  s.server.items.set('uploads/' + 'c'.repeat(64), doc);
+  await page.evaluate(() => showAssets(false));
+  await page.evaluate(() => { window.__kept = null; const was = assetKeep; assetKeep = (d, c, e, o) => { window.__kept = { w: c.width, h: c.height, tags: o.tags, name: o.name }; return was(d, c, e, o); }; });
+  await page.locator('#assetResults .asset-edges').first().click({ force: true });
+  await expect.poll(() => page.evaluate(() => window.__kept)).not.toBeNull();
+  const k = await page.evaluate(() => window.__kept);
+  expect(k.w).toBe(8 * 200);   // the fake server serves a 200 px picture whatever the document says
+  expect(k.h).toBe(6 * 200);
+  expect(k.tags).toEqual(expect.arrayContaining(['grass', 'edge tiles']));
+  expect(k.tags).not.toContain('tile');
+  expect(k.name).toBe('grass, tile edges');
+});
+
+test('the pack keeps edge tiles off the sprite sheet, in autotiles with their text', async ({ page }) => {
+  const s = await setup(page);
+  const doc = (id, name, tags) => ({ file: id.repeat(64) + '.png', name, type: 'image/png', from: 'generate', bytes: 100, t: Date.now(), folder: 'assets', asset: tags[1], tags, width: 200, height: 200 });
+  s.server.items.set('uploads/' + 'd'.repeat(64), doc('d', 'chest, prop, side', ['chest', 'prop', 'side']));
+  s.server.items.set('uploads/' + 'e'.repeat(64), doc('e', 'grass edges', ['grass', 'tile', 'edge tiles']));
+  await page.evaluate(() => showAssets(false));
+  await page.evaluate(() => loadSection('backup'));
+  const watched = page.evaluate(() => new Promise(res => { const was = makeZip; makeZip = e => { makeZip = was; res(e.map(x => x.name)); return was(e); }; }));
+  const download = page.waitForEvent('download');
+  await page.click('#assetPack');
+  await download;
+  const got = await watched;
+  expect(got).toEqual(expect.arrayContaining(['sheet.png', 'sprites/chest-prop-side.png', 'autotiles/grass-edges.png', 'autotiles/grass-edges.txt']));
+  expect(got).toHaveLength(4);
+});

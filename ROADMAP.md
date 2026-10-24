@@ -756,6 +756,15 @@ the pictures looked at - as the Generate features were):
    done:** the GIF (no encoder in the app), playing an old strip again later, a Unity .anim.
 8. **Blob autotile and UI.** The 47-tile terrain set from two textures; panels
    and buttons with a 9-slice; icon sets (a theme, 12 icons, one frame).
+   **In place for the blob set, from ONE texture** (`js/autotile.js`, "Edges" on a tile in Made here):
+   the tile cut to the shape its neighbours leave, 47 cells on one sheet of 8 across (tile halved above
+   256 px), kept tagged `edge tiles`, packed to `autotiles/` with a text of which neighbours (bits N=1 NE=2
+   E=4 SE=8 S=16 SW=32 W=64 NW=128) each cell is for. The ground ends `d` in from a side with no
+   neighbour, a corner of two such sides is rounded, a corner bitten from a field is a quarter circle of
+   radius `d` (the radius that meets the straight edges beside it with no step). A darker rim; hard
+   edges for the pixel look. **Not done:** a second texture to lie under or beside it (grass to dirt),
+   no .meta / Rule Tile file (cannot be checked without Unity), the model's own edge art; cut by
+   eye on a drawn grass tile only, never tried in Unity.
 9. **Models, if the above wants them** (each is the user's install, and an item
    on the get-models script of the Generate notes): a pixel-art LoRA (needs a
    `LoraLoader` in the server's graph - not there yet); a line-art ControlNet
@@ -1225,8 +1234,11 @@ the wash.
   dropped, so "one paint is enough" is an answer. It says how many colours land
   close (under 4), the furthest, and the recipe for each from the chosen paints
   only. A few seconds in the full box (1 s for three paints, 5 s for four).
-  Still to come: "5 markers" and pencils (no mixing: the nearest ready-made
-  colours, and for Copic its families), oil and acrylic, weighting the colours
+  **Markers in place** (the "Copic markers" chip over the count): from a list of 45
+  Copic Sketch colours (`COPIC_COLOURS`, my short list, hex estimated by eye - not the whole range
+  of 358, and not measured), each palette colour takes its NEAREST single marker (no mixing; OKLab x
+  100) and the set is chosen by the same greedy-and-swap search. Still to come: pencils, the rest of
+  the Copic range and its families, oil and acrylic, weighting the colours
   by how much of the picture they cover (the palette carries none), and
   checking the answer against painted swatches of the real tubes - the box's
   colours are still estimates.
