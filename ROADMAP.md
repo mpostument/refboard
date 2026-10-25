@@ -564,3 +564,15 @@ shoulder and other two-figure shots, and a lens's distortion on a photo.
   lightning, fireflies, and sunbeams under water; the Watercolour or Ink and
   markers choice is made once for the whole chapter. Still to come: a photo of
   a real painting beside each.
+
+## Materials
+
+In place: Fewest paints (`js/fewpaints.js`, Palettes) for watercolour paints, Copic markers
+and watercolour pencils - the 2 to 5 that are enough for a palette; and, for markers and
+pencils, **Which do you have?**: a chip for each on the list, pressed while it is yours (nothing
+marked is the whole list), kept in this browser for each of the two, with All and None. The
+search is kept to the ones marked, the result says "from the N you marked", and fewer than two
+marked is said plainly instead of searching. The markers' and pencils' colours are still my
+estimates from short lists, not the whole range. Not done: adding a marker or pencil that is not
+on the list (a code, a name and a swatch photo to read its colour from), and the same choice for
+the watercolour paints beyond the box above them.

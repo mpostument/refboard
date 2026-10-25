@@ -93,3 +93,43 @@ test('Pencils: a yellow laid over a blue gives a green nearer than either alone'
   expect(r.both.over).toBeTruthy();
   expect(r.both.dE).toBeLessThan(r.alone);
 });
+
+test('My markers: the search keeps to the ones you have, and says so', async ({ page }) => {
+  await palette(page, ['#2f6fc0']);
+  await page.click('#pgFewFor [data-few-for="copic"]');
+  const mine = page.locator('#pgFewMine');
+  await expect(mine).toBeVisible();
+  await expect(page.locator('#pgFewMineSum')).toContainText('All');
+  // With every marker, the nearest blue to this one is Ultramarine B29.
+  await page.click('#pgFewGo');
+  await expect(page.locator('#pgFew .pg-few-paint').first()).toContainText('B29', { timeout: 30_000 });
+  // Take B29 and B39 away: the answer is a different blue, kept to the rest, and the old answer goes.
+  await mine.locator('summary').click();
+  await page.click('#pgFewMineList [data-few-own="B29"]');
+  await expect(page.locator('#pgFew')).toBeHidden();
+  await page.click('#pgFewMineList [data-few-own="B39"]');
+  await expect(page.locator('#pgFewMineSum')).toContainText('marked');
+  await page.click('#pgFewGo');
+  await expect(page.locator('#pgFew h4')).toContainText('you marked', { timeout: 30_000 });
+  const keys = await page.evaluate(() => few.result.keys);
+  expect(keys).not.toContain('B29');
+  expect(keys).not.toContain('B39');
+  // Kept in this browser, and All gives the whole list back.
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem(FEW_KEY)).own.copic.includes('B29'))).toBe(false);
+  await page.click('#pgFewMineAll');
+  await expect(page.locator('#pgFewMineSum')).toContainText('All');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem(FEW_KEY)).own.copic)).toBeNull();
+});
+
+test('My pencils: fewer than two marked is said plainly; the list is its own for pencils', async ({ page }) => {
+  await palette(page, ['#3a63b0']);
+  await page.click('#pgFewFor [data-few-for="pencils"]');
+  await page.locator('#pgFewMine summary').click();
+  await page.click('#pgFewMineNone');
+  await page.click('#pgFewMineList [data-few-own="102"]');
+  await page.click('#pgFewGo');
+  await expect(page.locator('#pgFew')).toContainText('Mark at least two of your pencils');
+  // The markers' list is untouched by what was marked here.
+  await page.click('#pgFewFor [data-few-for="copic"]');
+  await expect(page.locator('#pgFewMineSum')).toContainText('All');
+});

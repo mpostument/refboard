@@ -66,7 +66,15 @@ const FEW_CAP = 25;      // a colour that lands further than this is "not reache
 const FEW_WORTH = 0.5;   // a paint that brings the mean closer by less than this is not worth its place
 const FEW_CLOSE = 4;     // paint.js's "close"
 
-let few = { medium: 'paints', n: 3, result: null, sig: '', run: 0, running: false };
+// own: the codes of the markers and of the pencils you have, or null where nothing is marked - the whole list.
+let few = { medium: 'paints', n: 3, result: null, sig: '', run: 0, running: false, own: { copic: null, pencils: null } };
+const FEW_LISTS = () => ({ copic: COPIC_COLOURS, pencils: PENCIL_COLOURS });
+const FEW_THINGS = { copic: 'markers', pencils: 'pencils' };
+// The codes the search may use: the ones marked as yours, or the whole list.
+function fewMine(kind) {
+  const all = FEW_LISTS()[kind].map(m => m.code), own = few.own[kind];
+  return own ? all.filter(c => own.includes(c)) : all;
+}
 const fewCache = new Map(); // 'set|hex' -> the best recipe for that colour from that set
 
 function fewLoad() {
@@ -74,10 +82,11 @@ function fewLoad() {
     const v = JSON.parse(localStorage.getItem(FEW_KEY));
     if (FEW_COUNTS.includes(v?.n)) few.n = v.n;
     if (FEW_FOR[v?.medium]) few.medium = v.medium;
+    for (const k of Object.keys(few.own)) if (Array.isArray(v?.own?.[k])) few.own[k] = v.own[k];
   } catch { /* the default */ }
 }
 function fewSave() {
-  try { localStorage.setItem(FEW_KEY, JSON.stringify({ n: few.n, medium: few.medium })); } catch { /* private mode */ }
+  try { localStorage.setItem(FEW_KEY, JSON.stringify({ n: few.n, medium: few.medium, own: few.own })); } catch { /* private mode */ }
 }
 
 /* The best way to get this colour from just these paints, markers or pencils. */
@@ -185,14 +194,18 @@ async function fewChoose(rgbs, pool, n, step, alive) {
   return { keys: chosen.slice(0, keep), asked: n, scores };
 }
 
-const fewSig = () => pg.swatches.map(s => colHexOf(s.rgb)).join() + '|' + (few.medium === 'paints' ? paintPaletteKey() : few.medium) + '|' + few.n;
+const fewSig = () => pg.swatches.map(s => colHexOf(s.rgb)).join() + '|' + (few.medium === 'paints' ? paintPaletteKey() : few.medium + ':' + fewMine(few.medium).join('.')) + '|' + few.n;
 
 async function fewRun() {
   const run = ++few.run, host = el('pgFew'), rgbs = pg.swatches.map(s => s.rgb);
   const ready = few.medium !== 'paints';   // markers and pencils are ready-made colours: no mixing to load
-  const pool = few.medium === 'copic' ? COPIC_COLOURS.map(m => m.code) : few.medium === 'pencils' ? PENCIL_COLOURS.map(m => m.code) : paintKeys(paintPaletteKey(), 'water');
+  const pool = ready ? fewMine(few.medium) : paintKeys(paintPaletteKey(), 'water');
   if (!ready && !paintInit()) { host.innerHTML = '<span class="count">Mixing needs js/vendor/spectral.js, which did not load.</span>'; return; }
-  if (pool.length < 2) { host.innerHTML = '<span class="count">Two paints at least are needed in the box above.</span>'; return; }
+  if (pool.length < 2) {
+    host.innerHTML = ready ? `<span class="count">Mark at least two of your ${FEW_THINGS[few.medium]} above.</span>`
+      : '<span class="count">Two paints at least are needed in the box above.</span>';
+    return;
+  }
   host.classList.remove('hidden');
   el('pgFewGo').disabled = true;
   const sig = fewSig();
@@ -237,7 +250,7 @@ function fewRenderCopic(host, res) {
   const fewer = res.keys.length < res.asked
     ? ` ${res.keys.length === 1 ? 'One marker is' : res.keys.length + ' markers are'} enough: another would not bring any colour noticeably closer.` : '';
   host.innerHTML =
-    `<h4>${res.keys.length === 1 ? 'One marker' : res.keys.length + ' markers'} for this palette</h4>` +
+    `<h4>${res.keys.length === 1 ? 'One marker' : res.keys.length + ' markers'} for this palette${fewOwnNote('copic')}</h4>` +
     '<div class="pg-few-paints">' + res.keys.map(k => `<span class="pg-few-paint">${chip(FEW_COPIC[k])}</span>`).join('') + '</div>' +
     `<p class="count">${close} of ${rows.length} colours land close (under ${FEW_CLOSE}); the furthest, ${esc(palgenName(far.rgb))} (${colHexOf(far.rgb)}), is ${far.r.dE.toFixed(1)} away.${fewer} ` +
     'A marker is not mixed with another, so each colour takes its nearest one; laid over a lighter one it goes darker. The markers\' colours are my estimate, from a short list - not the whole range.</p>' +
@@ -257,12 +270,37 @@ function fewRenderPencils(host, res) {
     ? `${step(r.key, r.press)} <span class="count">then over it</span> ${step(r.over, r.pressOver)}`
     : step(r.key, r.press);
   host.innerHTML =
-    `<h4>${res.keys.length === 1 ? 'One pencil' : res.keys.length + ' pencils'} for this palette</h4>` +
+    `<h4>${res.keys.length === 1 ? 'One pencil' : res.keys.length + ' pencils'} for this palette${fewOwnNote('pencils')}</h4>` +
     '<div class="pg-few-paints">' + res.keys.map(k => `<span class="pg-few-paint">${chip(FEW_PENCIL[k])}</span>`).join('') + '</div>' +
     `<p class="count">${close} of ${rows.length} colours land close (under ${FEW_CLOSE}); the furthest, ${esc(palgenName(far.rgb))} (${colHexOf(far.rgb)}), is ${far.r.dE.toFixed(1)} away.${fewer} ` +
     "Light is a gentle stroke with the paper showing through; firm is pressed. Where two are named, lay the first and the second over it, then go over it with a damp brush to melt the layers - wet, the colour goes deeper than shown. The pencils' colours are my estimate, from a short list of Albrecht Duerer - not the whole range.</p>" +
     '<div class="pg-few-rows">' + rows.map(x => `<div class="pg-few-row"><i style="background:${colHexOf(x.rgb)}" title="${colHexOf(x.rgb)} - the colour asked for"></i>` +
       `<i style="background:${colHexOf(x.r.rgb)}" title="${colHexOf(x.r.rgb)} - what the layers lay down"></i><span class="pg-few-how">${recipe(x.r)} <span class="count">${x.r.dE.toFixed(1)}</span></span></div>`).join('') + '</div>';
+}
+
+// Said beside a result when the search was kept to what you marked.
+const fewOwnNote = kind => few.own[kind] ? ` <span class="count">(from the ${fewMine(kind).length} you marked)</span>` : '';
+
+/* Which markers or pencils you have: a chip for each on the list, pressed while it is yours.
+   Nothing marked yet is the whole list - every chip pressed. */
+function fewMineRender() {
+  const kind = few.medium, host = el('pgFewMine');
+  host.classList.toggle('hidden', !FEW_THINGS[kind]);
+  if (!FEW_THINGS[kind]) return;
+  const mine = new Set(fewMine(kind)), list = FEW_LISTS()[kind];
+  el('pgFewMineSum').textContent = few.own[kind]
+    ? `Which ${FEW_THINGS[kind]} do you have? ${mine.size} of ${list.length} marked`
+    : `Which ${FEW_THINGS[kind]} do you have? All ${list.length} on the list`;
+  el('pgFewMineList').innerHTML = list.map(m =>
+    `<button class="chip" type="button" data-few-own="${esc(m.code)}" aria-pressed="${mine.has(m.code)}" title="${esc(m.name)}"><i style="background:${m.hex}"></i>${esc(m.code)}</button>`).join('');
+}
+
+function fewSetMine(kind, codes) {
+  const all = FEW_LISTS()[kind].length;
+  few.own[kind] = codes && codes.length < all ? codes : null;
+  fewSave();
+  fewMineRender();
+  fewSync();
 }
 
 /* The palette or the paints changed under a result: it no longer answers. */
@@ -285,8 +323,19 @@ function initFewPaints() {
     few.medium = b.dataset.fewFor;
     fewSave();
     for (const c of forHost.children) c.setAttribute('aria-pressed', String(c === b));
+    fewMineRender();
     fewSync();
   });
+  fewMineRender();
+  el('pgFewMineList').addEventListener('click', e => {
+    const b = e.target.closest('[data-few-own]');
+    if (!b) return;
+    const kind = few.medium, mine = fewMine(kind), code = b.dataset.fewOwn;
+    fewSetMine(kind, mine.includes(code) ? mine.filter(c => c !== code) : [...mine, code]);
+    el('pgFewMineList').querySelector(`[data-few-own="${code}"]`)?.focus();
+  });
+  el('pgFewMineAll').addEventListener('click', () => fewSetMine(few.medium, null));
+  el('pgFewMineNone').addEventListener('click', () => fewSetMine(few.medium, []));
   const chips = el('pgFewN');
   chips.innerHTML = FEW_COUNTS.map(n => `<button class="chip" type="button" data-few="${n}" aria-pressed="${n === few.n}">${n}</button>`).join('');
   chips.addEventListener('click', e => {

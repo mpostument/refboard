@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'my-markers', title: 'Fewest markers and pencils: from the ones you have',
+    text: "Palettes > Fewest paints, on Copic markers or Pencils, now has a Which do you have? list: mark the markers or pencils in your own set and the search keeps to those - the result says it is from the ones you marked. Nothing marked is the whole list, as before.",
+    act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },
   { id: 'reference-report', title: 'A report on one reference, on one page',
     text: "In a session, the workspace has a Report button (and Ctrl+K finds it): every check on the picture, run together and set out in sections - is it a good picture to work from, its values against your medium's range, its five main colours with how to mix each in your paints, the temperature, where the eye goes and the best crops, the shapes, edges and tangents. Each section has a small map. Print it, or keep it in My work as a picture to come back to.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
