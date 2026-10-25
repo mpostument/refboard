@@ -6,7 +6,7 @@
 "use strict";
 
 const ANN_KEY = 'refboard.animeNew.v1';
-const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight'];
+const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth'];
 
 function annLoad() {
   let s = {};
@@ -15,7 +15,7 @@ function annLoad() {
   const num = (v, lo, hi, d) => (v == null || v === '' || !Number.isFinite(+v) ? d : adClamp(+v, lo, hi));
   return {
     secs: AN_DRILL_SECS.includes(+s.secs) ? +s.secs : 60,
-    shoulders: Math.round(num(s.shoulders, -30, 30, 8)), hips: Math.round(num(s.hips, -30, 30, -10)), shift: Math.round(num(s.shift, -40, 40, 12)), light: key(s.light, AN_FACE_LIGHTS, 'ul'),
+    shoulders: Math.round(num(s.shoulders, -30, 30, 8)), hips: Math.round(num(s.hips, -30, 30, -10)), shift: Math.round(num(s.shift, -40, 40, 12)), light: key(s.light, AN_FACE_LIGHTS, 'ul'), mouthFull: s.mouthFull !== false,
     tone: key(s.tone, AN_TONE_KINDS, 'liner'),
     fx: key(s.fx, AN_FX, 'speed'), dir: key(s.dir, AN_FX_DIRS, 'h'), density: Math.round(num(s.density, 1, 3, 2)), seed: Math.round(num(s.seed, 1, 99999, 7)),
     aspect: key(s.aspect, AN_FRAMES, '16:9'),
@@ -176,6 +176,14 @@ function annInit() {
   el('acnRelaxed').addEventListener('click', () => { annPatch({ shoulders: 8, hips: -10, shift: 12 }); annConstructRender(); });
   adWire('acn', () => ann.svg.construct, 'anime-construction', 'anime-construction', () => { const s = annLoad(); return Math.abs(s.shoulders - s.hips) >= 8 ? 'contrapposto, standing, weight on one leg' : 'standing, symmetrical, straight posture'; });
 
+  /* The mouth in speech. */
+  annPane('amtPane', 'The mouth in speech',
+    'The mouth shapes of speech: the five vowels, the closed mouth, the teeth on the lip and the tongue tip. Anime uses three of them for most lines and the full set for a close-up.',
+    annRow('Set', 'amtSet') + annSaveRow('amt'),
+    `<div class="ad-stage ad-wide" id="amtStage"></div><div class="count pg-note" id="amtNote"></div>`);
+  adMakeChips('amtSet', [['full', 'All eight'], ['simple', 'Three: closed, half, open']], v => { annPatch({ mouthFull: v === 'full' }); annMouthRender(); });
+  adWire('amt', () => ann.svg.mouth, 'anime-mouths', 'anime-mouths', null);
+
   /* The light on a face. */
   annPane('alfPane', 'The light on a face',
     'The same face in cel shading, lit from one of eight sides: where the shadow lies on the cheek, how the nose and the chin throw theirs, and what the bangs do to the forehead. The skin colour is the one of Layers.',
@@ -200,6 +208,15 @@ function annShow(mode) {
   if (mode === 'compare') { adPress('acpMinutes', s.minutes); annCmpRender(); }
   if (mode === 'construct') annConstructRender();
   if (mode === 'facelight') annFaceLightRender();
+  if (mode === 'mouth') annMouthRender();
+}
+
+function annMouthRender() {
+  const s = annLoad(), keys = s.mouthFull ? Object.keys(AN_MOUTHS) : AN_MOUTH_SIMPLE;
+  adPress('amtSet', s.mouthFull ? 'full' : 'simple');
+  ann.svg.mouth = anMouthSheet({ full: s.mouthFull });
+  el('amtStage').innerHTML = ann.svg.mouth;
+  el('amtNote').innerHTML = `<ul>${keys.map(k => `<li><b>${esc(AN_MOUTHS[k].label)}.</b> ${esc(AN_MOUTHS[k].says)}</li>`).join('')}</ul><ul>${AN_MOUTH_TIPS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
 }
 
 /* ---- construction and the light on a face */

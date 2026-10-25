@@ -183,14 +183,15 @@ function adStar(x, y, r) {
 function adEyeSvg(o) {
   const shape = AD_EYE_SHAPES[o.shape] ? o.shape : 'tsurime', era = AD_EYE_ERAS[o.era] ? o.era : 'modern', key = String(o.key || 'e').replace(/[^a-z0-9]/gi, '');
   const tall = adClamp(+o.tall || 1, 0.6, 1.3), irisK = adClamp(+o.iris || 1, 0.6, 1.2), lash = adClamp(+o.lash || 3, 1, 5), hl = AD_EYE_HL[o.hl] ? o.hl : 'two';
-  const T = adTones(adRgbOf(o.colour || '#3f7fb8')), ink = AD_INK, up = 82 * tall, st = +o.stage || 9;   // st: the stage of the drawing, 1 to 6 (the whole eye when it is not given)
+  const T = adTones(adRgbOf(o.colour || '#3f7fb8')), ink = AD_INK, up = 82 * tall, st = +o.stage || 9, gxo = adClamp(+o.gx || 0, -1, 1) * 26, gyo = adClamp(+o.gy || 0, -1, 1) * 15;   // st: the stage of the drawing, 1 to 6 (the whole eye when it is not given)
   const I = [35, 114 + (shape === 'tsurime' ? 6 : shape === 'tareme' ? -4 : 0)], O = [225, 114 + (shape === 'tsurime' ? -24 : shape === 'tareme' ? 20 : 0)];
   const c1 = shape === 'tsurime' ? [I[0] + 28, I[1] - up * 1.15] : shape === 'tareme' ? [I[0] + 60, I[1] - up * 0.9] : [I[0] + 48, I[1] - up * 1.05];
   const c2 = shape === 'tsurime' ? [O[0] - 62, O[1] - up * 0.78] : shape === 'tareme' ? [O[0] - 30, O[1] - up * 1.05] : [O[0] - 48, O[1] - up * 1.05];
   const low = (shape === 'jito' ? 46 : 36) * tall, midY = (I[1] + O[1]) / 2;
   const upper = `M${adP(I)} C${adP(c1)} ${adP(c2)} ${adP(O)}`;
   const shapeD = `${upper} Q${adF(130)} ${adF(midY + low)} ${adP(I)}Z`;
-  const cx = 128, cy = midY - up * 0.16, modern = era === 'modern';
+  // gx, gy: where she looks, -1 to 1 (right and down are positive): the iris moves inside the lid, which cuts it.
+  const cx = 128 + gxo, cy = midY - up * 0.16 + gyo, modern = era === 'modern';
   const rx = (modern ? 46 : 36) * irisK, ry = (modern ? 64 : 50) * irisK * Math.max(0.8, tall);
   const clip = `adc-${key}`, grad = `adg-${key}`, irisClip = `adi-${key}`;
   let g = `<defs><clipPath id="${clip}"><path d="${shapeD}"/></clipPath><clipPath id="${irisClip}"><ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}"/></clipPath>` +
@@ -252,6 +253,30 @@ function adEyeStepsSvg(o) {
     return r + `<text x="${(i % 3) * 206 + 103}" y="${Math.floor(i / 3) * 190 + 174}" text-anchor="middle" font-size="12" font-weight="600" fill="#333">${i + 1}. ${esc(name)}</text>`;
   });
   return adSvgOpen([0, 0, 624, 380], 'The eye in six steps') + `<rect width="624" height="380" fill="#fff"/>${panels.join('')}</svg>`;
+}
+
+/* Both eyes looking at one place: gx, gy as the eye takes them, and near (0 - 1) turning both inward as an object comes close. The right
+   eye is the left one turned over, so its irises move by the opposite x. */
+function adGazeKind(gx, gy) {
+  const ax = Math.abs(gx), ay = Math.abs(gy);
+  if (ax < 0.25 && ay < 0.25) return 'centre';
+  if (ay > ax) return gy < 0 ? 'up' : 'down';
+  return gx < 0 ? 'left' : 'right';
+}
+const AD_GAZE_SAYS = {
+  centre: 'Looking straight at us: direct, honest, sometimes a challenge. The iris is in the middle of the lid, a little white on each side.',
+  up: 'Looking up: thinking, hoping, remembering. The iris touches the upper lid, and the white shows under it.',
+  down: 'Looking down: shy, sad or reading. The upper lid comes down over the iris, so draw the lid heavier and keep the lashes long.',
+  left: 'Looking to the left of the picture: out of the frame, so she is looking at something we cannot see. Put what she sees in the next panel.',
+  right: 'Looking to the right of the picture: the same, to the other side. Leave room on that side of the frame for what she sees.',
+};
+function adGazeWords(gx, gy) { return { centre: 'looking at viewer', up: 'looking up', down: 'looking down', left: 'looking to the side, facing left', right: 'looking to the side, facing right' }[adGazeKind(gx, gy)]; }
+function adGazeSvg(o) {
+  const near = adClamp(+o.near || 0, 0, 1), gx = adClamp(+o.gx || 0, -1, 1), gy = adClamp(+o.gy || 0, -1, 1);
+  const one = (key, x) => adEyeSvg({ shape: o.shape, era: o.era, tall: o.tall, iris: o.iris, hl: o.hl, lash: o.lash, colour: o.colour, key, gx: x, gy });
+  const left = one('gl', adClamp(gx + near * 0.4, -1, 1)), right = one('gr', adClamp(-(gx - near * 0.4), -1, 1));
+  const parts = left.replace('<svg ', '<svg x="0" y="0" ') + `<g transform="translate(540 0) scale(-1 1)">${right.replace('<svg ', '<svg x="0" y="0" ')}</g>`;
+  return adSvgOpen([0, 0, 540, 200], 'Both eyes looking ' + adGazeKind(gx, gy)) + `<rect width="540" height="200" fill="#f7f5ef"/>${parts}</svg>`;
 }
 
 /* ---- hair */

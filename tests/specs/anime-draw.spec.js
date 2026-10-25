@@ -98,7 +98,7 @@ test('perspective: one point has the vanishing point on the horizon; the roof sh
 test('the Anime study switch is in three groups and the six drawing panes open, change with a click and keep their choice', async ({ page }) => {
   await openApp(page);
   await openSection(page, 'anime');
-  await expect(page.locator('#asMode button')).toHaveCount(25);
+  await expect(page.locator('#asMode button')).toHaveCount(26);
   await expect(page.locator('#asMode .am-group')).toHaveCount(3);
 
   await page.locator('#asMode [data-mode=hands]').click();
