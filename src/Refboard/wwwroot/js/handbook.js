@@ -27,14 +27,15 @@
 "use strict";
 
 const HB_KEY = 'refboard.handbook.v1';
-let hb = null;   // { done: [id], lesson: id }
+let hb = null;   // { done: [id], lesson: id, medium: 'water' | 'ink' }
 
 function hbLoad() {
-  hb = { done: [], lesson: HB_LESSONS[0].id };
+  hb = { done: [], lesson: HB_LESSONS[0].id, medium: 'water' };
   try {
     const s = JSON.parse(localStorage.getItem(HB_KEY) || '{}');
     if (Array.isArray(s.done)) hb.done = s.done.filter(id => HB_LESSONS.some(l => l.id === id));
     if (HB_LESSONS.some(l => l.id === s.lesson)) hb.lesson = s.lesson;
+    if (s.medium === 'ink') hb.medium = 'ink';
   } catch { /* private mode: start at the first lesson */ }
 }
 function hbSave() {
@@ -280,6 +281,17 @@ const HB_LESSONS = [
     see: 'Yellow has to be much lighter than red to match it in grey, blue much darker: hues sit at different natural values. A red and a green of the same value are two colours and one shape - which is why squinting, or looking in grey, is the first check of any painting.' },
 ];
 
+/* ---- the medium
+   A theory that says what to do "In <b>watercolour</b> ..." and "In <b>ink with markers</b> ..." is
+   split at those two phrases: the common part always shows, and of the other two only the one for the
+   medium chosen once at the top of the lesson (kept for every lesson). Others show whole. */
+const HB_MEDIA = [['water', 'Watercolour'], ['ink', 'Ink and markers']];
+function hbParts(theory) {
+  const w = theory.indexOf('In <b>watercolour</b>'), k = theory.indexOf('In <b>ink with markers</b>');
+  if (w < 0 || k < w) return null;
+  return { common: theory.slice(0, w).trim(), water: theory.slice(w, k).trim(), ink: theory.slice(k).trim() };
+}
+
 /* ---- the view */
 function hbShow() {
   if (!hb) hbLoad();
@@ -287,9 +299,11 @@ function hbShow() {
   const groupOf = l => l.group || 'The basics';
   list.innerHTML = HB_LESSONS.map((l, n) => (n && groupOf(l) === groupOf(HB_LESSONS[n - 1]) ? '' : `<div class="hb-group">${esc(groupOf(l))}</div>`) + `<button type="button" class="hb-item" data-hb-lesson="${l.id}" aria-current="${l.id === hb.lesson}">` +
     `<span class="hb-n">${hb.done.includes(l.id) ? '&#10003;' : n + 1}</span><span>${esc(l.title)}</span></button>`).join('');
-  const body = el('hbLesson'), done = hb.done.includes(lesson.id);
+  const body = el('hbLesson'), done = hb.done.includes(lesson.id), parts = hbParts(lesson.theory);
   body.innerHTML = `<h3>${esc(lesson.title)}</h3>
-    <p class="hb-theory">${lesson.theory}</p>
+    ${parts ? `<p class="hb-theory">${parts.common}</p>
+    <div class="chips hb-medium" id="hbMedia" role="group" aria-label="I paint in">${HB_MEDIA.map(([k, n]) => `<button type="button" class="chip" data-hb-paint="${k}" aria-pressed="${k === hb.medium}">${n}</button>`).join('')}</div>
+    <p class="hb-theory">${parts[hb.medium]}</p>` : `<p class="hb-theory">${lesson.theory}</p>`}
     <div class="hb-demo" id="hbDemo"></div>
     <h4>Try this</h4>
     <ol class="hb-try">${lesson.tryThis.map(t => `<li>${esc(t)}</li>`).join('')}</ol>
@@ -314,7 +328,9 @@ function initHandbook() {
     hb.lesson = b.dataset.hbLesson; hbSave(); hbShow();
   });
   el('hbLesson').addEventListener('click', e => {
-    if (e.target.closest('#hbDone')) {
+    const m = e.target.closest('[data-hb-paint]');
+    if (m) { hb.medium = m.dataset.hbPaint; hbSave(); hbShow(); }
+    else if (e.target.closest('#hbDone')) {
       hb.done = hb.done.includes(hb.lesson) ? hb.done.filter(id => id !== hb.lesson) : [...hb.done, hb.lesson];
       hbSave(); hbShow();
     } else if (e.target.closest('#hbNext')) {

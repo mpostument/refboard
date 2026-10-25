@@ -137,13 +137,6 @@ refboard setting in localStorage, every document, every upload - as one
   Museums shows the licence and copies the credit while you are choosing;
   still to come is keeping it with the picture once it is open.
 
-## At the easel
-
-Hands full of paint: ways to run a session without touching the screen.
-
-- **A remote or a foot pedal.** Bluetooth page-turners and foot pedals to
-  change pose and pause.
-
 ## Anime
 
 Most of what the app has leans to realism - Loomis, the head scan, real
@@ -513,5 +506,8 @@ shoulder and other two-figure shots, and a lens's distortion on a photo.
   one point, sparkle bars growing toward the viewer, streaks leaning with one
   wind and fading with distance, flakes in three depths, a reflection stretched
   and dimmed by the wet). Models of how it looks, not of the optics, and not
-  checked against paintings. Still to come: sunbeams through water, lightning,
-  fog and mist, fireflies, a rainbow, and a photo of a real painting beside each.
+  checked against paintings. Also in place: fog and mist (ridges taking the sky's
+  colour with distance), a rainbow with its twin and the dark band between,
+  lightning, fireflies, and sunbeams under water; the Watercolour or Ink and
+  markers choice is made once for the whole chapter. Still to come: a photo of
+  a real painting beside each.

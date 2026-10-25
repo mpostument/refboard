@@ -1487,6 +1487,7 @@ section { margin-bottom: 20px; }
 .hb-lesson h3 { margin: 0 0 6px; font-size: 17px; }
 .hb-lesson h4 { margin: 14px 0 6px; }
 .hb-theory { margin: 0 0 12px; line-height: 1.55; color: var(--ink); max-width: 68ch; }
+.hb-medium { margin: 0 0 8px; }
 .hb-demo { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
 .hb-canvas { width: 100%; max-width: 480px; height: auto; aspect-ratio: 320 / 210; border-radius: 8px; border: 1px solid var(--line); background: #08080c; }
 .hb-slider { display: grid; grid-template-columns: 120px minmax(0, 1fr) 46px; gap: 8px; align-items: center; font-size: 12px; color: var(--dim); }

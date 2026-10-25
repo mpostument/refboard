@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'weather-more', title: 'Fog, a rainbow, lightning, fireflies and light under water',
+    text: "Practise > Handbook > Light and weather has five more lessons, each with a small picture to move and what to leave as bare paper. And you now choose once - Watercolour or Ink and markers - and every lesson of the chapter shows only the paragraph for it.",
+    act: 'Open it', run: () => setView({ kind: 'handbook' }) },
   { id: 'light-weather', title: 'Light and weather: glow, rays, sparkles, rain, snow, a wet street',
     text: "Practise > Handbook, a third chapter: six effects in the manner of a Shinkai sky. Each says where to leave the paper, where the edges go soft and in what order the layers go, for watercolour and for ink with markers, and has a small picture to move - the glow round a lamp, beams of light, sparkles on water, rain leaning with the wind, snow in three depths, neon in a wet road.",
     act: 'Open it', run: () => setView({ kind: 'handbook' }) },

@@ -83,7 +83,7 @@ test('value against colour: some lightness of green is the same value as the red
 test('lessons are marked done, in order, and remembered', async ({ page }) => {
   await open(page);
   await page.click('#hbDone');
-  await expect(page.locator('#viewMeta')).toContainText('1 of 21');
+  await expect(page.locator('#viewMeta')).toContainText('1 of 26');
   await page.click('#hbNext');
   await expect(page.locator('#hbLesson h3')).toHaveText('Aerial perspective');
   await page.reload();

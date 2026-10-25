@@ -1,5 +1,6 @@
 /* refboard - Light and weather effects: glow, light rays, sparkles on water,
-   rain, snow and a wet street with neon - the things a Shinkai sky is made of.
+   rain, snow, a wet street with neon, fog, a rainbow, lightning, fireflies and
+   sunbeams under water - the things a Shinkai sky is made of.
    The third chapter of the Handbook (Practise > Handbook), in the same four
    parts: theory, a demonstration, things to try, and what you should see.
 
@@ -8,7 +9,8 @@
    dark built round it. So each lesson says where to leave the paper, where the
    edges go soft, and in what order the layers go - for watercolour and for ink
    with markers - and its demonstration is drawn from a few numbers (lxGlow,
-   lxRays, lxSparkles, lxRain, lxSnow, lxStreet), which give back what they drew
+   lxRays, lxSparkles, lxRain, lxSnow, lxStreet, lxFog, lxRainbow, lxLightning,
+   lxFireflies, lxDeep), which give back what they drew
    so the lesson's words are read off the same numbers and a test can ask them.
    They are models of how the effect looks, not of the optics.
      glow      light falls off with the square of the distance from a point:
@@ -23,7 +25,18 @@
      snow      flakes in three depths: the near ones large and out of focus,
                the far ones small and sharp;
      street    a neon sign and its reflection in a wet road - stretched
-               downward, dimmer by what the road absorbs, broken by ripples.
+               downward, dimmer by what the road absorbs, broken by ripples;
+     fog       ridges one behind another, each taking the sky's colour by
+               1 - exp(-k * distance), mist thickest at the foot;
+     rainbow   seven colours, red outside, a fainter twin with the order
+               reversed, the dark band between the two;
+     lightning a bolt by midpoint displacement - crooked, with thinner forks
+               running down - and a glow that falls off fast;
+     fireflies bare points with a small yellow-green glow, big near, tiny far;
+     deep      water taking red first, then green, blue deepest, and slanting
+               beams that fade with it.
+   The watercolour and the ink paragraph of a lesson show one at a time: the
+   medium is chosen once at the top (handbook.js, hbParts).
    Loaded with handbook.js after techniques.js (loadSection('handbook')); it
    adds to HB_LESSONS. */
 "use strict";
@@ -190,6 +203,123 @@ function lxStreet(cv, { wet = 0.7, ripple = 0.4, glow = 0.5 } = {}) {
   return { signs: signs.length, keeps: hide, stretch: 1.8, ripple, source: lumAt(signs[0].x + 8, signs[0].y + 4), mirror: lumAt(signs[0].x + 8, road + 8), road };
 }
 
+/* ---- fog and mist */
+const lxLum = c => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+const lxMixRgb = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+
+// Ridges one behind another: each takes the sky's colour by 1 - exp(-k * distance), the Beer-Lambert law.
+function lxFog(cv, { density = 0.5, mist = 0.4, layers = 5 } = {}) {
+  const W = cv.width, H = cv.height, g = cv.getContext('2d'), rnd = tkRandom(41);
+  const sky = [196, 206, 212], dark = [38, 54, 52], k = 0.1 + density * 1.1;
+  lxSky(g, W, H, [150, 172, 190], sky);
+  const contrasts = [], veil = [];
+  for (let i = layers - 1; i >= 0; i--) {                       // far first, so the near ones cover them
+    const dist = 0.3 + i * 0.9, f = 1 - Math.exp(-k * dist), col = lxMixRgb(dark, sky, f), base = H * (0.7 - 0.075 * i);
+    g.fillStyle = tkRgba(col, 1); g.beginPath(); g.moveTo(0, H);
+    const ph = rnd() * 6;
+    for (let x = 0; x <= W; x += 8) g.lineTo(x, base - (10 + 16 * (1 - i / layers)) * (Math.sin(x / (30 + 9 * i) + ph) * 0.6 + Math.sin(x / 11 + ph * 2) * 0.4));
+    g.lineTo(W, H); g.fill();
+    contrasts[i] = Math.abs(lxLum(col) - lxLum(sky)); veil[i] = f;
+  }
+  const m = g.createLinearGradient(0, H, 0, H * (1 - 0.15 - mist * 0.55));
+  m.addColorStop(0, tkRgba(sky, 0.55 + 0.4 * mist)); m.addColorStop(1, tkRgba(sky, 0));
+  g.fillStyle = m; g.fillRect(0, 0, W, H);                      // mist lying in the valley, thickest at the bottom
+  return { layers, contrasts, veil, near: contrasts[0], far: contrasts[layers - 1], gone: contrasts.filter(c => c < 10).length, mist };
+}
+
+/* ---- a rainbow */
+const LX_BOW = [[220, 40, 40], [240, 130, 40], [240, 210, 60], [80, 180, 80], [70, 160, 210], [70, 80, 190], [140, 70, 180]];
+// Light bent back at 42 degrees from the point opposite the sun, red outside; a fainter twin at 51, reversed.
+function lxRainbow(cv, { strength = 0.6, width = 0.5, twin = 0.5 } = {}) {
+  const W = cv.width, H = cv.height, g = cv.getContext('2d'), cx = W / 2, cy = H * 0.95, R = H * 0.62;
+  lxSky(g, W, H, [62, 70, 92], [136, 146, 158]);
+  g.fillStyle = tkRgba([26, 38, 30], 1); g.fillRect(0, cy, W, H - cy);
+  const bw = 3 + width * 9, total = bw * LX_BOW.length, R2 = R * 1.28;
+  const ring = (r0, r1, a) => { g.fillStyle = a; g.beginPath(); g.arc(cx, cy, r1, Math.PI, 2 * Math.PI); g.arc(cx, cy, r0, 2 * Math.PI, Math.PI, true); g.closePath(); g.fill(); };
+  ring(0, R - total, tkRgba([255, 255, 255], 0.1 * strength));  // the sky inside the bow is lighter
+  ring(R, R2 - total, tkRgba([0, 0, 0], 0.22 * strength));      // Alexander's dark band between the two
+  g.lineWidth = bw + 0.8;
+  LX_BOW.forEach((c, i) => { g.strokeStyle = tkRgba(c, strength * 0.75); g.beginPath(); g.arc(cx, cy, R - bw * (i + 0.5), Math.PI, 2 * Math.PI); g.stroke(); });
+  const second = twin > 0.05;
+  if (second) LX_BOW.forEach((c, i) => { g.strokeStyle = tkRgba(LX_BOW[LX_BOW.length - 1 - i], strength * twin * 0.35); g.beginPath(); g.arc(cx, cy, R2 - bw * (i + 0.5), Math.PI, 2 * Math.PI); g.stroke(); });
+  const lum = r => { const p = g.getImageData(Math.round(cx), Math.round(cy - r), 1, 1).data; return (p[0] + p[1] + p[2]) / 3; };
+  return { radius: R, bands: LX_BOW.length, bandWidth: bw, across: total, second, outer: 'red', secondOuter: 'violet', inside: lum(R - total - 14), between: lum((R + R2 - total) / 2 + 2), outside: lum(R2 + 14) };
+}
+
+/* ---- lightning */
+function lxLightning(cv, { forks = 2, glow = 0.6, jag = 0.5 } = {}) {
+  const W = cv.width, H = cv.height, g = cv.getContext('2d'), rnd = tkRandom(53);
+  lxSky(g, W, H, [20, 22, 40], [64, 66, 92]);
+  // midpoint displacement: each segment is split and its middle pushed sideways, less each time
+  const bolt = (x0, y0, x1, y1, amp, depth) => {
+    if (depth === 0) return [[x0, y0], [x1, y1]];
+    const mx = (x0 + x1) / 2 + (rnd() - 0.5) * amp, my = (y0 + y1) / 2 + (rnd() - 0.5) * amp * 0.3;
+    return bolt(x0, y0, mx, my, amp / 2, depth - 1).concat(bolt(mx, my, x1, y1, amp / 2, depth - 1).slice(1));
+  };
+  const main = bolt(W * 0.56, 0, W * 0.44, H * 0.8, 20 + jag * 120, 5);
+  const paths = [{ pts: main, w: 2.2 }];
+  for (let f = 0; f < forks; f++) {
+    const at = main[Math.round(6 + (f + 0.5) / forks * (main.length - 14))], side = f % 2 ? -1 : 1;
+    paths.push({ pts: bolt(at[0], at[1], at[0] + side * (40 + 40 * rnd()), at[1] + 50 + 50 * rnd(), 10 + jag * 40, 3), w: 1.1 });
+  }
+  const stroke = (w, col, a) => { g.strokeStyle = tkRgba(col, a); g.lineJoin = 'round'; for (const p of paths) { g.beginPath(); p.pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.lineWidth = w * p.w / 2.2; g.stroke(); } };
+  g.globalCompositeOperation = 'lighter';
+  if (glow > 0) { stroke(34 * glow + 4, [120, 140, 255], 0.07 * glow + 0.02); stroke(16 * glow + 3, [160, 176, 255], 0.14 * glow + 0.03); stroke(7 * glow + 2, [210, 220, 255], 0.35); }
+  g.globalCompositeOperation = 'source-over';
+  stroke(2.2, [255, 255, 255], 1);                               // the core is the bare paper
+  const mid = main[Math.round(main.length * 0.6)], at = (dx) => { const p = g.getImageData(Math.max(0, Math.min(W - 1, Math.round(mid[0] + dx))), Math.round(mid[1]), 1, 1).data; return (p[0] + p[1] + p[2]) / 3; };
+  let len = 0; for (let i = 1; i < main.length; i++) len += Math.hypot(main[i][0] - main[i - 1][0], main[i][1] - main[i - 1][1]);
+  const straight = Math.hypot(W * 0.12, H * 0.8);
+  return { forks, glow, points: main.length, crooked: len / straight, beside: at(14), away: at(W * 0.45 * (mid[0] > W / 2 ? -1 : 1)), core: at(0) };
+}
+
+/* ---- fireflies */
+function lxFireflies(cv, { amount = 0.5, glow = 0.5 } = {}) {
+  const W = cv.width, H = cv.height, g = cv.getContext('2d'), rnd = tkRandom(61);
+  lxSky(g, W, H, [6, 14, 26], [16, 36, 34]);
+  g.fillStyle = tkRgba([4, 12, 12], 1); g.beginPath(); g.moveTo(0, H);
+  for (let x = 0; x <= W; x += 6) g.lineTo(x, H * 0.82 - 14 * rnd());
+  g.lineTo(W, H); g.fill();
+  const N = Math.round(6 + amount * 54); let near = 0, far = 0, biggest = 0;
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < N; i++) {
+    const d = rnd(), x = rnd() * W, y = H * 0.12 + rnd() * H * 0.7, r = 1 + 3.4 * (1 - d), halo = r * (1.6 + 4.4 * glow);
+    const grad = g.createRadialGradient(x, y, 0, x, y, halo);
+    grad.addColorStop(0, tkRgba([210, 255, 120], 0.55 + 0.3 * glow)); grad.addColorStop(1, tkRgba([210, 255, 120], 0));
+    g.fillStyle = grad; g.beginPath(); g.arc(x, y, halo, 0, Math.PI * 2); g.fill();
+    g.fillStyle = tkRgba([255, 255, 215], 0.95); g.beginPath(); g.arc(x, y, Math.max(0.8, r * 0.55), 0, Math.PI * 2); g.fill();     // the lamp itself: bare paper
+    if (d < 0.4) near++; else far++;
+    biggest = Math.max(biggest, halo * 2);
+  }
+  g.globalCompositeOperation = 'source-over';
+  return { count: N, near, far, biggest, glow };
+}
+
+/* ---- sunbeams under water */
+// Water takes red first, then green; blue goes deepest. Beams fade the same way.
+function lxDeep(cv, { depth = 0.5, rays = 0.5, clear = 0.5 } = {}) {
+  const W = cv.width, H = cv.height, g = cv.getContext('2d'), rnd = tkRandom(71);
+  const top = [120, 214, 222], k = (0.5 + depth * 2.2) * (1.5 - clear), per = [1.0, 0.28, 0.1];
+  const at = f => top.map((v, i) => v * Math.exp(-per[i] * k * f));            // f: 0 at the surface, 1 at the bottom of the picture
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  for (let s = 0; s <= 8; s++) grad.addColorStop(s / 8, tkRgba(at(s / 8), 1));
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  const N = Math.round(2 + rays * 8), lean = 0.35, reach = 0.35 + 0.65 * clear;
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < N; i++) {
+    const x = (i + 0.3 + rnd() * 0.5) / N * (W + 80) - 20, w = 6 + 18 * rnd(), a = 0.1 + 0.14 * rnd(), len = H * reach * (0.7 + 0.5 * rnd());
+    const gr = g.createLinearGradient(x, 0, x + lean * len, len);
+    gr.addColorStop(0, tkRgba([210, 255, 250], a)); gr.addColorStop(1, tkRgba([210, 255, 250], 0));
+    g.fillStyle = gr; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + w, 0); g.lineTo(x + w + lean * len + w, len); g.lineTo(x + lean * len, len); g.closePath(); g.fill();
+  }
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = tkRgba([8, 20, 28], 0.9); g.beginPath(); g.moveTo(0, H);
+  for (let x = 0; x <= W; x += 14) g.lineTo(x, H - 8 - 16 * Math.abs(Math.sin(x / 40)) * rnd());
+  g.lineTo(W, H); g.fill();
+  const t = at(0), b = at(1);
+  return { beams: N, reach, red: [t[0], b[0]], green: [t[1], b[1]], blue: [t[2], b[2]], keptRed: b[0] / t[0], keptBlue: b[2] / t[2] };
+}
+
 /* ---- the lessons */
 HB_LESSONS.push(
   { id: 'glow', group: LX_GROUP, title: 'Glow round a light',
@@ -305,5 +435,100 @@ HB_LESSONS.push(
     tryThis: ['Dry the road completely. What is left under the signs?',
       'Wet it to the top: is the reflection ever as bright as the sign?',
       'Add ripples. Do the reflections widen or break, and which looks more like rain-wet asphalt?'],
-    see: 'The reflection sits under its sign, darker and longer, fading with distance down the road, and ripples break it into wavy bars. It is never as bright as the source. A dry road has none; a very wet one gives a clear but still dimmer copy. Glow in the air softens the signs without changing what the road does.' }
+    see: 'The reflection sits under its sign, darker and longer, fading with distance down the road, and ripples break it into wavy bars. It is never as bright as the source. A dry road has none; a very wet one gives a clear but still dimmer copy. Glow in the air softens the signs without changing what the road does.' },
+
+  { id: 'fog', group: LX_GROUP, title: 'Fog and mist',
+    theory: 'Fog is not a grey you paint over things, it is <b>distance made thick</b>: every layer between you and the thing takes some of its colour and gives it the colour of the air. So each ridge behind the last is <b>lighter, bluer and softer</b>, with less contrast against the sky, until the farthest is nearly the sky itself. Mist lying in a valley is the same, thickest at the bottom. In <b>watercolour</b> paint the farthest layer first and palest, let it dry, then each nearer one a step darker, softening the top edge of the far ones with a damp brush; leave the paper bare for the brightest mist, or lift it with a tissue. In <b>ink with markers</b> use one light grey-blue marker for the farthest layer and a darker one for each step nearer, and blend the mist at the foot with a colourless blender or a white pastel pencil.',
+    build(host) {
+      host.innerHTML = tkLoad('Five ridges of dark trees one behind another in morning fog, the nearest nearly black and the farthest almost lost in the pale sky') +
+        hbSlider('hbFDen', 'Thickness of the fog', 0, 100, 1, 50, '') + hbSlider('hbFMist', 'Mist in the valley', 0, 100, 1, 40, '') + hbSlider('hbFLay', 'Layers', 2, 7, 1, 5, '') +
+        '<div class="count" id="hbRead" role="status"></div>';
+      const cv = host.querySelector('canvas'), read = host.querySelector('#hbRead');
+      const draw = () => {
+        const r = lxFog(cv, { density: tkValue(host, 'hbFDen') / 100, mist: tkValue(host, 'hbFMist') / 100, layers: tkValue(host, 'hbFLay') });
+        read.textContent = `${r.layers} layers. The nearest keeps ${Math.round(r.near)} of 255 against the sky, the farthest ${Math.round(r.far)}; the farthest has ${Math.round(r.veil[r.layers - 1] * 100)}% of its colour taken by the air.` + (r.gone ? ` ${r.gone === 1 ? 'One layer is' : r.gone + ' layers are'} lost in the fog: do not paint ${r.gone === 1 ? 'it' : 'them'}.` : '');
+      };
+      for (const id of ['hbFDen', 'hbFMist', 'hbFLay']) hbOn(host, id, draw);
+      draw();
+    },
+    tryThis: ['Thicken the fog. Which layer disappears first, the near or the far?',
+      'Add layers without changing the fog. Do the steps between them stay even?',
+      'Raise the mist in the valley: what happens to the lowest part of the nearest ridge?'],
+    see: 'The values step evenly toward the sky: near dark, far pale, none darker than the one in front. Thicker fog loses the far layers first and squeezes all that is left toward the sky\'s value. Mist at the foot lightens whatever is lowest. Fog is a value change before it is a colour change.' },
+
+  { id: 'rainbow', group: LX_GROUP, title: 'A rainbow',
+    theory: 'A rainbow is a <b>circle round the point opposite the sun</b>, of which you see the upper part. It is always the same size: red on the <b>outside</b>, violet inside, about <b>42 degrees</b> from that point. A fainter twin sits outside it at 51 degrees with the colours <b>reversed</b>, and the sky between the two is <b>darker</b> than the sky inside the bow or outside the twin. It is a band of light, not seven stripes: the colours run into each other. In <b>watercolour</b> keep the bow as bare paper under a grey storm sky, or lift it with a damp brush, then glaze it with very thin transparent colours wet-in-wet, yellow and blue meeting in a green rather than a stripe; paint the dark band between the two last. In <b>ink with markers</b> use light markers in a very pale tone over the grey ground, and blend the colours where they meet with a colourless blender.',
+    build(host) {
+      host.innerHTML = tkLoad('A rainbow over a dark field under a storm sky, the sky inside the bow lighter and a fainter second bow outside it') +
+        hbSlider('hbBStr', 'Strength', 0, 100, 1, 60, '') + hbSlider('hbBWid', 'Width of the colours', 0, 100, 1, 50, '') + hbSlider('hbBTwin', 'Second bow', 0, 100, 1, 50, '') +
+        '<div class="count" id="hbRead" role="status"></div>';
+      const cv = host.querySelector('canvas'), read = host.querySelector('#hbRead');
+      const draw = () => {
+        const r = lxRainbow(cv, { strength: tkValue(host, 'hbBStr') / 100, width: tkValue(host, 'hbBWid') / 100, twin: tkValue(host, 'hbBTwin') / 100 });
+        read.textContent = `${r.bands} colours across ${Math.round(r.across)} px, red outside. ` + (r.second ? `A second bow outside with ${r.secondOuter} on the outer edge. The sky between the two is ${Math.round(r.inside - r.between)} of 255 darker than inside the bow.` : 'No second bow.');
+      };
+      for (const id of ['hbBStr', 'hbBWid', 'hbBTwin']) hbOn(host, id, draw);
+      draw();
+    },
+    tryThis: ['Lower the strength until the bow is nearly gone: what makes it still readable, the colours or the light and dark of the sky?',
+      'Widen the colours. Where do they begin to look like stripes?',
+      'Take the second bow away and back. Which order do its colours run in?'],
+    see: 'The sky inside the bow is lighter and the band between the two is darker; with those two values alone the bow is read even in grey. The colours blend, red outermost; the twin is fainter and runs the other way. A bow that is as bright as it is wide looks pasted on.' },
+
+  { id: 'lightning', group: LX_GROUP, title: 'Lightning',
+    theory: 'A bolt is the brightest thing in the picture and should be the <b>only bare paper</b> in it. It is <b>crooked, not zigzag</b>: it turns often and by different amounts, with a few <b>forks</b> that thin out and run mostly downward, and no branch is as bold as the trunk. Its light scatters in the cloud and air, so there is a <b>glow</b> round it that falls off fast. In <b>watercolour</b> paint the cloudy sky dark and wet-in-wet, darker round where the bolt will be, and keep the line as bare paper, scratched with a blade or lifted, or put it in with white gouache over the dry dark, thin, with a rigger; lift a soft halo on one side of it. In <b>ink with markers</b> lay a dark sky and draw the bolt with a white gel pen, then dab a light blue marker round it for the glow.',
+    build(host) {
+      host.innerHTML = tkLoad('A bolt of lightning from a dark cloud to the ground with two thin forks and a pale blue glow round it') +
+        hbSlider('hbLForks', 'Forks', 0, 5, 1, 2, '') + hbSlider('hbLGlow', 'Glow', 0, 100, 1, 60, '') + hbSlider('hbLJag', 'Crookedness', 0, 100, 1, 50, '') +
+        '<div class="count" id="hbRead" role="status"></div>';
+      const cv = host.querySelector('canvas'), read = host.querySelector('#hbRead');
+      const draw = () => {
+        const r = lxLightning(cv, { forks: tkValue(host, 'hbLForks'), glow: tkValue(host, 'hbLGlow') / 100, jag: tkValue(host, 'hbLJag') / 100 });
+        read.textContent = `${r.forks === 0 ? 'No forks' : r.forks + (r.forks === 1 ? ' fork' : ' forks')}. The bolt is ${Math.round((r.crooked - 1) * 100)}% longer than a straight line between its ends. Beside it the sky is ${Math.round(r.beside)} of 255, far from it ${Math.round(r.away)}; the core is ${Math.round(r.core)}.`;
+      };
+      for (const id of ['hbLForks', 'hbLGlow', 'hbLJag']) hbOn(host, id, draw);
+      draw();
+    },
+    tryThis: ['Take the glow to nothing. What does the bolt look like on the dark, and what is missing?',
+      'Give it five forks. At what number does it start to look like a tree?',
+      'Straighten the bolt all the way. Why does a straight one look wrong?'],
+    see: 'The core is the lightest thing and the sky next to it a little lighter than the sky far off; the glow drops away quickly, so the bolt is sharp. Fewer forks than you think, thinner than the trunk and mostly running down. More crookedness lengthens the path, never the distance it covers.' },
+
+  { id: 'fireflies', group: LX_GROUP, title: 'Fireflies',
+    theory: 'Fireflies are <b>points of light with a small glow</b>, and the picture is read by the dark they are set in. Near ones are bigger and softer, far ones are tiny and sharp; none is evenly spaced and most are scattered in clumps with gaps. The glow is a yellow-green that reaches only a little way. In <b>watercolour</b> paint the night wet-in-wet in deep blue-greens, keep the points as bare paper by masking fluid, or put them in with gouache once dry, and add a thin halo of pale yellow-green around the larger. In <b>ink with markers</b> use dark blue-green markers for the night, a white gel pen for the dots, and a light yellow-green marker dabbed once round the nearest.',
+    build(host) {
+      host.innerHTML = tkLoad('A dark summer meadow at night with small yellow-green lights floating in the air, the nearest large and soft, the far ones tiny') +
+        hbSlider('hbIAmt', 'How many', 0, 100, 1, 50, '') + hbSlider('hbIGlow', 'Glow', 0, 100, 1, 50, '') +
+        '<div class="count" id="hbRead" role="status"></div>';
+      const cv = host.querySelector('canvas'), read = host.querySelector('#hbRead');
+      const draw = () => {
+        const r = lxFireflies(cv, { amount: tkValue(host, 'hbIAmt') / 100, glow: tkValue(host, 'hbIGlow') / 100 });
+        read.textContent = `${r.count} lights: ${r.near} near and soft, ${r.far} far and small. The biggest glow is about ${Math.round(r.biggest)} px across.` + (r.count > 45 ? ' So many read as a snowfall of light: take out half.' : '');
+      };
+      hbOn(host, 'hbIAmt', draw); hbOn(host, 'hbIGlow', draw);
+      draw();
+    },
+    tryThis: ['Raise the number to the top. Where does it stop looking like fireflies?',
+      'Take the glow to zero: are they still lights, or only dots?',
+      'Which would you paint first, the night or the lights?'],
+    see: 'A dark field with few lights, uneven, the near ones large and soft and the far ones fine. More lights add mostly far ones. The glow is what makes them light and not paint: without it they are dots. The night must stay dark for them to read.' },
+
+  { id: 'deep', group: LX_GROUP, title: 'Sunbeams under water',
+    theory: 'Water takes colour out of light as it goes down, <b>red first, then green, blue deepest</b>: near the surface it is a turquoise, at depth a dark blue and then nearly black. Beams from the surface come in at a slant, <b>fade with depth</b> as the colours do, and are brightest near the top. Clear water carries them farther; cloudy water loses them within a short way. In <b>watercolour</b> start at the top with a pale warm turquoise and go down in wet-in-wet blues, adding a little ultramarine and then indigo; <b>lift</b> the beams with a damp flat brush while it is still a little wet, longest in clear water. In <b>ink with markers</b> use light turquoise at the top and darker blues down, then white gel pen lines for the beams, thin near the bottom, with a blender over to soften them.',
+    build(host) {
+      host.innerHTML = tkLoad('Under the sea, turquoise at the top and dark blue below, with slanting pale beams of sunlight fading as they go down') +
+        hbSlider('hbDDep', 'Depth', 0, 100, 1, 50, '') + hbSlider('hbDRays', 'Beams', 0, 100, 1, 50, '') + hbSlider('hbDClear', 'Clear water', 0, 100, 1, 50, '') +
+        '<div class="count" id="hbRead" role="status"></div>';
+      const cv = host.querySelector('canvas'), read = host.querySelector('#hbRead');
+      const draw = () => {
+        const r = lxDeep(cv, { depth: tkValue(host, 'hbDDep') / 100, rays: tkValue(host, 'hbDRays') / 100, clear: tkValue(host, 'hbDClear') / 100 });
+        read.textContent = `${r.beams} beams, reaching ${Math.round(r.reach * 100)}% of the way down. At the bottom the water keeps ${Math.round(r.keptRed * 100)}% of its red and ${Math.round(r.keptBlue * 100)}% of its blue.`;
+      };
+      for (const id of ['hbDDep', 'hbDRays', 'hbDClear']) hbOn(host, id, draw);
+      draw();
+    },
+    tryThis: ['Go deeper. Which colour is gone first, and which is left?',
+      'Make the water cloudy. How far down do the beams reach now?',
+      'Put in as many beams as you can: when does the water stop looking deep?'],
+    see: 'Warm light out at the top, then green, then blue, then dark - the red gone long before the blue. Clear water gives longer beams; cloudy shorter ones. The beams are slanted, all the same way, fading as they go down. A few, uneven, look like water; many look like a fan.' }
 );
