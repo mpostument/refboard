@@ -502,6 +502,33 @@ Anime in watercolour:
   tagged `palette pulled`. Four lights, from a photo started from (the source strip). Only tested with a
   stand-in server: no real ComfyUI run, so how well a seed holds a scene across views, and how
   "біжить" reads to the model, are not known.
+- **Composition sketches, A or B, the storyboard, paint-ready.** In place (`js/genmore.js`; each way is a folded
+  block in More ways to make). Composition sketches: six compositions as drafts of about two thirds the size
+  (576x832, 704x704, 832x576: multiples of 64, so Finish this at 1.5 lands near the full size), one seed, 14 steps,
+  tagged `draft` and `composition sketch` so they wait in the drafts strip. A or B: the words of two pictures'
+  prompts, weights and escapes stripped; a word one has and the other lacks counts up for the winner and down for
+  the loser, and a word that wins twice is a lean; kept in this browser (`refboard.generate.taste.v1`) and can be
+  added to More tags. From the storyboard: Anime study's frames (shot, angle, gaze, text through `genMoveTags`) as
+  weighted tags over the choices without their framing, one seed. Paint-ready, in Colours to a palette: the
+  lightest share left as the paper's colour, and the rest held to three to five tones between the 2nd and 98th
+  percentile of lightness, each pixel scaled to the middle of its band; kept pictures are tagged `paint ready`.
+  Only tested with a stand-in server: how well one seed holds a scene across compositions is not known, and the
+  sketches' small size may draw SDXL's doubled figures.
+- **Inking, folds, layers, angles, hair steps.** In place (`js/animemore.js` for what is worked out and drawn,
+  `js/animemoreui.js` for the page; four more modes in Anime study, and Steps among the hair's looks). Inking:
+  Sobel edges of a drawing read at 560 px, each edge pixel weight 1, plus one against the plain paper round the
+  figure (found by a flood fill from the border), plus one on the side away from the light (an outline whose paper
+  side faces away from it; inside the figure a strong edge whose dark side does); a map of three weights and a pen
+  table for fineliner, ink and ballpoint. On a photo with a busy background there is no paper to find, so only
+  the shadow side counts. Folds: six kinds drawn as diagrams of the shape, and seven places that say which form
+  there; two to four lines are plenty in anime. Layers: the layer order for watercolour, watercolour pencils,
+  Copic markers and ink, for skin, hair, eyes and cloth, with the tones of `adTones` and, for each, the paint
+  recipe (`paintRecipes`, your palette key), the nearest marker (`fewNearest`) or pencils (`fewLayers`) from the
+  ones marked as yours; the background's colour mixes into the reflected light. Angles: the features as rings on
+  a sphere seen from a camera height (-60 to 60 degrees), the forehead, nose and chin spans against level, a
+  Dutch tilt, a seven-head figure whose parts scale with the nearness. Hair > Steps: six stages, bare head to
+  shaded hair. Not done: the fold pictures and the angle head are diagrams, not a style guide; the figure's
+  parts are boxes; no photo reading for layers (colours are chosen, not picked from a picture).
 - **Hands, eyes, hair, shading, expressions, background perspective.** In place (`js/animedraw.js` for what is
   drawn, `js/animedrawui.js` for the page; six more modes in Anime study, whose switch is now two groups, Colour
   and Drawing). Hands: twelve gestures as joint bends of a palm-box and three-joint fingers, projected in three

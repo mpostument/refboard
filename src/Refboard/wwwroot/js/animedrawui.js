@@ -181,11 +181,13 @@ function adRenderHair() {
   const s = adLoad(), colour = atLoad().hair;
   adPress('ahrStyle', s.style); adPress('ahrWind', s.wind); adPress('ahrLook', s.look);
   el('ahrColour').value = colour; el('ahrStrength').value = s.strength; el('ahrStrength').disabled = s.wind === 'none';
-  const r = adHairSvg({ style: s.style, wind: s.wind, strength: s.strength, colour, look: s.look, key: 'h' });
-  ad.svg.hair = r.svg; ad.hairTones = r.tones;
-  el('ahrStage').innerHTML = r.svg;
+  const steps = s.look === 'steps';
+  const r = adHairSvg({ style: s.style, wind: s.wind, strength: s.strength, colour, look: steps ? 'colour' : s.look, key: 'h' });
+  ad.svg.hair = steps ? adHairStepsSvg({ style: s.style, wind: s.wind, strength: s.strength, colour }) : r.svg; ad.hairTones = r.tones;
+  el('ahrStage').innerHTML = ad.svg.hair;
+  el('ahrStage').classList.toggle('ad-tall', !steps); el('ahrStage').classList.toggle('ad-wide', steps);
   el('ahrTones').innerHTML = adSwatches([['Light', r.tones.light], ['Base', r.tones.base], ['Shadow', r.tones.shadow], ['Core shadow', r.tones.core]]);
-  el('ahrNote').innerHTML = adHairNotes(s.style, s.wind, s.strength).map(esc).join(' ') + ` <small>${r.clumps} clumps. Light, base, shadow and core are worked out from the hair colour: the shadow is cooler, the light warmer.</small>`;
+  el('ahrNote').innerHTML = (steps ? `Draw it in this order:${adOl(AD_HAIR_STEPS)}` : '') + adHairNotes(s.style, s.wind, s.strength).map(esc).join(' ') + ` <small>${r.clumps} clumps. Light, base, shadow and core are worked out from the hair colour: the shadow is cooler, the light warmer.</small>`;
 }
 
 /* ---- shading */

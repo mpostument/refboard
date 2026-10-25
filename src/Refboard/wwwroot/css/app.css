@@ -2364,8 +2364,12 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 /* Generate's More ways to make, and Colours to a palette (js/genmore.js). */
 .gen-more-ways { margin: 14px 0 4px; }
 .gen-more-ways summary { cursor: pointer; color: var(--dim); font-size: 12px; }
-.gm-block { margin: 8px 0; }
-.gm-block h5 { margin: 0 0 2px; font-size: 12px; }
+.gm-block { margin: 6px 0; border-top: 1px solid var(--line); padding-top: 6px; }
+.gm-block summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--ink); }
+.gm-block > .count { margin: 4px 0; }
+.duel-pick { display: block; width: 100%; padding: 0; border: 2px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
+.duel-pick:hover, .duel-pick:focus-visible { border-color: var(--accent); }
+.duel-pick img { display: block; width: 100%; height: auto; max-height: 50vh; object-fit: contain; border-radius: 6px; }
 .gm-block .row input[type=text] { flex: 1; min-width: 0; }
 .pull-box { max-width: 760px; }
 .pull-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
@@ -2396,5 +2400,19 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .ad-thumb svg { width: 100%; height: auto; border-radius: 3px; }
 .ad-tones { display: inline-flex; height: 18px; min-width: 96px; }
 .ad-tones i { flex: 1; min-width: 22px; }
+.ain-pair { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.ain-pair figure { margin: 0; flex: 1 1 260px; min-width: 0; }
+.ain-pair canvas { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.ain-pair figcaption { font-size: 12px; color: var(--dim); margin-top: 4px; }
+.ain-key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin: 0 6px 0 2px; }
+.ain-pens table { border-collapse: collapse; margin-top: 4px; font-size: 13px; }
+.ain-pens th, .ain-pens td { text-align: left; padding: 3px 12px 3px 0; vertical-align: top; }
+.ain-pens td:first-of-type { white-space: nowrap; color: var(--dim); }
+.aly-bg { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.aly-steps { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 8px; counter-reset: aly; max-width: 760px; }
+.aly-steps li { display: flex; gap: 10px; align-items: flex-start; counter-increment: aly; }
+.aly-steps li::before { content: counter(aly); flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); text-align: center; font-size: 12px; line-height: 20px; }
+.aly-sw { flex: none; width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--line); background: repeating-linear-gradient(45deg, transparent 0 5px, var(--line) 5px 6px); }
+.aly-chip { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); vertical-align: -2px; }
 .ad-stage ~ .pg-note ol, .ad-cards ~ .pg-note ol { margin: 4px 0 6px; padding-left: 20px; }
 .av-hit { touch-action: none; }

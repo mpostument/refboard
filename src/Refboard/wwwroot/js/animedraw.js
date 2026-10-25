@@ -246,7 +246,17 @@ const AD_HAIR = {
   twintails: { label: 'Twintails', len: 0, spread: 0, sideLen: 70, sideSpread: 6, nBack: 0, wave: 0, tied: 2,
     how: 'Both tails start at the same height, and hang in matching curves; the tie is a small band, the hair swells just below it.', words: 'twintails' },
 };
-const AD_HAIR_LOOK = { colour: 'Colour', clumps: 'Clumps', flow: 'Flow lines' };
+const AD_HAIR_LOOK = { colour: 'Colour', clumps: 'Clumps', flow: 'Flow lines', steps: 'Steps' };
+// The six stages a hairstyle is built in; each is drawn by adHairSvg as a look of its own.
+const AD_HAIR_STAGES = ['bare', 'mass', 'clumps', 'flow', 'base', 'final'];
+const AD_HAIR_STEPS = [
+  'The head and the parting: the skull as a ball, the hairline and the parting. Hair grows from the parting, not from the outline.',
+  'The mass: the outline of the whole fall as one shape - how wide, how long, where it is fullest - before any clump.',
+  'The big clumps: split the mass into a few numbered clumps, each wide at the root and tapering to the tip.',
+  'The flow: an arrow down each clump, root to tip. Every clump bends once, and the bends agree.',
+  'The flat colour: the base tone in every clump, with the line on.',
+  'The shadow and the light: a darker stroke down each clump, and the ring of light across the crown.',
+];
 const AD_WIND = { none: 'None', left: 'To the left', right: 'To the right' };
 
 // A tapered clump from its root to its tip; bend pushes the middle sideways.
@@ -299,13 +309,18 @@ function adHairClumps(style, wind, strength) {
 
 /* o: { style, wind, strength, colour, look, key } */
 function adHairSvg(o) {
-  const style = AD_HAIR[o.style] ? o.style : 'long', look = AD_HAIR_LOOK[o.look] ? o.look : 'colour', key = String(o.key || 'h').replace(/[^a-z0-9]/gi, '');
+  const style = AD_HAIR[o.style] ? o.style : 'long', key = String(o.key || 'h').replace(/[^a-z0-9]/gi, '');
+  const stage = AD_HAIR_STAGES.includes(o.look) ? o.look : '';
+  const look = stage ? ({ base: 'colour', final: 'colour' }[stage] || stage) : (AD_HAIR_LOOK[o.look] && o.look !== 'steps' ? o.look : 'colour');
+  const shaded = stage !== 'base';       // the shadow strokes and the ring of light come last
   const { cx, cy, rx, ry } = AD_HEAD, tones = adTones(adRgbOf(o.colour || '#6b4a2f')), ink = AD_INK;
   const C = adHairClumps(style, o.wind, o.strength);
   const all = [...C.back, ...C.side, ...C.fringe];
   let n = 0;
   const draw = list => list.map(c => {
     const id = ++n;
+    if (look === 'bare') return '';
+    if (look === 'mass') return `<path d="${c.d}" fill="#cdc6b4" stroke="#cdc6b4" stroke-width="2" stroke-linejoin="round"/>`;
     if (look === 'clumps') {
       const hue = (id * 47) % 360, m = [(c.r[0] + c.t[0]) / 2, (c.r[1] + c.t[1]) / 2];
       return `<path d="${c.d}" fill="hsl(${hue} 55% 70%)" fill-opacity="0.75" stroke="${ink}" stroke-width="1.4"/><text x="${adF(m[0])}" y="${adF(m[1] + 4)}" text-anchor="middle" font-size="11" font-weight="700" fill="${ink}">${id}</text>`;
@@ -315,9 +330,9 @@ function adHairSvg(o) {
         `<path d="M${adP(c.r)} Q${adP(c.c)} ${adP(c.t)}" fill="none" stroke="#c8412f" stroke-width="1.8" marker-end="url(#ahf-${key})"/>`;
     }
     return `<path d="${c.d}" fill="${adCss(tones.base)}" stroke="${ink}" stroke-width="1.5" stroke-linejoin="round"/>` +
-      `<path d="M${adP(c.r)} Q${adP(c.c)} ${adP(c.t)}" fill="none" stroke="${adCss(tones.shadow)}" stroke-width="2.4" opacity="0.7" stroke-linecap="round"/>`;
+      (shaded ? `<path d="M${adP(c.r)} Q${adP(c.c)} ${adP(c.t)}" fill="none" stroke="${adCss(tones.shadow)}" stroke-width="2.4" opacity="0.7" stroke-linecap="round"/>` : '');
   }).join('');
-  const skin = '#fbe9dc', capFill = look === 'colour' ? adCss(tones.base) : look === 'flow' ? '#ebe7dd' : 'hsl(210 30% 85%)';
+  const skin = '#fbe9dc', capFill = look === 'colour' ? adCss(tones.base) : look === 'flow' ? '#ebe7dd' : look === 'mass' ? '#cdc6b4' : look === 'bare' ? 'none' : 'hsl(210 30% 85%)';
   const face = `M${cx - rx} ${cy - 8} C${cx - rx} ${cy + 40} ${cx - 26} ${cy + ry} ${cx} ${cy + ry} C${cx + 26} ${cy + ry} ${cx + rx} ${cy + 40} ${cx + rx} ${cy - 8} C${cx + rx} ${cy - ry * 0.9} ${cx - rx} ${cy - ry * 0.9} ${cx - rx} ${cy - 8}Z`;
   const cap = `M${cx - rx - 8} ${cy + 12} C${cx - rx - 14} ${cy - ry - 30} ${cx + rx + 14} ${cy - ry - 30} ${cx + rx + 8} ${cy + 12} Q${cx + rx - 6} ${cy - 30} ${cx} ${cy - ry * 0.7} Q${cx - rx + 6} ${cy - 30} ${cx - rx - 8} ${cy + 12}Z`;
   const capId = `ahc-${key}`;
@@ -328,14 +343,27 @@ function adHairSvg(o) {
     `<path d="M${cx - 34} ${cy + 14} q10 -6 20 0 M${cx + 14} ${cy + 14} q10 -6 20 0" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>` +
     `<path d="M${cx - 10} ${cy + 46} q10 5 20 0" fill="none" stroke="${ink}" stroke-width="1.8" stroke-linecap="round"/>`;
   g += draw(C.side);
-  g += `<path d="${cap}" fill="${capFill}" stroke="${ink}" stroke-width="1.6"/>`;
+  g += `<path d="${cap}" fill="${capFill}" stroke="${look === 'mass' ? capFill : ink}" stroke-width="1.6"${look === 'bare' ? ' stroke-dasharray="5 4"' : ''}/>`;
+  if (look === 'bare') g += `<path d="M${cx} ${cy - ry * 0.7} V${cy - 22}" stroke="#c8412f" stroke-width="2"/>`;
   g += draw(C.fringe);
-  if (look === 'colour') {
+  if (look === 'colour' && shaded) {
     g += `<g clip-path="url(#${capId})"><path d="M${cx - rx + 2} ${cy - 32} Q${cx} ${cy - ry - 4} ${cx + rx - 2} ${cy - 32}" fill="none" stroke="${adCss(tones.light)}" stroke-width="9" stroke-linecap="round" opacity="0.45"/></g>`;
   }
   for (const t of C.ties) g += `<rect x="${adF(t[0] - 7)}" y="${adF(t[1] - 5)}" width="14" height="10" rx="3" fill="#c8412f" stroke="${ink}" stroke-width="1.2"/>`;
   if (look === 'flow') g += `<path d="M${cx - rx} ${cy - 26} Q${cx} ${cy - ry - 8} ${cx + rx} ${cy - 26}" fill="none" stroke="#3a86e0" stroke-width="1.6" stroke-dasharray="5 4"/>`;
-  return { svg: adSvgOpen([-30, 0, 360, 420], `${AD_HAIR[style].label} hair as ${AD_HAIR_LOOK[look].toLowerCase()}`) + `<rect x="-30" width="360" height="420" fill="#f7f5ef"/>${g}</svg>`, tones, clumps: all.length };
+  return { svg: adSvgOpen([-30, 0, 360, 420], `${AD_HAIR[style].label} hair as ${(AD_HAIR_LOOK[look] || stage).toLowerCase()}`) + `<rect x="-30" width="360" height="420" fill="#f7f5ef"/>${g}</svg>`, tones, clumps: all.length };
+}
+
+/* The hairstyle built in six stages on one sheet, three across: from the head and the parting to the
+   shadow strokes. Each panel is adHairSvg at one stage. */
+function adHairStepsSvg(o) {
+  const panels = AD_HAIR_STAGES.map((stage, i) => {
+    const r = adHairSvg({ ...o, look: stage, key: 'st' + i }).svg
+      .replace(/ width="[\d.]+" height="[\d.]+"/, ' width="200" height="233"')
+      .replace('<svg ', `<svg x="${(i % 3) * 206 + 3}" y="${Math.floor(i / 3) * 262}" `);
+    return r + `<text x="${(i % 3) * 206 + 103}" y="${Math.floor(i / 3) * 262 + 252}" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${i + 1}</text>`;
+  });
+  return adSvgOpen([0, 0, 624, 524], `${(AD_HAIR[o.style] || AD_HAIR.long).label} hair in six steps`) + `<rect width="624" height="524" fill="#fff"/>${panels.join('')}</svg>`;
 }
 
 function adHairNotes(style, wind, strength) {

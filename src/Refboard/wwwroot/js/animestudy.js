@@ -6,7 +6,7 @@
    ones. Each frame is read in this browser and nothing is uploaded; the video is not kept, only
    the small pictures of the frames in this page, which go when you leave it.
    Outfits, Proportions, Faces and Storyboard are in js/animetools.js; Hands, Eyes, Hair, Shading,
-   Expressions and Perspective in js/animedrawui.js.
+   Expressions and Perspective in js/animedrawui.js; Inking, Folds, Layers and Angles in js/animemoreui.js.
    Backgrounds: a manner and an hour, the nine colours that make the picture, each with a job, and
    for each how to mix it from your paints.
    Loaded with the section (loadSection('anime')). */
@@ -16,9 +16,11 @@ const AS_MODE_KEY = 'refboard.animeMode.v1';
 const AS_COUNT_KEY = 'refboard.animeFrames.v1';
 const AS_COUNTS = [8, 12, 16];
 const AS_MAX_IMAGES = 24;
-// The halves of this view, each a pane; outfits to storyboard are in js/animetools.js, the last six in js/animedrawui.js.
+// The halves of this view, each a pane; outfits to storyboard are in js/animetools.js, hands to perspective in js/animedrawui.js,
+// the last four in js/animemoreui.js.
 const AS_PANES = { frames: 'afPane', background: 'abPane', outfits: 'aoPane', proportions: 'apPane', faces: 'acPane', storyboard: 'asbPane',
-  hands: 'ahdPane', eyes: 'aeyPane', hair: 'ahrPane', shading: 'ashPane', expressions: 'axPane', perspective: 'avPane' };
+  hands: 'ahdPane', eyes: 'aeyPane', hair: 'ahrPane', shading: 'ashPane', expressions: 'axPane', perspective: 'avPane',
+  inking: 'ainPane', folds: 'aflPane', layers: 'alyPane', angles: 'aanPane' };
 
 let asState = null;      // null until first opened; then { frames: [{ canvas, data }], busy }
 const abMixCache = new Map();
@@ -42,7 +44,7 @@ function asSetMode(mode, save = true) {
   for (const b of el('asMode').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   for (const [m, id] of Object.entries(AS_PANES)) el(id).classList.toggle('hidden', m !== mode);
   if (mode === 'background') abRender(false);
-  else { atShow(mode); adShow(mode); }
+  else { atShow(mode); adShow(mode); amuShow(mode); }
 }
 
 function asInit() {
@@ -96,6 +98,7 @@ function asInit() {
   paintChips(el('abMedium'), el('abPaints'), () => { abMixCache.clear(); abRender(false); });
   atInit();
   adInit();
+  amuInit();
 }
 
 function abSyncChips() {
