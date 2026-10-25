@@ -19,6 +19,7 @@ function adLoad() {
   const dflt = AD_PERSP_DEFAULT[kind === 3 ? (up ? '3up' : '3down') : kind];
   return {
     gesture: key(s.gesture, AD_HANDS, 'open'),
+    eyeLook: ['final', 'steps'].includes(s.eyeLook) ? s.eyeLook : 'final', eyeMat: key(s.eyeMat, AD_EYE_MATERIAL, 'water'),
     shape: key(s.shape, AD_EYE_SHAPES, 'tsurime'), era: ['90s', 'modern', 'both'].includes(s.era) ? s.era : 'both', hl: key(s.hl, AD_EYE_HL, 'two'),
     tall: num(s.tall, 0.6, 1.3, 1), iris: num(s.iris, 0.6, 1.2, 1), lash: num(s.lash, 1, 5, 3),
     style: key(s.style, AD_HAIR, 'long'), wind: key(s.wind, AD_WIND, 'none'), strength: Math.round(num(s.strength, 1, 3, 2)), look: key(s.look, AD_HAIR_LOOK, 'colour'),
@@ -85,6 +86,8 @@ function adInit() {
   adMakeChips('aeyShape', Object.entries(AD_EYE_SHAPES).map(([k, v]) => [k, v.label, v.about]), v => { adPatch({ shape: v }); adRenderEyes(); });
   adMakeChips('aeyEra', [['90s', '90s'], ['modern', 'Modern'], ['both', 'Both']], v => { adPatch({ era: v }); adRenderEyes(); });
   adMakeChips('aeyHl', Object.entries(AD_EYE_HL), v => { adPatch({ hl: v }); adRenderEyes(); });
+  adMakeChips('aeyLook', [['final', 'The eye'], ['steps', 'Steps']], v => { adPatch({ eyeLook: v }); adRenderEyes(); });
+  adMakeChips('aeyMat', [['water', 'Watercolour'], ['pencils', 'Pencils'], ['copic', 'Copic'], ['ink', 'Ink']], v => { adPatch({ eyeMat: v }); adRenderEyes(); });
   for (const [id, k] of [['aeyTall', 'tall'], ['aeyIris', 'iris'], ['aeyLash', 'lash']]) el(id).addEventListener('input', () => { adPatch({ [k]: +el(id).value }); adRenderEyes(); });
   el('aeyColour').addEventListener('input', () => { const a = atLoad(); a.eyes = el('aeyColour').value; atSave(a); adRenderEyes(); });
   adWire('aey', () => ad.svg.eyes, 'anime-eye', 'anime-eyes', () => { const s = adLoad(); return [AD_EYE_SHAPES[s.shape].words, s.era === 'both' ? AD_EYE_ERAS.modern.words : AD_EYE_ERAS[s.era].words].join(', '); });
@@ -168,6 +171,19 @@ function adRenderEyes() {
   const s = adLoad(), colour = atLoad().eyes;
   adPress('aeyShape', s.shape); adPress('aeyEra', s.era); adPress('aeyHl', s.hl);
   el('aeyColour').value = colour;
+  adPress('aeyLook', s.eyeLook); adPress('aeyMat', s.eyeMat);
+  const steps = s.eyeLook === 'steps';
+  el('aeyMatRow').classList.toggle('hidden', !steps);
+  if (steps) {
+    // The stages are drawn in one manner: the modern one, unless only the 90s is chosen.
+    ad.svg.eyes = adEyeStepsSvg({ shape: s.shape, era: s.era === '90s' ? '90s' : 'modern', tall: s.tall, iris: s.iris, hl: s.hl, lash: s.lash, colour });
+    el('aeyStage').classList.add('ad-wide');
+    el('aeyStage').innerHTML = ad.svg.eyes;
+    el('aeyNote').innerHTML = `<ol>${AD_EYE_MATERIAL[s.eyeMat].map((t, i) => `<li><b>${esc(AD_EYE_STAGES[i])}.</b> ${esc(t)}</li>`).join('')}</ol>` +
+      `<small>The stages are the order the layers go down in; light first, dark last, and the highlights are kept, not added.</small>`;
+    return;
+  }
+  el('aeyStage').classList.remove('ad-wide');
   ad.svg.eyes = adEyeScene(s);
   el('aeyStage').innerHTML = ad.svg.eyes;
   const eras = s.era === 'both' ? ['90s', 'modern'] : [s.era];

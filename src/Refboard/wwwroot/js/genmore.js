@@ -22,6 +22,7 @@
    the loser has not is counted, so the words that keep winning show, and can go into More tags.
    From the storyboard. The frames of Anime study's Storyboard - the shot, the angle, where she
    looks and what she does - drawn as pictures of one scene with one seed.
+   The sketch pad, Line art, Details, Other conditions, the grid, the cards and the challenge are in js/gennew.js.
    Paint-ready, in Colours to a palette: the lightest part left as bare paper and the tones held
    to a few steps, so the picture shows what to leave unpainted and how many values to use.
 
@@ -600,7 +601,8 @@ function genMoreInit() {
     block('gmMoveBlock', 'A movement', 'What she does, in your words - the tags go into More tags.',
       `<div class="row"><input type="text" id="genMoveText" maxlength="80" placeholder="e.g. біжить, озирається" aria-label="What she does"><button type="button" class="ghost" id="gmMove">Add</button></div>`) +
     block('gmTasteBlock', 'A or B', 'Two of your pictures at a time: which is better? The words that keep winning can go into More tags.',
-      `<button type="button" class="ghost" id="gmDuel">Compare two</button> <span class="count" id="gmTaste"></span>`);
+      `<button type="button" class="ghost" id="gmDuel">Compare two</button> <span class="count" id="gmTaste"></span>`) +
+    genNewBlocks();
   const sync = (id, picked, attr) => { const p = picked(); for (const b of el(id).children) b.setAttribute('aria-pressed', String(p.includes(b.dataset[attr]))); };
   const toggle = (id, key, picked, attr) => {
     sync(id, picked, attr);
@@ -620,4 +622,5 @@ function genMoreInit() {
   el('gmDuel').addEventListener('click', genDuelOpen);
   el('genMoveText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); genMoveAdd(); } });
   genDuelSummary();
+  genNewWire();
 }

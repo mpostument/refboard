@@ -8,13 +8,16 @@ test('the choices become the model\'s tags and the words it is filed under', asy
   await openApp(page);
   const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, hair: 'twintails', colour: 'pink', view: 'three', light: 'back' }, 'hat, rain'));
   expect(r.prompt).toBe('1girl, solo, twintails, pink hair, upper body, three quarter view, backlighting, rim lighting, ' +
-    'watercolor \\(medium\\), traditional media, lineart, minimalist, simple drawing, simple background, white background, hat, rain');
+    'watercolor \\(medium\\), traditional media, painting \\(medium\\), paper texture, colorful, rich colors, simple drawing, simple background, white background, hat, rain');
   expect(r.tags).toEqual(['anime', 'girl', 'twin tails', 'pink hair', 'bust', 'three-quarter', 'backlit', 'watercolour',
     'simple', 'hat', 'rain']);
   expect(r.shape).toBe('portrait');
   // Simple, the default, keeps the intricate out.
   expect(r.avoid).toContain('intricate details');
-  expect((await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, detail: 'normal' }))).avoid).toBe('');
+  expect((await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, detail: 'normal' }))).avoid).toBe('flat color, cel shading, digital art, vector art, thick outlines, 3d, cross necklace, cross pendant, latin cross');
+  // A cross pendant is kept out of every character, and of nothing else, unless one is asked for in More tags.
+  expect((await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, medium: 'ink', detail: 'normal' }, 'cross necklace'))).avoid).not.toContain('cross');
+  expect((await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'landscape', detail: 'normal' }))).avoid).not.toContain('cross');
   // A head is square; "any" adds nothing.
   const head = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, framing: 'head' }));
   expect(head.shape).toBe('square');
@@ -79,7 +82,7 @@ test('a landscape or an animal: no one in it, and only its own choices', async (
   const land = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'landscape', hair: 'long',
     place: 'lake', time: 'sunset', weather: 'fog', season: 'autumn' }));
   expect(land.prompt).toBe('no humans, scenery, landscape, lake, reflection, sunset, orange sky, evening, fog, mist, ' +
-    'autumn, autumn leaves, watercolor \\(medium\\), traditional media, lineart, minimalist, simple drawing');
+    'autumn, autumn leaves, watercolor \\(medium\\), traditional media, painting \\(medium\\), paper texture, colorful, rich colors, simple drawing');
   expect(land.tags).toEqual(['anime', 'landscape', 'lake', 'sunset', 'fog', 'autumn', 'watercolour', 'simple']);
   expect(land.shape).toBe('landscape');
   const fox = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'animal', animal: 'fox', size: 'close' }));
@@ -147,6 +150,7 @@ test('with a ComfyUI behind the server: made, kept, shown, opened', async ({ pag
   await page.click('[data-gen="subject"][data-opt="character"]');
   await expect(page.locator('[data-row="place"]')).toBeHidden();
   // Wet-in-wet is watercolour's question: not asked for ink.
+  await page.evaluate(() => document.querySelectorAll('.gen-rare').forEach(d => { d.open = true; }));
   await expect(page.locator('[data-row="edges"]')).toBeVisible();
   await page.click('[data-gen="medium"][data-opt="ink"]');
   await expect(page.locator('[data-row="edges"]')).toBeHidden();

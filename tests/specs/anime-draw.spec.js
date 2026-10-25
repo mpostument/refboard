@@ -95,11 +95,11 @@ test('perspective: one point has the vanishing point on the horizon; the roof sh
   for (const s of [r.one, r.up, r.down]) expect(s).not.toMatch(/NaN|undefined/);
 });
 
-test('the Anime study switch is in two groups and the six drawing panes open, change with a click and keep their choice', async ({ page }) => {
+test('the Anime study switch is in three groups and the six drawing panes open, change with a click and keep their choice', async ({ page }) => {
   await openApp(page);
   await openSection(page, 'anime');
-  await expect(page.locator('#asMode button')).toHaveCount(16);
-  await expect(page.locator('#asMode .am-group')).toHaveCount(2);
+  await expect(page.locator('#asMode button')).toHaveCount(23);
+  await expect(page.locator('#asMode .am-group')).toHaveCount(3);
 
   await page.locator('#asMode [data-mode=hands]').click();
   await expect(page.locator('#ahdStage svg')).toHaveCount(1);

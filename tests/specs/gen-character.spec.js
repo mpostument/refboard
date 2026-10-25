@@ -97,6 +97,7 @@ test('the field, its hint, and Original in the page: typed, kept, hidden for a l
   // Under Original it says what Original does about it.
   await page.click('[data-gen="setting"][data-opt="original"]');
   await expect(hint).toContainText('Original draws her at Normal detail');
+  await page.evaluate(() => document.querySelectorAll('.gen-rare').forEach(d => { d.open = true; }));
   await page.click('[data-gen="detail"][data-opt="normal"]');
   await expect(hint).toHaveText('');
   // Original, kept across a reload.

@@ -41,6 +41,9 @@ const wear = (girl, boy) => ch => ch.who === 'boy' ? boy : girl;
 // time. Kept out by Setting, and by the Clothes that stand in for it (`owns`
 // drops the Setting's avoid with its tags).
 const SLAVIC_AVOID = 'cross, cross necklace, latin cross, christianity, nun';
+// A necklace or any jewellery on an anime character is a cross pendant to most models, whatever the Setting:
+// kept out of every character, and switched off in the Prompt for the one who wears it.
+const GEN_NO_CROSS = 'cross necklace, cross pendant, latin cross';
 const slavicAvoid = a => ({ slavic: [a, SLAVIC_AVOID].filter(Boolean).join(', '), _: a || '' });
 // Close-fitting clothes are for seeing the figure's shape, as in a life
 // class - never revealing ones.
@@ -66,7 +69,7 @@ const GEN_CHOICES = [
     { id: 'boy', label: 'Boy', tags: '1boy, solo' },
     // A named character's own sex: "1girl" on Gojo Satoru drew a woman, so
     // naming her hands it to the name (the Character field switches to this).
-    { id: 'her', label: 'Hers', tags: 'solo', words: '', when: ch => !!genCharacterTags(ch.character),
+    { id: 'her', label: 'By name', tags: 'solo', words: '', when: ch => !!genCharacterTags(ch.character),
       hint: 'Her own sex and look - nothing says girl or boy, the character does' },
   ] },
   { id: 'hair', label: 'Hair', for: PERSON, options: [
@@ -426,14 +429,17 @@ const GEN_CHOICES = [
   // No "pen (medium)" or "graphite (medium)": the model drew the pen into
   // the picture, and a pencil beside it - hence the tools in what to avoid.
   { id: 'medium', label: 'Medium', options: [
-    { id: 'watercolour', label: 'Watercolour', tags: 'watercolor (medium), traditional media, lineart', words: 'watercolour' },
+    // Not "lineart", "minimalist" or "gradient" kept out: they made it clean digital lines on pale flat colour. A wash
+    // is a gradient, and paper with grain under it says the paint is wet and real (2026-10-25: "not like watercolour, minimal and faded").
+    { id: 'watercolour', label: 'Watercolour', tags: 'watercolor (medium), traditional media, painting (medium), paper texture, colorful, rich colors', words: 'watercolour',
+      avoid: 'flat color, cel shading, digital art, vector art, thick outlines, 3d' },
     { id: 'ink', label: 'Ink and hatching', words: 'ink',
-      tags: 'monochrome, greyscale, lineart, (hatching (texture):1.3), (cross-hatching:1.2), ink (medium), traditional media',
+      tags: 'monochrome, greyscale, lineart, (hatching (texture):1.3), (cross-hatching:1.2), ink (medium), traditional media, paper texture',
       // Red, sepia: without them the lines came out reddish on warm paper.
       avoid: 'color, gradient, screentone, solid black, black fill, grey wash, greyscale shading, (color:1.2), red, sepia, brown, orange, pen, holding pen, art tools' },
     { id: 'flat', label: 'Flat colour', tags: 'flat color, cel shading', words: 'flat colour' },
     { id: 'sketch', label: 'Pencil and hatching', words: 'pencil',
-      tags: 'monochrome, greyscale, sketch, (hatching (texture):1.2), traditional media',
+      tags: 'monochrome, greyscale, sketch, graphite (medium), (hatching (texture):1.2), traditional media, paper texture',
       avoid: 'color, digital, sepia, pencil, holding pencil, art tools' },
     // Watercolour's two cousins: the alcohol marker's even strokes side by
     // side (Copic's, though the model knows only "marker (medium)"), the
@@ -441,10 +447,10 @@ const GEN_CHOICES = [
     // No "visible strokes" or "vibrant colors": alcohol blends smooth, and with
     // those two the model drew red and blue streaks (2026-10-15).
     { id: 'copic', label: 'Copic markers', words: 'copic markers',
-      tags: 'marker (medium), traditional media, lineart, colored',
+      tags: 'marker (medium), traditional media, paper texture, lineart, colored',
       avoid: 'marker, holding marker, pen, art tools, digital, paint splatter, splashes, monochrome, greyscale, watercolor (medium), wet-on-wet, color bleeding' },
     { id: 'wpencil', label: 'Watercolour pencils', words: 'watercolour pencils',
-      tags: 'watercolor pencil (medium), colored pencil (medium), watercolor (medium), traditional media, sketch, visible strokes',
+      tags: 'watercolor pencil (medium), colored pencil (medium), watercolor (medium), traditional media, paper texture, sketch, visible strokes',
       avoid: 'pencil, holding pencil, art tools, digital' },
   ] },
   // Watercolour's own question - are the colours run together wet, or laid
@@ -489,8 +495,9 @@ const GEN_CHOICES = [
         building: BEGIN_AVOID + ', (many windows:1.2), crowd, ornament, sign, text, power lines, clutter, cityscape, skyscraper, car',
         nature: BEGIN_AVOID + ', clutter',
         animal: BEGIN_AVOID + ', detailed fur' } },
-    { id: 'simple', label: 'Simple', tags: 'minimalist, simple drawing', words: 'simple', hint: 'A few big shapes, no fine detail',
-      avoid: 'detailed, intricate details, complex background, gradient, shiny skin, shiny hair' },
+    // In watercolour "minimalist" drew few and pale colours, and "gradient" is what a wash is: both are left out there.
+    { id: 'simple', label: 'Simple', tags: ch => ch.medium === 'watercolour' ? 'simple drawing' : 'minimalist, simple drawing', words: 'simple', hint: 'A few big shapes, no fine detail',
+      avoid: ch => 'detailed, intricate details, complex background, ' + (ch.medium === 'watercolour' ? '' : 'gradient, ') + 'shiny skin, shiny hair' },
     { id: 'normal', label: 'Normal', tags: '', words: '', hint: 'As the model draws it - a finished illustration' },
   ] },
   // A landscape or a street is its own background.
@@ -516,6 +523,9 @@ const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', look
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
   size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', detail: 'simple',
   ground: 'plain' };
+
+// Rows kept under More choices in their group: set rarely, and not needed to make a picture.
+const GEN_RARE = ['parting', 'eyeShape', 'lens', 'edges', 'lock', 'detail', 'ground'];
 
 // Whether a row is asked, and used, with these choices.
 const genApplies = (c, ch) => (!c.for || c.for.includes(ch.subject)) && (!c.when || c.when(ch));
@@ -672,6 +682,7 @@ function genPrompt(choices, extra = '') {
     if (w) words.push(w);
   }
   const more = extra.split(',').map(s => s.trim()).filter(Boolean);
+  if (subject === 'character' && !more.some(t => /cross/i.test(t))) avoid.push(GEN_NO_CROSS);
   const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' || choices.framing === 'expressions' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
   // outfit: what Setting and Clothes alone say, for a variation, which keeps its
@@ -755,7 +766,10 @@ function genRequest() {
     return out;
   }
   out.denoise = src.level;
-  if (src.mode === 'study') {
+  if (src.mode === 'sketch') {
+    // Your own scribble: the choices say what it is, the sampler starts from the lines and colours it freely.
+    out.tags = [...out.tags, 'from a sketch'].slice(0, 24);
+  } else if (src.mode === 'study') {
     // A photo has no tags of its own: the beginner's, so what comes out is
     // a few flat shapes, then the choices above for what it is and its medium.
     const tags = genSplit(out.prompt);
@@ -793,12 +807,14 @@ const GEN_SHAPE_PX = { portrait: [832, 1216], square: [1024, 1024], landscape: [
 const GEN_LEVELS = {
   study: { title: 'How far from it', start: 1, options: [['Close', 0.45, 'Repaints the picture in the style, keeping its drawing'], ['Simplified', 0.62, 'Keeps the big shapes, drops the detail'], ['Loose', 0.8, 'Only its layout and colours']] },
   vary: { title: 'How different', start: 1, options: [['Slightly', 0.4, 'The same picture, a little changed'], ['Somewhat', 0.6, 'Same idea, new details'], ['Very', 0.8, 'Only the layout stays']] },
+  sketch: { title: 'How free', start: 1, options: [['Close', 0.68, 'Keeps your lines where they are'], ['Free', 0.8, 'Keeps the pose and the layout'], ['Loose', 0.9, 'Only the big shapes']] },
   pose: { title: 'How strictly', start: 1, options: [['Loose', 0.35, 'The pose is a suggestion'], ['Firm', 0.5, 'The pose, with some give'], ['Exact', 0.7, 'Follows the figure closely - and may keep something of the mannequin']] },
 };
 const GEN_WHAT = {
   study: 'A study: this picture simplified into flat shapes, in the style chosen above.',
   vary: 'A variation of this picture - its own tags, a Setting or Clothes you pick now, and any More tags added.',
   pose: 'This pose, drawn as the character chosen above.',
+  sketch: 'Your sketch, drawn as the picture the choices above describe.',
 };
 let genSource = null;
 
@@ -958,9 +974,14 @@ function renderGenerate() {
     `<input type="text" id="genLook" maxlength="${GEN_LOOK_MAX}" autocomplete="off" spellcheck="false" value="${esc(genChoices.look || '')}" ` +
     `placeholder="e.g. silver hair, green eyes"></label>` +
     `<div class="chips gen-recent hidden" id="genRecent" role="group" aria-label="Characters drawn lately"></div></div>`;
-  el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) =>
-    `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` + (k === 'who' ? charRow : '') +
-    ids.map(id => row(GEN_CHOICES.find(c => c.id === id))).join('') + '</section>').join('');
+  // The rows that are seldom needed are folded into the group's More choices, which opens by itself when one is set.
+  const rowOf = id => row(GEN_CHOICES.find(c => c.id === id)) + (id === 'clothes' ? '<p class="count gen-dress" id="genDress" role="status"></p>' : '');
+  el('genChoices').innerHTML = GEN_GROUPS.map(([k, title, ids]) => {
+    const rare = ids.filter(id => GEN_RARE.includes(id));
+    return `<section class="gen-group" data-group="${k}"><h3>${esc(title)}</h3>` + (k === 'who' ? charRow : '') +
+      ids.filter(id => !GEN_RARE.includes(id)).map(rowOf).join('') +
+      (rare.length ? `<details class="gen-rare"><summary>More choices <span class="count"></span></summary>${rare.map(rowOf).join('')}</details>` : '') + '</section>';
+  }).join('');
   syncGenRows();
   renderGenRecent();
   renderGenWhere();
@@ -992,9 +1013,33 @@ function syncGenRows() {
   }
   box.querySelector('[data-row="character"]')?.classList.toggle('hidden', genChoices.subject !== 'character');
   syncGenCharHint();
+  genSyncRare();
+  genSyncDress();
   // A group with none of its rows asked (a landscape has no character) goes too.
   for (const g of el('genChoices').querySelectorAll('.gen-group'))
     g.classList.toggle('hidden', !g.querySelector('.gen-row:not(.hidden)'));
+}
+
+// More choices: how many of its rows are set (not at their default), opened once when some are, hidden when no row of it is asked.
+function genSyncRare() {
+  for (const d of el('genChoices').querySelectorAll('.gen-rare')) {
+    const rows = [...d.querySelectorAll('.gen-row:not(.hidden)')], set = rows.filter(r => genChoices[r.dataset.row] !== GEN_DEFAULTS[r.dataset.row]).length;
+    d.classList.toggle('hidden', !rows.length);
+    d.querySelector('summary .count').textContent = set ? `(${set} set)` : '';
+    if (set && !d.dataset.seen) { d.open = true; d.dataset.seen = '1'; }
+  }
+}
+
+// What Setting, Era and Clothes together dress her in: the tags they add, so that three rows are read as one.
+function genSyncDress() {
+  const p = document.getElementById('genDress');
+  if (!p) return;
+  const ch = genChoices, plain = ch.setting === 'any' && ch.era === 'any' && ch.clothes === 'setting';
+  if (ch.setting === 'original' && ch.clothes === 'setting') { p.textContent = 'Original: her own clothes, nothing is added.'; return; }
+  p.classList.toggle('hidden', ch.subject !== 'character');
+  if (p.classList.contains('hidden')) return;
+  const text = genPrompt(ch, '').outfit.replace(/\(([^():]+):[\d.]+\)/g, '$1');
+  p.textContent = plain ? 'Setting, Era and Clothes say nothing: the model picks her clothes.' : text ? `Dressed as: ${text.length > 150 ? text.slice(0, 150) + '...' : text}` : 'These say nothing about her clothes.';
 }
 
 // Marks the chips of a row after its choice was changed in code.
@@ -1154,10 +1199,13 @@ function renderGenResults(list, total = list.length) {
       `<button type="button" class="gen-vary" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
       `<button type="button" class="gen-lights" title="Four pictures of it: soft, from the side, backlit, dramatic">Light it four ways</button>` +
       `<button type="button" class="gen-media" title="It drawn in your other media - watercolour, ink, Copic markers, pencil - to put side by side">In other media</button>` +
+      `<button type="button" class="gen-cond" title="The same place at another hour, in other weather or in another season">Other conditions...</button>` +
       `<button type="button" class="gen-pull" title="Pull its colours to the Holbein box or your palette, by as much as you like, and see which went where">Colours to a palette...</button>` +
       `<hr>` +
       `<div class="gen-menu-h" aria-hidden="true">Learn from it</div>` +
       `<button type="button" class="gen-steps" title="How to draw it - step by step">How to draw it</button>` +
+      `<button type="button" class="gen-line" title="Only its lines, pale, to print and draw over with your own ink - and its shapes numbered by tone for the paint">Line art to trace...</button>` +
+      `<button type="button" class="gen-detail" title="Cut out an eye, a hand, the hair - enlarged on a sheet to study, or draw a part again four ways">Details...</button>` +
       `<button type="button" class="gen-colours" title="Her colours, with how to mix them - the Colour studio's Character sheet">Her colours</button>` +
       `</div>`;
     storeFileUrl(u.file).then(url => { if (url) li.querySelector('img').src = url; });
@@ -1178,6 +1226,9 @@ function renderGenResults(list, total = list.length) {
     li.querySelector('.gen-lights').addEventListener('click', () => genLights(u));
     li.querySelector('.gen-media').addEventListener('click', () => genMedia(u));
     li.querySelector('.gen-pull').addEventListener('click', () => genMoreThen(() => genPullOpen(u)));
+    li.querySelector('.gen-cond').addEventListener('click', () => genMoreThen(() => genCondOpen(u)));
+    li.querySelector('.gen-line').addEventListener('click', () => genMoreThen(() => genLineOpen(u)));
+    li.querySelector('.gen-detail').addEventListener('click', () => genMoreThen(() => genDetailOpen(u)));
     li.querySelector('.gen-vary').addEventListener('click', async () => {
       const url = await storeFileUrl(u.file);
       if (!url) return;
@@ -1332,7 +1383,8 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null, ui 
   }
 }
 
-// A series, a movement, Colours to a palette and a photo's lights are in js/genmore.js, loaded on first use.
+// A series, a movement, Colours to a palette and a photo's lights are in js/genmore.js, loaded on first use;
+// the sketch pad, Line art, Details, Other conditions, the grid, the cards and the challenge in js/gennew.js with it.
 async function genMoreThen(run) {
   try { await loadSection('genmore'); } catch { el('genStatus').textContent = 'That could not load - check the connection.'; return; }
   run();
@@ -1355,6 +1407,7 @@ async function initGenerate() {
     for (const x of el('genChoices').querySelectorAll(`[data-gen="${b.dataset.gen}"]`))
       x.setAttribute('aria-pressed', String(x === b));
     if (['subject', 'hair', 'setting', 'medium', 'framing', 'detail', 'colours'].includes(b.dataset.gen)) syncGenRows();
+    else { genSyncRare(); genSyncDress(); }
     renderGenPrompt();
   });
   el('genChoices').addEventListener('input', e => {
@@ -1384,6 +1437,7 @@ async function initGenerate() {
   el('genMore').addEventListener('toggle', () => { if (el('genMore').open) genMoreThen(() => genMoreInit()); });
   el('genGo').addEventListener('click', () => genBusy ? genStop() : runGenerate());
   el('genPick').addEventListener('click', () => el('genPickInput').click());
+  el('genSketch').addEventListener('click', () => genMoreThen(() => genSketchOpen()));
   el('genPickInput').addEventListener('change', async e => { await genPicked(e.target.files[0]); e.target.value = ''; });
   el('genSource').addEventListener('click', e => {
     if (e.target.closest('#genSourceClear')) { clearGenSource(); el('genPick').focus(); return; }

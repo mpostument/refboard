@@ -183,7 +183,7 @@ function adStar(x, y, r) {
 function adEyeSvg(o) {
   const shape = AD_EYE_SHAPES[o.shape] ? o.shape : 'tsurime', era = AD_EYE_ERAS[o.era] ? o.era : 'modern', key = String(o.key || 'e').replace(/[^a-z0-9]/gi, '');
   const tall = adClamp(+o.tall || 1, 0.6, 1.3), irisK = adClamp(+o.iris || 1, 0.6, 1.2), lash = adClamp(+o.lash || 3, 1, 5), hl = AD_EYE_HL[o.hl] ? o.hl : 'two';
-  const T = adTones(adRgbOf(o.colour || '#3f7fb8')), ink = AD_INK, up = 82 * tall;
+  const T = adTones(adRgbOf(o.colour || '#3f7fb8')), ink = AD_INK, up = 82 * tall, st = +o.stage || 9;   // st: the stage of the drawing, 1 to 6 (the whole eye when it is not given)
   const I = [35, 114 + (shape === 'tsurime' ? 6 : shape === 'tareme' ? -4 : 0)], O = [225, 114 + (shape === 'tsurime' ? -24 : shape === 'tareme' ? 20 : 0)];
   const c1 = shape === 'tsurime' ? [I[0] + 28, I[1] - up * 1.15] : shape === 'tareme' ? [I[0] + 60, I[1] - up * 0.9] : [I[0] + 48, I[1] - up * 1.05];
   const c2 = shape === 'tsurime' ? [O[0] - 62, O[1] - up * 0.78] : shape === 'tareme' ? [O[0] - 30, O[1] - up * 1.05] : [O[0] - 48, O[1] - up * 1.05];
@@ -196,16 +196,17 @@ function adEyeSvg(o) {
   let g = `<defs><clipPath id="${clip}"><path d="${shapeD}"/></clipPath><clipPath id="${irisClip}"><ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}"/></clipPath>` +
     `<linearGradient id="${grad}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${adCss(T.core)}"/><stop offset="0.45" stop-color="${adCss(T.base)}"/><stop offset="1" stop-color="${adCss(T.reflect)}"/></linearGradient></defs>`;
   g += `<path d="${shapeD}" fill="#fff"/><g clip-path="url(#${clip})">`;
-  if (modern) {
-    g += `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}" fill="url(#${grad})" stroke="${adCss(T.core)}" stroke-width="3"/>` +
-      `<ellipse cx="${cx}" cy="${adF(cy + ry * 0.55)}" rx="${adF(rx * 0.68)}" ry="${adF(ry * 0.3)}" fill="${adCss(T.light)}" opacity="0.5"/>` +
-      `<ellipse cx="${cx}" cy="${adF(cy - ry * 0.05)}" rx="${adF(rx * 0.36)}" ry="${adF(ry * 0.5)}" fill="${ink}"/>`;
+  if (st < 2) { /* only the outline of the eye */ }
+  else if (modern) {
+    g += `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}" fill="${st < 3 ? adCss(T.base) : `url(#${grad})`}" stroke="${adCss(T.core)}" stroke-width="3"/>` +
+      (st >= 4 ? `<ellipse cx="${cx}" cy="${adF(cy + ry * 0.55)}" rx="${adF(rx * 0.68)}" ry="${adF(ry * 0.3)}" fill="${adCss(T.light)}" opacity="0.5"/>` : '') +
+      (st >= 3 ? `<ellipse cx="${cx}" cy="${adF(cy - ry * 0.05)}" rx="${adF(rx * 0.36)}" ry="${adF(ry * 0.5)}" fill="${ink}"/>` : '');
   } else {
     g += `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}" fill="${adCss(T.base)}"/>` +
-      `<rect x="${adF(cx - rx)}" y="${adF(cy - ry)}" width="${adF(rx * 2)}" height="${adF(ry * 0.8)}" fill="${adCss(T.core)}" opacity="0.85" clip-path="url(#${irisClip})"/>` +
-      `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx * 0.35)}" ry="${adF(ry * 0.5)}" fill="${ink}"/>`;
+      (st >= 3 ? `<rect x="${adF(cx - rx)}" y="${adF(cy - ry)}" width="${adF(rx * 2)}" height="${adF(ry * 0.8)}" fill="${adCss(T.core)}" opacity="0.85" clip-path="url(#${irisClip})"/>` +
+      `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx * 0.35)}" ry="${adF(ry * 0.5)}" fill="${ink}"/>` : '');
   }
-  if (hl !== 'none') {
+  if (hl !== 'none' && st >= 5) {
     const r1 = rx * (modern ? 0.3 : 0.34);
     g += `<circle cx="${adF(cx - rx * 0.36)}" cy="${adF(cy - ry * 0.4)}" r="${adF(r1)}" fill="#fff"/>`;
     if (modern && (hl === 'two' || hl === 'sparkle')) g += `<circle cx="${adF(cx + rx * 0.4)}" cy="${adF(cy + ry * 0.44)}" r="${adF(rx * 0.12)}" fill="#fff"/>`;
@@ -213,9 +214,10 @@ function adEyeSvg(o) {
   }
   g += '</g>';
   // The upper line: thick and winged in the 90s, thin with flicks now.
-  const wUp = modern ? lash * 1.1 + 1 : lash * 2.2 + 1;
+  const wUp = st < 6 ? 2 : modern ? lash * 1.1 + 1 : lash * 2.2 + 1;
   g += `<path d="${upper}" fill="none" stroke="${ink}" stroke-width="${adF(wUp)}" stroke-linecap="round"/>`;
-  if (modern) {
+  if (st < 6) g += `<path d="M${adP(O)} Q${adF(130)} ${adF(midY + low)} ${adP(I)}" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>`;
+  else if (modern) {
     for (const t of [0.72, 0.84, 0.95]) {
       const p = adBez(I, c1, c2, O, t), q = adBez(I, c1, c2, O, Math.min(1, t + 0.04)), dx = q[0] - p[0], dy = q[1] - p[1], n = Math.hypot(dx, dy) || 1;
       const f = 7 + lash * 2.2;
@@ -230,6 +232,26 @@ function adEyeSvg(o) {
       `<path d="M${adP(O)} Q${adF(130)} ${adF(midY + low)} ${adP(I)}" fill="none" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`;
   }
   return adSvgOpen([0, 0, 260, 200], `${AD_EYE_SHAPES[shape].label} eye in the ${AD_EYE_ERAS[era].label} manner`) + `<rect width="260" height="200" fill="#f7f5ef"/>${g}</svg>`;
+}
+
+/* The eye in six stages on one sheet, three across: the shape, the flat iris, the dark top and the pupil, the
+   glow, the highlights, and the lines. Each panel is adEyeSvg at one stage. */
+const AD_EYE_STAGES = ['The shape of the eye', 'The iris, flat', 'The dark top and the pupil', 'The glow below', 'The highlights', 'The lines and the lashes'];
+// What to do at each stage in each material (watercolour, watercolour pencils, Copic markers, ink).
+const AD_EYE_MATERIAL = {
+  water: ['Pencil only, very light: keep the white of the eye bare paper.', 'One wet wash of the iris colour, with the highlight places left dry. Let it dry.', 'Drop a darker wash of the same colour into the top while it is damp; when dry, the pupil in a dark mix.', 'Lift the bottom of the iris with a damp brush, or glaze a warm light colour there.', 'Keep the highlights as bare paper; if they were lost, white gouache on a dry iris.', 'Fine brush, size 0 or 1: the upper line thick, the lashes in flicks, a pale line for the lower lid.'],
+  pencils: ['Draw the shape in a sharp pencil, lightly.', 'Colour the iris with the base pencil, light pressure, leaving the highlights white.', 'Press harder at the top with a darker pencil, then the pupil in the darkest.', 'A lighter pencil in the lower iris, laid on top.', 'Keep the highlights as bare paper; lift a mistake with a kneaded eraser.', 'A sharp dark pencil for the upper line and the lashes; the lower lid in a lighter one.'],
+  copic: ['Draw the shape in a light pencil, then the lines later.', 'The iris with the lightest marker of its colour, the highlights left white.', 'The top of the iris and the pupil with a darker marker while the first is wet.', 'A light marker over the bottom, in the lightest of the colour.', 'White gel pen or a white paint marker on the highlights, last.', 'A fineliner for the upper line, thicker at the corner, and a thin lower line.'],
+  ink: ['Pencil the shape and keep it light.', 'The iris outline with a thin line; leave it empty.', 'Fill the top of the iris and the pupil with solid black, or hatch it closely.', 'A few close lines or dots in the lower iris, left lighter.', 'The highlights stay as paper: draw round them, do not paint over them.', 'The upper line thick and winged, the lashes flicked outwards, the lower line thin.'],
+};
+function adEyeStepsSvg(o) {
+  const panels = AD_EYE_STAGES.map((name, i) => {
+    const r = adEyeSvg({ ...o, stage: i + 1, key: 'es' + i })
+      .replace(/ width="[\d.]+" height="[\d.]+"/, ' width="200" height="154"')
+      .replace('<svg ', `<svg x="${(i % 3) * 206 + 3}" y="${Math.floor(i / 3) * 190}" `);
+    return r + `<text x="${(i % 3) * 206 + 103}" y="${Math.floor(i / 3) * 190 + 174}" text-anchor="middle" font-size="12" font-weight="600" fill="#333">${i + 1}. ${esc(name)}</text>`;
+  });
+  return adSvgOpen([0, 0, 624, 380], 'The eye in six steps') + `<rect width="624" height="380" fill="#fff"/>${panels.join('')}</svg>`;
 }
 
 /* ---- hair */

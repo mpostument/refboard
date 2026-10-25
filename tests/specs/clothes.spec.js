@@ -19,7 +19,7 @@ test('clothes are the Setting\'s own kind, and stand in for its clothes', async 
   expect(slavic.avoid).toContain('cross necklace');
   expect(slavic.avoid).toContain('cleavage');
   expect((await p({ setting: 'slavic', clothes: 'uniform' })).avoid).toContain('cross necklace');
-  expect((await p({ setting: 'east', clothes: 'festive' })).avoid).not.toContain('cross');
+  expect((await p({ setting: 'east', clothes: 'festive' })).avoid).not.toContain('christianity');
   expect((await p({ setting: 'east', clothes: 'festive' })).prompt).toContain('furisode');
   // A boy is not put in a ball gown.
   const west = await p({ setting: 'west', clothes: 'festive', who: 'boy' });

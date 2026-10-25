@@ -2416,3 +2416,35 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .aly-chip { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); vertical-align: -2px; }
 .ad-stage ~ .pg-note ol, .ad-cards ~ .pg-note ol { margin: 4px 0 6px; padding-left: 20px; }
 .av-hit { touch-action: none; }
+
+/* Anime study: Gesture, Tones, Effects, Shots, Legs, Silhouettes, Compare (js/animenewui.js). */
+.agt-stage { margin-bottom: 8px; }
+.agt-stage canvas { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: crosshair; touch-action: none; }
+.agt-drill { margin: 4px 0 8px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.agt-drill b { font-size: 16px; }
+.ast-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.ast-grid figure { margin: 0; flex: 0 1 220px; min-width: 0; }
+.ast-grid canvas { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.ast-grid figcaption { font-size: 12px; margin-top: 4px; }
+.asi-canvas { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; }
+
+/* Generate: the sketch pad, line art, details, other conditions, the grid, the cards and the challenge (js/gennew.js). */
+.gn-box { width: min(760px, 96vw); max-height: 92vh; overflow: auto; }
+.gn-pad { margin: 8px 0; }
+.gn-pad canvas { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; touch-action: none; }
+#skCanvas { cursor: crosshair; }
+#dtPic { cursor: crosshair; }
+.gn-tools { flex-wrap: wrap; gap: 8px; align-items: center; }
+.gn-bands { display: flex; flex-direction: column; gap: 3px; margin: 6px 0; font-size: 13px; }
+.gn-band i { display: inline-block; width: 16px; height: 16px; border-radius: 3px; border: 1px solid var(--line); vertical-align: -3px; margin-right: 6px; }
+.gn-parts { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.gn-part { font-size: 13px; }
+.gn-card { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+.gn-chals { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
+
+/* Generate: the start strip at the top, More choices folded in each group, and the dress line (js/generate.js). */
+.gen-left > .gen-source { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.gen-rare { margin-top: 8px; }
+.gen-rare > summary { cursor: pointer; font-size: 12px; color: var(--dim); }
+.gen-rare[open] > summary { margin-bottom: 4px; }
+.gen-dress { margin: 6px 0 0; font-size: 12px; }

@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=63aaeb75">
+<link rel="stylesheet" href="css/app.css?v=ff983a4c">
 </head>
 <body>
 <div id="setup">
@@ -338,6 +338,13 @@
               <p id="genOfflineText"></p>
               <button type="button" class="ghost" id="genRetry">Check again</button>
             </div>
+            <!-- Start from a picture or a sketch instead of from nothing - at the top, so it is not hidden under the bar: js/generate.js genSetSource(). -->
+            <div class="gen-source" id="genSource">
+              <button type="button" class="ghost" id="genPick" title="Draw from a picture of your own: a photo simplified into a study, with the choices above as its style. Or drop one here.">Start from a picture...</button>
+              <input type="file" id="genPickInput" accept="image/*" class="hidden" aria-label="Picture to start from">
+              <button type="button" class="ghost" id="genSketch" title="Draw a rough sketch or a stick figure here: the pose and the layout you draw are what the picture is made from">Draw a sketch...</button>
+              <div id="genSourceBody" class="hidden"></div>
+            </div>
             <div id="genChoices"></div>
             <!-- A series, a movement: js/genmore.js, loaded when this is first opened. -->
             <details class="gen-more-ways" id="genMore">
@@ -351,12 +358,6 @@
                 <summary>Prompt</summary>
                 <div id="genPromptBody"></div>
               </details>
-              <!-- Start from a picture instead of from nothing: js/generate.js genSetSource(). -->
-              <div class="gen-source" id="genSource">
-                <button type="button" class="ghost" id="genPick" title="Draw from a picture of your own: a photo simplified into a study, with the choices above as its style. Or drop one here.">Start from a picture...</button>
-                <input type="file" id="genPickInput" accept="image/*" class="hidden" aria-label="Picture to start from">
-                <div id="genSourceBody" class="hidden"></div>
-              </div>
               <!-- Figures to draw fast, made for you: js/warmup.js. -->
               <div class="gen-warm" id="genWarm">
                 <select id="genWarmN" aria-label="How many poses"></select>
@@ -859,13 +860,21 @@
           <button type="button" class="chip" data-mode="faces" aria-pressed="false" title="Soft, sharp and retro faces, as the numbers that make them">Faces</button>
           <button type="button" class="chip" data-mode="eyes" aria-pressed="false" title="The shape, height, iris, highlights and lashes of one eye, in the 90s and the modern manner">Eyes</button>
           <button type="button" class="chip" data-mode="hair" aria-pressed="false" title="A hairstyle as clumps, with the wind bending the tips and the ring of light across it">Hair</button>
-          <button type="button" class="chip" data-mode="inking" aria-pressed="false" title="Where the ink line is heavy, medium and thin on a drawing, and the pen for each">Inking</button>
-          <button type="button" class="chip" data-mode="folds" aria-pressed="false" title="Six kinds of fold in cloth and where each comes from: elbow, knee, a sitting skirt, wind">Folds</button>
-          <button type="button" class="chip" data-mode="angles" aria-pressed="false" title="A head and a figure from below, level and above: the curves, the forehead, the chin and the legs">Angles</button>
           <button type="button" class="chip" data-mode="hands" aria-pressed="false" title="Twelve gestures from a palm-box and three-joint fingers, in three turns">Hands</button>
           <button type="button" class="chip" data-mode="expressions" aria-pressed="false" title="Twelve emotions: where the brows, eyes and mouth go from a neutral face, and the marks anime adds">Expressions</button>
+          <button type="button" class="chip" data-mode="legs" aria-pressed="false" title="A leg from the front and the side in head heights, with the sock or stocking and the shoe">Legs</button>
+          <button type="button" class="chip" data-mode="folds" aria-pressed="false" title="Six kinds of fold in cloth and where each comes from: elbow, knee, a sitting skirt, wind">Folds</button>
+          <button type="button" class="chip" data-mode="inking" aria-pressed="false" title="Where the ink line is heavy, medium and thin on a drawing, and the pen for each">Inking</button>
+          <button type="button" class="chip" data-mode="tones" aria-pressed="false" title="A picture held to five tones and each drawn in ink: lines for a fineliner, dots for a stipple pen, passes for a ballpoint">Tones</button>
+          <button type="button" class="chip" data-mode="effects" aria-pressed="false" title="Speed lines, focus lines, an impact burst and sparkles, drawn at random, with how to ink each">Effects</button>
+          <span class="pg-label am-group">Scene and pose</span>
+          <button type="button" class="chip" data-mode="gesture" aria-pressed="false" title="Eight marks on a figure give the line of action - C, S or straight - and how the shoulders and hips tilt; and a drill of timed poses">Gesture</button>
+          <button type="button" class="chip" data-mode="angles" aria-pressed="false" title="A head and a figure from below, level and above: the curves, the forehead, the chin and the legs">Angles</button>
+          <button type="button" class="chip" data-mode="shots" aria-pressed="false" title="Two marks on a figure, and the picture is cut to six shots: long, medium, cowboy, close-up, extreme close-up">Shots</button>
           <button type="button" class="chip" data-mode="perspective" aria-pressed="false" title="A room, a street corner and a tower built from the horizon and the vanishing points">Perspective</button>
           <button type="button" class="chip" data-mode="storyboard" aria-pressed="false" title="A strip of frames: the shot, the camera angle and where she looks">Storyboard</button>
+          <button type="button" class="chip" data-mode="silhouette" aria-pressed="false" title="Up to three characters as black shapes at one height, and how alike they are">Silhouettes</button>
+          <button type="button" class="chip" data-mode="compare" aria-pressed="false" title="A reference and your drawing laid over each other as the difference between them, with a grid and a timer">Compare</button>
         </div>
         <div class="pg-body" id="afPane">
           <div class="pg-controls" role="group" aria-label="The frames">
@@ -1050,6 +1059,8 @@
             <div class="pg-row"><span class="pg-label">Shape</span><div class="chips" id="aeyShape" role="group" aria-label="Shape of the eye"></div></div>
             <div class="pg-row"><span class="pg-label">Manner</span><div class="chips" id="aeyEra" role="group" aria-label="Manner"></div></div>
             <div class="pg-row"><span class="pg-label">Highlights</span><div class="chips" id="aeyHl" role="group" aria-label="Highlights"></div></div>
+            <div class="pg-row"><span class="pg-label">Look</span><div class="chips" id="aeyLook" role="group" aria-label="The eye or its steps"></div></div>
+            <div class="pg-row" id="aeyMatRow"><span class="pg-label">Material</span><div class="chips" id="aeyMat" role="group" aria-label="The material for the steps"></div></div>
             <label class="ad-range"><span>Height</span><input type="range" id="aeyTall" min="0.6" max="1.3" step="0.05" value="1"></label>
             <label class="ad-range"><span>Iris size</span><input type="range" id="aeyIris" min="0.6" max="1.2" step="0.05" value="1"></label>
             <label class="ad-range"><span>Lashes</span><input type="range" id="aeyLash" min="1" max="5" step="1" value="3"></label>
@@ -1711,6 +1722,7 @@
       <span class="chips" id="redrawLevels" role="group" aria-label="How different"></span>
     </div>
     <div class="row redraw-tools" id="redrawDetailRow">
+      <label class="opt" title="Four pictures with four seeds, to choose the one that came out right"><input type="checkbox" id="redrawFour"> Four tries</label>
       <label class="opt" title="A small part - a face, a hand - is cut out with room round it, enlarged, drawn there with all the detail that size has, and put back. A part over a third of the picture is drawn where it is"><input type="checkbox" id="redrawDetail" checked> In detail - zoom in on a small part</label>
     </div>
     <div class="row redraw-tools">
@@ -2691,9 +2703,9 @@
 <script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
-<script src="js/generate.js?v=9420a94f"></script>
+<script src="js/generate.js?v=56d35f17"></script>
 <script src="js/assetsfx.js?v=d1db7100"></script>
-<script src="js/genedit.js?v=bfdd1fea"></script>
+<script src="js/genedit.js?v=e3635c75"></script>
 <script src="js/assetpack.js?v=bdc88bd4"></script>
 <script src="js/autotile.js?v=3ec73197"></script>
 <script src="js/charpose.js?v=67c4d5e0"></script>
@@ -2710,7 +2722,8 @@
 <script src="js/forms-api.js?v=445e5a7b"></script>
 </template>
 <template id="lazy-genmore">
-<script src="js/genmore.js?v=45385ce6"></script>
+<script src="js/genmore.js?v=233ac842"></script>
+<script src="js/gennew.js?v=25394c2d"></script>
 </template>
 <template id="lazy-train">
 <script src="js/train.js?v=fdee085e"></script>
@@ -2733,13 +2746,15 @@
 <template id="lazy-anime">
 <script src="js/animeframes.js?v=379e8188"></script>
 <script src="js/animecheck.js?v=5d05c055"></script>
-<script src="js/animedraw.js?v=8b2dae14"></script>
-<script src="js/animedrawui.js?v=e174fb81"></script>
+<script src="js/animedraw.js?v=8e90cfa8"></script>
+<script src="js/animedrawui.js?v=863cba4d"></script>
 <script src="js/animemore.js?v=883417e5"></script>
 <script src="js/animemoreui.js?v=99cd7998"></script>
+<script src="js/animenew.js?v=539244f9"></script>
+<script src="js/animenewui.js?v=98b23b3f"></script>
 <script src="js/animetools.js?v=e043a017"></script>
 <script src="js/animebg.js?v=8a25e316"></script>
-<script src="js/animestudy.js?v=9d03f57e"></script>
+<script src="js/animestudy.js?v=41af2d6b"></script>
 </template>
 <template id="lazy-sky">
 <script src="js/sky.js?v=28ee2a34"></script>

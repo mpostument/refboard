@@ -114,6 +114,7 @@ async function genRedrawOpen(u, background = false) {
   pc.width = mc.width = pic.width; pc.height = mc.height = pic.height;
   pc.getContext('2d').drawImage(pic, 0, 0);
   redraw = { u, w: pic.width, h: pic.height, level: GEN_REDRAW_LEVELS[background ? 2 : 1][1], ink: false, undo: [], last: null, background };
+  el('redrawFour').checked = false;
   el('redrawTitle').textContent = background ? 'New background' : 'Redraw a part';
   // A background is big and wide; there is no part of it to zoom in on.
   el('redrawDetailRow').classList.toggle('hidden', background);
@@ -196,14 +197,17 @@ function redrawGo() {
   const tags = [...(u.tags || []), ...genSplit(more), redraw.background ? 'new background' : 'redrawn'].slice(0, 24).map(t => t.slice(0, 40));
   const req = { prompt, avoid: u.avoid || '', tags, shape: u.shape || 'portrait',
     image: genEncode(pic), mask: redrawMaskPng(), denoise: redraw.level, parent: u.file };
+  const four = el('redrawFour').checked;
   const bg = redraw.background;
   // A small part drawn in detail: the part, with room round it, enlarged and drawn there,
   // then put back - see redrawZoom().
   const zoom = !bg && el('redrawDetail').checked ? redrawZoom() : null;
   if (zoom) { req.image = zoom.image; req.mask = zoom.mask; req.shape = extendShape(zoom.ow, zoom.oh); }
   closeRedraw();
-  runGenerate([req], bg ? 'Drawing the background...' : zoom ? 'Drawing that part again, in detail...' : 'Drawing that part again...',
-    bg ? 'New background - in Uploads, Generated.' : 'Redrawn - in Uploads, Generated.', zoom && (made => redrawPasteBack(u, made, zoom)));
+  // Four tries: the same job with four seeds, to choose the one that came out right.
+  const jobs = four ? [0, 1, 2, 3].map(() => ({ ...req, seed: Math.floor(Math.random() * 2 ** 48) })) : [req];
+  runGenerate(jobs, bg ? 'Drawing the background...' : zoom ? 'Drawing that part again, in detail...' : 'Drawing that part again...',
+    bg ? 'New background - in Uploads, Generated.' : four ? 'Four tries - in Uploads, Generated.' : 'Redrawn - in Uploads, Generated.', zoom && (made => redrawPasteBack(u, made, zoom)));
 }
 
 /* ---- In detail. A hand or a face a hundred pixels wide is a handful of the sampler's own
