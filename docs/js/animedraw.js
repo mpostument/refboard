@@ -183,29 +183,31 @@ function adStar(x, y, r) {
 function adEyeSvg(o) {
   const shape = AD_EYE_SHAPES[o.shape] ? o.shape : 'tsurime', era = AD_EYE_ERAS[o.era] ? o.era : 'modern', key = String(o.key || 'e').replace(/[^a-z0-9]/gi, '');
   const tall = adClamp(+o.tall || 1, 0.6, 1.3), irisK = adClamp(+o.iris || 1, 0.6, 1.2), lash = adClamp(+o.lash || 3, 1, 5), hl = AD_EYE_HL[o.hl] ? o.hl : 'two';
-  const T = adTones(adRgbOf(o.colour || '#3f7fb8')), ink = AD_INK, up = 82 * tall;
+  const T = adTones(adRgbOf(o.colour || '#3f7fb8')), ink = AD_INK, up = 82 * tall, st = +o.stage || 9, gxo = adClamp(+o.gx || 0, -1, 1) * 26, gyo = adClamp(+o.gy || 0, -1, 1) * 15;   // st: the stage of the drawing, 1 to 6 (the whole eye when it is not given)
   const I = [35, 114 + (shape === 'tsurime' ? 6 : shape === 'tareme' ? -4 : 0)], O = [225, 114 + (shape === 'tsurime' ? -24 : shape === 'tareme' ? 20 : 0)];
   const c1 = shape === 'tsurime' ? [I[0] + 28, I[1] - up * 1.15] : shape === 'tareme' ? [I[0] + 60, I[1] - up * 0.9] : [I[0] + 48, I[1] - up * 1.05];
   const c2 = shape === 'tsurime' ? [O[0] - 62, O[1] - up * 0.78] : shape === 'tareme' ? [O[0] - 30, O[1] - up * 1.05] : [O[0] - 48, O[1] - up * 1.05];
   const low = (shape === 'jito' ? 46 : 36) * tall, midY = (I[1] + O[1]) / 2;
   const upper = `M${adP(I)} C${adP(c1)} ${adP(c2)} ${adP(O)}`;
   const shapeD = `${upper} Q${adF(130)} ${adF(midY + low)} ${adP(I)}Z`;
-  const cx = 128, cy = midY - up * 0.16, modern = era === 'modern';
+  // gx, gy: where she looks, -1 to 1 (right and down are positive): the iris moves inside the lid, which cuts it.
+  const cx = 128 + gxo, cy = midY - up * 0.16 + gyo, modern = era === 'modern';
   const rx = (modern ? 46 : 36) * irisK, ry = (modern ? 64 : 50) * irisK * Math.max(0.8, tall);
   const clip = `adc-${key}`, grad = `adg-${key}`, irisClip = `adi-${key}`;
   let g = `<defs><clipPath id="${clip}"><path d="${shapeD}"/></clipPath><clipPath id="${irisClip}"><ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}"/></clipPath>` +
     `<linearGradient id="${grad}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${adCss(T.core)}"/><stop offset="0.45" stop-color="${adCss(T.base)}"/><stop offset="1" stop-color="${adCss(T.reflect)}"/></linearGradient></defs>`;
   g += `<path d="${shapeD}" fill="#fff"/><g clip-path="url(#${clip})">`;
-  if (modern) {
-    g += `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}" fill="url(#${grad})" stroke="${adCss(T.core)}" stroke-width="3"/>` +
-      `<ellipse cx="${cx}" cy="${adF(cy + ry * 0.55)}" rx="${adF(rx * 0.68)}" ry="${adF(ry * 0.3)}" fill="${adCss(T.light)}" opacity="0.5"/>` +
-      `<ellipse cx="${cx}" cy="${adF(cy - ry * 0.05)}" rx="${adF(rx * 0.36)}" ry="${adF(ry * 0.5)}" fill="${ink}"/>`;
+  if (st < 2) { /* only the outline of the eye */ }
+  else if (modern) {
+    g += `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}" fill="${st < 3 ? adCss(T.base) : `url(#${grad})`}" stroke="${adCss(T.core)}" stroke-width="3"/>` +
+      (st >= 4 ? `<ellipse cx="${cx}" cy="${adF(cy + ry * 0.55)}" rx="${adF(rx * 0.68)}" ry="${adF(ry * 0.3)}" fill="${adCss(T.light)}" opacity="0.5"/>` : '') +
+      (st >= 3 ? `<ellipse cx="${cx}" cy="${adF(cy - ry * 0.05)}" rx="${adF(rx * 0.36)}" ry="${adF(ry * 0.5)}" fill="${ink}"/>` : '');
   } else {
     g += `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx)}" ry="${adF(ry)}" fill="${adCss(T.base)}"/>` +
-      `<rect x="${adF(cx - rx)}" y="${adF(cy - ry)}" width="${adF(rx * 2)}" height="${adF(ry * 0.8)}" fill="${adCss(T.core)}" opacity="0.85" clip-path="url(#${irisClip})"/>` +
-      `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx * 0.35)}" ry="${adF(ry * 0.5)}" fill="${ink}"/>`;
+      (st >= 3 ? `<rect x="${adF(cx - rx)}" y="${adF(cy - ry)}" width="${adF(rx * 2)}" height="${adF(ry * 0.8)}" fill="${adCss(T.core)}" opacity="0.85" clip-path="url(#${irisClip})"/>` +
+      `<ellipse cx="${cx}" cy="${adF(cy)}" rx="${adF(rx * 0.35)}" ry="${adF(ry * 0.5)}" fill="${ink}"/>` : '');
   }
-  if (hl !== 'none') {
+  if (hl !== 'none' && st >= 5) {
     const r1 = rx * (modern ? 0.3 : 0.34);
     g += `<circle cx="${adF(cx - rx * 0.36)}" cy="${adF(cy - ry * 0.4)}" r="${adF(r1)}" fill="#fff"/>`;
     if (modern && (hl === 'two' || hl === 'sparkle')) g += `<circle cx="${adF(cx + rx * 0.4)}" cy="${adF(cy + ry * 0.44)}" r="${adF(rx * 0.12)}" fill="#fff"/>`;
@@ -213,9 +215,10 @@ function adEyeSvg(o) {
   }
   g += '</g>';
   // The upper line: thick and winged in the 90s, thin with flicks now.
-  const wUp = modern ? lash * 1.1 + 1 : lash * 2.2 + 1;
+  const wUp = st < 6 ? 2 : modern ? lash * 1.1 + 1 : lash * 2.2 + 1;
   g += `<path d="${upper}" fill="none" stroke="${ink}" stroke-width="${adF(wUp)}" stroke-linecap="round"/>`;
-  if (modern) {
+  if (st < 6) g += `<path d="M${adP(O)} Q${adF(130)} ${adF(midY + low)} ${adP(I)}" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>`;
+  else if (modern) {
     for (const t of [0.72, 0.84, 0.95]) {
       const p = adBez(I, c1, c2, O, t), q = adBez(I, c1, c2, O, Math.min(1, t + 0.04)), dx = q[0] - p[0], dy = q[1] - p[1], n = Math.hypot(dx, dy) || 1;
       const f = 7 + lash * 2.2;
@@ -232,6 +235,50 @@ function adEyeSvg(o) {
   return adSvgOpen([0, 0, 260, 200], `${AD_EYE_SHAPES[shape].label} eye in the ${AD_EYE_ERAS[era].label} manner`) + `<rect width="260" height="200" fill="#f7f5ef"/>${g}</svg>`;
 }
 
+/* The eye in six stages on one sheet, three across: the shape, the flat iris, the dark top and the pupil, the
+   glow, the highlights, and the lines. Each panel is adEyeSvg at one stage. */
+const AD_EYE_STAGES = ['The shape of the eye', 'The iris, flat', 'The dark top and the pupil', 'The glow below', 'The highlights', 'The lines and the lashes'];
+// What to do at each stage in each material (watercolour, watercolour pencils, Copic markers, ink).
+const AD_EYE_MATERIAL = {
+  water: ['Pencil only, very light: keep the white of the eye bare paper.', 'One wet wash of the iris colour, with the highlight places left dry. Let it dry.', 'Drop a darker wash of the same colour into the top while it is damp; when dry, the pupil in a dark mix.', 'Lift the bottom of the iris with a damp brush, or glaze a warm light colour there.', 'Keep the highlights as bare paper; if they were lost, white gouache on a dry iris.', 'Fine brush, size 0 or 1: the upper line thick, the lashes in flicks, a pale line for the lower lid.'],
+  pencils: ['Draw the shape in a sharp pencil, lightly.', 'Colour the iris with the base pencil, light pressure, leaving the highlights white.', 'Press harder at the top with a darker pencil, then the pupil in the darkest.', 'A lighter pencil in the lower iris, laid on top.', 'Keep the highlights as bare paper; lift a mistake with a kneaded eraser.', 'A sharp dark pencil for the upper line and the lashes; the lower lid in a lighter one.'],
+  copic: ['Draw the shape in a light pencil, then the lines later.', 'The iris with the lightest marker of its colour, the highlights left white.', 'The top of the iris and the pupil with a darker marker while the first is wet.', 'A light marker over the bottom, in the lightest of the colour.', 'White gel pen or a white paint marker on the highlights, last.', 'A fineliner for the upper line, thicker at the corner, and a thin lower line.'],
+  ink: ['Pencil the shape and keep it light.', 'The iris outline with a thin line; leave it empty.', 'Fill the top of the iris and the pupil with solid black, or hatch it closely.', 'A few close lines or dots in the lower iris, left lighter.', 'The highlights stay as paper: draw round them, do not paint over them.', 'The upper line thick and winged, the lashes flicked outwards, the lower line thin.'],
+};
+function adEyeStepsSvg(o) {
+  const panels = AD_EYE_STAGES.map((name, i) => {
+    const r = adEyeSvg({ ...o, stage: i + 1, key: 'es' + i })
+      .replace(/ width="[\d.]+" height="[\d.]+"/, ' width="200" height="154"')
+      .replace('<svg ', `<svg x="${(i % 3) * 206 + 3}" y="${Math.floor(i / 3) * 190}" `);
+    return r + `<text x="${(i % 3) * 206 + 103}" y="${Math.floor(i / 3) * 190 + 174}" text-anchor="middle" font-size="12" font-weight="600" fill="#333">${i + 1}. ${esc(name)}</text>`;
+  });
+  return adSvgOpen([0, 0, 624, 380], 'The eye in six steps') + `<rect width="624" height="380" fill="#fff"/>${panels.join('')}</svg>`;
+}
+
+/* Both eyes looking at one place: gx, gy as the eye takes them, and near (0 - 1) turning both inward as an object comes close. The right
+   eye is the left one turned over, so its irises move by the opposite x. */
+function adGazeKind(gx, gy) {
+  const ax = Math.abs(gx), ay = Math.abs(gy);
+  if (ax < 0.25 && ay < 0.25) return 'centre';
+  if (ay > ax) return gy < 0 ? 'up' : 'down';
+  return gx < 0 ? 'left' : 'right';
+}
+const AD_GAZE_SAYS = {
+  centre: 'Looking straight at us: direct, honest, sometimes a challenge. The iris is in the middle of the lid, a little white on each side.',
+  up: 'Looking up: thinking, hoping, remembering. The iris touches the upper lid, and the white shows under it.',
+  down: 'Looking down: shy, sad or reading. The upper lid comes down over the iris, so draw the lid heavier and keep the lashes long.',
+  left: 'Looking to the left of the picture: out of the frame, so she is looking at something we cannot see. Put what she sees in the next panel.',
+  right: 'Looking to the right of the picture: the same, to the other side. Leave room on that side of the frame for what she sees.',
+};
+function adGazeWords(gx, gy) { return { centre: 'looking at viewer', up: 'looking up', down: 'looking down', left: 'looking to the side, facing left', right: 'looking to the side, facing right' }[adGazeKind(gx, gy)]; }
+function adGazeSvg(o) {
+  const near = adClamp(+o.near || 0, 0, 1), gx = adClamp(+o.gx || 0, -1, 1), gy = adClamp(+o.gy || 0, -1, 1);
+  const one = (key, x) => adEyeSvg({ shape: o.shape, era: o.era, tall: o.tall, iris: o.iris, hl: o.hl, lash: o.lash, colour: o.colour, key, gx: x, gy });
+  const left = one('gl', adClamp(gx + near * 0.4, -1, 1)), right = one('gr', adClamp(-(gx - near * 0.4), -1, 1));
+  const parts = left.replace('<svg ', '<svg x="0" y="0" ') + `<g transform="translate(540 0) scale(-1 1)">${right.replace('<svg ', '<svg x="0" y="0" ')}</g>`;
+  return adSvgOpen([0, 0, 540, 200], 'Both eyes looking ' + adGazeKind(gx, gy)) + `<rect width="540" height="200" fill="#f7f5ef"/>${parts}</svg>`;
+}
+
 /* ---- hair */
 
 const AD_HAIR = {
@@ -246,7 +293,17 @@ const AD_HAIR = {
   twintails: { label: 'Twintails', len: 0, spread: 0, sideLen: 70, sideSpread: 6, nBack: 0, wave: 0, tied: 2,
     how: 'Both tails start at the same height, and hang in matching curves; the tie is a small band, the hair swells just below it.', words: 'twintails' },
 };
-const AD_HAIR_LOOK = { colour: 'Colour', clumps: 'Clumps', flow: 'Flow lines' };
+const AD_HAIR_LOOK = { colour: 'Colour', clumps: 'Clumps', flow: 'Flow lines', steps: 'Steps' };
+// The six stages a hairstyle is built in; each is drawn by adHairSvg as a look of its own.
+const AD_HAIR_STAGES = ['bare', 'mass', 'clumps', 'flow', 'base', 'final'];
+const AD_HAIR_STEPS = [
+  'The head and the parting: the skull as a ball, the hairline and the parting. Hair grows from the parting, not from the outline.',
+  'The mass: the outline of the whole fall as one shape - how wide, how long, where it is fullest - before any clump.',
+  'The big clumps: split the mass into a few numbered clumps, each wide at the root and tapering to the tip.',
+  'The flow: an arrow down each clump, root to tip. Every clump bends once, and the bends agree.',
+  'The flat colour: the base tone in every clump, with the line on.',
+  'The shadow and the light: a darker stroke down each clump, and the ring of light across the crown.',
+];
 const AD_WIND = { none: 'None', left: 'To the left', right: 'To the right' };
 
 // A tapered clump from its root to its tip; bend pushes the middle sideways.
@@ -299,13 +356,18 @@ function adHairClumps(style, wind, strength) {
 
 /* o: { style, wind, strength, colour, look, key } */
 function adHairSvg(o) {
-  const style = AD_HAIR[o.style] ? o.style : 'long', look = AD_HAIR_LOOK[o.look] ? o.look : 'colour', key = String(o.key || 'h').replace(/[^a-z0-9]/gi, '');
+  const style = AD_HAIR[o.style] ? o.style : 'long', key = String(o.key || 'h').replace(/[^a-z0-9]/gi, '');
+  const stage = AD_HAIR_STAGES.includes(o.look) ? o.look : '';
+  const look = stage ? ({ base: 'colour', final: 'colour' }[stage] || stage) : (AD_HAIR_LOOK[o.look] && o.look !== 'steps' ? o.look : 'colour');
+  const shaded = stage !== 'base';       // the shadow strokes and the ring of light come last
   const { cx, cy, rx, ry } = AD_HEAD, tones = adTones(adRgbOf(o.colour || '#6b4a2f')), ink = AD_INK;
   const C = adHairClumps(style, o.wind, o.strength);
   const all = [...C.back, ...C.side, ...C.fringe];
   let n = 0;
   const draw = list => list.map(c => {
     const id = ++n;
+    if (look === 'bare') return '';
+    if (look === 'mass') return `<path d="${c.d}" fill="#cdc6b4" stroke="#cdc6b4" stroke-width="2" stroke-linejoin="round"/>`;
     if (look === 'clumps') {
       const hue = (id * 47) % 360, m = [(c.r[0] + c.t[0]) / 2, (c.r[1] + c.t[1]) / 2];
       return `<path d="${c.d}" fill="hsl(${hue} 55% 70%)" fill-opacity="0.75" stroke="${ink}" stroke-width="1.4"/><text x="${adF(m[0])}" y="${adF(m[1] + 4)}" text-anchor="middle" font-size="11" font-weight="700" fill="${ink}">${id}</text>`;
@@ -315,9 +377,9 @@ function adHairSvg(o) {
         `<path d="M${adP(c.r)} Q${adP(c.c)} ${adP(c.t)}" fill="none" stroke="#c8412f" stroke-width="1.8" marker-end="url(#ahf-${key})"/>`;
     }
     return `<path d="${c.d}" fill="${adCss(tones.base)}" stroke="${ink}" stroke-width="1.5" stroke-linejoin="round"/>` +
-      `<path d="M${adP(c.r)} Q${adP(c.c)} ${adP(c.t)}" fill="none" stroke="${adCss(tones.shadow)}" stroke-width="2.4" opacity="0.7" stroke-linecap="round"/>`;
+      (shaded ? `<path d="M${adP(c.r)} Q${adP(c.c)} ${adP(c.t)}" fill="none" stroke="${adCss(tones.shadow)}" stroke-width="2.4" opacity="0.7" stroke-linecap="round"/>` : '');
   }).join('');
-  const skin = '#fbe9dc', capFill = look === 'colour' ? adCss(tones.base) : look === 'flow' ? '#ebe7dd' : 'hsl(210 30% 85%)';
+  const skin = '#fbe9dc', capFill = look === 'colour' ? adCss(tones.base) : look === 'flow' ? '#ebe7dd' : look === 'mass' ? '#cdc6b4' : look === 'bare' ? 'none' : 'hsl(210 30% 85%)';
   const face = `M${cx - rx} ${cy - 8} C${cx - rx} ${cy + 40} ${cx - 26} ${cy + ry} ${cx} ${cy + ry} C${cx + 26} ${cy + ry} ${cx + rx} ${cy + 40} ${cx + rx} ${cy - 8} C${cx + rx} ${cy - ry * 0.9} ${cx - rx} ${cy - ry * 0.9} ${cx - rx} ${cy - 8}Z`;
   const cap = `M${cx - rx - 8} ${cy + 12} C${cx - rx - 14} ${cy - ry - 30} ${cx + rx + 14} ${cy - ry - 30} ${cx + rx + 8} ${cy + 12} Q${cx + rx - 6} ${cy - 30} ${cx} ${cy - ry * 0.7} Q${cx - rx + 6} ${cy - 30} ${cx - rx - 8} ${cy + 12}Z`;
   const capId = `ahc-${key}`;
@@ -328,14 +390,27 @@ function adHairSvg(o) {
     `<path d="M${cx - 34} ${cy + 14} q10 -6 20 0 M${cx + 14} ${cy + 14} q10 -6 20 0" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>` +
     `<path d="M${cx - 10} ${cy + 46} q10 5 20 0" fill="none" stroke="${ink}" stroke-width="1.8" stroke-linecap="round"/>`;
   g += draw(C.side);
-  g += `<path d="${cap}" fill="${capFill}" stroke="${ink}" stroke-width="1.6"/>`;
+  g += `<path d="${cap}" fill="${capFill}" stroke="${look === 'mass' ? capFill : ink}" stroke-width="1.6"${look === 'bare' ? ' stroke-dasharray="5 4"' : ''}/>`;
+  if (look === 'bare') g += `<path d="M${cx} ${cy - ry * 0.7} V${cy - 22}" stroke="#c8412f" stroke-width="2"/>`;
   g += draw(C.fringe);
-  if (look === 'colour') {
+  if (look === 'colour' && shaded) {
     g += `<g clip-path="url(#${capId})"><path d="M${cx - rx + 2} ${cy - 32} Q${cx} ${cy - ry - 4} ${cx + rx - 2} ${cy - 32}" fill="none" stroke="${adCss(tones.light)}" stroke-width="9" stroke-linecap="round" opacity="0.45"/></g>`;
   }
   for (const t of C.ties) g += `<rect x="${adF(t[0] - 7)}" y="${adF(t[1] - 5)}" width="14" height="10" rx="3" fill="#c8412f" stroke="${ink}" stroke-width="1.2"/>`;
   if (look === 'flow') g += `<path d="M${cx - rx} ${cy - 26} Q${cx} ${cy - ry - 8} ${cx + rx} ${cy - 26}" fill="none" stroke="#3a86e0" stroke-width="1.6" stroke-dasharray="5 4"/>`;
-  return { svg: adSvgOpen([-30, 0, 360, 420], `${AD_HAIR[style].label} hair as ${AD_HAIR_LOOK[look].toLowerCase()}`) + `<rect x="-30" width="360" height="420" fill="#f7f5ef"/>${g}</svg>`, tones, clumps: all.length };
+  return { svg: adSvgOpen([-30, 0, 360, 420], `${AD_HAIR[style].label} hair as ${(AD_HAIR_LOOK[look] || stage).toLowerCase()}`) + `<rect x="-30" width="360" height="420" fill="#f7f5ef"/>${g}</svg>`, tones, clumps: all.length };
+}
+
+/* The hairstyle built in six stages on one sheet, three across: from the head and the parting to the
+   shadow strokes. Each panel is adHairSvg at one stage. */
+function adHairStepsSvg(o) {
+  const panels = AD_HAIR_STAGES.map((stage, i) => {
+    const r = adHairSvg({ ...o, look: stage, key: 'st' + i }).svg
+      .replace(/ width="[\d.]+" height="[\d.]+"/, ' width="200" height="233"')
+      .replace('<svg ', `<svg x="${(i % 3) * 206 + 3}" y="${Math.floor(i / 3) * 262}" `);
+    return r + `<text x="${(i % 3) * 206 + 103}" y="${Math.floor(i / 3) * 262 + 252}" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${i + 1}</text>`;
+  });
+  return adSvgOpen([0, 0, 624, 524], `${(AD_HAIR[o.style] || AD_HAIR.long).label} hair in six steps`) + `<rect width="624" height="524" fill="#fff"/>${panels.join('')}</svg>`;
 }
 
 function adHairNotes(style, wind, strength) {
