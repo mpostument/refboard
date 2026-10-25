@@ -5,6 +5,8 @@
    gives 8, 12 or 16 frames, the middle of each slice, so the same video always gives the same
    ones. Each frame is read in this browser and nothing is uploaded; the video is not kept, only
    the small pictures of the frames in this page, which go when you leave it.
+   Outfits, Proportions, Faces and Storyboard are in js/animetools.js; Hands, Eyes, Hair, Shading,
+   Expressions and Perspective in js/animedrawui.js.
    Backgrounds: a manner and an hour, the nine colours that make the picture, each with a job, and
    for each how to mix it from your paints.
    Loaded with the section (loadSection('anime')). */
@@ -14,6 +16,9 @@ const AS_MODE_KEY = 'refboard.animeMode.v1';
 const AS_COUNT_KEY = 'refboard.animeFrames.v1';
 const AS_COUNTS = [8, 12, 16];
 const AS_MAX_IMAGES = 24;
+// The halves of this view, each a pane; outfits to storyboard are in js/animetools.js, the last six in js/animedrawui.js.
+const AS_PANES = { frames: 'afPane', background: 'abPane', outfits: 'aoPane', proportions: 'apPane', faces: 'acPane', storyboard: 'asbPane',
+  hands: 'ahdPane', eyes: 'aeyPane', hair: 'ahrPane', shading: 'ashPane', expressions: 'axPane', perspective: 'avPane' };
 
 let asState = null;      // null until first opened; then { frames: [{ canvas, data }], busy }
 const abMixCache = new Map();
@@ -28,16 +33,16 @@ function asCount() {
 function showAnimeStudy() {
   if (!asState) asInit();
   let mode = 'frames';
-  try { if (localStorage.getItem(AS_MODE_KEY) === 'background') mode = 'background'; } catch { /* frames */ }
+  try { const m = localStorage.getItem(AS_MODE_KEY); if (AS_PANES[m]) mode = m; } catch { /* frames */ }
   asSetMode(mode, false);
 }
 
 function asSetMode(mode, save = true) {
   if (save) try { localStorage.setItem(AS_MODE_KEY, mode); } catch { /* private mode */ }
-  for (const b of el('asMode').children) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
-  el('afPane').classList.toggle('hidden', mode !== 'frames');
-  el('abPane').classList.toggle('hidden', mode !== 'background');
+  for (const b of el('asMode').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
+  for (const [m, id] of Object.entries(AS_PANES)) el(id).classList.toggle('hidden', m !== mode);
   if (mode === 'background') abRender(false);
+  else { atShow(mode); adShow(mode); }
 }
 
 function asInit() {
@@ -89,6 +94,8 @@ function asInit() {
     openPalette(abPalette(s.manner, s.hour).slice(0, 8).map(p => p.rgb));
   });
   paintChips(el('abMedium'), el('abPaints'), () => { abMixCache.clear(); abRender(false); });
+  atInit();
+  adInit();
 }
 
 function abSyncChips() {
