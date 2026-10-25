@@ -260,3 +260,39 @@ test('saved settings: every choice and the More tags come back under a name', as
   await page.locator('#gnSets [data-act=drop]').click();
   await expect(page.locator('#gnSets')).toContainText('None yet');
 });
+
+test('describe it: Ukrainian words become tags - a colour goes with the thing it colours', async ({ page }) => {
+  await setup(page);
+  const r = await page.evaluate(async () => {
+    await loadSection('genmore');
+    return { a: genDescribeTags('червона сукня, зелені очі, біля вікна'), b: genDescribeTags('стоїть під дощем, біла парасолька'), c: genDescribeTags('fantasy castle, блакитні квіти'), d: genDescribeTags('щось незрозуміле') };
+  });
+  expect(r.a.tags).toEqual(['red dress', 'green eyes', 'window']);
+  expect(r.b.tags).toEqual(expect.arrayContaining(['standing', 'rain', 'white umbrella']));
+  expect(r.c.tags).toEqual(['fantasy castle', 'blue flowers']);
+  expect(r.d.tags).toHaveLength(0);
+  expect(r.d.unknown).toEqual(['щось', 'незрозуміле']);
+  await page.locator('#genMore summary').click();
+  await page.locator('#gnDescBlock summary').click();
+  await page.locator('#genExtra').fill('smile');
+  await page.locator('#gnDescText').fill('червона сукня, біля вікна');
+  await page.locator('#gnDescAdd').click();
+  await expect(page.locator('#genExtra')).toHaveValue('smile, red dress, window');
+  await page.locator('#gnDescText').fill('щось незрозуміле');
+  await page.locator('#gnDescAdd').click();
+  await expect(page.locator('#genStatus')).toContainText('Not known yet');
+});
+
+test('anime of: a decade says its style tags, and Any says nothing', async ({ page }) => {
+  await setup(page);
+  const r = await page.evaluate(() => {
+    const p = o => genPrompt({ ...GEN_DEFAULTS, detail: 'normal', ...o }).prompt;
+    return { any: p({}), s90: p({ decade: '90s' }), s20: p({ decade: '20s' }) };
+  });
+  expect(r.any).not.toContain('(style)');
+  expect(r.s90).toContain('1990s \\(style\\), retro artstyle');
+  expect(r.s20).toContain('2020s \\(style\\)');
+  await expect(page.locator('[data-row=decade] h4')).toHaveText('Anime of');
+  await page.locator('[data-gen=decade][data-opt="80s"]').click();
+  await expect(page.locator('[data-gen=decade][data-opt="80s"]')).toHaveAttribute('aria-pressed', 'true');
+});

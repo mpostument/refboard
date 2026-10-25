@@ -626,6 +626,69 @@ function genChallengeTimer() {
   gnTimer = setInterval(() => { left--; tick(); if (left <= 0) { clearInterval(gnTimer); gnTimer = 0; btn.textContent = 'Start the timer'; } }, 1000);
 }
 
+/* ---- describe it */
+
+// Words of the Ukrainian (and some Russian) a reference is described in, as the tags a model knows. Colours come before the
+// thing they colour: "червона сукня" is "red dress", and a colour with no thing is left out.
+const GN_COLOURS = [
+  [/^червон|^красн/, 'red'], [/^син[іьяєю]|^синь|^блакитн|^голуб/, 'blue'], [/^зелен/, 'green'], [/^жовт|^желт/, 'yellow'], [/^помаранч|^оранж/, 'orange'],
+  [/^рожев|^розов/, 'pink'], [/^фіолет|^пурпур|^лілов|^сирен/, 'purple'], [/^біл|^бел/, 'white'], [/^чорн|^черн/, 'black'], [/^сір|^сер[іыо]/, 'grey'],
+  [/^коричнев|^бежев|^карі/, 'brown'], [/^золот/, 'golden'], [/^срібл|^серебр/, 'silver'], [/^бірюз/, 'turquoise'], [/^бордов|^винн/, 'maroon'], [/^темн/, 'dark'],
+  [/^світл|^светл/, 'light'], [/^рудий|^рудо|^рижий|^рыж/, 'red'],
+];
+const GN_NOUNS = [
+  // what she wears
+  [/^сукн|^платт|^плать/, 'dress'], [/^спідниц|^юбк/, 'skirt'], [/^курт/, 'jacket'], [/^светр|^свитер|^кофт/, 'sweater'], [/^футболк/, 't-shirt'], [/^сорочк|^блуз|^рубаш/, 'shirt'],
+  [/^штан|^брюк/, 'pants'], [/^джинс/, 'jeans'], [/^шорт/, 'shorts'], [/^капелюх|^шляп/, 'hat'], [/^шапк/, 'beanie'], [/^шарф/, 'scarf'], [/^окуляр|^очки/, 'glasses'],
+  [/^плащ/, 'cloak'], [/^пальт/, 'coat'], [/^худі|^толстовк/, 'hoodie'], [/^кімоно/, 'kimono'], [/^форм/, 'school uniform'], [/^вишиванк|^вишит/, 'embroidered shirt'],
+  [/^вінок|^венок/, 'flower wreath'], [/^стрічк|^лент/, 'ribbon'], [/^черевик|^ботинк/, 'boots'], [/^кросівк|^кроссовк/, 'sneakers'], [/^рукавич|^перчат/, 'gloves'],
+  [/^намист|^ожерел/, 'necklace'], [/^сережк|^серьг/, 'earrings'], [/^корон/, 'crown'], [/^маск/, 'mask'],
+  // her
+  [/^волосс|^волос/, 'hair'], [/^очі|^очей|^глаз|^очима/, 'eyes'], [/^кіс|^кос[аиу]/, 'braid'], [/^хвостик|^хвіст/, 'ponytail'], [/^чубчик|^чілк|^чёлк/, 'bangs'], [/^веснянк|^веснушк/, 'freckles'],
+  // what she holds, and what is near
+  [/^парасол|^зонт/, 'umbrella'], [/^сумк/, 'bag'], [/^рюкзак/, 'backpack'], [/^книг|^книж/, 'book'], [/^чашк|^кружк/, 'cup'], [/^кав/, 'coffee'], [/^чай/, 'tea'], [/^телефон/, 'smartphone'],
+  [/^квіт|^цвет/, 'flowers'], [/^букет/, 'bouquet'], [/^кіт|^кот|^кішк|^кошк/, 'cat'], [/^пес|^собак/, 'dog'], [/^птах|^птиц/, 'bird'], [/^метелик|^бабочк/, 'butterfly'], [/^меч/, 'sword'], [/^лук$/, 'bow (weapon)'],
+  [/^ліхтар|^фонар/, 'lantern'], [/^свічк|^свеч/, 'candle'], [/^гітар|^гитар/, 'guitar'], [/^велосипед/, 'bicycle'], [/^м.яч|^мяч/, 'ball'],
+  // where
+  [/^вікн|^окн/, 'window'], [/^дерев/, 'tree'], [/^ліс|^лес/, 'forest'], [/^мор[еяю]/, 'ocean'], [/^пляж/, 'beach'], [/^місто|^город/, 'city'], [/^вулиц|^улиц/, 'street'], [/^гор[иу]|^гір/, 'mountains'],
+  [/^міст$|^мост/, 'bridge'], [/^дощ|^дожд/, 'rain'], [/^сніг|^снег/, 'snow'], [/^тум[аан]/, 'fog'], [/^зірк|^звезд|^зорі/, 'stars'], [/^місяц|^луна/, 'moon'], [/^сонц|^солнц/, 'sun'], [/^хмар|^облак/, 'clouds'],
+  [/^кімнат|^комнат/, 'indoors, room'], [/^клас/, 'classroom'], [/^кухн/, 'kitchen'], [/^кав.ярн|^кафе/, 'cafe'], [/^бібліотек|^библиотек/, 'library'], [/^парк/, 'park'], [/^поле|^полі/, 'field'], [/^луг/, 'meadow'],
+  [/^храм/, 'temple'], [/^замок/, 'castle'], [/^озер|^озеро/, 'lake'], [/^річк|^рек[аиу]/, 'river'], [/^вогн|^огон|^огн/, 'fire'], [/^ніч|^ноч/, 'night'], [/^вечір|^вечер/, 'evening'], [/^ранок|^утро|^ранк/, 'morning'],
+  [/^осін|^осен/, 'autumn'], [/^зим/, 'winter'], [/^весн/, 'spring'], [/^літ[оа]|^лето/, 'summer'],
+];
+// Words that join a description and say nothing a model needs.
+const GN_JOIN = /^(біля|на|в|у|з|із|до|над|під|за|при|без|по|і|й|та|а|але|з|про|від|між|поруч|коло|около|возле|рядом|с|со|и|the|a|an|of|in|on)$/;
+
+/* text: "червона сукня, зелені очі, біля вікна". Gives { tags, unknown }: the tags to add, and the Ukrainian words nobody knew.
+   English parts go as they are, verbs are the movement rows of Generate (genMoveTags), and the rest is looked up word by word. */
+function genDescribeTags(text) {
+  const tags = [], unknown = [], add = t => { if (t && !tags.includes(t)) tags.push(t); };
+  for (const part of String(text).toLowerCase().split(/[,;]|\s+і\s+|\s+та\s+|\s+and\s+/).map(s => s.trim()).filter(Boolean)) {
+    if (/^[a-z0-9 '-]+$/.test(part)) { add(part); continue; }
+    const moves = GEN_MOVES.filter(([re]) => re.test(part));
+    for (const [, t] of moves) for (const x of t.split(', ')) add(x);
+    let colour = '';
+    for (const w of part.match(/[\p{L}'-]+/gu) || []) {
+      if (GN_JOIN.test(w)) continue;
+      const c = GN_COLOURS.find(([re]) => re.test(w)), n = GN_NOUNS.find(([re]) => re.test(w));
+      if (n) { add(colour && !/^(rain|snow|fog|night|evening|morning|autumn|winter|spring|summer)$/.test(n[1]) ? `${colour} ${n[1]}` : n[1]); colour = ''; }
+      else if (c) colour = c[1];
+      else if (!moves.some(([re]) => re.test(w)) && !/^[a-z'-]+$/.test(w)) unknown.push(w);
+      else if (/^[a-z'-]+$/.test(w)) add(w);
+    }
+  }
+  return { tags, unknown: [...new Set(unknown)] };
+}
+
+function genDescribeAdd() {
+  const status = el('genStatus'), { tags, unknown } = genDescribeTags(el('gnDescText').value);
+  if (!tags.length) { status.textContent = unknown.length ? `Not known yet: ${unknown.join(', ')}. Try other words, or write them in English.` : 'Describe it first.'; return; }
+  const have = genSplit(el('genExtra').value), add = tags.filter(t => !have.includes(t));
+  el('genExtra').value = [...have, ...add].join(', ').slice(0, 200);
+  el('genExtra').dispatchEvent(new Event('input'));
+  status.textContent = `Added to More tags: ${add.join(', ') || 'all were there already'}.` + (unknown.length ? ` Not known: ${unknown.join(', ')}.` : '');
+}
+
 /* ---- saved settings */
 
 const GN_SETS_KEY = 'refboard.generate.sets.v1', GN_SETS_MAX = 12;
@@ -671,7 +734,9 @@ function genSetsRender() {
 
 function genNewBlocks() {
   const block = (id, title, text, inner) => `<details class="gm-block" id="${id}"><summary>${title}</summary><p class="count">${text}</p>${inner}</details>`;
-  return block('gnSetBlock', 'Saved settings', 'All the choices and the More tags under a name - a watercolour street, a face sheet in ink - to ask for the same kind of reference again.',
+  return block('gnDescBlock', 'Describe it', 'In your own words - Ukrainian or English: "червона сукня, зелені очі, біля вікна". The words become tags in More tags, where they can be read and changed.',
+      `<div class="row"><input type="text" id="gnDescText" maxlength="160" placeholder="e.g. червона сукня, біля вікна, дощ" aria-label="Describe it"><button type="button" class="ghost" id="gnDescAdd">Add</button></div>`) +
+    block('gnSetBlock', 'Saved settings', 'All the choices and the More tags under a name - a watercolour street, a face sheet in ink - to ask for the same kind of reference again.',
       `<div class="row"><input type="text" id="gnSetName" maxlength="40" placeholder="a name" aria-label="Name for the settings"><button type="button" class="ghost" id="gnSetSave">Keep the settings</button></div><div id="gnSets"></div>`) +
     block('gnGridBlock', 'A grid', 'One thing changed at a time - the hair colour, the eyes, the light - with one seed, then seen on one sheet.',
       `<div class="row"><select id="gnGridRow" aria-label="What to change"></select><button type="button" class="ghost" id="gnGridGo">Make the grid</button></div>`) +
@@ -693,6 +758,9 @@ function genNewWire() {
   fill();
   el('gnGridBlock').addEventListener('toggle', () => { if (el('gnGridBlock').open) fill(); });
   el('gnGridGo').addEventListener('click', genGridGo);
+  // Describe it.
+  el('gnDescAdd').addEventListener('click', genDescribeAdd);
+  el('gnDescText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); genDescribeAdd(); } });
   // Saved settings.
   genSetsRender();
   el('gnSetSave').addEventListener('click', genSetSave);

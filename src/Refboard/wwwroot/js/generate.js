@@ -371,6 +371,16 @@ const GEN_CHOICES = [
   // for them. Hidden while Setting is Original, which adds nothing to a named character - an Era would be
   // the one thing that did. Kyivan Rus is Christian (988) but is before the onion dome (the 1500s): a
   // church there is a cube with a helmet dome, so the onion dome and the sunflower (America, 1700s) are kept out.
+  // Which decade of anime it looks like: the cel and the line of the eighties are not the digital finish of now. The tags are
+  // Danbooru's own decade styles; on top of Medium, they change the drawing, not the paint.
+  { id: 'decade', label: 'Anime of', options: [
+    ANY,
+    { id: '80s', label: "80s", tags: '1980s (style), retro artstyle', words: '1980s anime', hint: 'Round faces, soft cel colour, big hair' },
+    { id: '90s', label: "90s", tags: '1990s (style), retro artstyle', words: '1990s anime', hint: 'Sharp lines, tall eyes, matte cel colour' },
+    { id: '00s', label: "2000s", tags: '2000s (style)', words: '2000s anime', hint: 'Early digital: clean lines, glossy highlights' },
+    { id: '10s', label: "2010s", tags: '2010s (style)', words: '2010s anime', hint: 'Detailed eyes, soft shading, bright light' },
+    { id: '20s', label: "2020s", tags: '2020s (style)', words: '2020s anime', hint: 'The look of recent films: rich light, thin lines' },
+  ] },
   { id: 'era', label: 'Era', for: ['character', 'landscape', 'building'], when: ch => ch.setting !== 'original', options: [
     ANY,
     { id: 'ancient', label: 'Ancient', words: 'ancient', tags: {
@@ -520,7 +530,7 @@ const GEN_CHOICES = [
    and the Generate button fit on a screen. Only the page's order: the
    prompt keeps GEN_CHOICES' own, which puts "1girl, solo" first. */
 const GEN_GROUPS = [
-  ['what', 'What', ['style', 'subject', 'setting', 'era']],
+  ['what', 'What', ['style', 'subject', 'setting', 'era', 'decade']],
   ['who', 'The character', ['who', 'hair', 'parting', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
@@ -529,7 +539,7 @@ const GEN_GROUPS = [
 
 const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', look: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', parting: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', paper: 'any', detail: 'simple',
+  size: 'whole', decade: 'any', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', paper: 'any', detail: 'simple',
   ground: 'plain' };
 
 // Rows kept under More choices in their group: set rarely, and not needed to make a picture.

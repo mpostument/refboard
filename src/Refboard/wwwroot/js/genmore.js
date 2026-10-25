@@ -87,6 +87,7 @@ function genSeriesGo() {
 // What she does, as the tags a model knows. Each row: the stems it is written with (English and
 // Ukrainian) and the tags it gives.
 const GEN_MOVES = [
+  [/стоїть|стоят|стоїш|stand/, 'standing'],
   [/біж|біг|run|sprint|jog/, 'running, dynamic pose, motion lines'],
   [/йде|іде|ходи|ступ|walk|stroll/, 'walking'],
   [/стриб|jump|leap|hop/, 'jumping, mid-air, dynamic pose'],
