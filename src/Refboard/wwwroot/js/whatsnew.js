@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-study', title: 'Anime study: the colour of a film, and backgrounds in two manners',
+    text: "A new tab beside the Colour studio and Palettes. Study frames: give a video or some frames and read how its shadows are made (how much darker, which way the hue turns), its palette and where the colour turns - then use the colours as a palette. Backgrounds: a sky and the land under it, soft and painted or luminous, at day, golden hour, dusk, night or in rain - with nine colours, each with how to mix it from your paints.",
+    act: 'Open it', run: () => setView({ kind: 'anime' }) },
   { id: 'anime-colour', title: 'A photo coloured the way anime is',
     text: "Over any picture in a session, Simplify into shapes now has a third choice, Show > Anime: each shape in three flat tones - base, shadow and highlight - with the shadow turned toward blue-violet instead of just darker, as anime is coloured. Where the photo has no real shading a shape stays one tone. The key lists each shape's three tones.",
     act: 'Open a picture', run: () => setView({ kind: 'drop' }) },

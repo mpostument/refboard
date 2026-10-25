@@ -436,13 +436,33 @@ the model. Still to come on it: a hair tie, a side parting that shows more gap, 
 
 Line and background:
 
-- **Anime backgrounds.** Ghibli's backgrounds are largely painted in
-  gouache and watercolour - a direct line to watercolour. Sky and
-  landscape palettes in the manner of Ghibli or Makoto Shinkai, with
-  recipes for your materials.
-- **Studying anime frames.** Frames from a video (the app already takes
-  them), analysed: the cel shadow scheme, a character's palette, a
-  scene's colour script - learning from favourite work.
+- **Anime backgrounds.** In place (`js/animebg.js`, Anime study > Backgrounds, a tab with
+  the Colour studio and Palettes): two manners - soft and painted, luminous and high-key -
+  at five hours (day, golden hour, dusk, night, rain). Each is nine colours with a job
+  (top of the sky, horizon, a cloud's lit side and shade, far hills, foliage lit and in
+  shade, ground, a light accent), set in OKLCH for the hour and moved by the manner
+  (luminous: stronger chroma, a deeper sky, shades turned up to 26 degrees toward
+  blue-violet; soft: less chroma, values closer), a picture painted from those nine
+  (gradient sky, clouds with a flat base in three flat layers, hills fading to the
+  horizon colour, trees), a note on how to paint it, and for each colour how to mix it
+  from your paints (the same recipes as Palettes). The picture goes to the workspace or
+  a PNG, the colours to Palettes. The manners are my reading of a style and set by eye;
+  no colour is taken from a film. A diagram of a background, not a painting: the clouds
+  are rounds, not drawn cloud, and nothing is looked at from a different angle.
+- **Studying anime frames.** In place (`js/animeframes.js`, Anime study > Study frames):
+  a video (8, 12 or 16 frames, the middle of each slice) or pictures in the order given.
+  Each frame is read at 320 px in Simplify's anime shapes: the cel scheme is the weighted
+  median, over all the shapes, of how much darker the shadow is than its base, how many
+  degrees its hue turns toward blue-violet and whether it keeps its colour - from two
+  places, a shape's own darker pixels, and two touching shapes of one hue (the smaller
+  the shadow) - plus how flat the picture is (the share of pixels within 0.018 of the tone
+  of their shape); the palette is the five largest shapes; the colour script is a column
+  of palette for each frame with the value as a line, and the note names the darkest and
+  lightest frame, the one with most colour and the coolest, and the biggest changes of
+  colour. The palette of all the frames goes to Palettes. Checked on drawn frames only, not
+  on a real film: compression noise may lower the flatness, and a hue turn is only read
+  where the base has colour. Not done: reading one character apart from the background, and
+  taking frames at the cuts instead of evenly.
 
 Anime in watercolour:
 

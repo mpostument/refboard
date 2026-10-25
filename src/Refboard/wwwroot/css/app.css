@@ -2311,3 +2311,18 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 @media (hover: none) { .asset-edges { opacity: 1; } }
 
 .pg-few-how { flex: 1; min-width: 0; line-height: 1.7; }
+
+/* Anime study (js/animestudy.js): the colour script, the frames under it, and a background's colours. */
+#afResult .pg-row { margin-top: 10px; }
+#afScript { display: block; width: 100%; max-width: 720px; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.af-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; margin: 10px 0; max-width: 1000px; }
+.af-frame { margin: 0; }
+.af-frame button { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #111; cursor: pointer; }
+.af-frame img { display: block; width: 100%; height: auto; }
+.af-frame figcaption { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); margin-top: 3px; }
+.af-sw { display: flex; flex: 1; height: 10px; border-radius: 3px; overflow: hidden; }
+.af-sw i { flex: 1; }
+.ab-colours { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-top: 12px; max-width: 1000px; }
+.ab-colour { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; }
+.ab-colour > i { flex: none; width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--line); }
+.ab-mix { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; color: var(--dim); }

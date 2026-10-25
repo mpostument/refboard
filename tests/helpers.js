@@ -129,7 +129,7 @@ async function fakeServer(page) {
 }
 
 /* A section that is a tab of a group (VIEW_GROUPS in js/stages.js): the group's rail button, then the tab. */
-const SECTION_LEAD = { assets: 'generate', palette: 'colour', sky: 'perspective', museum: 'all' };
+const SECTION_LEAD = { assets: 'generate', palette: 'colour', anime: 'colour', sky: 'perspective', museum: 'all' };
 async function openSection(page, view) {
   await page.click(`.nav-item[data-view="${SECTION_LEAD[view]}"]`);
   await page.click(`#viewTabs [data-view="${view}"]`);

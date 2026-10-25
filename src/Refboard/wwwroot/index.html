@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=acd5e3b6">
+<link rel="stylesheet" href="css/app.css?v=d843098f">
 </head>
 <body>
 <div id="setup">
@@ -70,6 +70,7 @@
       <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
       <button class="nav-item rail-sub" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
       <button class="nav-item" type="button" data-view="perspective" data-icon="perspective" data-tip="Perspective grid - vanishing points on your paper to print and draw over, how tall people are anywhere in a picture, and a manga page of panels" aria-label="Perspective grid"></button>
+      <button class="nav-item rail-sub" type="button" data-view="anime" data-icon="film" data-tip="Anime study - the colour scheme of a film read off its frames, and backgrounds in two painted manners with how to mix each colour" aria-label="Anime study"></button>
       <button class="nav-item rail-sub" type="button" data-view="sky" data-icon="sky" data-tip="Sky and weather - a sky to study at any time of day, and how fast a wash will dry today" aria-label="Sky and weather"></button>
       <!-- Shown by js/generate.js once the server says a ComfyUI is there. -->
       <button class="nav-item rail-sub hidden" type="button" data-view="assets" data-icon="sword" data-tip="Game assets - props, weapons and items for a 2D game, cut out, with ComfyUI" aria-label="Game assets"></button>
@@ -834,6 +835,54 @@
             <div class="wx-card" id="wxCard" aria-live="polite"></div>
             <div id="wxHours"></div>
             <div class="count pg-note" id="wxNote"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Anime study - see showAnimeStudy() in js/animestudy.js, which loads with js/animeframes.js
+           and js/animebg.js the first time this opens. Two halves: frames of a film, and a background. -->
+      <div id="viewAnime" class="hidden">
+        <div class="chips pg-modes" id="asMode" role="group" aria-label="What to work on">
+          <button type="button" class="chip" data-mode="frames" aria-pressed="true" title="Give a video or some frames of a film: its shadow scheme, the palette and the colour script, read off them">Study frames</button>
+          <button type="button" class="chip" data-mode="background" aria-pressed="false" title="A sky and the land under it in a manner and at an hour, with the palette and how to mix each colour">Backgrounds</button>
+        </div>
+        <div class="pg-body" id="afPane">
+          <div class="pg-controls" role="group" aria-label="The frames">
+            <p class="te-note">Give a video, or the frames themselves in the order you want them read. What a film does with colour is found in them: how its shadows are made, its palette, and where the colour turns. Everything stays in this browser.</p>
+            <div class="pg-row"><button type="button" class="primary" id="afPick" title="Choose a video, or several pictures">Choose a video or frames</button>
+              <input type="file" id="afInput" accept="video/*,image/*" multiple class="hidden" aria-label="A video or frames"></div>
+            <div class="pg-row"><span class="pg-label">Frames from a video</span><div class="chips" id="afCount" role="group" aria-label="How many frames to take from a video"></div></div>
+            <div class="count" id="afStatus" role="status" aria-live="polite">Or drop them here.</div>
+          </div>
+          <div class="pg-stage">
+            <div id="afResult" class="hidden">
+              <canvas id="afScript" role="img" aria-label="The colour script" width="720" height="140"></canvas>
+              <div class="af-thumbs" id="afThumbs"></div>
+              <div class="count pg-note" id="afNote"></div>
+              <div class="pg-row">
+                <button type="button" class="ghost" id="afPalette" title="The colours of all the frames as one palette, in Palettes, with how to mix each">Use as a palette</button>
+                <button type="button" class="ghost" id="afCopy" title="Copy the note">Copy the note</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pg-body hidden" id="abPane">
+          <div class="pg-controls" role="group" aria-label="The background">
+            <div class="pg-row"><span class="pg-label">Manner</span><div class="chips" id="abManner" role="group" aria-label="Manner"></div></div>
+            <div class="pg-row"><span class="pg-label">Hour</span><div class="chips" id="abHour" role="group" aria-label="Hour or weather"></div></div>
+            <div class="chips" id="abMedium" role="group" aria-label="Medium"></div>
+            <div class="chips" id="abPaints" role="group" aria-label="Paints"></div>
+            <div class="pg-row">
+              <button type="button" class="primary" id="abAnother" title="The same palette, with the clouds and land arranged again">Another</button>
+              <button type="button" class="ghost" id="abSave" title="The picture as a PNG">Save PNG</button>
+              <button type="button" class="ghost" id="abOpen" title="Open it in the workspace, where the value and colour tools work on it">Open in workspace</button>
+              <button type="button" class="ghost" id="abPalette" title="The colours as the palette in Palettes">Use as a palette</button>
+            </div>
+          </div>
+          <div class="pg-stage">
+            <div class="sky-stage"><canvas id="abCanvas" role="img" aria-label="A background in the chosen manner" width="960" height="540"></canvas></div>
+            <div class="count pg-note" id="abNote"></div>
+            <div class="ab-colours" id="abColours"></div>
           </div>
         </div>
       </div>
@@ -2334,8 +2383,8 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=99eda378"></script>
-<script src="js/setup.js?v=dbd36f34"></script>
+<script src="js/core.js?v=caf7e3b6"></script>
+<script src="js/setup.js?v=5f07837d"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=3136007f"></script>
 <script src="js/uploads.js?v=9c23696a"></script>
@@ -2349,14 +2398,14 @@
 <script src="js/colourfind.js?v=d51aa014"></script>
 <script src="js/study.js?v=90053b55"></script>
 <script src="js/layers.js?v=29c0c0af"></script>
-<script src="js/stages.js?v=eee7c2f5"></script>
+<script src="js/stages.js?v=75696626"></script>
 <script src="js/pins.js?v=b448b387"></script>
 <script src="js/workspace.js?v=85afea61"></script>
 <script src="js/train.js?v=43e428f9"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=8a185c37"></script>
+<script src="js/command.js?v=ab44481e"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=6484b0e6"></script>
+<script src="js/whatsnew.js?v=2a30858f"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=73f7eb91"></script>
@@ -2414,6 +2463,11 @@
 <script src="js/perspective.js?v=f66c3085"></script>
 <script src="js/mangapage.js?v=439f57c8"></script>
 <script src="js/people.js?v=37136132"></script>
+</template>
+<template id="lazy-anime">
+<script src="js/animeframes.js?v=379e8188"></script>
+<script src="js/animebg.js?v=8a25e316"></script>
+<script src="js/animestudy.js?v=052c8ece"></script>
 </template>
 <template id="lazy-sky">
 <script src="js/sky.js?v=28ee2a34"></script>

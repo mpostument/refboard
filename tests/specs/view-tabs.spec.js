@@ -44,7 +44,7 @@ test('without a ComfyUI there is no Gen AI, and no tab for it', async ({ page })
   await openApp(page);
   await expect(page.locator('#rail .nav-item[data-view="generate"]')).toBeHidden();
   await page.click('.nav-item[data-view="colour"]');
-  await expect(tabs(page)).toHaveText(['Colour studio', 'Palettes']);
+  await expect(tabs(page)).toHaveText(['Colour studio', 'Palettes', 'Anime study']);
 });
 
 test('Colour: the studio and Palettes; Palettes is not a rail button but its card and Ctrl+K still open it', async ({ page }) => {

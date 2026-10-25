@@ -80,6 +80,7 @@ const ICONS = {
   sparkle: '<path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15.5c.3 1.6 1 2.3 2.5 2.5-1.5.2-2.2.9-2.5 2.5-.3-1.6-1-2.3-2.5-2.5 1.5-.2 2.2-.9 2.5-2.5z"/>',
   lightbox: '<rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="M8 16c1.5-4 4.5-7 8-8.5"/><path d="M8 19h8" stroke-dasharray="1.5 2"/>',
   perspective: '<path d="M3 11h18"/><path d="M3 5l9 6 9-6"/><path d="M3 19l9-8 9 8"/><circle cx="12" cy="11" r="1.2"/>',
+  film: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 10h4M3 14h4M17 10h4M17 14h4"/>',
   sky: '<path d="M7 18h10a3.500 3.500 0 0 0 .6-6.950A5 5 0 0 0 7.900 10.200 4 4 0 0 0 7 18z"/><path d="M5 6.500l1 1M12 4v1.500M19 6.500l-1 1" opacity=".55"/>',
   sword: '<path d="M14.500 3.500h6v6L10 20l-2-2z"/><path d="M5 15l4 4M3 21l3.500-3.500"/>',
   book: '<path d="M5 4.5h10a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>',
