@@ -404,9 +404,18 @@ by the Shine slider, renamed Highlight meanwhile, and the Second light as a
 rim. Cast shadows go hard while any form is Anime. Still to come on it: an
 ink outline (the inverted hull), a second, darker shadow tone for occlusion.
 
-- **A photo as anime colouring.** Each area of the photo reduced to a base
-  colour, a shadow and a highlight, as anime is coloured - with the shadow
-  colour shifted toward purple or blue the way anime usually does.
+- **A photo as anime colouring.** In place (`js/animecolour.js`, Simplify's third
+  "Show" choice, Anime): the picture's shapes found by hue (lightness counts a fifth
+  as much as in the other views, or the shading would become shapes of its own), each
+  in three flat tones. The shadow is the base turned up to 22 degrees toward blue-violet
+  and a step down in value (less for a dark colour), the highlight a step up and up to
+  14 degrees toward warm yellow; a grey takes a blue-grey shadow. Which pixels are in
+  shadow or light is read from the photo: darker than the shape's average by 0.045 of
+  OKLab lightness, or lighter by 0.06, voted inside the shape; a shape with no real
+  shading stays one tone, marked flat. The key lists the three tones of each shape. The
+  thresholds and the turns were set by eye on drawn test pictures, not on real photos or
+  against anime frames; a face is not told from a shirt, so a nose shadow is only what
+  the photo's light makes it.
 In place: hair in clumps - the anime head's Hair (`formAnimeHairGeometry()`,
 `HAIR_STYLES` in `js/forms-models.js`; the ring in `injectHairRing()` in
 `js/forms.js`): Short, Bob or Long, as pointed locks over a scalp mass, each

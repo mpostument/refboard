@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-colour', title: 'A photo coloured the way anime is',
+    text: "Over any picture in a session, Simplify into shapes now has a third choice, Show > Anime: each shape in three flat tones - base, shadow and highlight - with the shadow turned toward blue-violet instead of just darker, as anime is coloured. Where the photo has no real shading a shape stays one tone. The key lists each shape's three tones.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'manga-page', title: 'A manga page to draw on',
     text: "Perspective grid > Manga page: choose three to six panels and one of the layouts, and the page comes numbered in the order it is read - right to left, top to bottom, or left to right for a Western comic - with places for the speech balloons in the order they are read, a slant for the gutters of a fast page, and a note on which panel the eye will stay on. Print it at the paper's real size, save it as SVG, or keep it in My work to open beside your drawing.",
     act: 'Open it', run: () => { try { localStorage.setItem('refboard.perspectiveMode.v1', 'manga'); } catch { /* the sheet opens */ } setView({ kind: 'perspective' }); } },

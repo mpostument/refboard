@@ -39,7 +39,7 @@ const COMMAND_WORDS = {
   btnHatch: 'hatching map hatch layers cross-hatch crosshatch ink pen liner ballpoint value density build up strokes lines shading darks how many layers',
   btnComposition: 'composition analysis saliency eye goes attention balance weight centre of interest leading lines crop cropping thirds visual weight heavy side',
   btnJars: 'ink wash jars dilution diluted ink bottle sumi brush wash tones thin water drops sepia indigo black value study which jar',
-  btnSimplify: 'simplify shapes flat posterize posterise big shapes masses blocks simplified colour value study plan reduce detail areas patches',
+  btnSimplify: 'simplify anime cel shading colouring shapes flat posterize posterise big shapes masses blocks simplified colour value study plan reduce detail areas patches',
   btnFlow: 'stroke direction flow hatching hatch which way direction lines follow the form hair folds muscle grain contour cross-contour pen liner pencil',
   btnGrades: 'pencil grades graphite 2h h hb b 2b 4b 6b 8b hardness lead soft hard value study greys which pencil',
   btnTone: 'toned paper tone grey tan black white pencil gel pen gouache chalk pastel mid tone middle value darks lights highlights leave the paper',
