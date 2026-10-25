@@ -471,6 +471,13 @@ const GEN_CHOICES = [
     { id: 'hard', label: 'Hard - on dry paper', tags: 'hard edges, sharp edges, layered glazing, flat wash', words: 'hard edges',
       avoid: 'blurry, color bleeding' },
   ] },
+  // Ink is drawn with a fineliner, a brush or nib with its thick and thin, or a ballpoint: three lines, three kinds of reference.
+  { id: 'pen', label: 'Pen', when: ch => ch.medium === 'ink', options: [
+    ANY,
+    { id: 'liner', label: 'Fineliner', tags: 'thin lines, uniform line width, clean lineart', words: 'fineliner', hint: 'One width of line all through: the outline and the hatching alike' },
+    { id: 'brush', label: 'Brush or nib', tags: 'variable line width, thick and thin lines, brush strokes', words: 'brush pen', hint: 'The line swells and thins with the hand: heavy on the shadow side' },
+    { id: 'ball', label: 'Ballpoint', tags: 'ballpoint pen (medium), scribble, hatching, uneven lines', words: 'ballpoint', hint: 'A ballpoint has one width: the tone is built from many passes' },
+  ] },
   // The shape of the picture. It is what the choices say (a head is square, a landscape wide) unless set here; no tag goes
   // to the model - the size of the picture is what changes.
   { id: 'format', label: 'Frame', options: [
@@ -542,12 +549,12 @@ const GEN_GROUPS = [
   ['who', 'The character', ['who', 'hair', 'parting', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
-  ['picture', 'The picture', ['medium', 'paper', 'format', 'edges', 'colours', 'lock', 'detail', 'ground']],
+  ['picture', 'The picture', ['medium', 'pen', 'paper', 'format', 'edges', 'colours', 'lock', 'detail', 'ground']],
 ];
 
 const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', look: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', parting: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', decade: 'any', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', paper: 'any', format: 'any', detail: 'simple',
+  size: 'whole', decade: 'any', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', pen: 'any', paper: 'any', format: 'any', detail: 'simple',
   ground: 'plain' };
 
 // Rows kept under More choices in their group: set rarely, and not needed to make a picture.

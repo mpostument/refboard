@@ -314,3 +314,21 @@ test('frame: Auto keeps the shape the choices say, the others set it, and no tag
   await page.locator('#genGo').click();
   await expect(page.locator('#genStatus')).toContainText('Made');
 });
+
+test('pen: asked only for ink, and each pen says its own line', async ({ page }) => {
+  await setup(page);
+  const r = await page.evaluate(() => {
+    const p = o => genPrompt({ ...GEN_DEFAULTS, detail: 'normal', ...o }).prompt;
+    return { none: p({ medium: 'ink' }), liner: p({ medium: 'ink', pen: 'liner' }), brush: p({ medium: 'ink', pen: 'brush' }), ball: p({ medium: 'ink', pen: 'ball' }), water: p({ medium: 'watercolour', pen: 'ball' }) };
+  });
+  expect(r.none).not.toContain('line width');
+  expect(r.liner).toContain('uniform line width');
+  expect(r.brush).toContain('thick and thin lines');
+  expect(r.ball).toContain('ballpoint pen \\(medium\\)');
+  expect(r.water).not.toContain('ballpoint');
+  await expect(page.locator('[data-row=pen]')).toBeHidden();
+  await page.locator('[data-gen=medium][data-opt=ink]').click();
+  await expect(page.locator('[data-row=pen]')).toBeVisible();
+  await page.locator('[data-gen=pen][data-opt=ball]').click();
+  await expect(page.locator('[data-gen=pen][data-opt=ball]')).toHaveAttribute('aria-pressed', 'true');
+});
