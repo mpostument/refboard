@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'gen-more', title: 'Generate: a series, a movement, colours to a palette, four lights from a photo',
+    text: "Generate > More ways to make: a series draws one scene from several views - wide, close, from above and so on - with one seed and your palette, so the room and the clothes stay the same; a movement turns what she does, in your own words (\"біжить, озирається\"), into tags in More tags. On any picture made here, More > Colours to a palette pulls its colours to the Holbein box or your palette by as much as you like, shows which went where, and keeps the result beside the original. And a photo you start from can be drawn again in four lights.",
+    act: 'Open Generate', run: () => setView({ kind: 'generate' }) },
   { id: 'anime-tools', title: 'Anime study: outfits, proportions, faces and a storyboard',
     text: "Four more halves in Anime study. Outfits: give her hair and eye colours and a picture of each outfit - which colours swallow the hair, which tie to the eyes, and which two outfits read alike. Proportions: click the crown, chin, shoulders, crotch, knees and soles on a drawing to see how many heads tall it is and which mark is off against anime, realistic or long-legged. Faces: soft, sharp and retro faces as the numbers that make them, with words for Generate. Storyboard: a strip of frames with the shot, the camera angle and where she looks, to print or keep in My work.",
     act: 'Open Anime study', run: () => setView({ kind: 'anime' }) },

@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=b7e637b5">
+<link rel="stylesheet" href="css/app.css?v=c6924624">
 </head>
 <body>
 <div id="setup">
@@ -339,6 +339,11 @@
               <button type="button" class="ghost" id="genRetry">Check again</button>
             </div>
             <div id="genChoices"></div>
+            <!-- A series, a movement: js/genmore.js, loaded when this is first opened. -->
+            <details class="gen-more-ways" id="genMore">
+              <summary>More ways to make</summary>
+              <div id="genMoreBody"></div>
+            </details>
             <!-- Stays at the bottom of the view while the choices scroll. -->
             <div class="gen-bar">
               <!-- What goes to the model, hidden until asked: js/generate.js renderGenPrompt(). -->
@@ -2496,7 +2501,7 @@
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=c0f8ba24"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=e41998d7"></script>
+<script src="js/whatsnew.js?v=1217edb0"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=73f7eb91"></script>
@@ -2525,7 +2530,7 @@
 <script src="js/lightbox.js?v=558bc8d9"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
-<script src="js/generate.js?v=d9b8f79f"></script>
+<script src="js/generate.js?v=9420a94f"></script>
 <script src="js/assetsfx.js?v=d1db7100"></script>
 <script src="js/genedit.js?v=bfdd1fea"></script>
 <script src="js/assetpack.js?v=bdc88bd4"></script>
@@ -2542,6 +2547,9 @@
 <script src="js/forms-settings.js?v=47a50035"></script>
 <script src="js/forms.js?v=65c873cc"></script>
 <script src="js/forms-api.js?v=445e5a7b"></script>
+</template>
+<template id="lazy-genmore">
+<script src="js/genmore.js?v=adf9ee47"></script>
 </template>
 <template id="lazy-train">
 <script src="js/train.js?v=fdee085e"></script>

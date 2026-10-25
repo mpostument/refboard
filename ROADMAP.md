@@ -492,6 +492,16 @@ Anime in watercolour:
   Storyboard: up to six frames of shot x angle x gaze drawn as plain diagrams, four sequences to start from,
   printed, saved as SVG or kept in My work. Not done: the faces are diagrams, not a style guide from any
   studio; the storyboard does not feed the 3D camera or the manga page; wind and cloth on the mannequin.
+- **More ways to make, in Generate.** In place (`js/genmore.js`, lazy `lazy-genmore`, loaded when
+  "More ways to make" under the choices is first opened or one of its items is asked for). A series:
+  the choices drawn from two to six views with one seed and the palette lock, the views weighted 1.3 and
+  the framing row's own tags taken out. A movement: Ukrainian and English stems (`GEN_MOVES`) to tags in
+  More tags; a part it does not know is said, an English part is passed on. Colours to a palette (More >
+  on a picture): `genLockPixels` after the fact, at "a little / mostly / fully", Holbein box or Your
+  palette, the picture beside the pulled one, the biggest changes by share, kept as a new picture
+  tagged `palette pulled`. Four lights, from a photo started from (the source strip). Only tested with a
+  stand-in server: no real ComfyUI run, so how well a seed holds a scene across views, and how
+  "біжить" reads to the model, are not known.
 - **Lightbox, the rest.** In place (`js/lightbox.js`, Paint > Lightbox,
   Workspace > Onto paper, Ctrl+K "trace"): a photo of the sketch unbent
   from its four corners (a homography; found as the biggest light shape),
