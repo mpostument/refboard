@@ -168,3 +168,69 @@ function anSkirtNotes(o) {
   out.push(n === 8 ? 'Eight pleats are wide and easy to draw: a school skirt in a drawing with few lines.' : n === 16 ? 'Sixteen pleats are fine: draw the lit and shadow ones alternately and only a few at the edge.' : 'Twelve is the usual: six lit and six in shadow, alternately.');
   return out;
 }
+
+/* ---- the walk and the run */
+
+/* The key poses of a cycle, from the side, facing right. Each leg is [thigh, knee]: the thigh's angle from the vertical (forward is
+   positive) and how far the knee bends the shin back; each arm is [upper arm, elbow bend]. lean: the torso's lean forward in degrees;
+   lift: how far the hips are raised off the height at which the first leg stands on the floor (a flight). */
+const AN_GAITS = {
+  walk: {
+    label: 'Walk', head: 'A walk always has a foot on the floor. Four key poses make half a step; the other half is the same with the legs and the arms changed over.',
+    poses: [
+      { name: 'Contact', says: 'The front heel meets the floor, the legs are furthest apart, the arms at their furthest too. The hips are at their middle height.', A: [28, 2], B: [-22, 20], armA: [-25, 15], armB: [25, 20], lean: 2, lift: 0 },
+      { name: 'Down', says: 'The weight lands on the front leg, which bends a little; the body is at its lowest. The rear foot comes off the floor.', A: [10, 18], B: [-14, 48], armA: [-10, 15], armB: [10, 20], lean: 3, lift: 0 },
+      { name: 'Passing', says: 'The free leg passes the standing one with the knee bent; the standing leg is straight and the hips are over it. The arms pass the body.', A: [0, 0], B: [14, 75], armA: [0, 10], armB: [0, 15], lean: 2, lift: 0 },
+      { name: 'Up', says: 'The body is at its highest, pushing off the toe of the standing leg; the free leg swings forward to the next contact.', A: [-14, 6], B: [30, 35], armA: [22, 15], armB: [-22, 20], lean: 2, lift: 0 },
+    ],
+  },
+  run: {
+    label: 'Run', head: 'A run has a flight: for a moment no foot touches the floor. The body leans forward, the arms are bent at the elbow, and the legs go further.',
+    poses: [
+      { name: 'Contact', says: 'The front foot lands under or just before the body, the knee a little bent; the rear leg is folded up behind.', A: [32, 18], B: [-40, 95], armA: [-40, 90], armB: [40, 95], lean: 12, lift: 0 },
+      { name: 'Down', says: 'The landing leg takes the weight and bends more; the body is at its lowest, the free leg comes through, knee high.', A: [14, 45], B: [20, 100], armA: [-20, 90], armB: [20, 90], lean: 14, lift: 0 },
+      { name: 'Passing', says: 'The landing leg pushes up and the free knee is driven forward; the arms cross the body.', A: [-4, 25], B: [48, 95], armA: [5, 85], armB: [-5, 90], lean: 13, lift: 0 },
+      { name: 'Flight', says: 'Both feet are in the air: the back leg stretched behind, the front knee up. The body is at its highest, the longest line of the pose.', A: [-38, 35], B: [58, 70], armA: [40, 95], armB: [-40, 95], lean: 12, lift: 42 },
+    ],
+  },
+};
+
+// A limb from a point: two bones of length L at angles (from the vertical, forward positive); returns [start, joint, end].
+function anLimb(p, a1, bend, L1, L2) {
+  const j = [p[0] + L1 * Math.sin(adRad(a1)), p[1] + L1 * Math.cos(adRad(a1))], a2 = a1 - bend;
+  return [p, j, [j[0] + L2 * Math.sin(adRad(a2)), j[1] + L2 * Math.cos(adRad(a2))]];
+}
+
+/* The figure of one pose: the hips set so that the first leg stands on the floor (less the lift), then the other limbs. */
+function anGaitFigure(pose, floor, x) {
+  const T = 62, S = 60, hip0 = [x, 0], legA0 = anLimb(hip0, pose.A[0], pose.A[1], T, S), hipY = floor - legA0[2][1] - pose.lift - 4;
+  const hip = [x, hipY], legA = anLimb(hip, pose.A[0], pose.A[1], T, S), legB = anLimb(hip, pose.B[0], pose.B[1], T, S);
+  const shoulder = [x + 100 * Math.sin(adRad(pose.lean)), hipY - 100 * Math.cos(adRad(pose.lean))];
+  const armA = anLimb(shoulder, pose.armA[0], -pose.armA[1], 44, 42), armB = anLimb(shoulder, pose.armB[0], -pose.armB[1], 44, 42);
+  const head = [shoulder[0] + 22 * Math.sin(adRad(pose.lean)), shoulder[1] - 24 * Math.cos(adRad(pose.lean))];
+  const foot = l => [l[2], [l[2][0] + 18, l[2][1] + 2]];
+  return { hip, legA, legB, shoulder, armA, armB, head, footA: foot(legA), footB: foot(legB) };
+}
+
+function anGaitSvg(o) {
+  const G = AN_GAITS[o.gait] || AN_GAITS.walk, ink = AD_INK, W = 4 * 150 + 40, floor = 318, H = 372;
+  let s = `<rect width="${W}" height="${H}" fill="#fff"/><path d="M10 ${floor} L${W - 10} ${floor}" stroke="#aab" stroke-width="1.2"/>`;
+  const line = (pts, col, w) => `<path d="M${pts.map(adP).join(' L')}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  G.poses.forEach((pose, i) => {
+    const f = anGaitFigure(pose, floor, 90 + i * 150);
+    // The far side first, in grey, then the near side in ink.
+    s += line(f.legB, '#9aa0b0', 9) + line(f.footB, '#9aa0b0', 7) + line(f.armB, '#9aa0b0', 7);
+    s += line(f.legA, ink, 10) + line(f.footA, ink, 8) + line([f.hip, f.shoulder], ink, 16) + line(f.armA, ink, 8);
+    s += `<circle cx="${adF(f.head[0])}" cy="${adF(f.head[1])}" r="19" fill="#fff" stroke="${ink}" stroke-width="3"/>`;
+    for (const j of [f.legA[1], f.legB[1], f.armA[1], f.armB[1]]) s += `<circle cx="${adF(j[0])}" cy="${adF(j[1])}" r="3.4" fill="#fff" stroke="${ink}" stroke-width="1.4"/>`;
+    s += `<text x="${90 + i * 150}" y="${H - 12}" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${i + 1}. ${esc(pose.name)}</text>`;
+    s += `<path d="M${adP([f.hip[0] - 40, f.hip[1]])} L${adP([f.hip[0] + 40, f.hip[1]])}" stroke="#d67a3a" stroke-width="1" stroke-dasharray="3 4"/>`;
+  });
+  return adSvgOpen([0, 0, W, H], `${G.label} cycle, four key poses from the side`) + s + '</svg>';
+}
+
+function anGaitNotes(o) {
+  const G = AN_GAITS[o.gait] || AN_GAITS.walk;
+  return [G.head, ...G.poses.map((p, i) => `${i + 1}. ${p.name}. ${p.says}`),
+    'Draw each key pose first, then the drawings between them (the in-betweens). At twelve drawings a second, a walk of two steps is eight to twelve drawings, each held for two frames. The dashed orange line is the hip height: see how it rises and falls.'];
+}

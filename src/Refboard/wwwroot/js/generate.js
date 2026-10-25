@@ -471,6 +471,14 @@ const GEN_CHOICES = [
     { id: 'hard', label: 'Hard - on dry paper', tags: 'hard edges, sharp edges, layered glazing, flat wash', words: 'hard edges',
       avoid: 'blurry, color bleeding' },
   ] },
+  // The shape of the picture. It is what the choices say (a head is square, a landscape wide) unless set here; no tag goes
+  // to the model - the size of the picture is what changes.
+  { id: 'format', label: 'Frame', options: [
+    { id: 'any', label: 'Auto', words: '', hint: 'The shape the choices say: a bust is tall, a landscape wide, a head square' },
+    { id: 'tall', label: 'Tall', words: '', hint: 'Portrait: 832 x 1216' },
+    { id: 'square', label: 'Square', words: '', hint: '1024 x 1024' },
+    { id: 'wide', label: 'Wide', words: '', hint: 'Landscape: 1216 x 832' },
+  ] },
   // The paper under the paint or the line: watercolour depends on it more than on any tag. Toned paper takes the white
   // background out (Background below), or the two pull against each other and the page comes out white again.
   { id: 'paper', label: 'Paper', when: ch => ch.medium !== 'flat', options: [
@@ -534,12 +542,12 @@ const GEN_GROUPS = [
   ['who', 'The character', ['who', 'hair', 'parting', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
-  ['picture', 'The picture', ['medium', 'paper', 'edges', 'colours', 'lock', 'detail', 'ground']],
+  ['picture', 'The picture', ['medium', 'paper', 'format', 'edges', 'colours', 'lock', 'detail', 'ground']],
 ];
 
 const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', look: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', parting: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', decade: 'any', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', paper: 'any', detail: 'simple',
+  size: 'whole', decade: 'any', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', paper: 'any', format: 'any', detail: 'simple',
   ground: 'plain' };
 
 // Rows kept under More choices in their group: set rarely, and not needed to make a picture.
@@ -703,9 +711,10 @@ function genPrompt(choices, extra = '') {
   if (subject === 'character' && !more.some(t => /cross/i.test(t))) avoid.push(GEN_NO_CROSS);
   const shape = subject === 'character' ? (choices.framing === 'head' ? 'square' : choices.framing === 'sheet' || choices.framing === 'expressions' ? 'landscape' : 'portrait')
     : subject === 'landscape' || subject === 'building' ? 'landscape' : 'square';
+  const framed = { tall: 'portrait', square: 'square', wide: 'landscape' }[choices.format] || shape;
   // outfit: what Setting and Clothes alone say, for a variation, which keeps its
   // own tags and takes only these from the choices (genRequest).
-  return { outfit: outfitTags.join(', '), prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...(who ? [who.split(', ')[0]] : []), ...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape };
+  return { outfit: outfitTags.join(', '), prompt: comfyTags([...tags, ...more].join(', ')), avoid: comfyTags(avoid.join(', ')), tags: [...(who ? [who.split(', ')[0]] : []), ...words, ...more].slice(0, 24).map(w => w.slice(0, 40)), shape: framed };
 }
 
 /* "watercolor (medium)" is the Danbooru tag, but to ComfyUI bare brackets

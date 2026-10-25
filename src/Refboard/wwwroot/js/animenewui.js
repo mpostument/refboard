@@ -6,7 +6,7 @@
 "use strict";
 
 const ANN_KEY = 'refboard.animeNew.v1';
-const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth', 'skirt'];
+const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth', 'skirt', 'walk'];
 
 function annLoad() {
   let s = {};
@@ -15,7 +15,7 @@ function annLoad() {
   const num = (v, lo, hi, d) => (v == null || v === '' || !Number.isFinite(+v) ? d : adClamp(+v, lo, hi));
   return {
     secs: AN_DRILL_SECS.includes(+s.secs) ? +s.secs : 60,
-    shoulders: Math.round(num(s.shoulders, -30, 30, 8)), hips: Math.round(num(s.hips, -30, 30, -10)), shift: Math.round(num(s.shift, -40, 40, 12)), light: key(s.light, AN_FACE_LIGHTS, 'ul'), mouthFull: s.mouthFull !== false,
+    shoulders: Math.round(num(s.shoulders, -30, 30, 8)), hips: Math.round(num(s.hips, -30, 30, -10)), shift: Math.round(num(s.shift, -40, 40, 12)), light: key(s.light, AN_FACE_LIGHTS, 'ul'), mouthFull: s.mouthFull !== false, gait: key(s.gait, AN_GAITS, 'walk'),
     skirtLength: key(s.skirtLength, AN_SKIRT_LENGTHS, 'knee'), skirtPleats: AN_SKIRT_PLEATS[s.skirtPleats] ? +s.skirtPleats : 12, skirtView: key(s.skirtView, AN_SKIRT_VIEWS, 'front'), wind: Math.round(num(s.wind, 0, 2, 0)),
     tone: key(s.tone, AN_TONE_KINDS, 'liner'),
     fx: key(s.fx, AN_FX, 'speed'), dir: key(s.dir, AN_FX_DIRS, 'h'), density: Math.round(num(s.density, 1, 3, 2)), seed: Math.round(num(s.seed, 1, 99999, 7)),
@@ -177,6 +177,14 @@ function annInit() {
   el('acnRelaxed').addEventListener('click', () => { annPatch({ shoulders: 8, hips: -10, shift: 12 }); annConstructRender(); });
   adWire('acn', () => ann.svg.construct, 'anime-construction', 'anime-construction', () => { const s = annLoad(); return Math.abs(s.shoulders - s.hips) >= 8 ? 'contrapposto, standing, weight on one leg' : 'standing, symmetrical, straight posture'; });
 
+  /* The walk and the run. */
+  annPane('awkPane', 'The walk and the run',
+    'The four key poses of a walk or a run from the side: contact, down, passing and up (a run has a flight instead). The far arm and leg are grey. Draw these first, then the in-betweens.',
+    annRow('Gait', 'awkGait') + annSaveRow('awk') + `<div class="pg-row"><button type="button" class="ghost hidden" id="awkToGenerate" title="Add the words for this to Generate's More tags">Use in Generate</button></div>`,
+    `<div class="ad-stage ad-wide" id="awkStage"></div><div class="count pg-note" id="awkNote"></div>`);
+  adMakeChips('awkGait', Object.entries(AN_GAITS).map(([k, v]) => [k, v.label]), v => { annPatch({ gait: v }); annGaitRender(); });
+  adWire('awk', () => ann.svg.walk, 'anime-gait', 'anime-gait', () => (annLoad().gait === 'run' ? 'running, dynamic pose, from side, motion lines' : 'walking, from side'));
+
   /* The pleated skirt. */
   annPane('akrPane', 'The pleated skirt',
     'A pleated skirt as a cone: the pleat lines come from the waist, the hem is an arc, the pleats narrow toward the sides. Choose its length, how many pleats, the side you see it from, and the wind.',
@@ -225,6 +233,15 @@ function annShow(mode) {
   if (mode === 'facelight') annFaceLightRender();
   if (mode === 'mouth') annMouthRender();
   if (mode === 'skirt') annSkirtRender();
+  if (mode === 'walk') annGaitRender();
+}
+
+function annGaitRender() {
+  const s = annLoad();
+  adPress('awkGait', s.gait);
+  ann.svg.walk = anGaitSvg({ gait: s.gait });
+  el('awkStage').innerHTML = ann.svg.walk;
+  el('awkNote').innerHTML = `<ul>${anGaitNotes({ gait: s.gait }).map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
 }
 
 function annSkirtRender() {

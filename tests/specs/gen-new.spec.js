@@ -296,3 +296,21 @@ test('anime of: a decade says its style tags, and Any says nothing', async ({ pa
   await page.locator('[data-gen=decade][data-opt="80s"]').click();
   await expect(page.locator('[data-gen=decade][data-opt="80s"]')).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('frame: Auto keeps the shape the choices say, the others set it, and no tag goes to the model', async ({ page }) => {
+  await setup(page);
+  const r = await page.evaluate(() => {
+    const p = o => genPrompt({ ...GEN_DEFAULTS, detail: 'normal', ...o });
+    return { auto: p({}).shape, head: p({ framing: 'head' }).shape, wide: p({ format: 'wide' }), tall: p({ subject: 'landscape', format: 'tall' }).shape, sq: p({ format: 'square' }).shape, plain: p({}) };
+  });
+  expect(r.auto).toBe('portrait');
+  expect(r.head).toBe('square');
+  expect(r.wide.shape).toBe('landscape');
+  expect(r.tall).toBe('portrait');
+  expect(r.sq).toBe('square');
+  expect(r.wide.prompt).toBe(r.plain.prompt);
+  await page.locator('[data-gen=format][data-opt=wide]').click();
+  await page.locator('#genCount').selectOption('1');
+  await page.locator('#genGo').click();
+  await expect(page.locator('#genStatus')).toContainText('Made');
+});

@@ -74,3 +74,29 @@ test('skirt: the length, the pleats, the view and the wind change the picture; t
   await expect(page.locator('#akrNote')).toContainText('With wind');
   await expect(page.locator('#akrStage svg')).toHaveAttribute('aria-label', /long, 16 pleats/);
 });
+
+test('walk and run: four key poses each; a run has a flight with both feet off the floor, a walk never does', async ({ page }) => {
+  await openApp(page);
+  const r = await run(page, () => {
+    const floor = 300, low = p => { const f = anGaitFigure(p, floor, 100); return Math.max(f.legA[2][1], f.legB[2][1]); };
+    const walkOff = AN_GAITS.walk.poses.map(p => Math.round(floor - low(p)));
+    const runOff = AN_GAITS.run.poses.map(p => Math.round(floor - low(p)));
+    const hips = AN_GAITS.walk.poses.map(p => Math.round(anGaitFigure(p, floor, 100).hip[1]));
+    return { walk: anGaitSvg({ gait: 'walk' }), run: anGaitSvg({ gait: 'run' }), n: [AN_GAITS.walk.poses.length, AN_GAITS.run.poses.length], walkOff, runOff, hips, notes: anGaitNotes({ gait: 'run' }).join(' ') };
+  });
+  expect(r.n).toEqual([4, 4]);
+  expect(r.walk).not.toBe(r.run);
+  expect(Math.min(...r.walkOff)).toBeGreaterThanOrEqual(0);
+  expect(Math.max(...r.walkOff.slice(0, 3))).toBeLessThan(8);         // a foot is on the floor in the first three
+  expect(r.runOff[3]).toBeGreaterThan(20);                            // the flight: the lowest foot is well off the floor
+  expect(Math.min(...r.runOff.slice(0, 3))).toBeLessThan(8);
+  expect(r.hips[1]).toBeGreaterThan(r.hips[3] - 1000);                // numbers, not NaN
+  expect(r.hips.every(Number.isFinite)).toBe(true);
+  expect(r.notes).toContain('Flight');
+  await openSection(page, 'anime');
+  await page.locator('#asMode [data-mode=walk]').click();
+  await expect(page.locator('#awkStage svg')).toBeVisible();
+  await expect(page.locator('#awkNote li').first()).toContainText('A walk always has a foot on the floor');
+  await page.locator('#awkGait [data-v=run]').click();
+  await expect(page.locator('#awkNote')).toContainText('flight');
+});
