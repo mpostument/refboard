@@ -481,6 +481,17 @@ Line and background:
 
 Anime in watercolour:
 
+- **Outfits, proportions, faces, storyboard.** In place (`js/animecheck.js` for the numbers and the pictures,
+  `js/animetools.js` for the page; four more modes in Anime study). Outfits: hair and eye colours (typed, or
+  clicked on a picture of her) against the three largest colours of each outfit picture, with a plain ground
+  taken out by its border; in OKLab - an outfit colour near the hair, as light as the hair, in the eyes' hue,
+  opposite the hair - and two outfits with the same main colour. Proportions: six clicks (any can be skipped)
+  give the height in heads, the nearest of four builds and each mark's distance from the chosen build, drawn as
+  dashed lines on the drawing; the build marks are set by eye. Faces: soft, sharp, retro as numbers (eye size,
+  gap, eye line, nose, mouth, chin) drawn as a front face, a note, and words for Generate's More tags.
+  Storyboard: up to six frames of shot x angle x gaze drawn as plain diagrams, four sequences to start from,
+  printed, saved as SVG or kept in My work. Not done: the faces are diagrams, not a style guide from any
+  studio; the storyboard does not feed the 3D camera or the manga page; wind and cloth on the mannequin.
 - **Lightbox, the rest.** In place (`js/lightbox.js`, Paint > Lightbox,
   Workspace > Onto paper, Ctrl+K "trace"): a photo of the sketch unbent
   from its four corners (a homography; found as the biggest light shape),

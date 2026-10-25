@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-tools', title: 'Anime study: outfits, proportions, faces and a storyboard',
+    text: "Four more halves in Anime study. Outfits: give her hair and eye colours and a picture of each outfit - which colours swallow the hair, which tie to the eyes, and which two outfits read alike. Proportions: click the crown, chin, shoulders, crotch, knees and soles on a drawing to see how many heads tall it is and which mark is off against anime, realistic or long-legged. Faces: soft, sharp and retro faces as the numbers that make them, with words for Generate. Storyboard: a strip of frames with the shot, the camera angle and where she looks, to print or keep in My work.",
+    act: 'Open Anime study', run: () => setView({ kind: 'anime' }) },
   { id: 'my-markers', title: 'Fewest markers and pencils: from the ones you have',
     text: "Palettes > Fewest paints, on Copic markers or Pencils, now has a Which do you have? list: mark the markers or pencils in your own set and the search keeps to those - the result says it is from the ones you marked. Nothing marked is the whole list, as before.",
     act: 'Open Palettes', run: () => setView({ kind: 'palette' }) },

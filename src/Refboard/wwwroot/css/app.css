@@ -2337,3 +2337,26 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .ab-colour { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; }
 .ab-colour > i { flex: none; width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--line); }
 .ab-mix { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; color: var(--dim); }
+/* Anime study's other four panes (js/animetools.js): outfits, proportions, faces, storyboard. */
+.ao-face { max-width: 320px; max-height: 220px; width: auto; height: auto; border: 1px solid var(--line); border-radius: 6px; cursor: crosshair; }
+.ao-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; max-width: 1000px; }
+.ao-card { margin: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.ao-card img { display: block; width: 100%; max-height: 180px; object-fit: contain; background: #111; }
+.ao-card figcaption { padding: 8px 10px; font-size: 12px; }
+.ao-card ul { margin: 6px 0 0; padding-left: 16px; color: var(--dim); }
+.ao-card .af-sw { height: 14px; margin-top: 6px; }
+.ao-verdict { font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line-hi); }
+.ao-card[data-verdict=good] .ao-verdict { border-color: var(--accent); color: var(--accent); }
+.ao-card[data-verdict=check] .ao-verdict { border-color: var(--bad); color: var(--bad); }
+.ap-stage { overflow: auto; max-width: 100%; }
+#apCanvas { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; cursor: crosshair; }
+.ap-rows { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 12px; color: var(--dim); }
+.ap-row[data-on=true] { color: var(--accent); }
+.ac-faces { display: grid; grid-template-columns: repeat(3, minmax(120px, 220px)); gap: 12px; margin-bottom: 10px; }
+.ac-face { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); cursor: pointer; }
+.ac-face[aria-pressed=true] { border-color: var(--accent); }
+.ac-face svg { width: 100%; height: auto; }
+.asb-strip svg { display: block; width: 100%; max-width: 900px; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.asb-edit { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; max-width: 900px; }
+.asb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.asb-row input[type=text] { flex: 1; min-width: 160px; }

@@ -79,7 +79,7 @@ const COMMAND_WORDS = {
   'view-perspective': 'manga page panels layout comic balloons speech storyboard perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex seasons season spring summer autumn winter morning noon dusk fog landscape times of day',
   'view-train': 'drill practice exercise test',
-  'view-anime': 'anime study frames film video colour script cel shadow scheme palette character background ghibli shinkai sky landscape gouache manner studio',
+  'view-anime': 'anime study frames film video colour script cel shadow scheme palette character background ghibli shinkai sky landscape gouache manner studio outfits wardrobe clothes hair eyes proportions heads tall faces storyboard shot camera angle frames',
   'view-sky': 'sky skies cloud clouds cumulus cirrus stratus storm sunset sunrise dawn dusk golden hour night stars moon weather wet drying dry humidity temperature wind plein air forecast rain study reference',
   'view-handbook': 'handbook lessons learn theory demonstration light form aerial perspective mixing value colour course tutorial book pen textures wood stone foliage fur water brick ink hatching practice sheet',
   btnLibrary: 'folders packs',

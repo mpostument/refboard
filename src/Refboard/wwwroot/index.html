@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=8a4e694e">
+<link rel="stylesheet" href="css/app.css?v=b7e637b5">
 </head>
 <body>
 <div id="setup">
@@ -845,6 +845,10 @@
         <div class="chips pg-modes" id="asMode" role="group" aria-label="What to work on">
           <button type="button" class="chip" data-mode="frames" aria-pressed="true" title="Give a video or some frames of a film: its shadow scheme, the palette and the colour script, read off them">Study frames</button>
           <button type="button" class="chip" data-mode="background" aria-pressed="false" title="A sky and the land under it in a manner and at an hour, with the palette and how to mix each colour">Backgrounds</button>
+          <button type="button" class="chip" data-mode="outfits" aria-pressed="false" title="Her hair and eyes against each outfit: which colours swallow the hair, which tie to the eyes">Outfits</button>
+          <button type="button" class="chip" data-mode="proportions" aria-pressed="false" title="Click the marks on a drawn figure: how many heads tall it is, and which mark is off">Proportions</button>
+          <button type="button" class="chip" data-mode="faces" aria-pressed="false" title="Soft, sharp and retro faces, as the numbers that make them">Faces</button>
+          <button type="button" class="chip" data-mode="storyboard" aria-pressed="false" title="A strip of frames: the shot, the camera angle and where she looks">Storyboard</button>
         </div>
         <div class="pg-body" id="afPane">
           <div class="pg-controls" role="group" aria-label="The frames">
@@ -883,6 +887,70 @@
             <div class="sky-stage"><canvas id="abCanvas" role="img" aria-label="A background in the chosen manner" width="960" height="540"></canvas></div>
             <div class="count pg-note" id="abNote"></div>
             <div class="ab-colours" id="abColours"></div>
+          </div>
+        </div>
+        <div class="pg-body hidden" id="aoPane">
+          <div class="pg-controls" role="group" aria-label="The outfits">
+            <p class="te-note">A character's hair and eyes stay; her outfits change. Give the colours of her hair and eyes, then a picture of each outfit: each is set against them, and against the others. Nothing leaves this page.</p>
+            <div class="pg-row"><span class="pg-label">Hair</span><input type="color" id="aoHair" value="#6b4a2f" aria-label="Hair colour">
+              <span class="pg-label">Eyes</span><input type="color" id="aoEyes" value="#3f7fb8" aria-label="Eye colour"></div>
+            <div class="pg-row"><button type="button" class="ghost" id="aoFacePick" title="Click her hair, then her eyes, on a picture of her">Take them from a picture</button>
+              <input type="file" id="aoFaceInput" accept="image/*" class="hidden" aria-label="A picture of her"></div>
+            <canvas id="aoFaceCanvas" class="hidden ao-face" aria-label="Click her hair, then her eyes"></canvas>
+            <div class="pg-row"><button type="button" class="primary" id="aoAdd" title="One picture for each outfit">Add outfits</button>
+              <input type="file" id="aoInput" accept="image/*" multiple class="hidden" aria-label="Pictures of the outfits"></div>
+            <div class="count" id="aoStatus" role="status" aria-live="polite">Or drop the pictures here.</div>
+          </div>
+          <div class="pg-stage">
+            <div class="ao-list" id="aoList"></div>
+            <div class="count pg-note" id="aoPairs"></div>
+            <div class="pg-row hidden" id="aoActions">
+              <button type="button" class="ghost" id="aoPalette" title="Every outfit's colours as a palette, in Palettes">Use as a palette</button>
+              <button type="button" class="ghost" id="aoClear" title="Remove all the outfits">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="pg-body hidden" id="apPane">
+          <div class="pg-controls" role="group" aria-label="The proportions">
+            <p class="te-note">Choose a drawing of a standing figure, then click along it, in order, the marks named below. The figure's height in heads is worked out from them, and each mark is set against the build you chose.</p>
+            <div class="pg-row"><button type="button" class="primary" id="apPick">Choose a drawing</button>
+              <input type="file" id="apInput" accept="image/*" class="hidden" aria-label="A drawing of a standing figure"></div>
+            <div class="pg-row"><span class="pg-label">Build</span><div class="chips" id="apBuild" role="group" aria-label="Build to compare with"></div></div>
+            <div class="count" id="apNext" role="status" aria-live="polite">Or drop a drawing here.</div>
+            <div class="pg-row"><button type="button" class="ghost" id="apSkip" title="Leave this mark out - for the shoulders or knees you cannot see">Skip this mark</button><button type="button" class="ghost" id="apUndo">Undo a mark</button><button type="button" class="ghost" id="apClear">Clear</button></div>
+          </div>
+          <div class="pg-stage">
+            <div class="ap-stage"><canvas id="apCanvas" class="hidden" aria-label="The drawing. Click the marks in order."></canvas></div>
+            <div class="count pg-note" id="apNote"></div>
+            <div class="ap-rows" id="apRows"></div>
+          </div>
+        </div>
+        <div class="pg-body hidden" id="acPane">
+          <div class="pg-controls" role="group" aria-label="The face">
+            <p class="te-note">Three manners of an anime face, as the numbers that make them. The red dashed line is the eye line: a real face has it halfway down.</p>
+            <div class="pg-row"><span class="pg-label">Manner</span><div class="chips" id="acManner" role="group" aria-label="Manner"></div></div>
+            <div class="pg-row"><button type="button" class="ghost" id="acToGenerate" title="Put the words for this manner in Generate's More tags">Use in Generate</button>
+              <button type="button" class="ghost" id="acCopy" title="Copy the words">Copy the words</button></div>
+          </div>
+          <div class="pg-stage">
+            <div class="ac-faces" id="acFaces"></div>
+            <div class="count pg-note" id="acNote"></div>
+          </div>
+        </div>
+        <div class="pg-body hidden" id="asbPane">
+          <div class="pg-controls" role="group" aria-label="The storyboard">
+            <p class="te-note">A strip of frames for a scene: how much of her each shows, from where the camera looks, and where she looks. Start from a sequence, then change any frame.</p>
+            <div class="pg-row"><span class="pg-label">Start from</span><div class="chips" id="asbSeq" role="group" aria-label="A sequence to start from"></div></div>
+            <div class="pg-row"><button type="button" class="ghost" id="asbAdd">Add a frame</button>
+              <button type="button" class="ghost" id="asbPrint">Print</button>
+              <button type="button" class="ghost" id="asbSave">Save SVG</button>
+              <button type="button" class="ghost" id="asbKeep" title="Keep the strip as a picture in My work">Keep in My work</button></div>
+            <div class="count" id="asbKept" role="status" aria-live="polite"></div>
+          </div>
+          <div class="pg-stage">
+            <div class="asb-strip" id="asbStrip"></div>
+            <div class="asb-edit" id="asbEdit"></div>
+            <div class="count pg-note" id="asbNote"></div>
           </div>
         </div>
       </div>
@@ -2426,9 +2494,9 @@
 <script src="js/workspace.js?v=14891cdc"></script>
 <script src="js/colourmath.js?v=ae688fd8"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=20c3069f"></script>
+<script src="js/command.js?v=c0f8ba24"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=fae54ae7"></script>
+<script src="js/whatsnew.js?v=e41998d7"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=73f7eb91"></script>
@@ -2495,8 +2563,10 @@
 </template>
 <template id="lazy-anime">
 <script src="js/animeframes.js?v=379e8188"></script>
+<script src="js/animecheck.js?v=5d05c055"></script>
+<script src="js/animetools.js?v=e043a017"></script>
 <script src="js/animebg.js?v=8a25e316"></script>
-<script src="js/animestudy.js?v=052c8ece"></script>
+<script src="js/animestudy.js?v=0c6b1b6a"></script>
 </template>
 <template id="lazy-sky">
 <script src="js/sky.js?v=28ee2a34"></script>
