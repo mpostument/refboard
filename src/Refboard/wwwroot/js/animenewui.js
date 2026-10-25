@@ -6,7 +6,7 @@
 "use strict";
 
 const ANN_KEY = 'refboard.animeNew.v1';
-const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth'];
+const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth', 'skirt'];
 
 function annLoad() {
   let s = {};
@@ -16,6 +16,7 @@ function annLoad() {
   return {
     secs: AN_DRILL_SECS.includes(+s.secs) ? +s.secs : 60,
     shoulders: Math.round(num(s.shoulders, -30, 30, 8)), hips: Math.round(num(s.hips, -30, 30, -10)), shift: Math.round(num(s.shift, -40, 40, 12)), light: key(s.light, AN_FACE_LIGHTS, 'ul'), mouthFull: s.mouthFull !== false,
+    skirtLength: key(s.skirtLength, AN_SKIRT_LENGTHS, 'knee'), skirtPleats: AN_SKIRT_PLEATS[s.skirtPleats] ? +s.skirtPleats : 12, skirtView: key(s.skirtView, AN_SKIRT_VIEWS, 'front'), wind: Math.round(num(s.wind, 0, 2, 0)),
     tone: key(s.tone, AN_TONE_KINDS, 'liner'),
     fx: key(s.fx, AN_FX, 'speed'), dir: key(s.dir, AN_FX_DIRS, 'h'), density: Math.round(num(s.density, 1, 3, 2)), seed: Math.round(num(s.seed, 1, 99999, 7)),
     aspect: key(s.aspect, AN_FRAMES, '16:9'),
@@ -176,6 +177,20 @@ function annInit() {
   el('acnRelaxed').addEventListener('click', () => { annPatch({ shoulders: 8, hips: -10, shift: 12 }); annConstructRender(); });
   adWire('acn', () => ann.svg.construct, 'anime-construction', 'anime-construction', () => { const s = annLoad(); return Math.abs(s.shoulders - s.hips) >= 8 ? 'contrapposto, standing, weight on one leg' : 'standing, symmetrical, straight posture'; });
 
+  /* The pleated skirt. */
+  annPane('akrPane', 'The pleated skirt',
+    'A pleated skirt as a cone: the pleat lines come from the waist, the hem is an arc, the pleats narrow toward the sides. Choose its length, how many pleats, the side you see it from, and the wind.',
+    annRow('Length', 'akrLength') + annRow('Pleats', 'akrPleats') + annRow('Seen from', 'akrView') + annRange('Wind', 'akrWind', 0, 2, 1, 0) +
+    `<div class="pg-row"><span class="pg-label">Cloth</span><input type="color" id="akrColour" value="#3b4a8c" aria-label="Colour of the cloth"></div>` + annSaveRow('akr') +
+    `<div class="pg-row"><button type="button" class="ghost hidden" id="akrToGenerate" title="Add the words for this skirt to Generate's More tags">Use in Generate</button></div>`,
+    `<div class="ad-stage ad-face" id="akrStage"></div><div class="count pg-note" id="akrNote"></div>`);
+  adMakeChips('akrLength', Object.entries(AN_SKIRT_LENGTHS).map(([k, v]) => [k, v[0]]), v => { annPatch({ skirtLength: v }); annSkirtRender(); });
+  adMakeChips('akrPleats', Object.entries(AN_SKIRT_PLEATS), v => { annPatch({ skirtPleats: +v }); annSkirtRender(); });
+  adMakeChips('akrView', Object.entries(AN_SKIRT_VIEWS).map(([k, v]) => [k, v[0]]), v => { annPatch({ skirtView: v }); annSkirtRender(); });
+  el('akrWind').addEventListener('input', () => { annPatch({ wind: +el('akrWind').value }); annSkirtRender(); });
+  el('akrColour').addEventListener('input', () => { amuPatch({ cloth: el('akrColour').value }); annSkirtRender(); });
+  adWire('akr', () => ann.svg.skirt, 'anime-skirt', 'anime-skirt', () => { const s = annLoad(); return `pleated skirt, ${s.skirtLength === 'mini' ? 'miniskirt' : s.skirtLength === 'long' ? 'long skirt' : 'knee-length skirt'}${s.wind ? ', wind lift, skirt lift' : ''}`; });
+
   /* The mouth in speech. */
   annPane('amtPane', 'The mouth in speech',
     'The mouth shapes of speech: the five vowels, the closed mouth, the teeth on the lip and the tongue tip. Anime uses three of them for most lines and the full set for a close-up.',
@@ -209,6 +224,16 @@ function annShow(mode) {
   if (mode === 'construct') annConstructRender();
   if (mode === 'facelight') annFaceLightRender();
   if (mode === 'mouth') annMouthRender();
+  if (mode === 'skirt') annSkirtRender();
+}
+
+function annSkirtRender() {
+  const s = annLoad(), cloth = amuLoad().cloth, o = { length: s.skirtLength, pleats: s.skirtPleats, view: s.skirtView, wind: s.wind, colour: cloth };
+  adPress('akrLength', s.skirtLength); adPress('akrPleats', s.skirtPleats); adPress('akrView', s.skirtView);
+  el('akrWind').value = s.wind; el('akrColour').value = cloth;
+  ann.svg.skirt = anSkirtSvg(o);
+  el('akrStage').innerHTML = ann.svg.skirt;
+  el('akrNote').innerHTML = anSkirtNotes(o).map(esc).join(' ') + ' <small>The skirt is a diagram of its construction, not of a garment.</small>';
 }
 
 function annMouthRender() {

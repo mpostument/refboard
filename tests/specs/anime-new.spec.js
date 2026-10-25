@@ -228,7 +228,7 @@ test('the switch is in three groups and every mode shows only its own pane', asy
   await openSection(page, 'anime');
   await expect(page.locator('#asMode .am-group')).toHaveText(['Colour', 'Drawing', 'Scene and pose']);
   const modes = await page.locator('#asMode [data-mode]').evaluateAll(bs => bs.map(b => b.dataset.mode));
-  expect(modes.length).toBe(26);
+  expect(modes.length).toBe(27);
   for (const m of modes) {
     await page.locator(`#asMode [data-mode="${m}"]`).click();
     await expect(page.locator('#viewAnime .pg-body:not(.hidden)')).toHaveCount(1);

@@ -117,3 +117,54 @@ function anFaceLightSvg(o) {
   s += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="${ink}" stroke-width="2"/>`;
   return adSvgOpen([0, 0, 300, 270], `A face lit ${AN_FACE_LIGHTS[L].label.toLowerCase()}`) + s + '</svg>';
 }
+
+/* ---- the pleated skirt */
+
+const AN_SKIRT_LENGTHS = { mini: ['Mini', 46], knee: ['To the knee', 78], long: ['Long', 118] };
+const AN_SKIRT_PLEATS = { 8: 'Eight pleats', 12: 'Twelve pleats', 16: 'Sixteen pleats' };
+const AN_SKIRT_VIEWS = { front: ['Front', 0], three: ['Three-quarter', 35], back: ['From behind', 180] };
+
+/* o: { length (mini, knee, long), pleats (8, 12, 16), view (front, three, back), wind (0 - 2), skin... }. A pleated skirt as a cone cut by two
+   ellipses - the waist and the hem - seen from a little above; the pleat lines run from the waist to the hem, and are spaced more closely
+   toward the sides, where the cloth turns away. The hem is lifted on one side by the wind. */
+function anSkirtSvg(o) {
+  const len = (AN_SKIRT_LENGTHS[o.length] || AN_SKIRT_LENGTHS.knee)[1], n = +o.pleats in AN_SKIRT_PLEATS ? +o.pleats : 12, turn = (AN_SKIRT_VIEWS[o.view] || AN_SKIRT_VIEWS.front)[1];
+  const wind = adClamp(+o.wind || 0, 0, 2), cx = 160, wy = 60, rw = 42, rh = rw + 20 + len * 0.55, ew = 0.22, eh = 0.22;
+  const cloth = adRgbOf(o.colour || '#3b4a8c'), T = adTones(cloth), ink = AD_INK, light = adCss(T.light), base = adCss(T.base), shade = adCss(T.shadow);
+  const hemY = wy + len + 40;
+  // The point on the waist or the hem at angle a round the skirt (0 is the front; the picture's x is the sine).
+  const at = (a, r, y, e) => [cx + r * Math.sin(a), y + r * e * Math.cos(a)];
+  const hemLift = (x, a) => wind ? wind * (14 + 10 * Math.sin(a * 2 + 1)) * Math.max(0, Math.sin(a + 0.6)) : 0;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const a = adRad(turn) + (i / n - 0.5) * Math.PI * 2;
+    pts.push({ a, w: at(a, rw, wy, ew), h: at(a, rh + wind * 6 * Math.max(0, Math.sin(a + 0.6)), hemY - 0, eh), front: Math.cos(a) > 0 });
+  }
+  for (const p of pts) p.h[1] -= hemLift(p.h[0], p.a);
+  const vis = pts.map((p, i) => ({ ...p, i })).filter(p => p.front);
+  let s = `<rect width="320" height="${hemY + 70}" fill="#f7f5ef"/>`;
+  // The waistband and the body of the skirt: the cloth between neighbouring pleat lines, the pleats alternately lit and in shadow.
+  const seg = [];
+  for (let k = 0; k < vis.length - 1; k++) {
+    const a = vis[k], b = vis[k + 1];
+    if (b.i !== a.i + 1) continue;
+    seg.push(`<path d="M${adP(a.w)} L${adP(b.w)} L${adP(b.h)} L${adP(a.h)}Z" fill="${a.i % 2 ? shade : light}" stroke="${ink}" stroke-width="1.2" stroke-linejoin="round"/>`);
+  }
+  s += seg.join('');
+  // The hem as one line through the lower corners, and the waist as one through the upper ones.
+  const run = (key) => vis.map((p, k) => (k ? 'L' : 'M') + adP(p[key])).join('');
+  s += `<path d="${run('h')}" fill="none" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/><path d="${run('w')}" fill="none" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>`;
+  s += `<path d="M${cx - rw - 2} ${wy - 12} L${cx + rw + 2} ${wy - 12} L${cx + rw} ${wy + 4} L${cx - rw} ${wy + 4}Z" fill="${adCss(adMixRgb(cloth, [30, 30, 40], 0.3))}" stroke="${ink}" stroke-width="1.6"/>`;
+  s += `<text x="12" y="${wy}" font-size="11" fill="#666">waist</text><text x="12" y="${hemY}" font-size="11" fill="#666">hem</text>`;
+  return adSvgOpen([0, 0, 320, hemY + 70], `A pleated skirt, ${(AN_SKIRT_LENGTHS[o.length] || AN_SKIRT_LENGTHS.knee)[0].toLowerCase()}, ${n} pleats`) + s + '</svg>';
+}
+
+function anSkirtNotes(o) {
+  const n = +o.pleats in AN_SKIRT_PLEATS ? +o.pleats : 12, out = [];
+  out.push('A pleated skirt is a cone: the pleat lines all come from the waist, and the hem is an arc - it dips in front and rises at the sides when seen from above.');
+  out.push('The pleats are narrow at the sides, where the cloth turns away, and widest in the middle of the front: do not draw them all the same.');
+  if ((AN_SKIRT_VIEWS[o.view] || [])[1] === 180) out.push('From behind the same arc is seen the other way, and the pleats are the same: only the waist seam has changed.');
+  if (+o.wind) out.push('With wind the hem lifts on the side it blows from and the pleats open there: draw the lifted side with longer, straighter lines and keep the other close.');
+  out.push(n === 8 ? 'Eight pleats are wide and easy to draw: a school skirt in a drawing with few lines.' : n === 16 ? 'Sixteen pleats are fine: draw the lit and shadow ones alternately and only a few at the edge.' : 'Twelve is the usual: six lit and six in shadow, alternately.');
+  return out;
+}

@@ -53,3 +53,24 @@ test('mouth: eight shapes on a sheet, three in the simple set, and each says wha
   await expect(page.locator('#amtNote')).toContainText('three drawings');
   await expect(page.locator('#amtSave')).toBeVisible();
 });
+
+test('skirt: the length, the pleats, the view and the wind change the picture; the notes follow', async ({ page }) => {
+  await openApp(page);
+  const r = await run(page, () => {
+    const o = (x) => anSkirtSvg({ length: 'knee', pleats: 12, view: 'front', wind: 0, colour: '#3b4a8c', ...x });
+    return { base: o({}), mini: o({ length: 'mini' }), long: o({ length: 'long' }), p8: o({ pleats: 8 }), three: o({ view: 'three' }), back: o({ view: 'back' }), wind: o({ wind: 2 }),
+      pleatLines: (o({ pleats: 16 }).match(/<path d="M[^"]*Z" fill/g) || []).length, notes: anSkirtNotes({ pleats: 12, view: 'back', wind: 2 }).join(' ') };
+  });
+  expect(new Set([r.base, r.mini, r.long, r.p8, r.three, r.back, r.wind]).size).toBe(7);
+  expect(r.pleatLines).toBeGreaterThan(4);
+  expect(r.notes).toContain('From behind');
+  expect(r.notes).toContain('wind');
+  await openSection(page, 'anime');
+  await page.locator('#asMode [data-mode=skirt]').click();
+  await expect(page.locator('#akrStage svg')).toBeVisible();
+  await page.locator('#akrLength [data-v=long]').click();
+  await page.locator('#akrPleats [data-v="16"]').click();
+  await page.locator('#akrWind').fill('2');
+  await expect(page.locator('#akrNote')).toContainText('With wind');
+  await expect(page.locator('#akrStage svg')).toHaveAttribute('aria-label', /long, 16 pleats/);
+});
