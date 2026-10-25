@@ -20,6 +20,22 @@ const SHOT_COMMANDS = [
   ['tele', 'Telephoto', 'long lens flat compressed far'],
   ['fish', 'Fisheye', 'fish eye distortion curved bent lens'],
 ];
+// The trainers (TRAINERS, in js/train.js, which loads when Train is first
+// opened - so listed here too: id, title, blurb). A test checks the two agree.
+const TRAINER_COMMANDS = [
+  ['value', 'Value', 'Read how light a patch really is - on a surround built to fool you. Then do it in colour.'],
+  ['colour', 'Colour', 'Mix the target by hue, chroma and value - and see which of the three you missed, and which way.'],
+  ['anatomy', 'Anatomy', 'Where the landmarks fall on an eight-heads figure and on the head - click the height, see the canon.'],
+  ['measure', 'Angles and proportions', 'Copy an angle by eye; say how many times one length goes into another. The two things you measure all day.'],
+  ['lines', 'Lines and ellipses', 'Straight lines, circles and ellipses in one stroke - with a tablet or a mouse. Drawn from the shoulder.'],
+  ['perspective', 'Perspective', 'Find where a box\'s edges meet, and where your eye level is - from the box alone.'],
+  ['gesture', 'Gesture', 'A random pose on the 3D figure, timed - then hidden while you finish. Judge it against the pose, or lay your photo over it.'],
+  ['negative', 'Negative space', 'See the shapes around the figure instead of the figure - pick the true one from three near-misses.'],
+  ['tones', 'Tone map', 'On real pictures: which spot is darker, where the darkest dark and lightest light are - judged squinting.'],
+  ['temperature', 'Colour temperature', 'Which of two is warmer - two reds, two blues, two greys - with value and intensity changed to throw you.'],
+  ['edges', 'Edges', 'Which edge is hardest, which softest - when contrast is set to fool you.'],
+  ['ellipses', 'Ellipses and centres', 'Fit a cylinder\'s ellipse to its axis; find the true middle of a rectangle in perspective.'],
+];
 // Other words a tool is looked for by, keyed by its element's id.
 const COMMAND_WORDS = {
   btnHead: 'face construction ball thirds loomis anime eyes',
@@ -39,7 +55,7 @@ const COMMAND_WORDS = {
   btnHatch: 'hatching map hatch layers cross-hatch crosshatch ink pen liner ballpoint value density build up strokes lines shading darks how many layers',
   btnComposition: 'composition analysis saliency eye goes attention balance weight centre of interest leading lines crop cropping thirds visual weight heavy side',
   btnJars: 'ink wash jars dilution diluted ink bottle sumi brush wash tones thin water drops sepia indigo black value study which jar',
-  btnSimplify: 'simplify shapes flat posterize posterise big shapes masses blocks simplified colour value study plan reduce detail areas patches',
+  btnSimplify: 'simplify anime cel shading colouring shapes flat posterize posterise big shapes masses blocks simplified colour value study plan reduce detail areas patches',
   btnFlow: 'stroke direction flow hatching hatch which way direction lines follow the form hair folds muscle grain contour cross-contour pen liner pencil',
   btnGrades: 'pencil grades graphite 2h h hb b 2b 4b 6b 8b hardness lead soft hard value study greys which pencil',
   btnTone: 'toned paper tone grey tan black white pencil gel pen gouache chalk pastel mid tone middle value darks lights highlights leave the paper',
@@ -60,9 +76,10 @@ const COMMAND_WORDS = {
   'view-drop': 'open file upload photo check own image video',
   'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading hair',
   'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
-  'view-perspective': 'perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
+  'view-perspective': 'manga page panels layout comic balloons speech storyboard perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex seasons season spring summer autumn winter morning noon dusk fog landscape times of day',
   'view-train': 'drill practice exercise test',
+  'view-anime': 'anime study frames film video colour script cel shadow scheme palette character background ghibli shinkai sky landscape gouache manner studio',
   'view-sky': 'sky skies cloud clouds cumulus cirrus stratus storm sunset sunrise dawn dusk golden hour night stars moon weather wet drying dry humidity temperature wind plein air forecast rain study reference',
   'view-handbook': 'handbook lessons learn theory demonstration light form aerial perspective mixing value colour course tutorial book pen textures wood stone foliage fur water brick ink hatching practice sheet',
   btnLibrary: 'folders packs',
@@ -117,6 +134,8 @@ function collectCommands() {
       run: () => openLightbox(state.current) });
     out.push({ id: 'steps', label: 'How to draw it', hint: 'Onto paper', words: 'steps stages guide tutorial learn order sketch hatching wash',
       run: () => openSteps(state.current) });
+    out.push({ id: 'refreport', label: 'Reference report - every check on this picture', hint: 'Check', words: 'report analysis summary page print quality value colour composition tangents crop palette recipes one page',
+      run: () => openReportFor(state.current) });
     // The head construction in either style - turned on too, if it is off.
     for (const [k, label] of Object.entries(HEAD_STYLES)) {
       if (state.headOn && k === headStyle) continue;
@@ -161,10 +180,10 @@ function collectCommands() {
         words: `${COMMAND_WORDS[id] || ''} ${stage || ''}`, run: () => b.click(),
       });
     }
-    for (const t of TRAINERS) {
+    for (const [id, title, blurb] of TRAINER_COMMANDS) {
       out.push({
-        id: 'train-' + t.id, label: t.title + ' trainer', hint: 'Train', words: 'drill practice ' + (t.blurb || ''),
-        run: () => { setView({ kind: 'train' }); startTrainer(t.id); },
+        id: 'train-' + id, label: title + ' trainer', hint: 'Train', words: 'drill practice ' + blurb,
+        run: async () => { setView({ kind: 'train' }); await loadSection('train'); startTrainer(id); },
       });
     }
   }

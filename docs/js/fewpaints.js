@@ -16,7 +16,7 @@
 "use strict";
 
 const FEW_KEY = 'refboard.fewpaints.v1';
-const FEW_FOR = { paints: 'Paints', copic: 'Copic markers' };
+const FEW_FOR = { paints: 'Paints', copic: 'Copic markers', pencils: 'Pencils' };
 
 /* Copic Sketch colours people reach for first - NOT the whole range. The
    codes and names are the maker's; the hex is my estimate of what each lays
@@ -38,12 +38,43 @@ const COPIC_COLOURS = [
 ].map(([code, name, hex]) => ({ code, name, hex, rgb: [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) }));
 const FEW_COPIC = Object.fromEntries(COPIC_COLOURS.map(m => [m.code, m]));
 const fewLab = rgb => linToOklab(...rgb.map(v => srgbToLin(v / 255)));
+/* Watercolour pencils - Faber-Castell Albrecht Duerer, a short list of what a
+   painter reaches for first, NOT the whole 120. The numbers and names are the
+   maker's as I know them; the hex is my estimate of the dry stroke on white paper,
+   to be corrected from a swatch photo like the Holbein box and the markers. A
+   pencil is not mixed on a palette - it is laid in layers on the paper - so a
+   colour is matched by one pencil (pressed lightly or firmly) or by two, the
+   second over the first. */
+const PENCIL_COLOURS = [
+  ['102', 'Cream', '#f3e3b8'], ['104', 'Light Yellow Glaze', '#f7e86a'], ['106', 'Light Chrome Yellow', '#f9d423'], ['107', 'Cadmium Yellow', '#f7c61c'],
+  ['109', 'Dark Chrome Yellow', '#f0a41a'], ['111', 'Cadmium Orange', '#ee7d1f'], ['118', 'Scarlet Red', '#d9302b'], ['121', 'Pale Geranium Lake', '#e0575a'],
+  ['126', 'Permanent Carmine', '#b3223f'], ['129', 'Pink Madder Lake', '#d9647d'], ['125', 'Middle Purple Pink', '#c9578f'], ['133', 'Magenta', '#b02a6b'],
+  ['136', 'Purple Violet', '#5b3a86'], ['138', 'Violet', '#7a5aa6'], ['140', 'Light Ultramarine', '#6f7fc4'], ['143', 'Cobalt Blue', '#3a63b0'],
+  ['151', 'Helioblue-Reddish', '#2d4a9a'], ['152', 'Middle Phthalo Blue', '#1f6fb2'], ['146', 'Sky Blue', '#6fb4e0'], ['149', 'Bluish Turquoise', '#2aa5b5'],
+  ['153', 'Cobalt Green', '#5ec0a0'], ['157', 'Dark Phthalo Green', '#17685a'], ['163', 'Emerald Green', '#1f9a5a'], ['167', 'Permanent Green Olive', '#6b8a2e'],
+  ['168', 'Earth Green Yellowish', '#8a9a4a'], ['170', 'May Green', '#8cc152'], ['172', 'Earth Green', '#5c7a4a'], ['174', 'Chromium Green Opaque', '#3d6e3a'],
+  ['175', 'Dark Sepia', '#4a2f24'], ['176', 'Van Dyck Brown', '#5a3a2a'], ['177', 'Walnut Brown', '#6d4a33'], ['180', 'Raw Umber', '#6a5a45'],
+  ['183', 'Light Yellow Ochre', '#d9ad5a'], ['185', 'Naples Yellow', '#f1d58a'], ['186', 'Terracotta', '#c0654a'], ['187', 'Burnt Ochre', '#b0643a'],
+  ['188', 'Sanguine', '#b44e3a'], ['189', 'Cinnamon', '#a06a4a'], ['190', 'Venetian Red', '#a8472f'], ['192', 'Indian Red', '#8f3a2f'], ['193', 'Burnt Sienna', '#8a4a2a'],
+  ['199', 'Black', '#232325'], ['230', 'Cold Grey I', '#e2e4e6'], ['232', 'Cold Grey III', '#b9bdc2'], ['234', 'Cold Grey V', '#8a9096'],
+  ['271', 'Warm Grey I', '#e8e3dc'], ['273', 'Warm Grey III', '#c3bbb0'], ['275', 'Warm Grey V', '#9a9086'],
+].map(([code, name, hex]) => ({ code, name, hex, rgb: [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) }));
+const FEW_PENCIL = Object.fromEntries(PENCIL_COLOURS.map(m => [m.code, m]));
+const PENCIL_PRESS = { light: 0.5, firm: 1 };   // how much of the pencil's colour a stroke lays on what is under it
 const FEW_COUNTS = [2, 3, 4, 5];
 const FEW_CAP = 25;      // a colour that lands further than this is "not reached" - and no further wrong than that
 const FEW_WORTH = 0.5;   // a paint that brings the mean closer by less than this is not worth its place
 const FEW_CLOSE = 4;     // paint.js's "close"
 
-let few = { medium: 'paints', n: 3, result: null, sig: '', run: 0, running: false };
+// own: the codes of the markers and of the pencils you have, or null where nothing is marked - the whole list.
+let few = { medium: 'paints', n: 3, result: null, sig: '', run: 0, running: false, own: { copic: null, pencils: null } };
+const FEW_LISTS = () => ({ copic: COPIC_COLOURS, pencils: PENCIL_COLOURS });
+const FEW_THINGS = { copic: 'markers', pencils: 'pencils' };
+// The codes the search may use: the ones marked as yours, or the whole list.
+function fewMine(kind) {
+  const all = FEW_LISTS()[kind].map(m => m.code), own = few.own[kind];
+  return own ? all.filter(c => own.includes(c)) : all;
+}
 const fewCache = new Map(); // 'set|hex' -> the best recipe for that colour from that set
 
 function fewLoad() {
@@ -51,15 +82,17 @@ function fewLoad() {
     const v = JSON.parse(localStorage.getItem(FEW_KEY));
     if (FEW_COUNTS.includes(v?.n)) few.n = v.n;
     if (FEW_FOR[v?.medium]) few.medium = v.medium;
+    for (const k of Object.keys(few.own)) if (Array.isArray(v?.own?.[k])) few.own[k] = v.own[k];
   } catch { /* the default */ }
 }
 function fewSave() {
-  try { localStorage.setItem(FEW_KEY, JSON.stringify({ n: few.n, medium: few.medium })); } catch { /* private mode */ }
+  try { localStorage.setItem(FEW_KEY, JSON.stringify({ n: few.n, medium: few.medium, own: few.own })); } catch { /* private mode */ }
 }
 
-/* The best way to mix this colour from just these paints, in watercolour. */
+/* The best way to get this colour from just these paints, markers or pencils. */
 function fewBest(rgb, keys) {
   if (few.medium === 'copic') return fewNearest(rgb, keys);
+  if (few.medium === 'pencils') return fewLayers(rgb, keys);
   const k = [...keys].sort().join('+') + '|' + colHexOf(rgb);
   if (!fewCache.has(k)) fewCache.set(k, paintRecipes(rgb, null, 1, 'water', keys)[0] || null);
   return fewCache.get(k);
@@ -74,6 +107,32 @@ function fewNearest(rgb, keys) {
     const d = 100 * Math.hypot(l[0] - t[0], l[1] - t[1], l[2] - t[2]);
     if (!best || d < best.dE) best = { key: k, dE: d };
   }
+  return best;
+}
+
+/* A pencil laid on what is under it: the stroke's lightness lets the under
+   colour show, and where it covers it multiplies - a yellow over a blue goes
+   green, as a glaze does. */
+const pencilOver = (under, rgb, press) => under.map((u, i) => u * (1 - press) + (u * rgb[i] / 255) * press);
+
+/* Pencils: the nearest single pencil (light or firm), or two laid one over the
+   other. As a recipe: { key, press, over?, pressOver?, rgb, dE }. */
+function fewLayers(rgb, keys) {
+  const ck = 'pencils|' + [...keys].sort().join('+') + '|' + colHexOf(rgb);
+  if (fewCache.has(ck)) return fewCache.get(ck);
+  const t = fewLab(rgb), WHITE = [255, 255, 255];
+  let best = null;
+  const tryIt = (r, got) => {
+    const l = fewLab(got), d = 100 * Math.hypot(l[0] - t[0], l[1] - t[1], l[2] - t[2]);
+    if (!best || d < best.dE) best = { ...r, rgb: got.map(Math.round), dE: d };
+  };
+  for (const a of keys) for (const [pa, va] of Object.entries(PENCIL_PRESS)) {
+    const first = pencilOver(WHITE, FEW_PENCIL[a].rgb, va);
+    tryIt({ key: a, press: pa }, first);
+    for (const b of keys) if (b !== a) for (const [pb, vb] of Object.entries(PENCIL_PRESS))
+      tryIt({ key: a, press: pa, over: b, pressOver: pb }, pencilOver(first, FEW_PENCIL[b].rgb, vb));
+  }
+  fewCache.set(ck, best);
   return best;
 }
 
@@ -135,14 +194,18 @@ async function fewChoose(rgbs, pool, n, step, alive) {
   return { keys: chosen.slice(0, keep), asked: n, scores };
 }
 
-const fewSig = () => pg.swatches.map(s => colHexOf(s.rgb)).join() + '|' + (few.medium === 'copic' ? 'copic' : paintPaletteKey()) + '|' + few.n;
+const fewSig = () => pg.swatches.map(s => colHexOf(s.rgb)).join() + '|' + (few.medium === 'paints' ? paintPaletteKey() : few.medium + ':' + fewMine(few.medium).join('.')) + '|' + few.n;
 
 async function fewRun() {
   const run = ++few.run, host = el('pgFew'), rgbs = pg.swatches.map(s => s.rgb);
-  const copic = few.medium === 'copic';
-  const pool = copic ? COPIC_COLOURS.map(m => m.code) : paintKeys(paintPaletteKey(), 'water');
-  if (!copic && !paintInit()) { host.innerHTML = '<span class="count">Mixing needs js/vendor/spectral.js, which did not load.</span>'; return; }
-  if (pool.length < 2) { host.innerHTML = '<span class="count">Two paints at least are needed in the box above.</span>'; return; }
+  const ready = few.medium !== 'paints';   // markers and pencils are ready-made colours: no mixing to load
+  const pool = ready ? fewMine(few.medium) : paintKeys(paintPaletteKey(), 'water');
+  if (!ready && !paintInit()) { host.innerHTML = '<span class="count">Mixing needs js/vendor/spectral.js, which did not load.</span>'; return; }
+  if (pool.length < 2) {
+    host.innerHTML = ready ? `<span class="count">Mark at least two of your ${FEW_THINGS[few.medium]} above.</span>`
+      : '<span class="count">Two paints at least are needed in the box above.</span>';
+    return;
+  }
   host.classList.remove('hidden');
   el('pgFewGo').disabled = true;
   const sig = fewSig();
@@ -163,6 +226,7 @@ function fewRender() {
   if (!res || few.sig !== fewSig()) { host.classList.add('hidden'); host.innerHTML = ''; return; }
   host.classList.remove('hidden');
   if (few.medium === 'copic') { fewRenderCopic(host, res); return; }
+  if (few.medium === 'pencils') { fewRenderPencils(host, res); return; }
   const rows = pg.swatches.map(s => ({ rgb: s.rgb, r: fewBest(s.rgb, res.keys) }));
   const close = rows.filter(x => x.r && x.r.dE < FEW_CLOSE).length;
   const far = rows.reduce((a, x) => (x.r?.dE ?? FEW_CAP) > (a.r?.dE ?? FEW_CAP) ? x : a, rows[0]);
@@ -186,11 +250,57 @@ function fewRenderCopic(host, res) {
   const fewer = res.keys.length < res.asked
     ? ` ${res.keys.length === 1 ? 'One marker is' : res.keys.length + ' markers are'} enough: another would not bring any colour noticeably closer.` : '';
   host.innerHTML =
-    `<h4>${res.keys.length === 1 ? 'One marker' : res.keys.length + ' markers'} for this palette</h4>` +
+    `<h4>${res.keys.length === 1 ? 'One marker' : res.keys.length + ' markers'} for this palette${fewOwnNote('copic')}</h4>` +
     '<div class="pg-few-paints">' + res.keys.map(k => `<span class="pg-few-paint">${chip(FEW_COPIC[k])}</span>`).join('') + '</div>' +
     `<p class="count">${close} of ${rows.length} colours land close (under ${FEW_CLOSE}); the furthest, ${esc(palgenName(far.rgb))} (${colHexOf(far.rgb)}), is ${far.r.dE.toFixed(1)} away.${fewer} ` +
     'A marker is not mixed with another, so each colour takes its nearest one; laid over a lighter one it goes darker. The markers\' colours are my estimate, from a short list - not the whole range.</p>' +
     '<div class="pg-few-rows">' + rows.map(x => `<div class="pg-few-row"><i style="background:${colHexOf(x.rgb)}" title="${colHexOf(x.rgb)} - the colour asked for"></i><span class="pg-few-paint">${chip(FEW_COPIC[x.r.key])}</span> <span class="count">${x.r.dE.toFixed(1)}</span></div>`).join('') + '</div>';
+}
+
+/* Pencils: what to lay down for each colour, in order. */
+function fewRenderPencils(host, res) {
+  const rows = pg.swatches.map(s => ({ rgb: s.rgb, r: fewLayers(s.rgb, res.keys) }));
+  const close = rows.filter(x => x.r.dE < FEW_CLOSE).length;
+  const far = rows.reduce((a, x) => x.r.dE > a.r.dE ? x : a, rows[0]);
+  const chip = m => `<i style="background:${m.hex}"></i>${esc(m.code)} ${esc(m.name)}`;
+  const fewer = res.keys.length < res.asked
+    ? ` ${res.keys.length === 1 ? 'One pencil is' : res.keys.length + ' pencils are'} enough: another would not bring any colour noticeably closer.` : '';
+  const step = (k, p) => `<span class="pg-few-paint">${chip(FEW_PENCIL[k])}</span> ${p}`;
+  const recipe = r => r.over
+    ? `${step(r.key, r.press)} <span class="count">then over it</span> ${step(r.over, r.pressOver)}`
+    : step(r.key, r.press);
+  host.innerHTML =
+    `<h4>${res.keys.length === 1 ? 'One pencil' : res.keys.length + ' pencils'} for this palette${fewOwnNote('pencils')}</h4>` +
+    '<div class="pg-few-paints">' + res.keys.map(k => `<span class="pg-few-paint">${chip(FEW_PENCIL[k])}</span>`).join('') + '</div>' +
+    `<p class="count">${close} of ${rows.length} colours land close (under ${FEW_CLOSE}); the furthest, ${esc(palgenName(far.rgb))} (${colHexOf(far.rgb)}), is ${far.r.dE.toFixed(1)} away.${fewer} ` +
+    "Light is a gentle stroke with the paper showing through; firm is pressed. Where two are named, lay the first and the second over it, then go over it with a damp brush to melt the layers - wet, the colour goes deeper than shown. The pencils' colours are my estimate, from a short list of Albrecht Duerer - not the whole range.</p>" +
+    '<div class="pg-few-rows">' + rows.map(x => `<div class="pg-few-row"><i style="background:${colHexOf(x.rgb)}" title="${colHexOf(x.rgb)} - the colour asked for"></i>` +
+      `<i style="background:${colHexOf(x.r.rgb)}" title="${colHexOf(x.r.rgb)} - what the layers lay down"></i><span class="pg-few-how">${recipe(x.r)} <span class="count">${x.r.dE.toFixed(1)}</span></span></div>`).join('') + '</div>';
+}
+
+// Said beside a result when the search was kept to what you marked.
+const fewOwnNote = kind => few.own[kind] ? ` <span class="count">(from the ${fewMine(kind).length} you marked)</span>` : '';
+
+/* Which markers or pencils you have: a chip for each on the list, pressed while it is yours.
+   Nothing marked yet is the whole list - every chip pressed. */
+function fewMineRender() {
+  const kind = few.medium, host = el('pgFewMine');
+  host.classList.toggle('hidden', !FEW_THINGS[kind]);
+  if (!FEW_THINGS[kind]) return;
+  const mine = new Set(fewMine(kind)), list = FEW_LISTS()[kind];
+  el('pgFewMineSum').textContent = few.own[kind]
+    ? `Which ${FEW_THINGS[kind]} do you have? ${mine.size} of ${list.length} marked`
+    : `Which ${FEW_THINGS[kind]} do you have? All ${list.length} on the list`;
+  el('pgFewMineList').innerHTML = list.map(m =>
+    `<button class="chip" type="button" data-few-own="${esc(m.code)}" aria-pressed="${mine.has(m.code)}" title="${esc(m.name)}"><i style="background:${m.hex}"></i>${esc(m.code)}</button>`).join('');
+}
+
+function fewSetMine(kind, codes) {
+  const all = FEW_LISTS()[kind].length;
+  few.own[kind] = codes && codes.length < all ? codes : null;
+  fewSave();
+  fewMineRender();
+  fewSync();
 }
 
 /* The palette or the paints changed under a result: it no longer answers. */
@@ -213,8 +323,19 @@ function initFewPaints() {
     few.medium = b.dataset.fewFor;
     fewSave();
     for (const c of forHost.children) c.setAttribute('aria-pressed', String(c === b));
+    fewMineRender();
     fewSync();
   });
+  fewMineRender();
+  el('pgFewMineList').addEventListener('click', e => {
+    const b = e.target.closest('[data-few-own]');
+    if (!b) return;
+    const kind = few.medium, mine = fewMine(kind), code = b.dataset.fewOwn;
+    fewSetMine(kind, mine.includes(code) ? mine.filter(c => c !== code) : [...mine, code]);
+    el('pgFewMineList').querySelector(`[data-few-own="${code}"]`)?.focus();
+  });
+  el('pgFewMineAll').addEventListener('click', () => fewSetMine(few.medium, null));
+  el('pgFewMineNone').addEventListener('click', () => fewSetMine(few.medium, []));
   const chips = el('pgFewN');
   chips.innerHTML = FEW_COUNTS.map(n => `<button class="chip" type="button" data-few="${n}" aria-pressed="${n === few.n}">${n}</button>`).join('');
   chips.addEventListener('click', e => {
