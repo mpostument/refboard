@@ -912,6 +912,7 @@ function renderGenSource() {
     `<span class="gen-source-what">${esc(GEN_WHAT[src.mode])}</span>` +
     `<div class="chips" role="group" aria-label="${esc(L.title)}">` +
     L.options.map(([label, v, hint]) => `<button type="button" class="chip" data-level="${v}" title="${esc(hint)}" aria-pressed="${v === src.level}">${esc(label)}</button>`).join('') + '</div>' +
+    (src.mode === 'study' ? `<button type="button" class="ghost" id="genSourceLights" title="The photo drawn again in four lights - soft, from the side, backlit, dramatic - to see the same thing lit differently">Four lights</button>` : '') +
     `<button type="button" class="ghost" id="genSourceClear" title="Back to making a picture from the choices alone">Drop it</button>`;
 }
 
@@ -1153,6 +1154,7 @@ function renderGenResults(list, total = list.length) {
       `<button type="button" class="gen-vary" title="More like it - the same picture, a little or a lot changed">Vary</button>` +
       `<button type="button" class="gen-lights" title="Four pictures of it: soft, from the side, backlit, dramatic">Light it four ways</button>` +
       `<button type="button" class="gen-media" title="It drawn in your other media - watercolour, ink, Copic markers, pencil - to put side by side">In other media</button>` +
+      `<button type="button" class="gen-pull" title="Pull its colours to the Holbein box or your palette, by as much as you like, and see which went where">Colours to a palette...</button>` +
       `<hr>` +
       `<div class="gen-menu-h" aria-hidden="true">Learn from it</div>` +
       `<button type="button" class="gen-steps" title="How to draw it - step by step">How to draw it</button>` +
@@ -1175,6 +1177,7 @@ function renderGenResults(list, total = list.length) {
     li.querySelector('.gen-compare')?.addEventListener('click', () => genCompare(u));
     li.querySelector('.gen-lights').addEventListener('click', () => genLights(u));
     li.querySelector('.gen-media').addEventListener('click', () => genMedia(u));
+    li.querySelector('.gen-pull').addEventListener('click', () => genMoreThen(() => genPullOpen(u)));
     li.querySelector('.gen-vary').addEventListener('click', async () => {
       const url = await storeFileUrl(u.file);
       if (!url) return;
@@ -1329,6 +1332,12 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null, ui 
   }
 }
 
+// A series, a movement, Colours to a palette and a photo's lights are in js/genmore.js, loaded on first use.
+async function genMoreThen(run) {
+  try { await loadSection('genmore'); } catch { el('genStatus').textContent = 'That could not load - check the connection.'; return; }
+  run();
+}
+
 async function initGenerate() {
   loadGenChoices();
   el('genChoices').addEventListener('click', e => {
@@ -1372,11 +1381,13 @@ async function initGenerate() {
     el('genPromptBody').querySelector(t ? `[data-avoid="${CSS.escape(t.dataset.avoid)}"]` : '.gen-avoid button')?.focus();
   });
   el('genExtra').addEventListener('input', renderGenPrompt);
+  el('genMore').addEventListener('toggle', () => { if (el('genMore').open) genMoreThen(() => genMoreInit()); });
   el('genGo').addEventListener('click', () => genBusy ? genStop() : runGenerate());
   el('genPick').addEventListener('click', () => el('genPickInput').click());
   el('genPickInput').addEventListener('change', async e => { await genPicked(e.target.files[0]); e.target.value = ''; });
   el('genSource').addEventListener('click', e => {
     if (e.target.closest('#genSourceClear')) { clearGenSource(); el('genPick').focus(); return; }
+    if (e.target.closest('#genSourceLights')) { genMoreThen(() => genPhotoLights()); return; }
     const b = e.target.closest('[data-level]');
     if (!b || !genSource) return;
     genSource.level = Number(b.dataset.level);
