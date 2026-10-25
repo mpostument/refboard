@@ -76,9 +76,15 @@ the rail, Skip to the content, and a live region that says which section
 opened and which pose is up; a test checks that every control on every
 screen has a name a screen reader can say.
 
-- **Fast loading, the rest.** The trainers (`train.js`, 1100 lines) still
-  load with the page - its colour helpers are shared with the paint engine
-  and the Colour studio, and want moving out first.
+- **Fast loading, the rest.** In place for the trainers: `js/train.js` (1040
+  lines) is now `<template id="lazy-train">` and loads when Train is first
+  opened, or Ctrl+K opens a trainer; the colour maths, `clamp01`/`rnd`/`pick`,
+  `loadImg` and the library picker it shared with the paint engine and the
+  Colour studio moved to `js/colourmath.js`, which loads with the page. Ctrl+K
+  lists the trainers before their code is there, from its own
+  `TRAINER_COMMANDS`, and a test checks the list says what the trainers say.
+  Not measured on a slow connection: only that the page no longer asks for the
+  file.
 - **Accessibility, the rest.** The 3D view's canvas and the trainers'
   canvases are pointer-only; each wants a keyboard way to do what a click
   does there.

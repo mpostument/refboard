@@ -1318,7 +1318,7 @@ function setView(next) {
   // Initialised on first visit, not at boot: a WebGL context and a shadow map
   // are real GPU memory, and most visits to the board never open this view.
   if (forms) openLazyView('forms', () => showForms());
-  if (train) showTrain();
+  if (train) openLazyView('train', () => showTrain());
   if (colour) openLazyView('colour', () => showColour());
   if (palette) openLazyView('palette', () => showPalette());
   if (museum) openLazyView('museum', () => showMuseum());

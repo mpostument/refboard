@@ -439,7 +439,7 @@
         <div class="warm-pic"><img alt="The pose to draw"><p class="warm-say" role="status"></p></div>
       </div>
 
-      <!-- Trainers - see TRAINERS. Built by showTrain(). -->
+      <!-- Trainers - see TRAINERS in js/train.js, which loads when this view is first opened. Built by showTrain(). -->
       <div id="viewTrain" class="hidden"></div>
 
       <!-- Colour studio - see showColour(). Like the drop zone it needs no
@@ -2384,7 +2384,7 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=caf7e3b6"></script>
-<script src="js/setup.js?v=5f07837d"></script>
+<script src="js/setup.js?v=a98ae2fc"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=3136007f"></script>
 <script src="js/uploads.js?v=9c23696a"></script>
@@ -2401,9 +2401,9 @@
 <script src="js/stages.js?v=75696626"></script>
 <script src="js/pins.js?v=b448b387"></script>
 <script src="js/workspace.js?v=85afea61"></script>
-<script src="js/train.js?v=43e428f9"></script>
+<script src="js/colourmath.js?v=ae688fd8"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=ab44481e"></script>
+<script src="js/command.js?v=6fb37b6f"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
 <script src="js/whatsnew.js?v=2a30858f"></script>
 <script src="js/edges.js?v=055fd538"></script>
@@ -2451,6 +2451,9 @@
 <script src="js/forms-settings.js?v=47a50035"></script>
 <script src="js/forms.js?v=65c873cc"></script>
 <script src="js/forms-api.js?v=445e5a7b"></script>
+</template>
+<template id="lazy-train">
+<script src="js/train.js?v=fdee085e"></script>
 </template>
 <template id="lazy-backup">
 <script src="js/portfolio.js?v=6dcc64d8"></script>

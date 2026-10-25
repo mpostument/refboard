@@ -20,6 +20,22 @@ const SHOT_COMMANDS = [
   ['tele', 'Telephoto', 'long lens flat compressed far'],
   ['fish', 'Fisheye', 'fish eye distortion curved bent lens'],
 ];
+// The trainers (TRAINERS, in js/train.js, which loads when Train is first
+// opened - so listed here too: id, title, blurb). A test checks the two agree.
+const TRAINER_COMMANDS = [
+  ['value', 'Value', 'Read how light a patch really is - on a surround built to fool you. Then do it in colour.'],
+  ['colour', 'Colour', 'Mix the target by hue, chroma and value - and see which of the three you missed, and which way.'],
+  ['anatomy', 'Anatomy', 'Where the landmarks fall on an eight-heads figure and on the head - click the height, see the canon.'],
+  ['measure', 'Angles and proportions', 'Copy an angle by eye; say how many times one length goes into another. The two things you measure all day.'],
+  ['lines', 'Lines and ellipses', 'Straight lines, circles and ellipses in one stroke - with a tablet or a mouse. Drawn from the shoulder.'],
+  ['perspective', 'Perspective', 'Find where a box\'s edges meet, and where your eye level is - from the box alone.'],
+  ['gesture', 'Gesture', 'A random pose on the 3D figure, timed - then hidden while you finish. Judge it against the pose, or lay your photo over it.'],
+  ['negative', 'Negative space', 'See the shapes around the figure instead of the figure - pick the true one from three near-misses.'],
+  ['tones', 'Tone map', 'On real pictures: which spot is darker, where the darkest dark and lightest light are - judged squinting.'],
+  ['temperature', 'Colour temperature', 'Which of two is warmer - two reds, two blues, two greys - with value and intensity changed to throw you.'],
+  ['edges', 'Edges', 'Which edge is hardest, which softest - when contrast is set to fool you.'],
+  ['ellipses', 'Ellipses and centres', 'Fit a cylinder\'s ellipse to its axis; find the true middle of a rectangle in perspective.'],
+];
 // Other words a tool is looked for by, keyed by its element's id.
 const COMMAND_WORDS = {
   btnHead: 'face construction ball thirds loomis anime eyes',
@@ -162,10 +178,10 @@ function collectCommands() {
         words: `${COMMAND_WORDS[id] || ''} ${stage || ''}`, run: () => b.click(),
       });
     }
-    for (const t of TRAINERS) {
+    for (const [id, title, blurb] of TRAINER_COMMANDS) {
       out.push({
-        id: 'train-' + t.id, label: t.title + ' trainer', hint: 'Train', words: 'drill practice ' + (t.blurb || ''),
-        run: () => { setView({ kind: 'train' }); startTrainer(t.id); },
+        id: 'train-' + id, label: title + ' trainer', hint: 'Train', words: 'drill practice ' + blurb,
+        run: async () => { setView({ kind: 'train' }); await loadSection('train'); startTrainer(id); },
       });
     }
   }
