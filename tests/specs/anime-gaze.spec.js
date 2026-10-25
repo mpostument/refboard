@@ -100,3 +100,16 @@ test('walk and run: four key poses each; a run has a flight with both feet off t
   await page.locator('#awkGait [data-v=run]').click();
   await expect(page.locator('#awkNote')).toContainText('flight');
 });
+
+test('balloons: six shapes on a sheet, each says what it is for, and the rules for a page follow', async ({ page }) => {
+  await openApp(page);
+  const r = await run(page, () => ({ shapes: Object.keys(AN_BALLOONS).map(k => anBalloonShape(k, 0, 0)), sheet: anBalloonSheet() }));
+  expect(new Set(r.shapes).size).toBe(6);
+  expect((r.sheet.match(/<text /g) || []).length).toBe(6);
+  await openSection(page, 'anime');
+  await page.locator('#asMode [data-mode=balloons]').click();
+  await expect(page.locator('#abbStage svg')).toBeVisible();
+  await expect(page.locator('#abbNote li')).toHaveCount(6 + 4);
+  await expect(page.locator('#abbNote')).toContainText('mouth, not to the face');
+  await expect(page.locator('#abbNote')).toContainText('reading');
+});

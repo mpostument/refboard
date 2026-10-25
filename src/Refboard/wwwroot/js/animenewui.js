@@ -6,7 +6,7 @@
 "use strict";
 
 const ANN_KEY = 'refboard.animeNew.v1';
-const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth', 'skirt', 'walk'];
+const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth', 'skirt', 'walk', 'balloons'];
 
 function annLoad() {
   let s = {};
@@ -177,6 +177,13 @@ function annInit() {
   el('acnRelaxed').addEventListener('click', () => { annPatch({ shoulders: 8, hips: -10, shift: 12 }); annConstructRender(); });
   adWire('acn', () => ann.svg.construct, 'anime-construction', 'anime-construction', () => { const s = annLoad(); return Math.abs(s.shoulders - s.hips) >= 8 ? 'contrapposto, standing, weight on one leg' : 'standing, symmetrical, straight posture'; });
 
+  /* Speech balloons. */
+  annPane('abbPane', 'The speech balloons',
+    'The six balloons of a manga page: speech, thought, shout, whisper, narration and the voice from off the panel. What each shape says, where its tail goes and how the balloons are placed on a page.',
+    annSaveRow('abb'),
+    `<div class="ad-stage ad-wide" id="abbStage"></div><div class="count pg-note" id="abbNote"></div>`);
+  adWire('abb', () => ann.svg.balloons, 'manga-balloons', 'manga-balloons', null);
+
   /* The walk and the run. */
   annPane('awkPane', 'The walk and the run',
     'The four key poses of a walk or a run from the side: contact, down, passing and up (a run has a flight instead). The far arm and leg are grey. Draw these first, then the in-betweens.',
@@ -234,6 +241,13 @@ function annShow(mode) {
   if (mode === 'mouth') annMouthRender();
   if (mode === 'skirt') annSkirtRender();
   if (mode === 'walk') annGaitRender();
+  if (mode === 'balloons') annBalloonsRender();
+}
+
+function annBalloonsRender() {
+  ann.svg.balloons = anBalloonSheet();
+  el('abbStage').innerHTML = ann.svg.balloons;
+  el('abbNote').innerHTML = `<ul>${Object.values(AN_BALLOONS).map(b => `<li><b>${esc(b.label)}.</b> ${esc(b.says)}</li>`).join('')}</ul><ul>${AN_BALLOON_RULES.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
 }
 
 function annGaitRender() {

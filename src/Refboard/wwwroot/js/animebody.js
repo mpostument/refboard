@@ -234,3 +234,57 @@ function anGaitNotes(o) {
   return [G.head, ...G.poses.map((p, i) => `${i + 1}. ${p.name}. ${p.says}`),
     'Draw each key pose first, then the drawings between them (the in-betweens). At twelve drawings a second, a walk of two steps is eight to twelve drawings, each held for two frames. The dashed orange line is the hip height: see how it rises and falls.'];
 }
+
+/* ---- speech balloons */
+
+const AN_BALLOONS = {
+  speech: { label: 'Speech', says: 'An oval or a rounded shape, with a tail that points at the mouth - to the mouth, not to the face. One tail for one speaker; the tail is a thin triangle, a little curved.' },
+  thought: { label: 'Thought', says: 'A cloud of bumps, with a trail of two or three small circles toward the head. The line is thinner than speech: a thought is quiet.' },
+  shout: { label: 'Shout', says: 'A spiked burst: the points are sharp and uneven, and the lettering inside is bigger and bolder. Use it rarely, or it stops meaning anything.' },
+  whisper: { label: 'Whisper', says: 'The same oval as speech, but drawn with a dashed line, and the lettering smaller and lighter.' },
+  narration: { label: 'Narration', says: 'A plain rectangle with no tail, set in the corner of the panel: the voice of the story, not of anyone in the picture.' },
+  offscreen: { label: 'Off the panel', says: 'The tail leaves the balloon and runs to the edge of the panel, toward the speaker who is out of sight: we hear her, we do not see her.' },
+};
+const AN_BALLOON_RULES = [
+  'Balloons are read from the top left to the bottom right (and from the top right to the left in a manga read the Japanese way): put the first speaker\'s balloon highest and furthest in the reading direction.',
+  'Keep the face, the hands and the main action out from under a balloon: draw the figures first, then find the empty places for the balloons.',
+  'Leave a margin of about one letter\'s height between the lettering and the edge of the balloon, and keep the text centred in it.',
+  'A balloon may cross the border of a panel to join two panels, but not more than one at a time.',
+];
+
+// One balloon drawn at (ox, oy) in a cell 150 wide and 120 tall: the outline, the placeholder lines of text and the tail.
+function anBalloonShape(k, ox, oy) {
+  const ink = AD_INK, P = (x, y) => `${ox + x} ${oy + y}`, fill = '#fff';
+  const lines = (n, x0, x1, y0, dy) => Array.from({ length: n }, (_, i) => `<path d="M${P(x0 + (i % 2) * 6, y0 + i * dy)} L${P(x1 - (i % 2) * 6, y0 + i * dy)}" stroke="#b6bac6" stroke-width="3.2" stroke-linecap="round"/>`).join('');
+  switch (k) {
+    case 'thought': {
+      let bumps = '';
+      for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; bumps += `<circle cx="${ox + 75 + 46 * Math.cos(a)}" cy="${oy + 44 + 26 * Math.sin(a)}" r="13" fill="${fill}" stroke="${ink}" stroke-width="1.6"/>`; }
+      return bumps + `<ellipse cx="${ox + 75}" cy="${oy + 44}" rx="46" ry="26" fill="${fill}"/>` + lines(2, 44, 106, 38, 13) +
+        `<circle cx="${ox + 50}" cy="${oy + 88}" r="6" fill="${fill}" stroke="${ink}" stroke-width="1.6"/><circle cx="${ox + 38}" cy="${oy + 102}" r="4" fill="${fill}" stroke="${ink}" stroke-width="1.6"/>`;
+    }
+    case 'shout': {
+      const pts = [];
+      for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2, r = i % 2 ? 0.7 : 1.05 + (i % 4 === 0 ? 0.12 : 0); pts.push(`${ox + 75 + 62 * r * Math.cos(a)},${oy + 50 + 36 * r * Math.sin(a)}`); }
+      return `<polygon points="${pts.join(' ')}" fill="${fill}" stroke="${ink}" stroke-width="2.6" stroke-linejoin="miter"/>` + lines(2, 46, 104, 44, 14).replace(/3\.2/g, '4.6');
+    }
+    case 'whisper':
+      return `<ellipse cx="${ox + 75}" cy="${oy + 46}" rx="56" ry="32" fill="${fill}" stroke="${ink}" stroke-width="2" stroke-dasharray="5 4"/><path d="M${P(48, 74)} L${P(36, 100)} L${P(66, 78)}" fill="${fill}" stroke="${ink}" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>` + lines(2, 44, 106, 42, 12);
+    case 'narration':
+      return `<rect x="${ox + 14}" y="${oy + 22}" width="122" height="52" fill="#fbf7e8" stroke="${ink}" stroke-width="2.2"/>` + lines(3, 28, 122, 36, 12);
+    case 'offscreen':
+      return `<rect x="${ox + 4}" y="${oy + 4}" width="142" height="108" fill="none" stroke="#c4c8d4" stroke-width="2" stroke-dasharray="2 4"/><ellipse cx="${ox + 70}" cy="${oy + 44}" rx="46" ry="28" fill="${fill}" stroke="${ink}" stroke-width="2.2"/><path d="M${P(100, 62)} Q${P(124, 70)} ${P(146, 62)} Q${P(124, 76)} ${P(104, 70)}Z" fill="${fill}" stroke="${ink}" stroke-width="2"/>` + lines(2, 44, 96, 38, 13);
+    default:
+      return `<ellipse cx="${ox + 75}" cy="${oy + 46}" rx="56" ry="32" fill="${fill}" stroke="${ink}" stroke-width="2.4"/><path d="M${P(48, 74)} Q${P(38, 94)} ${P(30, 106)} Q${P(52, 94)} ${P(68, 77)}Z" fill="${fill}" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/><path d="M${P(52, 73)} L${P(66, 75)}" stroke="${fill}" stroke-width="4"/>` + lines(2, 44, 106, 40, 13);
+  }
+}
+
+function anBalloonSheet() {
+  const keys = Object.keys(AN_BALLOONS), W = 3 * 160 + 10, H = 2 * 154 + 10;
+  let s = `<rect width="${W}" height="${H}" fill="#fff"/>`;
+  keys.forEach((k, i) => {
+    const ox = 10 + (i % 3) * 160, oy = 8 + Math.floor(i / 3) * 154;
+    s += `<rect x="${ox}" y="${oy}" width="150" height="120" rx="8" fill="#eef0f5" stroke="#dde"/>` + anBalloonShape(k, ox, oy) + `<text x="${ox + 75}" y="${oy + 138}" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${esc(AN_BALLOONS[k].label)}</text>`;
+  });
+  return adSvgOpen([0, 0, W, H], 'Speech balloon shapes') + s + '</svg>';
+}
