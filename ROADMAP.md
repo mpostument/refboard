@@ -484,9 +484,18 @@ shoulder and other two-figure shots, and a lens's distortion on a photo.
   convenience store, a rooftop with a fence, a station platform, a bedroom
   and a school gate with cherry trees; furniture you can move; windows that
   show a sky.
-- **Manga page layout.** Panel templates for a page, right-to-left
-  reading order, where speech balloons go - for pages and comics, not
-  only single illustrations.
+- **Manga page layout.** In place (`js/mangapage.js`, Perspective grid > Manga
+  page): twelve layouts for a page of three to six panels, as trees of splits cut
+  into four-cornered shapes, so the gutters between rows can be slanted; panels
+  numbered in the reading order (a row from its right edge to its left, a column
+  from the top down; or left to right), the gutter and margin in millimetres on
+  B6 to B4 paper, places for up to three balloons in a panel going down and
+  across the way the eye goes, an eye path, and a note on which panel is the
+  largest and what the slant does. Printed at the paper's size, saved as SVG, or
+  kept in My work tagged `manga page`. A page of panels, not of drawn pictures: no
+  two-page spread yet, no panels you move or cut by hand, no Japanese manuscript
+  frame (the trim and the safe area of a real manuscript were not checked), balloons
+  as places, not shapes.
 
 - **Your own anime character in 3D (VRoid / VRM).** VRoid Studio (free)
   builds anime characters and saves them as `.vrm`, a kind of glTF that

@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'manga-page', title: 'A manga page to draw on',
+    text: "Perspective grid > Manga page: choose three to six panels and one of the layouts, and the page comes numbered in the order it is read - right to left, top to bottom, or left to right for a Western comic - with places for the speech balloons in the order they are read, a slant for the gutters of a fast page, and a note on which panel the eye will stay on. Print it at the paper's real size, save it as SVG, or keep it in My work to open beside your drawing.",
+    act: 'Open it', run: () => { try { localStorage.setItem('refboard.perspectiveMode.v1', 'manga'); } catch { /* the sheet opens */ } setView({ kind: 'perspective' }); } },
   { id: 'weather-more', title: 'Fog, a rainbow, lightning, fireflies and light under water',
     text: "Practise > Handbook > Light and weather has five more lessons, each with a small picture to move and what to leave as bare paper. And you now choose once - Watercolour or Ink and markers - and every lesson of the chapter shows only the paragraph for it.",
     act: 'Open it', run: () => setView({ kind: 'handbook' }) },

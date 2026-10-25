@@ -60,7 +60,7 @@ const COMMAND_WORDS = {
   'view-drop': 'open file upload photo check own image video',
   'view-forms': '3d model mannequin head asaro planes light shadow anime cel toon shading hair',
   'view-colour': 'palette wheel gamut mask mix recipe paint watercolour green red blue yellow',
-  'view-perspective': 'perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
+  'view-perspective': 'manga page panels layout comic balloons speech storyboard perspective grid vanishing point horizon eye level one two three point 1 2 3 box room street building print sheet template paper draw over',
   'view-palette': 'palette generator colours harmony scheme swatches coolors complementary analogous triadic random lock hex seasons season spring summer autumn winter morning noon dusk fog landscape times of day',
   'view-train': 'drill practice exercise test',
   'view-sky': 'sky skies cloud clouds cumulus cirrus stratus storm sunset sunrise dawn dusk golden hour night stars moon weather wet drying dry humidity temperature wind plein air forecast rain study reference',

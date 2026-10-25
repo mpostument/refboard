@@ -290,7 +290,7 @@ function ppShowModes() {
     el('pgMode').addEventListener('click', e => { const b = e.target.closest('button'); if (b) ppSetMode(b.dataset.mode); });
   }
   let mode = 'sheet';
-  try { if (localStorage.getItem(PP_MODE_KEY) === 'people') mode = 'people'; } catch { /* sheet */ }
+  try { const m = localStorage.getItem(PP_MODE_KEY); if (m === 'people' || m === 'manga') mode = m; } catch { /* sheet */ }
   ppSetMode(mode, false);
 }
 
@@ -299,5 +299,7 @@ function ppSetMode(mode, save = true) {
   for (const b of el('pgMode').children) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   el('pgSheetMode').classList.toggle('hidden', mode !== 'sheet');
   el('pgPeopleMode').classList.toggle('hidden', mode !== 'people');
+  el('pgMangaMode').classList.toggle('hidden', mode !== 'manga');
   if (mode === 'people') ppRender(true);
+  if (mode === 'manga') mpShow();
 }
