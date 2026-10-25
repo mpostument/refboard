@@ -228,9 +228,57 @@ test('the switch is in three groups and every mode shows only its own pane', asy
   await openSection(page, 'anime');
   await expect(page.locator('#asMode .am-group')).toHaveText(['Colour', 'Drawing', 'Scene and pose']);
   const modes = await page.locator('#asMode [data-mode]').evaluateAll(bs => bs.map(b => b.dataset.mode));
-  expect(modes.length).toBe(23);
+  expect(modes.length).toBe(25);
   for (const m of modes) {
     await page.locator(`#asMode [data-mode="${m}"]`).click();
     await expect(page.locator('#viewAnime .pg-body:not(.hidden)')).toHaveCount(1);
   }
+});
+
+test('construction: the weight is on the higher hip, its foot under the balance line, and the notes follow the tilts', async ({ page }) => {
+  await openApp(page);
+  const r = await run(page, () => {
+    const a = anConstruct({ shoulders: 8, hips: -10, shift: 12 }), b = anConstruct({ shoulders: 8, hips: 10, shift: 0 });
+    const level = anConstruct({ shoulders: 0, hips: 0, shift: 0 });
+    return {
+      // Hips -10: the right side of the picture goes up, so the weight is on the right leg.
+      aLeft: a.weightLeft, bLeft: b.weightLeft, onLine: Math.abs(a.wAnkle[0] - a.balance) < 0.01, floor: a.wAnkle[1] === a.floor,
+      free: a.fAnkle[0] !== a.wAnkle[0], levelSame: level.LH[1] === level.RH[1],
+      relaxed: anConstructNotes({ shoulders: 8, hips: -10, shift: 0 }).join(' '), plank: anConstructNotes({ shoulders: 12, hips: 12, shift: 0 }).join(' '), stiff: anConstructNotes({ shoulders: 0, hips: 0, shift: 0 }).join(' '),
+      far: anConstructNotes({ shoulders: 8, hips: -10, shift: 35 }).join(' '), svg: anConstructSvg({ shoulders: 8, hips: -10, shift: 12 }),
+    };
+  });
+  expect(r.aLeft).toBe(false);
+  expect(r.bLeft).toBe(true);
+  expect(r.onLine).toBe(true); expect(r.floor).toBe(true); expect(r.free).toBe(true); expect(r.levelSame).toBe(true);
+  expect(r.relaxed).toContain('contrapposto');
+  expect(r.plank).toContain('plank');
+  expect(r.stiff).toContain('attention');
+  expect(r.far).toContain('far over the pelvis');
+  expect(r.svg).toContain('balance');
+  await openSection(page, 'anime');
+  await page.locator('#asMode [data-mode=construct]').click();
+  await expect(page.locator('#acnStage svg')).toBeVisible();
+  await page.locator('#acnLevel').click();
+  await expect(page.locator('#acnNote')).toContainText('attention');
+  await page.locator('#acnRelaxed').click();
+  await expect(page.locator('#acnNote')).toContainText('contrapposto');
+  await page.locator('#acnSh').fill('-20');
+  await expect(page.locator('#acnStage svg')).toContainText('shoulders -20');
+});
+
+test('the light on a face: eight lights are eight pictures, from the front it has the least shadow', async ({ page }) => {
+  await openApp(page);
+  const r = await run(page, () => {
+    const svgs = Object.keys(AN_FACE_LIGHTS).map(k => anFaceLightSvg({ light: k, skin: '#f1c9a5' }));
+    return { n: svgs.length, distinct: new Set(svgs).size, ok: svgs.every(s => s.startsWith('<svg') && s.includes('clipPath')) };
+  });
+  expect(r.n).toBe(8); expect(r.distinct).toBe(8); expect(r.ok).toBe(true);
+  await openSection(page, 'anime');
+  await page.locator('#asMode [data-mode=facelight]').click();
+  await expect(page.locator('#alfStage svg')).toBeVisible();
+  await page.locator('#alfLight [data-v=below]').click();
+  await expect(page.locator('#alfNote')).toContainText('ghost story');
+  await page.locator('#alfLight [data-v=back]').click();
+  await expect(page.locator('#alfNote')).toContainText('rim light');
 });

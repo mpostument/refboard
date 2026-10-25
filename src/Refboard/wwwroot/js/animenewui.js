@@ -6,7 +6,7 @@
 "use strict";
 
 const ANN_KEY = 'refboard.animeNew.v1';
-const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare'];
+const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight'];
 
 function annLoad() {
   let s = {};
@@ -15,6 +15,7 @@ function annLoad() {
   const num = (v, lo, hi, d) => (v == null || v === '' || !Number.isFinite(+v) ? d : adClamp(+v, lo, hi));
   return {
     secs: AN_DRILL_SECS.includes(+s.secs) ? +s.secs : 60,
+    shoulders: Math.round(num(s.shoulders, -30, 30, 8)), hips: Math.round(num(s.hips, -30, 30, -10)), shift: Math.round(num(s.shift, -40, 40, 12)), light: key(s.light, AN_FACE_LIGHTS, 'ul'),
     tone: key(s.tone, AN_TONE_KINDS, 'liner'),
     fx: key(s.fx, AN_FX, 'speed'), dir: key(s.dir, AN_FX_DIRS, 'h'), density: Math.round(num(s.density, 1, 3, 2)), seed: Math.round(num(s.seed, 1, 99999, 7)),
     aspect: key(s.aspect, AN_FRAMES, '16:9'),
@@ -162,6 +163,28 @@ function annInit() {
   el('acpOpacity').addEventListener('input', () => { annPatch({ opacity: +el('acpOpacity').value }); annCmpRender(); });
   el('acpTimer').addEventListener('click', annSittingToggle);
   annPngWire('acp', () => el('acpCanvas'), 'anime-compare.png', 'Reference and drawing');
+
+  /* Construction. */
+  annPane('acnPane', 'The construction',
+    'The body as blocks: the head, the ribcage, the pelvis and the limbs. Tilt the shoulders and the hips against each other and the weight goes on the leg of the higher hip; its foot is put under the balance line from the neck. The picture shows what a standing figure needs to stay up.',
+    annRange('Shoulders', 'acnSh', -30, 30, 1, 8) + annRange('Hips', 'acnHp', -30, 30, 1, -10) + annRange('Chest over the pelvis', 'acnShift', -40, 40, 1, 12) +
+    `<div class="pg-row"><button type="button" class="ghost" id="acnLevel" title="Both level: a figure standing at attention">Level</button><button type="button" class="ghost" id="acnRelaxed" title="A relaxed contrapposto">Relaxed</button></div>` + annSaveRow('acn') +
+    `<div class="pg-row"><button type="button" class="ghost hidden" id="acnToGenerate" title="Add the words for this to Generate's More tags">Use in Generate</button></div>`,
+    `<div class="ad-stage" id="acnStage"></div><div class="count pg-note" id="acnNote"></div>`);
+  for (const [id, k] of [['acnSh', 'shoulders'], ['acnHp', 'hips'], ['acnShift', 'shift']]) el(id).addEventListener('input', () => { annPatch({ [k]: +el(id).value }); annConstructRender(); });
+  el('acnLevel').addEventListener('click', () => { annPatch({ shoulders: 0, hips: 0, shift: 0 }); annConstructRender(); });
+  el('acnRelaxed').addEventListener('click', () => { annPatch({ shoulders: 8, hips: -10, shift: 12 }); annConstructRender(); });
+  adWire('acn', () => ann.svg.construct, 'anime-construction', 'anime-construction', () => { const s = annLoad(); return Math.abs(s.shoulders - s.hips) >= 8 ? 'contrapposto, standing, weight on one leg' : 'standing, symmetrical, straight posture'; });
+
+  /* The light on a face. */
+  annPane('alfPane', 'The light on a face',
+    'The same face in cel shading, lit from one of eight sides: where the shadow lies on the cheek, how the nose and the chin throw theirs, and what the bangs do to the forehead. The skin colour is the one of Layers.',
+    annRow('Light from', 'alfLight') + `<div class="pg-row"><span class="pg-label">Skin</span><input type="color" id="alfSkin" value="#f1c9a5" aria-label="Skin colour"></div>` + annSaveRow('alf') +
+    `<div class="pg-row"><button type="button" class="ghost hidden" id="alfToGenerate" title="Add the words for this light to Generate's More tags">Use in Generate</button></div>`,
+    `<div class="ad-stage ad-face" id="alfStage"></div><div class="count pg-note" id="alfNote"></div>`);
+  adMakeChips('alfLight', Object.entries(AN_FACE_LIGHTS).map(([k, v]) => [k, v.label]), v => { annPatch({ light: v }); annFaceLightRender(); });
+  el('alfSkin').addEventListener('input', () => { amuPatch({ skin: el('alfSkin').value }); annFaceLightRender(); });
+  adWire('alf', () => ann.svg.facelight, 'anime-face-light', 'anime-face-light', () => ({ ul: 'light from the upper left', ur: 'light from the upper right', l: 'light from the side, half-lit face', r: 'light from the side, half-lit face', top: 'light from above, overhead lighting', front: 'front lighting, flat lighting', below: 'light from below, underlighting', back: 'backlighting, rim lighting, face in shadow' }[annLoad().light]));
 }
 
 // The pane for a mode has just been shown.
@@ -175,6 +198,26 @@ function annShow(mode) {
   if (mode === 'legs') annLegsRender();
   if (mode === 'silhouette') annSilRender();
   if (mode === 'compare') { adPress('acpMinutes', s.minutes); annCmpRender(); }
+  if (mode === 'construct') annConstructRender();
+  if (mode === 'facelight') annFaceLightRender();
+}
+
+/* ---- construction and the light on a face */
+
+function annConstructRender() {
+  const s = annLoad();
+  el('acnSh').value = s.shoulders; el('acnHp').value = s.hips; el('acnShift').value = s.shift;
+  ann.svg.construct = anConstructSvg({ shoulders: s.shoulders, hips: s.hips, shift: s.shift });
+  el('acnStage').innerHTML = ann.svg.construct;
+  el('acnNote').innerHTML = anConstructNotes({ shoulders: s.shoulders, hips: s.hips, shift: s.shift }).map(esc).join(' ') + ' <small>The blocks are a plan, not a drawing: the figure is seven heads tall and seen from the front.</small>';
+}
+
+function annFaceLightRender() {
+  const s = annLoad(), skin = amuLoad().skin;
+  adPress('alfLight', s.light); el('alfSkin').value = skin;
+  ann.svg.facelight = anFaceLightSvg({ light: s.light, skin });
+  el('alfStage').innerHTML = ann.svg.facelight;
+  el('alfNote').innerHTML = `<b>${esc(AN_FACE_LIGHTS[s.light].label)}.</b> ${esc(AN_FACE_LIGHTS[s.light].says)} <small>The shadow is the skin colour turned cool and darker; its edge stays hard in cel shading.</small>`;
 }
 
 /* ---- gesture */

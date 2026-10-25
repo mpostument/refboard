@@ -461,6 +461,14 @@ const GEN_CHOICES = [
     { id: 'hard', label: 'Hard - on dry paper', tags: 'hard edges, sharp edges, layered glazing, flat wash', words: 'hard edges',
       avoid: 'blurry, color bleeding' },
   ] },
+  // The paper under the paint or the line: watercolour depends on it more than on any tag. Toned paper takes the white
+  // background out (Background below), or the two pull against each other and the page comes out white again.
+  { id: 'paper', label: 'Paper', when: ch => ch.medium !== 'flat', options: [
+    ANY,
+    { id: 'rough', label: 'Rough', tags: 'rough paper, textured paper, paper grain', words: 'rough paper', hint: 'Cold-pressed: a visible grain the paint settles into' },
+    { id: 'smooth', label: 'Smooth', tags: 'smooth paper, hot-pressed paper', words: 'smooth paper', hint: 'Hot-pressed: little grain, the paint runs further' },
+    { id: 'toned', label: 'Toned', tags: 'beige paper, aged paper, toned paper', words: 'toned paper', hint: 'Cream or tan paper instead of white: the lights are the paper itself' },
+  ] },
   // A palette from Palettes (js/palette.js), sent with its Use in Generate.
   // The model knows no hex, only the words it learnt from - so the palette
   // goes as those (genPaletteTags). Not for ink or pencil: they are grey.
@@ -502,7 +510,7 @@ const GEN_CHOICES = [
   ] },
   // A landscape or a street is its own background.
   { id: 'ground', label: 'Background', for: ['character', 'nature', 'animal'], options: [
-    { id: 'plain', label: 'Plain', tags: 'simple background, white background', words: '' },
+    { id: 'plain', label: 'Plain', tags: ch => ch.paper === 'toned' && ch.medium !== 'flat' ? 'simple background' : 'simple background, white background', words: '' },
     { id: 'scene', label: 'A place', tags: 'outdoors, scenery', words: 'scene' },
   ] },
 ];
@@ -516,12 +524,12 @@ const GEN_GROUPS = [
   ['who', 'The character', ['who', 'hair', 'parting', 'colour', 'eyes', 'eyeShape', 'expression', 'clothes']],
   ['shot', 'The shot', ['framing', 'view', 'lens', 'pose', 'place', 'building', 'seen', 'thing', 'animal', 'size']],
   ['light', 'Light and time', ['time', 'weather', 'season', 'light']],
-  ['picture', 'The picture', ['medium', 'edges', 'colours', 'lock', 'detail', 'ground']],
+  ['picture', 'The picture', ['medium', 'paper', 'edges', 'colours', 'lock', 'detail', 'ground']],
 ];
 
 const GEN_DEFAULTS = { style: 'anime', subject: 'character', character: '', look: '', setting: 'any', era: 'any', who: 'girl', hair: 'any', parting: 'any', colour: 'any', eyes: 'any', eyeShape: 'any', expression: 'any', clothes: 'setting', framing: 'bust',
   view: 'front', lens: 'any', pose: 'any', place: 'mountains', building: 'street', seen: 'street', thing: 'flowers', animal: 'cat',
-  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', detail: 'simple',
+  size: 'whole', time: 'any', weather: 'any', season: 'any', light: 'any', medium: 'watercolour', edges: 'any', colours: 'any', lock: 'off', paper: 'any', detail: 'simple',
   ground: 'plain' };
 
 // Rows kept under More choices in their group: set rarely, and not needed to make a picture.

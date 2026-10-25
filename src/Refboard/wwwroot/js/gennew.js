@@ -626,11 +626,54 @@ function genChallengeTimer() {
   gnTimer = setInterval(() => { left--; tick(); if (left <= 0) { clearInterval(gnTimer); gnTimer = 0; btn.textContent = 'Start the timer'; } }, 1000);
 }
 
+/* ---- saved settings */
+
+const GN_SETS_KEY = 'refboard.generate.sets.v1', GN_SETS_MAX = 12;
+const genSetsLoad = () => { const v = gnStore(GN_SETS_KEY, []); return Array.isArray(v) ? v.filter(s => s && typeof s.name === 'string' && s.choices && typeof s.choices === 'object').slice(0, GN_SETS_MAX) : []; };
+
+// Every choice as it is, and the More tags, under a name: the way a kind of reference is asked for again (a watercolour study of
+// a street, a sheet of faces in ink). A set of the same name is replaced.
+function genSetMake(name, ch = genChoices, extra = el('genExtra').value) {
+  const { palette, ...rest } = ch;
+  return { name: String(name || '').trim().slice(0, 40), choices: { ...rest }, extra: String(extra || '').slice(0, 200), medium: ch.medium, subject: ch.subject };
+}
+function genSetSave() {
+  const status = el('genStatus'), name = el('gnSetName').value.trim();
+  if (!name) { status.textContent = 'Name the settings first.'; return; }
+  const set = genSetMake(name);
+  gnPut(GN_SETS_KEY, [set, ...genSetsLoad().filter(s => s.name.toLowerCase() !== set.name.toLowerCase())].slice(0, GN_SETS_MAX));
+  el('gnSetName').value = '';
+  genSetsRender();
+  status.textContent = `${set.name} is kept: every choice and the More tags.`;
+}
+function genSetUse(i) {
+  const set = genSetsLoad()[i];
+  if (!set) return;
+  // The palette is not kept with them (it comes from Palettes): a set that asks for it keeps the one there is.
+  const keep = genChoices.palette;
+  genChoices = { ...GEN_DEFAULTS, ...set.choices };
+  if (keep) genChoices.palette = keep;
+  saveGenChoices();
+  el('genExtra').value = set.extra || '';
+  renderGenerate();
+  renderGenPrompt();
+  el('genStatus').textContent = `${set.name} is back in the choices.`;
+}
+function genSetsRender() {
+  const list = genSetsLoad(), host = el('gnSets');
+  host.innerHTML = list.length ? list.map((s, i) => `<div class="gn-card" data-i="${i}"><b>${esc(s.name)}</b> <span class="count">${esc([s.subject, s.medium].filter(Boolean).join(', '))}</span>` +
+    `<button type="button" class="ghost" data-act="use" title="Put every choice and the More tags back as they were">Use</button>` +
+    `<button type="button" class="ghost" data-act="drop" aria-label="Forget ${esc(s.name)}" title="Forget these settings">&times;</button></div>`).join('')
+    : '<p class="count">None yet: set the choices the way you want them, name them and keep them.</p>';
+}
+
 /* ---- the blocks in the panel (genMoreInit calls these) */
 
 function genNewBlocks() {
   const block = (id, title, text, inner) => `<details class="gm-block" id="${id}"><summary>${title}</summary><p class="count">${text}</p>${inner}</details>`;
-  return block('gnGridBlock', 'A grid', 'One thing changed at a time - the hair colour, the eyes, the light - with one seed, then seen on one sheet.',
+  return block('gnSetBlock', 'Saved settings', 'All the choices and the More tags under a name - a watercolour street, a face sheet in ink - to ask for the same kind of reference again.',
+      `<div class="row"><input type="text" id="gnSetName" maxlength="40" placeholder="a name" aria-label="Name for the settings"><button type="button" class="ghost" id="gnSetSave">Keep the settings</button></div><div id="gnSets"></div>`) +
+    block('gnGridBlock', 'A grid', 'One thing changed at a time - the hair colour, the eyes, the light - with one seed, then seen on one sheet.',
       `<div class="row"><select id="gnGridRow" aria-label="What to change"></select><button type="button" class="ghost" id="gnGridGo">Make the grid</button></div>`) +
     block('gnCardBlock', 'Character cards', 'A character kept under a name with her hair and eyes: put her back in a click, or draw her in the storyboard.',
       `<div class="row"><input type="text" id="gnCardName" maxlength="40" placeholder="her name" aria-label="Name for the card"><button type="button" class="ghost" id="gnCardSave" title="Keep the character, her look and her hair and eyes as they are in the choices">Keep her</button></div><div id="gnCards"></div>`) +
@@ -650,6 +693,14 @@ function genNewWire() {
   fill();
   el('gnGridBlock').addEventListener('toggle', () => { if (el('gnGridBlock').open) fill(); });
   el('gnGridGo').addEventListener('click', genGridGo);
+  // Saved settings.
+  genSetsRender();
+  el('gnSetSave').addEventListener('click', genSetSave);
+  el('gnSetName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); genSetSave(); } });
+  el('gnSets').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'), row = e.target.closest('[data-i]'); if (!b || !row) return;
+    if (b.dataset.act === 'drop') { gnPut(GN_SETS_KEY, genSetsLoad().filter((_, j) => j !== +row.dataset.i)); genSetsRender(); } else genSetUse(+row.dataset.i);
+  });
   // The cards.
   genCardsRender();
   el('gnCardSave').addEventListener('click', genCardSave);

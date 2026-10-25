@@ -217,3 +217,46 @@ test('the choices: the start strip is at the top, rare rows are folded, and the 
   await expect(page.locator('.gen-rare[data-seen]').first()).toHaveJSProperty('open', true);
   await expect(page.locator('.gen-rare summary .count').first()).toHaveText('(1 set)');
 });
+
+test('paper: rough, smooth and toned say their words; toned paper takes the white background away', async ({ page }) => {
+  await setup(page);
+  const r = await page.evaluate(() => {
+    const p = o => genPrompt({ ...GEN_DEFAULTS, detail: 'normal', ...o }).prompt;
+    return { any: p({}), rough: p({ paper: 'rough' }), toned: p({ paper: 'toned' }), flat: p({ medium: 'flat', paper: 'toned' }), ink: p({ medium: 'ink', paper: 'smooth' }) };
+  });
+  expect(r.any).toContain('white background');
+  expect(r.any).not.toContain('paper grain');
+  expect(r.rough).toContain('rough paper, textured paper, paper grain');
+  expect(r.toned).toContain('beige paper');
+  expect(r.toned).not.toContain('white background');
+  expect(r.toned).toContain('simple background');
+  expect(r.flat).not.toContain('beige paper');          // no paper under flat colour
+  expect(r.ink).toContain('smooth paper');
+  await expect(page.locator('[data-row=paper]')).toBeVisible();
+  await page.locator('[data-gen=medium][data-opt=flat]').click();
+  await expect(page.locator('[data-row=paper]')).toBeHidden();
+});
+
+test('saved settings: every choice and the More tags come back under a name', async ({ page }) => {
+  await setup(page);
+  await page.locator('#genMore summary').click();
+  await page.locator('#gnSetBlock summary').click();
+  await page.locator('[data-gen=medium][data-opt=ink]').click();
+  await page.locator('[data-gen=hair][data-opt=long]').click();
+  await page.locator('#genExtra').fill('hat, rain');
+  await page.locator('#gnSetName').fill('Ink girl');
+  await page.locator('#gnSetSave').click();
+  await expect(page.locator('#gnSets .gn-card')).toHaveCount(1);
+  await page.locator('[data-gen=medium][data-opt=watercolour]').click();
+  await page.locator('[data-gen=hair][data-opt=short]').click();
+  await page.locator('#genExtra').fill('');
+  await page.locator('#gnSets [data-act=use]').click();
+  await expect(page.locator('[data-gen=medium][data-opt=ink]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-gen=hair][data-opt=long]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#genExtra')).toHaveValue('hat, rain');
+  await page.locator('#gnSetName').fill('ink GIRL');
+  await page.locator('#gnSetSave').click();
+  await expect(page.locator('#gnSets .gn-card')).toHaveCount(1);
+  await page.locator('#gnSets [data-act=drop]').click();
+  await expect(page.locator('#gnSets')).toContainText('None yet');
+});
