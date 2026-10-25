@@ -134,6 +134,8 @@ function collectCommands() {
       run: () => openLightbox(state.current) });
     out.push({ id: 'steps', label: 'How to draw it', hint: 'Onto paper', words: 'steps stages guide tutorial learn order sketch hatching wash',
       run: () => openSteps(state.current) });
+    out.push({ id: 'refreport', label: 'Reference report - every check on this picture', hint: 'Check', words: 'report analysis summary page print quality value colour composition tangents crop palette recipes one page',
+      run: () => openReportFor(state.current) });
     // The head construction in either style - turned on too, if it is off.
     for (const [k, label] of Object.entries(HEAD_STYLES)) {
       if (state.headOn && k === headStyle) continue;

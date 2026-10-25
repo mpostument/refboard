@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'reference-report', title: 'A report on one reference, on one page',
+    text: "In a session, the workspace has a Report button (and Ctrl+K finds it): every check on the picture, run together and set out in sections - is it a good picture to work from, its values against your medium's range, its five main colours with how to mix each in your paints, the temperature, where the eye goes and the best crops, the shapes, edges and tangents. Each section has a small map. Print it, or keep it in My work as a picture to come back to.",
+    act: 'Open a picture', run: () => setView({ kind: 'drop' }) },
   { id: 'anime-study', title: 'Anime study: the colour of a film, and backgrounds in two manners',
     text: "A new tab beside the Colour studio and Palettes. Study frames: give a video or some frames and read how its shadows are made (how much darker, which way the hue turns), its palette and where the colour turns - then use the colours as a palette. Backgrounds: a sky and the land under it, soft and painted or luminous, at day, golden hour, dusk, night or in rain - with nine colours, each with how to mix it from your paints.",
     act: 'Open it', run: () => setView({ kind: 'anime' }) },

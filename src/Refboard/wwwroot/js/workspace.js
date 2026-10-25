@@ -190,10 +190,17 @@ function setWorkspaceTab(id) {
   el('wsTabs').querySelector(`[data-tab="${id}"]`).focus();
 }
 
+// The reference report is loaded the first time it is asked for.
+async function openReportFor(src) {
+  try { await loadSection('report'); } catch { announce('The report could not load - check the connection.'); return; }
+  openReport(src);
+}
+
 function initWorkspace() {
   el('btnWorkspace').addEventListener('click', () => toggleWorkspace());
   el('btnLayers').addEventListener('click', () => toggleWorkspace(false));
   el('wsClose').addEventListener('click', () => toggleWorkspace(false));
+  el('wsReport').addEventListener('click', () => openReportFor(state.current));
   el('wsTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setWorkspaceTab(b.dataset.tab); });
   el('wsList').addEventListener('click', e => { const b = e.target.closest('button[data-row]'); if (b) useWorkspaceRow(b); });
   el('wsList').addEventListener('change', e => { if (e.target.matches('select[data-row]')) useWorkspaceRow(e.target); });

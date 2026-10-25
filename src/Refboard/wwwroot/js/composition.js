@@ -288,11 +288,8 @@ function compositionDraw(f, c, cfg) {
   return c;
 }
 
-function compositionNote(f, cfg) {
-  const chip = (attr, k, label, on) => `<button type="button" class="chip" data-comp-${attr}="${k}" aria-pressed="${on}">${label}</button>`;
-  const bar = '<div class="tone-bar"><span>Crop</span>' +
-    f.crops.map((k, i) => chip('crop', i + 1, `${i + 1} - ${esc(k.name)} ${Math.round(k.kept)}%`, cfg.crop === i + 1)).join('') +
-    chip('crop', 0, 'Off', cfg.crop === 0) + `<span>Eye map</span>${chip('heat', 'on', 'On', cfg.heat)}${chip('heat', 'off', 'Off', !cfg.heat)}</div>`;
+// What the analysis says, in words - for the note over the picture and for the reference report.
+function compositionSay(f) {
   const dx = f.cx - 0.5, dy = f.cy - 0.5, say = [];
   if (Math.abs(dx) < 0.07 && Math.abs(dy) < 0.07) say.push('The weight sits near the middle: calm and stable, and static unless something pulls away from it.');
   else {
@@ -308,7 +305,15 @@ function compositionNote(f, cfg) {
   else if (!f.lines.length) say.push('No strong straight line was found.');
   if (!f.crops.length) say.push('No crop beats the whole picture.');
   else say.push(`Best crop: ${f.crops[0].name}, keeping ${Math.round(f.crops[0].kept)}% of the interest.`);
-  return bar + esc(say.join(' ')) + ' <small>Red-yellow is where contrast and colour pull the eye: a guess, not a reading of faces or words. The ring is the middle of that interest, the plus is the picture\'s middle.</small>';
+  return say.join(' ');
+}
+
+function compositionNote(f, cfg) {
+  const chip = (attr, k, label, on) => `<button type="button" class="chip" data-comp-${attr}="${k}" aria-pressed="${on}">${label}</button>`;
+  const bar = '<div class="tone-bar"><span>Crop</span>' +
+    f.crops.map((k, i) => chip('crop', i + 1, `${i + 1} - ${esc(k.name)} ${Math.round(k.kept)}%`, cfg.crop === i + 1)).join('') +
+    chip('crop', 0, 'Off', cfg.crop === 0) + `<span>Eye map</span>${chip('heat', 'on', 'On', cfg.heat)}${chip('heat', 'off', 'Off', !cfg.heat)}</div>`;
+  return bar + esc(compositionSay(f)) + ' <small>Red-yellow is where contrast and colour pull the eye: a guess, not a reading of faces or words. The ring is the middle of that interest, the plus is the picture\'s middle.</small>';
 }
 
 /* ---- in a session: the analysis over the picture, as a layer. */

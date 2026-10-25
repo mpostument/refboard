@@ -134,9 +134,18 @@ refboard setting in localStorage, every document, every upload - as one
   board, recipes, layer plan, photos of the stages and the result. Open
   the project and it is all to hand - the unit the saving is organised
   around.
-- **Reference report.** Every analysis of one photo - value, palette,
-  composition, perspective, recipes - gathered on one page, kept in the
-  project to come back to.
+- **Reference report.** In place (`js/refreport.js`, the workspace's Report, Ctrl+K "reference
+  report"): the session's own checks - `qualityOf`, `amountsOf`, `rangeMap`, `tempMap`,
+  `compositionOf`, `tangentsOf` - run together on one read of the picture and set in five sections
+  (is it a good picture to work from; value against the medium's range; colour - the five biggest
+  colours, each with its recipe or its step in the medium chosen in My materials, then temperature;
+  where the eye goes and the crops; shapes, edges and tangents), each with a small map. One piece of
+  HTML with its own style and its pictures inline: shown in a sheet, printed, or drawn to a picture
+  (an SVG foreignObject) kept in My work tagged `reference report`. Loaded when first asked for. The
+  words are the tools' own (`compositionSay` was taken out of the composition note to be shared);
+  a check that fails leaves its section out. Tried on a drawn picture and one sample, not on a body of
+  photos. Not done: other analyses (perspective, the pose skeleton, the palette's recipes in every
+  medium); a report kept as a document that can be edited, not a picture; a project to keep it in.
 - **Source and licence of a reference.** For each image from the web or a
   museum, where it came from and under what licence - so when a piece is
   posted, it is plain whom to credit, and whether it may be used at all.
