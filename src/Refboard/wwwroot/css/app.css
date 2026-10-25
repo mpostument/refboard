@@ -2448,3 +2448,5 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .gen-rare > summary { cursor: pointer; font-size: 12px; color: var(--dim); }
 .gen-rare[open] > summary { margin-bottom: 4px; }
 .gen-dress { margin: 6px 0 0; font-size: 12px; }
+.gen-source .gen-warm { margin: 0 0 0 auto; }
+.gen-source .gen-warm { margin: 0 0 0 auto; }

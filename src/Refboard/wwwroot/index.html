@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=ff983a4c">
+<link rel="stylesheet" href="css/app.css?v=ba219dc7">
 </head>
 <body>
 <div id="setup">
@@ -343,6 +343,12 @@
               <button type="button" class="ghost" id="genPick" title="Draw from a picture of your own: a photo simplified into a study, with the choices above as its style. Or drop one here.">Start from a picture...</button>
               <input type="file" id="genPickInput" accept="image/*" class="hidden" aria-label="Picture to start from">
               <button type="button" class="ghost" id="genSketch" title="Draw a rough sketch or a stick figure here: the pose and the layout you draw are what the picture is made from">Draw a sketch...</button>
+              <!-- Figures to draw fast, made for you: js/warmup.js. -->
+              <div class="gen-warm" id="genWarm">
+                <select id="genWarmN" aria-label="How many poses"></select>
+                <select id="genWarmT" aria-label="Time for each pose"></select>
+                <button type="button" class="ghost" id="genWarmGo" title="Gesture drawing with new figures: a run of whole figures in different poses, each on the screen for a short time (the session kind Gesture warm-up draws from your library instead). The choices above are the character and the style; the next figure is made while you draw.">Warm-up with new poses</button>
+              </div>
               <div id="genSourceBody" class="hidden"></div>
             </div>
             <div id="genChoices"></div>
@@ -358,12 +364,6 @@
                 <summary>Prompt</summary>
                 <div id="genPromptBody"></div>
               </details>
-              <!-- Figures to draw fast, made for you: js/warmup.js. -->
-              <div class="gen-warm" id="genWarm">
-                <select id="genWarmN" aria-label="How many poses"></select>
-                <select id="genWarmT" aria-label="Time for each pose"></select>
-                <button type="button" class="ghost" id="genWarmGo" title="Gesture drawing with new figures: a run of whole figures in different poses, each on the screen for a short time (the session kind Gesture warm-up draws from your library instead). The choices above are the character and the style; the next figure is made while you draw.">Warm-up with new poses</button>
-              </div>
               <label class="gen-extra">More tags <input type="text" id="genExtra" placeholder="e.g. hat, rain, holding umbrella" maxlength="200"></label>
               <div class="row gen-go">
                 <label>How many <select id="genCount"><option>1</option><option selected>2</option><option>4</option></select></label>
