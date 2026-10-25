@@ -1487,6 +1487,7 @@ section { margin-bottom: 20px; }
 .hb-lesson h3 { margin: 0 0 6px; font-size: 17px; }
 .hb-lesson h4 { margin: 14px 0 6px; }
 .hb-theory { margin: 0 0 12px; line-height: 1.55; color: var(--ink); max-width: 68ch; }
+.hb-medium { margin: 0 0 8px; }
 .hb-demo { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
 .hb-canvas { width: 100%; max-width: 480px; height: auto; aspect-ratio: 320 / 210; border-radius: 8px; border: 1px solid var(--line); background: #08080c; }
 .hb-slider { display: grid; grid-template-columns: 120px minmax(0, 1fr) 46px; gap: 8px; align-items: center; font-size: 12px; color: var(--dim); }
@@ -1647,6 +1648,10 @@ section { margin-bottom: 20px; }
 .pg-few { margin: 12px 0 4px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
 .pg-few h4 { margin: 0 0 8px; }
 .pg-few p { margin: 8px 0; }
+.pg-few-mine { margin: 4px 0 8px; font-size: 13px; }
+.pg-few-mine summary { cursor: pointer; color: var(--dim); padding: 2px 0; }
+.pg-few-mine .chip { display: inline-flex; align-items: center; gap: 5px; }
+.pg-few-mine .chip i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(128,128,128,.5); flex: none; }
 .pg-few-paints { display: flex; flex-wrap: wrap; gap: 6px; }
 .pg-few-paint { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; border: 1px solid var(--line); border-radius: 14px; font-size: 13px; }
 .pg-few-paint i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(128,128,128,.5); flex: none; }
@@ -2094,6 +2099,13 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #genSourceBody img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); }
 #genSourceBody .gen-source-what { font-size: 12px; color: var(--dim); flex: 1 1 180px; }
 
+/* ---- Reference report (js/refreport.js): the page has its own style and is
+   paper, light in every theme, since it is printed and kept as it is. */
+.sheet-box.report-box { width: min(900px, 100%); }
+#reportBody { overflow: auto; max-height: 72vh; border-radius: 8px; background: #fffefb; }
+#reportKept:empty { display: none; }
+#reportBody > .count { padding: 16px; color: #6b6a66; }
+
 /* ---- How to draw it (js/steps.js) */
 .sheet-box.steps-box { width: min(1080px, 100%); }
 .steps-main { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 18px; align-items: start; }
@@ -2225,6 +2237,10 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .pg-foot .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
 .pg-note { max-width: 780px; line-height: 1.5; }
 .pg-modes { max-width: 1300px; margin-bottom: 12px; }
+.mp-layouts { display: flex; gap: 8px; flex-wrap: wrap; }
+.mp-layout { width: 54px; height: 72px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--dim); cursor: pointer; }
+.mp-layout svg { display: block; width: 100%; height: 100%; }
+.mp-layout[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
 .pg-controls .primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 7px 18px; font-weight: 600; cursor: pointer; }
 .pg-row input[type=search] { flex: 1; min-width: 0; }
 .sky-stage { background: #111; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
@@ -2304,3 +2320,20 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 #assetResults li:hover .asset-edges, .asset-edges:focus-visible { opacity: 1; }
 .asset-edges:disabled { opacity: .5; cursor: wait; }
 @media (hover: none) { .asset-edges { opacity: 1; } }
+
+.pg-few-how { flex: 1; min-width: 0; line-height: 1.7; }
+
+/* Anime study (js/animestudy.js): the colour script, the frames under it, and a background's colours. */
+#afResult .pg-row { margin-top: 10px; }
+#afScript { display: block; width: 100%; max-width: 720px; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.af-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; margin: 10px 0; max-width: 1000px; }
+.af-frame { margin: 0; }
+.af-frame button { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #111; cursor: pointer; }
+.af-frame img { display: block; width: 100%; height: auto; }
+.af-frame figcaption { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); margin-top: 3px; }
+.af-sw { display: flex; flex: 1; height: 10px; border-radius: 3px; overflow: hidden; }
+.af-sw i { flex: 1; }
+.ab-colours { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-top: 12px; max-width: 1000px; }
+.ab-colour { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; }
+.ab-colour > i { flex: none; width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--line); }
+.ab-mix { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; color: var(--dim); }

@@ -26,12 +26,14 @@ const SIMPLIFY_COUNTS = [5, 8, 12];
 // blur: the radius is the long side over this; min: the smallest island kept, as a share of the picture.
 // vote: radius of the majority vote that cleans speckle (2r+1 square).
 const SIMPLIFY_DETAIL = { broad: { blur: 70, min: 0.008, vote: 3 }, medium: { blur: 130, min: 0.0025, vote: 2 }, fine: { blur: 260, min: 0.0006, vote: 1 } };
+const SIMPLIFY_VIEWS = ['colour', 'value', 'anime'];   // anime: each shape in a base, a shadow and a highlight (js/animecolour.js)
+const SIMPLIFY_ANIME_WEIGHT = 0.35;    // anime colours by hue, and shades a colour itself: lightness counts less, or the shading becomes shapes
 const SIMPLIFY_LIGHT_WEIGHT = 1.8;     // lightness counts this much more than a or b in telling colours apart
 
 function simplifyLoad() {
   try {
     const v = JSON.parse(localStorage.getItem(SIMPLIFY_KEY));
-    if (v) return { n: SIMPLIFY_COUNTS.includes(v.n) ? v.n : 8, detail: SIMPLIFY_DETAIL[v.detail] ? v.detail : 'medium', view: v.view === 'value' ? 'value' : 'colour' };
+    if (v) return { n: SIMPLIFY_COUNTS.includes(v.n) ? v.n : 8, detail: SIMPLIFY_DETAIL[v.detail] ? v.detail : 'medium', view: SIMPLIFY_VIEWS.includes(v.view) ? v.view : 'colour' };
   } catch { /* fall through */ }
   return { n: 8, detail: 'medium', view: 'colour' };
 }
@@ -90,12 +92,13 @@ function simplifyMerge(labels, w, h, minPx) {
 /* p: stepsRead(); { n, detail }. Gives { w, h, labels, shapes }: labels per
    pixel (an index into shapes) and shapes [{ rgb, share, L }] - the average
    colour, the percent of the picture and its L* - in no particular order. */
-function simplifyOf(p, { n = 8, detail = 'medium' } = {}) {
+function simplifyOf(p, { n = 8, detail = 'medium', view } = {}) {
+  const LW = view === 'anime' ? SIMPLIFY_ANIME_WEIGHT : SIMPLIFY_LIGHT_WEIGHT;
   const { w, h, rgba } = p, px = w * h, S = Math.max(w, h), D = SIMPLIFY_DETAIL[detail];
   const ch = [new Float32Array(px), new Float32Array(px), new Float32Array(px)];
   for (let i = 0; i < px; i++) {
     const [l, a, b] = compositionOklab(rgba[4 * i], rgba[4 * i + 1], rgba[4 * i + 2]);
-    ch[0][i] = l * SIMPLIFY_LIGHT_WEIGHT; ch[1][i] = a; ch[2][i] = b;
+    ch[0][i] = l * LW; ch[1][i] = a; ch[2][i] = b;
   }
   const f = ch.map(c => stepsBlur(c, w, h, Math.max(1, S / D.blur)));   // to train on; the pixels themselves are assigned from ch
   // k-means on a sample.
@@ -155,13 +158,22 @@ function simplifyOf(p, { n = 8, detail = 'medium' } = {}) {
     shapes.push({ rgb, share: s[3] / px * 100, L: lstar(rgb) });
   });
   for (let i = 0; i < px; i++) labels[i] = index[labels[i]];
-  return { w, h, labels, shapes };
+  // The picture's own lightness, only lightly blurred: where inside a shape it is darker or lighter (animecolour.js).
+  const tone = stepsBlur(ch[0], w, h, Math.max(1, S / 300));
+  for (let i = 0; i < px; i++) tone[i] /= LW;
+  return { w, h, labels, shapes, tone };
 }
 
 // The flat picture on a canvas of the picture read's size: in colour, or in the grey of each shape's value.
 function simplifyDraw(f, c, cfg) {
   c.width = f.w; c.height = f.h;
   const g = c.getContext('2d'), img = g.createImageData(f.w, f.h), px = img.data;
+  if (cfg.view === 'anime') {
+    const a = animeColour(f);
+    px.set(a.px); g.putImageData(img, 0, 0);
+    c.animeResult = a;
+    return c;
+  }
   const paint = f.shapes.map(s => cfg.view === 'value' ? greyOfLstar(s.L) : s.rgb);
   for (let i = 0; i < f.w * f.h; i++) {
     const p = paint[f.labels[i]];
@@ -175,7 +187,11 @@ function simplifyNote(f, cfg) {
   const chip = (attr, k, label, on) => `<button type="button" class="chip" data-simp-${attr}="${k}" aria-pressed="${on}">${label}</button>`;
   const bar = '<div class="tone-bar"><span>Shapes</span>' + SIMPLIFY_COUNTS.map(n => chip('n', n, n, cfg.n === n)).join('') +
     '<span>Detail</span>' + Object.keys(SIMPLIFY_DETAIL).map(k => chip('d', k, k[0].toUpperCase() + k.slice(1), cfg.detail === k)).join('') +
-    '<span>Show</span>' + chip('v', 'colour', 'Colour', cfg.view === 'colour') + chip('v', 'value', 'Value', cfg.view === 'value') + '</div>';
+    '<span>Show</span>' + chip('v', 'colour', 'Colour', cfg.view === 'colour') + chip('v', 'value', 'Value', cfg.view === 'value') + chip('v', 'anime', 'Anime', cfg.view === 'anime') + '</div>';
+  if (cfg.view === 'anime') {
+    const a = f.anime || animeColour(f);
+    return bar + animeKey(f, a) + 'Each shape in three flat tones, as anime is coloured: the shadow is not the base made darker but turned toward blue-violet, the highlight a step lighter and a little warmer. Where the photo shows no real shading the shape stays one tone (marked flat). <small>Shadows and highlights are read from the photo; the shapes are those of Simplify.</small>';
+  }
   const byValue = f.shapes.slice().sort((a, b) => a.L - b.L);
   const key = '<div class="hm-key">' + byValue.map(s =>
     `<span title="${colHexOf(s.rgb)}"><i style="background:${rgbCss(s.rgb)}"></i>${colHexOf(s.rgb)} · ${s.share < 1 ? '<1' : Math.round(s.share)}% · L* ${Math.round(s.L)}</span>`).join('') + '</div>';
@@ -212,7 +228,7 @@ function runSimplify() {
     if (run !== simplifyRun || !state.simplifyOn) return;
     const cfg = simplifyLoad();
     let f;
-    try { f = simplifyOf(stepsRead(img), cfg); simplifyDraw(f, el('simplifyOverlay'), cfg); }
+    try { f = simplifyOf(stepsRead(img), cfg); simplifyDraw(f, el('simplifyOverlay'), cfg); f.anime = el('simplifyOverlay').animeResult; }
     catch (err) { console.error('simplify:', err); overlayNote('simplify', '<i>Could not find shapes in this picture.</i>'); return; }
     el('simplifyOverlay').classList.remove('hidden');
     overlayNote('simplify', simplifyNote(f, cfg));
@@ -226,7 +242,7 @@ el('poseNote').addEventListener('click', e => {
   const cfg = simplifyLoad();
   if (n && SIMPLIFY_COUNTS.includes(+n.dataset.simpN)) cfg.n = +n.dataset.simpN;
   if (d && SIMPLIFY_DETAIL[d.dataset.simpD]) cfg.detail = d.dataset.simpD;
-  if (v) cfg.view = v.dataset.simpV === 'value' ? 'value' : 'colour';
+  if (v && SIMPLIFY_VIEWS.includes(v.dataset.simpV)) cfg.view = v.dataset.simpV;
   simplifySave(cfg);
   runSimplify();
 });

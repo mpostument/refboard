@@ -34,8 +34,8 @@ function stageToolHtml(b, proxy) {
    stay in the page, hidden from the rail by CSS (.rail-sub) and not by the class the app
    and Sections you use read - so their dashboard cards, their entry in that list and
    Ctrl+K are as they were. */
-const VIEW_GROUPS = [['generate', 'assets'], ['colour', 'palette'], ['perspective', 'sky'], ['all', 'museum']];
-const VIEW_TAB_LABELS = { generate: 'References', assets: 'Game assets', colour: 'Colour studio', palette: 'Palettes',
+const VIEW_GROUPS = [['generate', 'assets'], ['colour', 'palette', 'anime'], ['perspective', 'sky'], ['all', 'museum']];
+const VIEW_TAB_LABELS = { generate: 'References', assets: 'Game assets', colour: 'Colour studio', palette: 'Palettes', anime: 'Anime study',
   perspective: 'Perspective grid', sky: 'Sky and weather', all: 'Images', museum: 'Museums' };
 const viewGroupOf = kind => VIEW_GROUPS.find(g => g.includes(kind)) || [kind];
 
