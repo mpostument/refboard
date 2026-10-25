@@ -629,6 +629,31 @@ shoulder and other two-figure shots, and a lens's distortion on a photo.
   markers choice is made once for the whole chapter. Still to come: a photo of
   a real painting beside each.
 
+- **Fifteen more anime tools.** In place (`js/animenew.js`, `js/animebody.js`, `js/animemouth.js` for what is worked
+  out and drawn; `js/animenewui.js` for the pages, which are made in script and added to the Anime view). Gesture: eight
+  marks (head, chest, hips, feet, both shoulders, both hips) give the line of action as C, S or I from the sideways step
+  of the chest and the hips off the head-to-feet line, and the tilts of the shoulders and the hips against each other;
+  a drill of 28 poses on a timer. Construction: a seven-head figure in blocks, shoulders and hips tilted against each
+  other, the weight on the leg of the higher hip with its foot on the balance line from the neck. Tones: the picture held
+  to five tones between the 2nd and 98th percentile, each drawn as fineliner hatching, dots or ballpoint passes. Effects:
+  speed lines, focus lines, an impact burst and sparkles from a seed. Shots: two marks, six cuts in four frame shapes.
+  Legs, Skirt (a cone cut by two ellipses), Mouth (eight shapes), Walk and run (four key poses each, by forward
+  kinematics), Balloons, Face light (eight lights as a shifted ellipse over the face), Silhouettes (a flood fill from the
+  border, overlap of the shapes at one height), Compare (a blurred grey difference, red where the drawing is darker,
+  with a grid and a timer). Eyes: Steps (six stages, with the layers for watercolour, pencils, Copic and ink) and Gaze.
+  All diagrams of the construction, not of a style; nothing is uploaded.
+- **Generate: a sketch pad, line art, details, conditions, grid, cards, settings, challenge, Describe it.** In place
+  (`js/gennew.js`, loaded with `js/genmore.js`). The sketch pad starts from your lines (img2img at 0.68 to 0.9, no
+  ControlNet). Line art: Sobel edges of the picture in a pale colour, or the picture held to 3 to 6 tones with its
+  regions numbered. Details: boxes dragged on the picture, enlarged on a sheet; Redraw a part has Four tries (four
+  seeds). Other conditions: ten hours, weathers and seasons, each weighted over the picture's own words with the old
+  ones taken out. A grid: one row's options, one seed, then a contact sheet. Character cards and Saved settings are kept
+  in this browser; Describe it reads Ukrainian words (a colour goes with the thing it colours). New rows: Anime of
+  (Danbooru's decade styles), Paper, Frame (the shape alone) and Pen (ink). The rows seldom needed are folded under
+  More choices; no character gets a cross pendant unless More tags say cross; the watercolour medium no longer says
+  `lineart` or, in Simple, `minimalist` and `gradient`, and takes `paper texture`. Only tested with a stand-in server:
+  none of the tag changes has been looked at on a real ComfyUI.
+
 ## Materials
 
 In place: Fewest paints (`js/fewpaints.js`, Palettes) for watercolour paints, Copic markers
