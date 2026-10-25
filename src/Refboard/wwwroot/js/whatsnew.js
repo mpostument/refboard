@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'anime-draw', title: 'Anime study: hands, eyes, hair, shading, expressions and background perspective',
+    text: "Six more tools in Anime study, and the switch is now in two groups, Colour and Drawing. Hands: twelve gestures from a palm-box and three-joint fingers, turned three ways, with what each says. Eyes: sharp, soft or flat, the 90s manner beside the modern one, with the order to draw the layers in. Hair: a style as numbered clumps or flow lines, with wind bending the tips. Shading: a sphere and a tube in cel, two-step, soft and painted, with the tones for your colour. Expressions: twelve emotions as arrows from a neutral face, with blush, sweat and veins. Perspective: a room, a street corner and a tower built from a horizon you can drag. Each can go to Generate's More tags, be saved as SVG or kept in My work.",
+    act: 'Open Anime study', run: () => setView({ kind: 'anime' }) },
   { id: 'gen-more', title: 'Generate: a series, a movement, colours to a palette, four lights from a photo',
     text: "Generate > More ways to make: a series draws one scene from several views - wide, close, from above and so on - with one seed and your palette, so the room and the clothes stay the same; a movement turns what she does, in your own words (\"біжить, озирається\"), into tags in More tags. On any picture made here, More > Colours to a palette pulls its colours to the Holbein box or your palette by as much as you like, shows which went where, and keeps the result beside the original. And a photo you start from can be drawn again in four lights.",
     act: 'Open Generate', run: () => setView({ kind: 'generate' }) },

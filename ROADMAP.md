@@ -502,6 +502,22 @@ Anime in watercolour:
   tagged `palette pulled`. Four lights, from a photo started from (the source strip). Only tested with a
   stand-in server: no real ComfyUI run, so how well a seed holds a scene across views, and how
   "біжить" reads to the model, are not known.
+- **Hands, eyes, hair, shading, expressions, background perspective.** In place (`js/animedraw.js` for what is
+  drawn, `js/animedrawui.js` for the page; six more modes in Anime study, whose switch is now two groups, Colour
+  and Drawing). Hands: twelve gestures as joint bends of a palm-box and three-joint fingers, projected in three
+  turns (front, three-quarter, side), with what each says and where to use it. Eyes: sharp, soft, flat; height,
+  iris, highlights, lashes; the 90s and the modern manner side by side with the order of the layers; the iris
+  takes Outfits' eye colour. Hair: five styles as tapered clumps (root, bend, tip), wind that moves the tips and
+  not the roots, drawn as colour, numbered clumps or flow lines, with the ring of light; tones from the hair
+  colour. Shading: a sphere and a tube in cel, two-step cel, soft and painted, lit from the upper left, upper
+  right or above, with light/base/shadow/core/reflected tones worked out in HSL (shadow turned cool, light warm).
+  Expressions: twelve emotions as brow, eye and mouth offsets from a neutral face drawn dashed, with arrows, and
+  the anime marks (blush, sweat, vein, tears, sparkle) that can be switched off. Perspective: a room, a street
+  corner and a tower from the horizon and the points, a draggable horizon, figures whose eyes sit on it, the roof
+  shown only when the horizon is above the box. Every picture can be saved as SVG or kept in My work, and the
+  words go to Generate's More tags. Not done: the hands are a flat model, not an anatomy study (the OK sign's
+  circle is closed by eye); hair is a diagram of a head, not a character; the expression marks are the common
+  ones, not every studio's; the perspective scenes are one box and a room, not a street.
 - **Lightbox, the rest.** In place (`js/lightbox.js`, Paint > Lightbox,
   Workspace > Onto paper, Ctrl+K "trace"): a photo of the sketch unbent
   from its four corners (a homography; found as the biggest light shape),
