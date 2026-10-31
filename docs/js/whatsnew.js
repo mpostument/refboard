@@ -15,6 +15,9 @@ const NEWS_SHOWN = 4; // the rest fold under "Earlier"
 
 // Newest first. `run` is what "try it" does.
 const NEWS = [
+  { id: 'five-more', title: 'Anime study: shoes, ears and neck, a run of ten; Generate: simple forms and a history',
+    text: "Anime study has Shoes (a sneaker, a loafer, Mary Janes, a boot, a sandal and a high heel, from the side and the front), Ears and neck (the ear between the eyebrow line and the nose line, and the neck's width, lean and collarbones), Sitting and Ages, and the Gesture drill has 15 seconds and a run of ten poses. Generate's More ways has Simple forms (the scene as a mannequin, boxes and cylinders, or contour lines), History (your latest pictures with their words, pins, and Draw again with a new seed), a palette from a picture, colours from your own set and What changed between two pictures.",
+    act: 'Open Anime study', run: () => setView({ kind: 'anime' }) },
   { id: 'anime-new', title: 'Anime study: gesture, construction, tones, effects, shots, legs, skirt, mouth, balloons and more',
     text: "Fifteen more things in Anime study, and the switch is now in three lists, Colour, Drawing, and Scene and pose. Gesture: eight marks on a figure give the line of action (C, S or straight) and how the shoulders and hips tilt, with a drill of timed poses. Construction: the body as blocks, the weight on the higher hip over a balance line. Tones: a drawing in five tones of ink, as hatching, dots or ballpoint passes. Effects: speed lines, focus lines, an impact burst and sparkles. Shots: two marks and the picture is cut to six shots. Legs, Skirt, Mouth (the shapes of speech), Walk and run (key poses), Balloons, Face light (eight lights), Silhouettes and Compare (a reference against your drawing, with a grid and a timer); and Eyes gets Steps (the order of the layers in your material) and Gaze.",
     act: 'Open Anime study', run: () => setView({ kind: 'anime' }) },

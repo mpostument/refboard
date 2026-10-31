@@ -288,3 +288,377 @@ function anBalloonSheet() {
   });
   return adSvgOpen([0, 0, W, H], 'Speech balloon shapes') + s + '</svg>';
 }
+
+/* ---- a hand holding something */
+
+// The grips: the hand's pose (as AD_HANDS' poses), the turn of the whole drawing, and the object in the hand's own space
+// (x across the palm, y up the fingers, z towards us). `obj(P)` gives the object, with P the projection of that space.
+const AN_HOLD_ROD = (P, a, b, r, fill = '#c9ced9') => {
+  const A = P(a), B = P(b), d = `M${adP(A)}L${adP(B)}`;
+  return `<path d="${d}" stroke="${AD_INK}" stroke-width="${r * 2 + 3.4}" stroke-linecap="round"/><path d="${d}" stroke="${fill}" stroke-width="${r * 2}" stroke-linecap="round"/>`;
+};
+const AN_HOLD_FIST = [85, 100, 70];
+const AN_HOLDS = {
+  stick: { label: 'A stick or an umbrella', rot: -90,
+    pose: { i: AN_HOLD_FIST, m: AN_HOLD_FIST, r: AN_HOLD_FIST, p: AN_HOLD_FIST, t: [35, 45, 35], spread: 0, tabd: 20 },
+    obj: P => AN_HOLD_ROD(P, [-150, 98, 25], [120, 98, 25], 12, '#6d7bb0'),
+    says: 'A fist closed round a rod: the rod crosses all four fingers at the middle joints, and the thumb closes over the index finger from the other side.',
+    tip: 'Hold the rod across the palm, not along it - the hand turns the rod vertical by turning the wrist. The fist is a little larger than usual: it has the rod in it.',
+    words: 'hand gripping a stick, fingers wrapped around the handle, umbrella' },
+  sword: { label: 'A sword hilt', rot: -50,
+    pose: { i: AN_HOLD_FIST, m: AN_HOLD_FIST, r: AN_HOLD_FIST, p: AN_HOLD_FIST, t: [35, 45, 35], spread: 0, tabd: 20 },
+    obj: P => AN_HOLD_ROD(P, [-230, 98, 25], [-78, 98, 25], 4, '#dfe6f0') + AN_HOLD_ROD(P, [-78, 98, 25], [70, 98, 25], 10, '#6b5238') +
+      `<path d="M${adP(P([-80, 60, 25]))}L${adP(P([-80, 136, 25]))}" stroke="${AD_INK}" stroke-width="7" stroke-linecap="round"/>`,
+    says: 'The same fist as on a stick, with the blade running on from the index-finger side, a guard in front of the index finger and the pommel under the little finger.',
+    tip: 'The blade is the line of the forearm continued: if the wrist is bent, the blade bends it. Grip it low and firm, the hand just under the guard.',
+    words: 'hand gripping a sword hilt, holding sword, fingers wrapped around the grip' },
+  mug: { label: 'A mug by the handle', rot: 0,
+    pose: { i: [75, 90, 60], m: [80, 95, 65], r: [85, 100, 70], p: [85, 100, 70], t: [25, 35, 25], spread: 0, tabd: 22 },
+    obj: P => AN_HOLD_ROD(P, [-36, 98, 20], [80, 98, 20], 8, '#e9e4d8') +
+      `<ellipse cx="${adF(P([130, 80, 18])[0])}" cy="${adF(P([130, 80, 18])[1])}" rx="46" ry="52" fill="#f4f1ea" stroke="${AD_INK}" stroke-width="2.4"/>`,
+    says: 'Index, middle and ring fingers go through the handle, the little finger rests under it, and the thumb lies on top of the handle to steady it.',
+    tip: 'The mug is beside the hand and the handle only a short bar: show the fingers going through the loop. For a cup held with both hands, see Hands, Holding a cup.',
+    words: 'hand holding a mug by the handle, fingers through the handle' },
+  pen: { label: 'A pen', rot: -22,
+    pose: { i: [40, 50, 30], m: [70, 85, 60], r: [85, 100, 70], p: [90, 105, 75], t: [30, 30, 25], spread: 0, tabd: 15 },
+    obj: P => AN_HOLD_ROD(P, [-34, 160, 34], [38, 52, 10], 3.4, '#2d3550'),
+    says: 'The pen rests on the side of the middle finger, is held between the thumb and the index finger, and leans back into the web between them. The other two fingers curl under, loose.',
+    tip: 'The tip of the pen is about two fingers\' width from the fingertips. The pen points over the shoulder, not at the viewer.',
+    words: 'hand holding a pen, writing grip, fingers pinching the pen' },
+  phone: { label: 'A phone', rot: -15,
+    pose: { i: [45, 55, 35], m: [48, 58, 36], r: [50, 60, 38], p: [52, 62, 40], t: [15, 20, 15], spread: 0, tabd: 45 },
+    obj: P => { const c = [[-34, -6, 22], [40, -6, 22], [40, 112, 22], [-34, 112, 22]].map(P); return `<path d="M${c.map(adP).join('L')}Z" fill="#2a2f3d" stroke="${AD_INK}" stroke-width="2" stroke-linejoin="round"/>`; },
+    says: 'The phone lies across the palm, the four fingers curled at its far edge, the thumb free on the side to touch the screen.',
+    tip: 'Show only the finger edges on the far side of the phone: the rest of the hand is hidden behind it. A thin dark rectangle reads as a phone better than any detail.',
+    words: 'hand holding a smartphone, thumb on screen' },
+  ball: { label: 'An apple or a ball', rot: 0,
+    pose: { i: [40, 40, 30], m: [45, 42, 30], r: [45, 42, 30], p: [42, 40, 28], t: [20, 25, 20], spread: 10, tabd: 50 },
+    obj: P => { const c = P([0, 78, 36]); return `<circle cx="${adF(c[0])}" cy="${adF(c[1])}" r="52" fill="#c8453b" stroke="${AD_INK}" stroke-width="2.4"/><path d="M${adF(c[0])} ${adF(c[1] - 50)}q4 -14 12 -18" stroke="#4a3a28" stroke-width="3" fill="none" stroke-linecap="round"/>`; },
+    says: 'The round thing sits in the palm; the fingers curl up round it and the thumb closes the other side. The fingers do not touch the middle of it, only its sides.',
+    tip: 'Leave a small gap between the palm and the object: a hand never grips a ball with the whole palm flat on it.',
+    words: 'hand holding an apple, fingers curled around a round object' },
+};
+
+function anHoldSheet(key) {
+  const H = AN_HOLDS[key] || AN_HOLDS.stick;
+  let g = '';
+  [[10, 'Front'], [55, 'Three-quarter']].forEach(([turn, label], i) => {
+    const ox = i * 300;
+    g += `<g transform="rotate(${H.rot} ${ox + 110} 150)">${adHandView(H.pose, turn, ox, H.obj)}</g><text x="${ox + 110}" y="296" text-anchor="middle" font-size="12" fill="#666">${label}</text>`;
+  });
+  return adSvgOpen([0, 0, 600, 310], `${H.label}, in a hand`) + `<rect width="600" height="310" fill="#fff"/>${g}</svg>`;
+}
+
+/* ---- sitting */
+
+/* Six ways to sit, from the side, facing right. hip: how high the hip joint is above the floor. A is the near leg and B the far one:
+   [thigh angle from the vertical (forward is positive, 90 is level), how far the knee bends the shin back]. hands: where the arms go -
+   on the lap, round the knees, behind on the floor, on the edge of the seat. foot: which way the toes point (1 forward, -1 back). */
+const AN_SITS = {
+  chair: { label: 'On a chair', hip: 62, A: [90, 88], B: [84, 82], lean: 2, hands: 'lap', foot: 1, prop: 'chair',
+    says: 'The thigh is level, the shin straight down, the foot flat: two right angles. The hip is as high as the seat, a shin\'s length above the floor.',
+    tip: 'Draw the thigh shorter than when standing - it points a little at us in most views. The back does not touch the chair unless she leans on it.',
+    words: 'sitting on a chair, hands on lap, from side' },
+  cross: { label: 'Cross-legged', hip: 10, A: [118, 188], B: [104, 170], lean: 3, hands: 'lap', foot: -1, prop: null,
+    says: 'The hips almost touch the floor, the knees are a little above them and out to the sides, and each shin lies back under the other thigh.',
+    tip: 'From the side the knees are the highest point of the legs and the feet hardly show. Round the back a little: a straight back here looks stiff.',
+    words: 'sitting cross-legged, indian style, on the floor' },
+  seiza: { label: 'Kneeling (seiza)', hip: 36, A: [56, 146], B: [56, 146], lean: 0, hands: 'lap', foot: -1, prop: null,
+    says: 'She sits on her heels: the knees on the floor, the shins flat along it, the toes pointing back. The hip is the height of the heels and one thigh above the floor.',
+    tip: 'The back is the straightest line in any sitting pose here. The hands lie on the thighs near the knees.',
+    words: 'seiza, kneeling, sitting on heels, hands on thighs' },
+  hug: { label: 'Knees up, hugging', hip: 8, A: [145, 135], B: [152, 140], lean: 14, hands: 'knee', foot: 1, prop: null,
+    says: 'The knees rise close to the chest, the shins drop to the floor and the arms close round them. The back rounds and the head sinks toward the knees.',
+    tip: 'The knee is higher than the hip by a whole thigh: that, and the arms wrapped on the shins, says it is a closed, small pose.',
+    words: 'sitting, knees up, hugging own knees, from side' },
+  ledge: { label: 'On a ledge, legs hanging', hip: 108, A: [90, 75], B: [94, 98], lean: 4, hands: 'edge', foot: 1, prop: 'ledge',
+    says: 'The seat is high, so the shins hang free and the feet swing; one leg is a little forward of the other. The hands rest on the edge beside the hips.',
+    tip: 'Give the legs different angles - two shins parallel look like furniture. The weight is on the hands and the hips, so the shoulders lift a little.',
+    words: 'sitting on a ledge, legs dangling, hands on edge' },
+  long: { label: 'Legs out, leaning back', hip: 8, A: [88, -4], B: [88, -2], lean: -18, hands: 'back', foot: 1, prop: null,
+    says: 'The legs lie straight along the floor and the body leans back on straight arms behind, the hands flat on the floor.',
+    tip: 'The back arm is straight and takes the weight, so the shoulder is higher than in a relaxed seat. The line from hand to hip to toes is the whole pose.',
+    words: 'sitting, legs stretched out, leaning back, hands on floor behind' },
+};
+
+// A limb reaching a point: two bones of length L1 and L2 from p, bent at the elbow or knee to the side `side` (1 or -1); the end falls short if it cannot reach.
+function anReach(p, to, L1, L2, side) {
+  const dx = to[0] - p[0], dy = to[1] - p[1], r = Math.hypot(dx, dy) || 1, d = Math.min(r, L1 + L2 - 0.5);
+  const a = Math.atan2(dx, dy) + side * Math.acos(adClamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
+  return [p, [p[0] + L1 * Math.sin(a), p[1] + L1 * Math.cos(a)], [p[0] + dx / r * d, p[1] + dy / r * d]];
+}
+
+function anSitFigure(S, floor, x) {
+  const T = 62, SH = 60, hip = [x, floor - S.hip], legA = anLimb(hip, S.A[0], S.A[1], T, SH), legB = anLimb(hip, S.B[0], S.B[1], T, SH);
+  const lean = adRad(S.lean), shoulder = [x + 100 * Math.sin(lean), hip[1] - 100 * Math.cos(lean)];
+  const head = [shoulder[0] + 22 * Math.sin(lean), shoulder[1] - 24 * Math.cos(lean)];
+  const mid = leg => [(leg[0][0] + leg[1][0]) / 2, (leg[0][1] + leg[1][1]) / 2 - 7];
+  const at = {
+    lap: [mid(legA), [mid(legA)[0] + 8, mid(legA)[1]]],
+    knee: [[legA[1][0] + 4, legA[1][1] + 26], [legA[1][0] + 10, legA[1][1] + 22]],
+    back: [[x - 78, floor - 2], [x - 94, floor - 2]],
+    edge: [[x - 28, hip[1] + 8], [x - 46, hip[1] + 8]],
+  }[S.hands];
+  const side = S.hands === 'back' ? -1 : 1;
+  const armA = anReach(shoulder, at[0], 44, 42, side), armB = anReach(shoulder, at[1], 44, 42, side);
+  const foot = l => [l[2], [l[2][0] + 18 * S.foot, l[2][1] + 2]];
+  return { hip, legA, legB, shoulder, armA, armB, head, footA: foot(legA), footB: foot(legB) };
+}
+
+function anSitSvg(o) {
+  const S = AN_SITS[o.sit] || AN_SITS.chair, ink = AD_INK, W = 420, floor = 330, x = 190;
+  const f = anSitFigure(S, floor, x);
+  // Cut to the figure: a pose low on the floor does not need the height of one on a ledge.
+  const top = Math.max(0, Math.floor(Math.min(f.head[1] - 19, f.shoulder[1]) - 24)), H = floor + 44 - top;
+  const line = (pts, col, w) => `<path d="M${pts.map(adP).join(' L')}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  let s = `<rect y="${top}" width="${W}" height="${H}" fill="#fff"/><path d="M10 ${floor + 4} L${W - 10} ${floor + 4}" stroke="#aab" stroke-width="1.2"/>`;
+  const seat = f.hip[1] + 9;
+  if (S.prop === 'chair') {
+    s += `<path d="M${x - 40} ${seat} V${floor + 4} M${x + 62} ${seat} V${floor + 4} M${x - 40} ${seat} V${seat - 100}" stroke="#b8a68a" stroke-width="5" fill="none" stroke-linecap="round"/>` +
+      `<rect x="${x - 44}" y="${seat - 3}" width="112" height="8" rx="2" fill="#d8c8a8" stroke="#8a7a5c" stroke-width="1.4"/>`;
+  } else if (S.prop === 'ledge') {
+    s += `<rect x="${x - 150}" y="${seat}" width="160" height="${floor + 4 - seat}" fill="#e6e8ee" stroke="#9aa0b0" stroke-width="1.4"/>`;
+  }
+  s += line(f.legB, '#9aa0b0', 9) + line(f.footB, '#9aa0b0', 7) + line(f.armB, '#9aa0b0', 7);
+  s += line(f.legA, ink, 10) + line(f.footA, ink, 8) + line([f.hip, f.shoulder], ink, 16) + line(f.armA, ink, 8);
+  s += `<circle cx="${adF(f.head[0])}" cy="${adF(f.head[1])}" r="19" fill="#fff" stroke="${ink}" stroke-width="3"/>`;
+  for (const j of [f.legA[1], f.legB[1], f.armA[1], f.armB[1]]) s += `<circle cx="${adF(j[0])}" cy="${adF(j[1])}" r="3.4" fill="#fff" stroke="${ink}" stroke-width="1.4"/>`;
+  // The hip height, so the weight of the pose can be seen against the floor.
+  s += `<path d="M${adP([f.hip[0] - 60, f.hip[1]])} L${adP([f.hip[0] + 60, f.hip[1]])}" stroke="#d67a3a" stroke-width="1" stroke-dasharray="3 4"/>`;
+  s += `<text x="${W / 2}" y="${floor + 30}" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${esc(S.label)}</text>`;
+  return adSvgOpen([0, top, W, H], `${S.label}, a seated figure from the side`) + s + '</svg>';
+}
+
+function anSitNotes(o) {
+  const S = AN_SITS[o.sit] || AN_SITS.chair;
+  return [S.says, S.tip, 'The dashed orange line is the hip. Draw it first, then the spine up from it, then the thighs: where the hip sits against the floor decides how heavy the pose feels.'];
+}
+
+/* ---- the ages */
+
+/* Five ages as a figure of heads: heights of the shoulder, crotch and knee in heads from the crown, the whole height in heads and in
+   centimetres, where the eyes sit on the face (from the crown, as a share of the head) and how big they are. A child is shorter
+   mostly in the legs, and has a rounder, shorter face with the eyes lower. */
+const AN_AGES = {
+  small: { label: 'Small child', heads: 4.5, cm: 100, shoulder: 1.2, crotch: 2.5, knee: 3.5, eyeLine: 0.6, eye: 1.25, rx: 46, ry: 43,
+    says: 'The head is about a fifth of the height. The legs are short and the belly round; the arms reach only to the top of the thighs.' },
+  child: { label: 'Child, about 8', heads: 5.5, cm: 125, shoulder: 1.25, crotch: 2.9, knee: 4.2, eyeLine: 0.57, eye: 1.15, rx: 44, ry: 45,
+    says: 'The legs have grown longer than the body. The face is still round with big eyes set low; the neck is thin and short.' },
+  young: { label: 'Young teen', heads: 6.5, cm: 150, shoulder: 1.3, crotch: 3.3, knee: 4.9, eyeLine: 0.54, eye: 1.05, rx: 42, ry: 47,
+    says: 'The height comes from the legs. The shoulders are narrow, the chest and hips begin to show; the face lengthens and the eyes move up.' },
+  teen: { label: 'Older teen', heads: 7, cm: 163, shoulder: 1.3, crotch: 3.5, knee: 5.2, eyeLine: 0.52, eye: 1, rx: 41, ry: 49,
+    says: 'The usual anime schoolgirl or schoolboy: seven heads, the crotch just below the middle, the shoulders as wide as two heads on a boy.' },
+  adult: { label: 'Adult', heads: 7.5, cm: 170, shoulder: 1.35, crotch: 3.75, knee: 5.6, eyeLine: 0.5, eye: 0.9, rx: 40, ry: 51,
+    says: 'The eyes are on the middle line of the head, the jaw is longer and more defined, and the eyes are smaller against the face.' },
+};
+const AN_AGE_VIEWS = { figure: 'Whole figure', face: 'Face' };
+
+function anAgesSvg(o) {
+  const ink = AD_INK, keys = Object.keys(AN_AGES), W = 640, H = 420, floor = 360, tall = 300 / AN_AGES.adult.cm;
+  let s = `<rect width="${W}" height="${H}" fill="#fff"/>`;
+  if (o.view === 'face') {
+    keys.forEach((k, i) => {
+      const A = AN_AGES[k], cx = 70 + i * 125, top = 110, h = 140, w = h * A.rx / A.ry * 0.8;
+      // The head: a round skull whose jaw narrows with age.
+      const chin = top + h, jk = adF(w * (0.34 - i * 0.045)), l = adF(cx - w / 2), r = adF(cx + w / 2), mid = adF(top + h * 0.45), low = adF(top + h * 0.82);
+      s += `<path d="M${l} ${mid} C${l} ${adF(top - h * 0.08)} ${r} ${adF(top - h * 0.08)} ${r} ${mid} C${r} ${low} ${adF(cx + +jk)} ${chin} ${cx} ${chin} C${adF(cx - jk)} ${chin} ${l} ${low} ${l} ${mid}Z" fill="#fdf2ea" stroke="${ink}" stroke-width="2.2"/>`;
+      const ey = top + h * A.eyeLine, er = 11 * A.eye;
+      for (const sx of [-1, 1]) s += `<ellipse cx="${adF(cx + sx * w * 0.24)}" cy="${adF(ey)}" rx="${adF(er * 0.9)}" ry="${adF(er * 1.25)}" fill="#fff" stroke="${ink}" stroke-width="1.8"/>` +
+        `<ellipse cx="${adF(cx + sx * w * 0.24)}" cy="${adF(ey + er * 0.1)}" rx="${adF(er * 0.62)}" ry="${adF(er * 0.95)}" fill="#4a6fa5"/>`;
+      s += `<path d="M${cx - 2} ${adF(top + h * (A.eyeLine + 0.16))} q2 3 4 0" fill="none" stroke="${ink}" stroke-width="1.4"/>` +
+        `<path d="M${cx - 8} ${adF(top + h * 0.84)} q8 5 16 0" fill="none" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`;
+      s += `<path d="M${adF(cx - w / 2 - 6)} ${adF(ey)} H${adF(cx + w / 2 + 6)}" stroke="#d67a3a" stroke-width="1" stroke-dasharray="3 4"/>`;
+      s += `<text x="${cx}" y="${H - 52}" text-anchor="middle" font-size="12.5" font-weight="600" fill="#333">${esc(A.label)}</text>` +
+        `<text x="${cx}" y="${H - 34}" text-anchor="middle" font-size="11.5" fill="#666">eyes ${Math.round(A.eyeLine * 100)}% down</text>`;
+    });
+    return adSvgOpen([0, 0, W, H], 'The face at five ages, the eye line dashed') + s + '</svg>';
+  }
+  s += `<path d="M10 ${floor} L${W - 10} ${floor}" stroke="#aab" stroke-width="1.2"/>`;
+  keys.forEach((k, i) => {
+    const A = AN_AGES[k], cx = 70 + i * 125, tallPx = A.cm * tall, head = tallPx / A.heads, top = floor - tallPx;
+    const y = n => top + n * head, sh = head * (0.5 + i * 0.06);
+    const line = (pts, w) => `<path d="M${pts.map(adP).join(' L')}" fill="none" stroke="${ink}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<ellipse cx="${cx}" cy="${adF(top + head / 2)}" rx="${adF(head * 0.4)}" ry="${adF(head / 2)}" fill="#fff" stroke="${ink}" stroke-width="2.4"/>`;
+    s += line([[cx, y(1)], [cx, y(A.crotch)]], 8) + line([[cx - sh, y(A.shoulder)], [cx + sh, y(A.shoulder)]], 5);
+    s += line([[cx - sh, y(A.shoulder)], [cx - sh - 4, y(A.shoulder + (A.crotch - A.shoulder) * 0.95)]], 4) + line([[cx + sh, y(A.shoulder)], [cx + sh + 4, y(A.shoulder + (A.crotch - A.shoulder) * 0.95)]], 4);
+    s += line([[cx - 5, y(A.crotch)], [cx - 6, y(A.knee)], [cx - 6, floor]], 6) + line([[cx + 5, y(A.crotch)], [cx + 6, y(A.knee)], [cx + 6, floor]], 6);
+    // The head-heights as ticks beside the figure: how many of the head fit into the body.
+    for (let n = 1; n <= Math.floor(A.heads); n++) s += `<path d="M${adF(cx + head * 0.55)} ${adF(y(n))} h7" stroke="#d67a3a" stroke-width="1.2"/>`;
+    s += `<text x="${cx}" y="${floor + 18}" text-anchor="middle" font-size="12.5" font-weight="600" fill="#333">${esc(A.label)}</text>` +
+      `<text x="${cx}" y="${floor + 34}" text-anchor="middle" font-size="11.5" fill="#666">${A.heads} heads · ~${A.cm} cm</text>`;
+  });
+  return adSvgOpen([0, 0, W, H], 'Five ages as figures of heads, side by side') + s + '</svg>';
+}
+
+function anAgesNotes() {
+  return [...Object.values(AN_AGES).map(A => `${A.label}, ${A.heads} heads. ${A.says}`),
+    'The same head drawn at every age: only the body grows more than the head does. The orange ticks on the figures are the head-heights; the dashed line on the faces is the eye line.'];
+}
+
+/* ---- footwear */
+
+/* Six kinds of shoe, from the side and the front. Heights are in px at the size drawn (a foot is 230 long): sole, heel block, shaft (the
+   height of the opening above the sole at the ankle), vamp (the instep) and toe (the toe box). detail: what is drawn on it. */
+const AN_FOOTWEAR = {
+  sneaker: { label: 'Sneaker', sole: 12, heel: 0, shaft: 72, vamp: 62, toe: 38, detail: 'laces',
+    says: 'A thick sole with a toe cap that curls up, the laces over the instep and a padded collar round the ankle.',
+    tip: 'Draw the foot inside first, then the shoe as a shell a little bigger than it: the toe cap is a rounded wedge, not a flat tip.',
+    words: 'sneakers, white sneakers, laces' },
+  loafer: { label: 'School loafer', sole: 8, heel: 6, shaft: 50, vamp: 54, toe: 32, detail: 'band',
+    says: 'A low shoe cut under the ankle bone, a strap or band across the vamp and a thin sole with a small heel.',
+    tip: 'The opening is a scoop: the ankle shows above it. Keep the toe box long and low; it is the shape the school-uniform look is made of.',
+    words: 'loafers, school uniform, brown shoes' },
+  mary: { label: 'Mary Jane', sole: 8, heel: 14, shaft: 46, vamp: 50, toe: 30, detail: 'strap',
+    says: 'A round toe, a low heel and a strap across the instep with a button.',
+    tip: 'The strap runs across the highest point of the foot, so it bends round the instep: draw it as a curve, not a straight band.',
+    words: 'mary janes, strap shoes, round toe' },
+  boot: { label: 'Boot', sole: 14, heel: 22, shaft: 150, vamp: 62, toe: 38, detail: 'band',
+    says: 'The shaft goes up the calf and hides the ankle; the heel is a block and the opening is a cuff.',
+    tip: 'The shaft is a tube that follows the leg and bends at the ankle: a crease or two at the bend, and a cuff or a zip line at the top.',
+    words: 'boots, ankle boots, knee-high boots' },
+  sandal: { label: 'Sandal', sole: 8, heel: 10, shaft: 0, vamp: 36, toe: 20, detail: 'straps',
+    says: 'No upper: the foot, a flat sole and two straps - over the instep and round the ankle - and the toes in view.',
+    tip: 'Draw the whole foot first, then lay the straps on it. The toes stay in the picture, so the foot has to be right.',
+    words: 'sandals, bare feet, straps' },
+  heel: { label: 'High heel', sole: 6, heel: 58, shaft: 40, vamp: 56, toe: 24, detail: 'pump',
+    says: 'The heel lifts the foot so that it points down: the arch is steep and the toe barely touches the floor.',
+    tip: 'Draw the leg line right down into the toe; the heel is a thin post under the back of the foot, not a block.',
+    words: 'high heels, pumps' },
+};
+const AN_FOOTWEAR_VIEWS = { side: 'From the side', front: 'From the front' };
+
+function anFootwearSide(S, x0, fl, ink) {
+  const L = 230, x1 = x0 + L, hl = S.heel, yH = fl - hl - S.sole, yT = fl - S.sole - hl * 0.3, f = adF;
+  const at = t => yH + (yT - yH) * t, back = yH - S.shaft;
+  let s = '';
+  // The leg above the shoe, grey.
+  const legTop = Math.min(back, yH - 70) - 60;
+  s += `<path d="M${f(x0 + 16)} ${f(legTop)} L${f(x0 + 22)} ${f(back)} M${f(x0 + 86)} ${f(legTop)} L${f(x0 + 90)} ${f(back + 4)}" fill="none" stroke="#9aa0b0" stroke-width="2"/>`;
+  if (S.detail === 'straps') {
+    // A bare foot on a flat sole with straps.
+    s += `<path d="M${f(x0 + 14)} ${f(yH - 66)} L${f(x0 + 18)} ${f(yH)} L${f(x1 - 6)} ${f(yT - 4)} Q${f(x1 + 4)} ${f(yT - 12)} ${f(x1 - 12)} ${f(yT - 22)} Q${f(x0 + 150)} ${f(at(0.5) - 48)} ${f(x0 + 100)} ${f(at(0.3) - 46)} L${f(x0 + 92)} ${f(yH - 68)}Z" fill="#fbe3d3" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>`;
+    s += `<path d="M${f(x0 + 120)} ${f(at(0.45) - 40)} Q${f(x0 + 128)} ${f(at(0.45) - 18)} ${f(x0 + 124)} ${f(at(0.45) + 2)} M${f(x0 + 98)} ${f(yH - 54)} Q${f(x0 + 56)} ${f(yH - 44)} ${f(x0 + 16)} ${f(yH - 54)}" fill="none" stroke="${ink}" stroke-width="3.4" stroke-linecap="round"/>`;
+    for (let i = 0; i < 4; i++) s += `<circle cx="${f(x1 - 10 - i * 11)}" cy="${f(yT - 11 + i * 1.2)}" r="${f(5 - i * 0.6)}" fill="#fbe3d3" stroke="${ink}" stroke-width="1.4"/>`;
+  } else {
+    // The upper.
+    const open = x0 + 0.36 * L, dip = S.detail === 'laces' ? 8 : 16;
+    const top = [x1 - 16, at(1) - S.toe + 6];
+    s += `<path d="M${f(x0)} ${f(yH)} L${f(x0 - 2)} ${f(back)} L${f(open)} ${f(back + dip)} Q${f(x0 + 0.5 * L)} ${f(yH - S.vamp - 4)} ${f(top[0])} ${f(top[1])} Q${f(x1 + 4)} ${f(yT - S.toe * 0.45)} ${f(x1)} ${f(yT)} L${f(x0)} ${f(yH)}Z" fill="#fff" stroke="${ink}" stroke-width="2.6" stroke-linejoin="round"/>`;
+    // The sole, and a heel block under the back.
+    s += `<path d="M${f(x0 - 2)} ${f(yH)} L${f(x1)} ${f(yT)} L${f(x1)} ${f(yT + S.sole)} L${f(x0 + 36)} ${f(yH + S.sole + hl * 0.7)} L${f(x0 - 2)} ${f(yH + S.sole)}Z" fill="#e6e8ee" stroke="${ink}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    if (hl > 0) {
+      const w = S.detail === 'pump' ? 12 : 34;
+      s += `<path d="M${f(x0 - 2)} ${f(yH + S.sole)} H${f(x0 + w)} L${f(x0 + w - 3)} ${f(fl)} H${f(x0 + 1)}Z" fill="#d6d8e0" stroke="${ink}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    }
+    if (S.detail === 'laces') {
+      for (let i = 0; i < 4; i++) { const px = x0 + 0.42 * L + i * 22, py = yH - S.vamp + 4 + i * 3.5; s += `<path d="M${f(px)} ${f(py - 6)} l8 12" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>`; }
+      s += `<path d="M${f(x1 - 56)} ${f(yT - 6)} Q${f(x1 - 50)} ${f(yT - S.toe * 0.6)} ${f(x1 - 30)} ${f(yT - S.toe * 0.8)}" fill="none" stroke="${ink}" stroke-width="1.8"/>`;
+    } else if (S.detail === 'strap') {
+      s += `<path d="M${f(x0 + 0.5 * L - 4)} ${f(yH - S.vamp + 1)} Q${f(x0 + 0.5 * L - 14)} ${f(yH - S.vamp / 2)} ${f(x0 + 0.5 * L - 8)} ${f(yH - 4)}" fill="none" stroke="${ink}" stroke-width="5" stroke-linecap="round"/><circle cx="${f(x0 + 0.5 * L - 12)}" cy="${f(yH - S.vamp / 2)}" r="3.2" fill="#fff" stroke="${ink}" stroke-width="1.4"/>`;
+    } else if (S.detail === 'band') {
+      s += `<path d="M${f(x0 + 0.5 * L + 6)} ${f(yH - S.vamp + 4)} Q${f(x0 + 0.5 * L + 20)} ${f(yH - S.vamp / 2)} ${f(x0 + 0.5 * L + 10)} ${f(at(0.7) - 6)}" fill="none" stroke="${ink}" stroke-width="2" stroke-dasharray="5 4"/>`;
+      if (S.shaft > 100) s += `<path d="M${f(x0 - 2)} ${f(back + 14)} L${f(open - 2)} ${f(back + dip + 14)}" stroke="${ink}" stroke-width="1.8"/>`;
+    }
+  }
+  return s;
+}
+
+function anFootwearFront(S, cx, fl, ink) {
+  const f = adF, w = 66, h = S.vamp * 0.8 + S.toe * 0.3;
+  let s = '';
+  for (const sx of [-1, 1]) {
+    const x = cx + sx * 48, top = fl - S.heel * 0.2 - S.sole - h;
+    s += `<path d="M${f(x - 8)} ${f(top - 70)} V${f(top + 6)} M${f(x + 8)} ${f(top - 70)} V${f(top + 6)}" stroke="#9aa0b0" stroke-width="2" fill="none"/>`;
+    if (S.shaft > 100) s += `<rect x="${f(x - 20)}" y="${f(top - 90)}" width="40" height="${f(S.shaft - 6)}" rx="6" fill="#fff" stroke="${ink}" stroke-width="2.4"/>`;
+    s += `<path d="M${f(x - w / 2)} ${f(fl - S.sole)} C${f(x - w / 2)} ${f(top - h * 0.25)} ${f(x + w / 2)} ${f(top - h * 0.25)} ${f(x + w / 2)} ${f(fl - S.sole)}Z" fill="${S.detail === 'straps' ? '#fbe3d3' : '#fff'}" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>`;
+    s += `<rect x="${f(x - w / 2 - 2)}" y="${f(fl - S.sole)}" width="${w + 4}" height="${S.sole}" rx="3" fill="#e6e8ee" stroke="${ink}" stroke-width="2.2"/>`;
+    if (S.detail === 'laces') for (let i = 0; i < 3; i++) s += `<path d="M${f(x - 7)} ${f(top + 10 + i * 8)} l14 5 M${f(x + 7)} ${f(top + 10 + i * 8)} l-14 5" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`;
+    if (S.detail === 'strap' || S.detail === 'straps') s += `<path d="M${f(x - w / 2 + 4)} ${f(top + h * 0.55)} Q${f(x)} ${f(top + h * 0.4)} ${f(x + w / 2 - 4)} ${f(top + h * 0.55)}" fill="none" stroke="${ink}" stroke-width="4" stroke-linecap="round"/>`;
+    if (S.detail === 'band') s += `<path d="M${f(x - w / 2 + 6)} ${f(top + h * 0.5)} Q${f(x)} ${f(top + h * 0.38)} ${f(x + w / 2 - 6)} ${f(top + h * 0.5)}" fill="none" stroke="${ink}" stroke-width="1.8" stroke-dasharray="5 4"/>`;
+    if (S.detail === 'pump') s += `<path d="M${f(x - 12)} ${f(top + 8)} Q${f(x)} ${f(top + 18)} ${f(x + 12)} ${f(top + 8)}" fill="none" stroke="${ink}" stroke-width="1.8"/>`;
+    if (S.detail === 'straps') for (let i = 0; i < 5; i++) s += `<circle cx="${f(x - 20 + i * 10)}" cy="${f(fl - S.sole - 6 - (i === 0 || i === 4 ? 0 : 3))}" r="4" fill="#fbe3d3" stroke="${ink}" stroke-width="1.2"/>`;
+  }
+  return s;
+}
+
+function anFootwearSvg(o) {
+  const S = AN_FOOTWEAR[o.shoe] || AN_FOOTWEAR.sneaker, ink = AD_INK, W = 420, H = 300, fl = 262;
+  let s = `<rect width="${W}" height="${H}" fill="#fff"/><path d="M10 ${fl} H${W - 10}" stroke="#aab" stroke-width="1.2"/>`;
+  s += o.view === 'front' ? anFootwearFront(S, W / 2, fl, ink) : anFootwearSide(S, 90, fl, ink);
+  s += `<text x="${W / 2}" y="${H - 14}" text-anchor="middle" font-size="13" font-weight="600" fill="#333">${esc(S.label)}</text>`;
+  return adSvgOpen([0, 0, W, H], `${S.label} ${o.view === 'front' ? 'from the front' : 'from the side'}`) + s + '</svg>';
+}
+
+function anFootwearNotes(o) {
+  const S = AN_FOOTWEAR[o.shoe] || AN_FOOTWEAR.sneaker;
+  return [S.says, S.tip, 'The leg in grey goes down into the shoe: draw the ankle first, then the shoe round it.'];
+}
+
+/* ---- ears and neck */
+
+const AN_EARNECK_VIEWS = { ear: 'The ear', neck: 'The neck' };
+const AN_EARNECK_NOTES = {
+  ear: ['The top of the ear is on the eyebrow line and the bottom of the lobe on the line of the base of the nose, from every side.',
+    'From the front the ears flare out at the top. In three-quarter only the far one is shown, further back; from the side it sits behind the middle of the head, nearer the back than the nose.',
+    'The dashed orange lines are the eyebrow line and the nose line: draw them across the head first, then fit the ear between them.'],
+  neck: ['The neck is about half the width of the head from the front, and it does not stand straight: from the side it leans forward and is set on under the back of the skull.',
+    'The collarbones make a V that starts at the notch under the throat and run out to the shoulders; the trapezius slopes from the neck to the shoulder, not at a right angle.',
+    'In three-quarter the muscle from behind the ear to the notch is the one line that tells the turn. Draw it and the neck turns with the head.'],
+};
+
+function anEarNeckSvg(o) {
+  const ink = AD_INK, W = 640, H = 380, f = adF, G = '#d67a3a';
+  let s = `<rect width="${W}" height="${H}" fill="#fff"/>`;
+  const line = (d, w = 2.4, extra = '') => `<path d="${d}" fill="none" stroke="${ink}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${extra}/>`;
+  const label = (x, t) => `<text x="${x}" y="${H - 16}" text-anchor="middle" font-size="12.5" font-weight="600" fill="#333">${esc(t)}</text>`;
+  if (o.view === 'neck') {
+    // Front.
+    let cx = 110;
+    s += `<ellipse cx="${cx}" cy="95" rx="42" ry="52" fill="#fdf2ea" stroke="${ink}" stroke-width="2.4"/>`;
+    s += line(`M${cx - 22} 138 L${cx - 24} 205 M${cx + 22} 138 L${cx + 24} 205`) +
+      line(`M${cx - 24} 205 Q${cx - 60} 212 ${cx - 112} 240 M${cx + 24} 205 Q${cx + 60} 212 ${cx + 112} 240`, 2.4, 'stroke-opacity=".75"') +
+      line(`M${cx} 214 Q${cx - 36} 214 ${cx - 70} 232 M${cx} 214 Q${cx + 36} 214 ${cx + 70} 232`, 1.8) +
+      `<path d="M${cx - 44} 200 H${cx + 44}" stroke="${G}" stroke-width="1" stroke-dasharray="3 4"/>`;
+    s += label(cx, 'Front');
+    // Three-quarter.
+    cx = 320;
+    s += `<ellipse cx="${cx - 6}" cy="95" rx="38" ry="52" fill="#fdf2ea" stroke="${ink}" stroke-width="2.4" transform="rotate(-6 ${cx - 6} 95)"/>`;
+    s += line(`M${cx - 18} 140 L${cx - 22} 205 M${cx + 22} 128 L${cx + 26} 205`) +
+      line(`M${cx + 20} 128 Q${cx + 4} 168 ${cx - 14} 212`, 1.8) +
+      line(`M${cx - 22} 205 Q${cx - 70} 214 ${cx - 114} 240 M${cx + 26} 205 Q${cx + 66} 212 ${cx + 106} 238`, 2.4, 'stroke-opacity=".75"') +
+      line(`M${cx - 14} 214 Q${cx - 44} 216 ${cx - 70} 232 M${cx - 14} 214 Q${cx + 16} 216 ${cx + 50} 230`, 1.8);
+    s += label(cx, 'Three-quarter');
+    // Side.
+    cx = 530;
+    s += `<path d="M${cx - 44} 80 C${cx - 44} 40 ${cx + 40} 40 ${cx + 44} 86 C${cx + 46} 112 ${cx + 30} 130 ${cx + 8} 142 L${cx - 22} 140 C${cx - 40} 128 ${cx - 46} 106 ${cx - 44} 80Z" fill="#fdf2ea" stroke="${ink}" stroke-width="2.4"/>`;
+    s += line(`M${cx + 26} 118 Q${cx + 34} 168 ${cx + 40} 212 M${cx - 14} 140 Q${cx - 14} 176 ${cx - 12} 206`) +
+      line(`M${cx - 12} 206 Q${cx - 50} 214 ${cx - 90} 238 M${cx + 40} 212 Q${cx + 70} 222 ${cx + 100} 246`, 2.4, 'stroke-opacity=".75"');
+    s += `<path d="M${cx - 26} 130 L${cx + 46} 166" stroke="${G}" stroke-width="1" stroke-dasharray="3 4"/>`;
+    s += label(cx, 'Side');
+    return adSvgOpen([0, 0, W, H], 'The neck from the front, in three-quarter and from the side') + s + '</svg>';
+  }
+  // The ear, on three heads with the eyebrow and nose lines through them.
+  const top = 60, h = 220, brow = top + h * 0.42, nose = top + h * 0.7, mid = (brow + nose) / 2;
+  const ear = (x, rx, ry, tilt = 0, inner = true) => `<g transform="rotate(${tilt} ${f(x)} ${f(mid)})"><ellipse cx="${f(x)}" cy="${f(mid)}" rx="${rx}" ry="${ry}" fill="#fdf2ea" stroke="${ink}" stroke-width="2.4"/>` +
+    (inner ? `<path d="M${f(x + rx * 0.2)} ${f(mid - ry * 0.55)} Q${f(x - rx * 0.6)} ${f(mid)} ${f(x + rx * 0.2)} ${f(mid + ry * 0.5)}" fill="none" stroke="${ink}" stroke-width="1.4"/>` : '') + '</g>';
+  // Front.
+  let cx = 110;
+  s += `<path d="M${cx - 62} ${top + 80} C${cx - 62} ${top - 14} ${cx + 62} ${top - 14} ${cx + 62} ${top + 80} C${cx + 62} ${top + 170} ${cx + 22} ${top + h} ${cx} ${top + h} C${cx - 22} ${top + h} ${cx - 62} ${top + 170} ${cx - 62} ${top + 80}Z" fill="#fdf2ea" stroke="${ink}" stroke-width="2.4"/>`;
+  s += ear(cx - 68, 9, 26, -8) + ear(cx + 68, 9, 26, 8);
+  s += `<path d="M${cx - 6} ${top + h * 0.62} q6 5 12 0" fill="none" stroke="${ink}" stroke-width="1.6"/>`;
+  s += label(cx, 'Front');
+  // Three-quarter.
+  cx = 320;
+  s += `<path d="M${cx - 56} ${top + 80} C${cx - 56} ${top - 12} ${cx + 66} ${top - 12} ${cx + 66} ${top + 80} C${cx + 66} ${top + 170} ${cx + 20} ${top + h} ${cx - 14} ${top + h} C${cx - 40} ${top + h - 6} ${cx - 56} ${top + 160} ${cx - 56} ${top + 80}Z" fill="#fdf2ea" stroke="${ink}" stroke-width="2.4"/>`;
+  s += ear(cx + 62, 12, 26, 4) + `<path d="M${cx - 58} ${top + h * 0.62} q-12 4 -2 10" fill="none" stroke="${ink}" stroke-width="2"/>`;
+  s += label(cx, 'Three-quarter');
+  // Side.
+  cx = 530;
+  s += `<path d="M${cx - 66} ${top + h * 0.62} C${cx - 70} ${top + 10} ${cx + 66} ${top - 14} ${cx + 66} ${top + 80} C${cx + 66} ${top + 150} ${cx + 30} ${top + h - 20} ${cx - 8} ${top + h} L${cx - 40} ${top + h - 4} C${cx - 52} ${top + h - 30} ${cx - 54} ${top + h * 0.78} ${cx - 56} ${top + h * 0.72} L${cx - 66} ${top + h * 0.7}Z" fill="#fdf2ea" stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"/>`;
+  s += ear(cx + 10, 15, 27, 8) + `<path d="M${cx - 4} ${top + 40} V${top + h - 4}" stroke="${G}" stroke-width="1" stroke-dasharray="3 4"/>`;
+  s += label(cx, 'Side');
+  for (const y of [brow, nose]) s += `<path d="M20 ${f(y)} H${W - 20}" stroke="${G}" stroke-width="1" stroke-dasharray="3 4"/>`;
+  return adSvgOpen([0, 0, W, H], 'The ear on a head from the front, in three-quarter and from the side, between the eyebrow line and the nose line') + s + '</svg>';
+}
+
+function anEarNeckNotes(o) { return AN_EARNECK_NOTES[o.view] || AN_EARNECK_NOTES.ear; }

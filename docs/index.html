@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=54ba8118">
+<link rel="stylesheet" href="css/app.css?v=68ad4e70">
 </head>
 <body>
 <div id="setup">
@@ -857,15 +857,19 @@
           <button type="button" class="chip" data-mode="shading" aria-pressed="false" title="One sphere and one tube in four manners - cel, two steps, soft, painted - with the shadow and light tones for your colour">Shading</button>
           <span class="pg-label am-group">Drawing</span>
           <button type="button" class="chip" data-mode="proportions" aria-pressed="false" title="Click the marks on a drawn figure: how many heads tall it is, and which mark is off">Proportions</button>
+          <button type="button" class="chip" data-mode="ages" aria-pressed="false" title="Five ages from a small child to an adult: the height in heads, where the hips and knees fall, and the eye line and eye size on the face">Ages</button>
+          <button type="button" class="chip" data-mode="earneck" aria-pressed="false" title="Where the ear sits between the eyebrow line and the nose line, and the neck: its width, its lean, the collarbones">Ears and neck</button>
           <button type="button" class="chip" data-mode="faces" aria-pressed="false" title="Soft, sharp and retro faces, as the numbers that make them">Faces</button>
           <button type="button" class="chip" data-mode="eyes" aria-pressed="false" title="The shape, height, iris, highlights and lashes of one eye, in the 90s and the modern manner">Eyes</button>
           <button type="button" class="chip" data-mode="hair" aria-pressed="false" title="A hairstyle as clumps, with the wind bending the tips and the ring of light across it">Hair</button>
           <button type="button" class="chip" data-mode="hands" aria-pressed="false" title="Twelve gestures from a palm-box and three-joint fingers, in three turns">Hands</button>
+          <button type="button" class="chip" data-mode="holds" aria-pressed="false" title="A hand round a stick, a sword, a mug, a pen, a phone and an apple: where the fingers go and what the object hides">Holding</button>
           <button type="button" class="chip" data-mode="expressions" aria-pressed="false" title="Twelve emotions: where the brows, eyes and mouth go from a neutral face, and the marks anime adds">Expressions</button>
           <button type="button" class="chip" data-mode="skirt" aria-pressed="false" title="A pleated skirt as a cone: the pleat lines from the waist, the hem as an arc, the length, the pleats and the wind">Skirt</button>
           <button type="button" class="chip" data-mode="mouth" aria-pressed="false" title="The mouth shapes of speech: the five vowels, closed, teeth on the lip, the tongue tip, and the three-drawing flap">Mouth</button>
           <button type="button" class="chip" data-mode="facelight" aria-pressed="false" title="The same face lit from eight sides: the cheek's shadow, the nose, the chin and the bangs">Face light</button>
           <button type="button" class="chip" data-mode="legs" aria-pressed="false" title="A leg from the front and the side in head heights, with the sock or stocking and the shoe">Legs</button>
+          <button type="button" class="chip" data-mode="footwear" aria-pressed="false" title="Six kinds of shoe from the side and the front: sneaker, loafer, Mary Jane, boot, sandal and high heel">Shoes</button>
           <button type="button" class="chip" data-mode="folds" aria-pressed="false" title="Six kinds of fold in cloth and where each comes from: elbow, knee, a sitting skirt, wind">Folds</button>
           <button type="button" class="chip" data-mode="inking" aria-pressed="false" title="Where the ink line is heavy, medium and thin on a drawing, and the pen for each">Inking</button>
           <button type="button" class="chip" data-mode="tones" aria-pressed="false" title="A picture held to five tones and each drawn in ink: lines for a fineliner, dots for a stipple pen, passes for a ballpoint">Tones</button>
@@ -874,6 +878,7 @@
           <button type="button" class="chip" data-mode="gesture" aria-pressed="false" title="Eight marks on a figure give the line of action - C, S or straight - and how the shoulders and hips tilt; and a drill of timed poses">Gesture</button>
           <button type="button" class="chip" data-mode="construct" aria-pressed="false" title="The body as blocks: tilt the shoulders and the hips against each other and the weight goes on one leg, over the balance line">Construction</button>
           <button type="button" class="chip" data-mode="walk" aria-pressed="false" title="The four key poses of a walk and of a run, from the side: contact, down, passing, up - and the flight of a run">Walk and run</button>
+          <button type="button" class="chip" data-mode="sit" aria-pressed="false" title="Six ways to sit from the side: a chair, cross-legged, kneeling, knees up, a ledge and legs out leaning back">Sitting</button>
           <button type="button" class="chip" data-mode="angles" aria-pressed="false" title="A head and a figure from below, level and above: the curves, the forehead, the chin and the legs">Angles</button>
           <button type="button" class="chip" data-mode="shots" aria-pressed="false" title="Two marks on a figure, and the picture is cut to six shots: long, medium, cowboy, close-up, extreme close-up">Shots</button>
           <button type="button" class="chip" data-mode="perspective" aria-pressed="false" title="A room, a street corner and a tower built from the horizon and the vanishing points">Perspective</button>
@@ -2662,7 +2667,7 @@
      files above it define (a function called later, from an event, can live
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
-<script src="js/core.js?v=1c683e2e"></script>
+<script src="js/core.js?v=2d424df3"></script>
 <script src="js/setup.js?v=a98ae2fc"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=3136007f"></script>
@@ -2682,9 +2687,9 @@
 <script src="js/workspace.js?v=14891cdc"></script>
 <script src="js/colourmath.js?v=ae688fd8"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
-<script src="js/command.js?v=d11c13d3"></script>
+<script src="js/command.js?v=6bd9e16e"></script>
 <script src="js/tour.js?v=ab9d6df9"></script>
-<script src="js/whatsnew.js?v=1411e701"></script>
+<script src="js/whatsnew.js?v=610f0785"></script>
 <script src="js/edges.js?v=055fd538"></script>
 <script src="js/range.js?v=2b00e551"></script>
 <script src="js/tone.js?v=73f7eb91"></script>
@@ -2732,8 +2737,9 @@
 <script src="js/forms-api.js?v=445e5a7b"></script>
 </template>
 <template id="lazy-genmore">
-<script src="js/genmore.js?v=309a0d0d"></script>
+<script src="js/genmore.js?v=a2cac08a"></script>
 <script src="js/gennew.js?v=7c3244b0"></script>
+<script src="js/genpick.js?v=1e86a786"></script>
 </template>
 <template id="lazy-train">
 <script src="js/train.js?v=fdee085e"></script>
@@ -2756,17 +2762,17 @@
 <template id="lazy-anime">
 <script src="js/animeframes.js?v=379e8188"></script>
 <script src="js/animecheck.js?v=5d05c055"></script>
-<script src="js/animedraw.js?v=e8838dd2"></script>
+<script src="js/animedraw.js?v=9c0d637c"></script>
 <script src="js/animedrawui.js?v=a362a542"></script>
 <script src="js/animemore.js?v=883417e5"></script>
 <script src="js/animemoreui.js?v=99cd7998"></script>
 <script src="js/animemouth.js?v=ab0896bb"></script>
-<script src="js/animebody.js?v=f3163d62"></script>
-<script src="js/animenew.js?v=539244f9"></script>
-<script src="js/animenewui.js?v=805d60e9"></script>
+<script src="js/animebody.js?v=b943eeeb"></script>
+<script src="js/animenew.js?v=bf69a14e"></script>
+<script src="js/animenewui.js?v=8f6ecc9f"></script>
 <script src="js/animetools.js?v=e043a017"></script>
 <script src="js/animebg.js?v=8a25e316"></script>
-<script src="js/animestudy.js?v=72dde2b7"></script>
+<script src="js/animestudy.js?v=e3b23b29"></script>
 </template>
 <template id="lazy-sky">
 <script src="js/sky.js?v=28ee2a34"></script>

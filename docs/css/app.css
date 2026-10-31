@@ -2333,6 +2333,12 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .af-frame figcaption { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); margin-top: 3px; }
 .af-sw { display: flex; flex: 1; height: 10px; border-radius: 3px; overflow: hidden; }
 .af-sw i { flex: 1; }
+.gp-his { display: grid; gap: 8px; margin-top: 8px; }
+.gp-his-row { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; }
+.gp-his-row img { width: 96px; height: 96px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.gp-his-words { font-size: 12px; margin: 2px 0 4px; overflow-wrap: anywhere; }
+.gp-sws { display: flex; gap: 4px; margin: 6px 0; }
+.gp-sw { width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(128,128,128,.4); }
 .ab-colours { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-top: 12px; max-width: 1000px; }
 .ab-colour { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; }
 .ab-colour > i { flex: none; width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--line); }
