@@ -584,6 +584,108 @@ async function genStoryGo() {
     async made => { if (genLockWanted()) await genLockMade(made, status); });
 }
 
+/* ---- a sheet of emotions */
+
+// One face, several feelings: the same character and seed, a close-up each, the feeling weighted so it wins over the choices' own.
+const GEN_EMOTIONS = [
+  ['joy', 'Joy', 'happy, smiling, open mouth, bright eyes'],
+  ['sad', 'Sadness', 'sad, teary eyes, downcast eyes, frown'],
+  ['anger', 'Anger', 'angry, furrowed brow, clenched teeth'],
+  ['surprise', 'Surprise', 'surprised, wide eyes, open mouth, raised eyebrows'],
+  ['shy', 'Shyness', 'embarrassed, blush, looking away, small smile'],
+  ['tired', 'Tiredness', 'tired, half-closed eyes, sleepy'],
+];
+const GEN_EMOTIONS_KEY = 'refboard.generate.emotions.v1';
+const GEN_EMOTION_FACE = 'portrait, face focus, close-up';
+
+function genEmotionsPicked() {
+  try {
+    const v = JSON.parse(localStorage.getItem(GEN_EMOTIONS_KEY));
+    if (Array.isArray(v)) return GEN_EMOTIONS.filter(x => v.includes(x[0])).map(x => x[0]);
+  } catch { /* default */ }
+  return ['joy', 'sad', 'anger', 'surprise'];
+}
+
+/* base: genRequest(); feelings: GEN_EMOTIONS rows; seed: the one they share. One job for each feeling. */
+function genEmotionJobs(base, feelings, seed) {
+  const plain = genPlainOfFraming(base);
+  return feelings.map(([, label, tags]) => ({
+    ...base, seed,
+    prompt: [...plain, ...genWeighted(GEN_EMOTION_FACE, GEN_VIEW_WEIGHT), ...genWeighted(tags, GEN_VIEW_WEIGHT)].join(', '),
+    tags: [...base.tags, 'emotions', label.toLowerCase()].slice(0, 24).map(t => t.slice(0, 40)),
+  }));
+}
+
+function genEmotionsGo() {
+  const status = el('genStatus');
+  if (genBusy) { status.textContent = 'Wait for the picture in hand - or Stop it.'; return; }
+  if (genSource) { status.textContent = 'The faces are drawn from the choices alone: drop the picture first.'; return; }
+  const picked = genEmotionsPicked(), feelings = GEN_EMOTIONS.filter(f => picked.includes(f[0]));
+  if (feelings.length < 2) { status.textContent = 'Choose at least two feelings.'; return; }
+  const base = genRequest();
+  if (el('genQuality').value === 'draft') { base.steps = GEN_DRAFT_STEPS; base.tags = [...base.tags, 'draft'].slice(0, 24); }
+  const jobs = genEmotionJobs(base, feelings, Math.floor(Math.random() * 2 ** 48));
+  runGenerate(jobs, (i, n) => `Drawing face ${i} of ${n} - ${feelings[i - 1][1].toLowerCase()}...`, `${jobs.length} faces of one character - in Uploads, Generated.`,
+    async made => { if (genLockWanted()) await genLockMade(made, status); });
+}
+
+/* ---- the best of several */
+
+/* The request drawn several times with different seeds, each picture read for what its pixels can say - the focus, the spread of
+   light and what is lost to pure white or black (the Reference check's measures, js/quality.js) - and the best few kept. It cannot
+   see a sixth finger or a wrong eye: it puts aside the blurred, the flat and the burnt, and the rest is for the eye. */
+const GEN_BEST_COUNTS = [4, 6, 8];
+const GEN_BEST_KEY = 'refboard.generate.best.v1';
+const GEN_BEST_KEEP = 2;
+
+function genBestLoad() {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(GEN_BEST_KEY)) || {}; } catch { /* defaults */ }
+  return { count: GEN_BEST_COUNTS.includes(+s.count) ? +s.count : 6, drop: s.drop === true };
+}
+const genBestSave = patch => { try { localStorage.setItem(GEN_BEST_KEY, JSON.stringify({ ...genBestLoad(), ...patch })); } catch { /* private mode */ } };
+
+// 0 to 100 from quality.js's measurements q: the steepest edge counts most, then the spread of light; pure white and black take away.
+function genBestScore(q) {
+  return Math.max(0, Math.round(Math.min(q.sharp, 30) / 30 * 55 + Math.min(q.spread, 80) / 80 * 35 + 10 - Math.min(q.blown + q.crushed, 12) * 2.5));
+}
+
+// rows: [{ doc, score }]. The best `keep` by score, then the rest; a tie goes to the one made first.
+function genBestOrder(rows, keep = GEN_BEST_KEEP) {
+  const sorted = rows.map((r, i) => ({ ...r, i })).sort((a, b) => b.score - a.score || a.i - b.i);
+  return { best: sorted.slice(0, keep), rest: sorted.slice(keep) };
+}
+
+async function genBestGo() {
+  const status = el('genStatus');
+  if (genBusy) { status.textContent = 'Wait for the picture in hand - or Stop it.'; return; }
+  if (genSource) { status.textContent = 'The best of several is drawn from the choices alone: drop the picture first.'; return; }
+  const { count, drop } = genBestLoad(), base = genRequest();
+  if (el('genQuality').value === 'draft') { base.steps = GEN_DRAFT_STEPS; base.tags = [...base.tags, 'draft'].slice(0, 24); }
+  const jobs = Array.from({ length: count }, () => ({ ...base, seed: Math.floor(Math.random() * 2 ** 48) }));
+  const rows = [];
+  await runGenerate(jobs, (i, n) => `Drawing ${i} of ${n}...`, '',
+    async made => {
+      rows.push({ doc: made.doc, score: genBestScore(qualityOf(stepsRead(await genLoadPicture(made.doc)))) });
+    });
+  if (genStopped || rows.length < count) return;
+  if (rows.length <= GEN_BEST_KEEP) { status.textContent = 'Too few pictures to choose from.'; return; }
+  const { best, rest } = genBestOrder(rows);
+  // Keep to the palette is done to the ones kept only: the rest are not worth the colouring.
+  for (const r of best) {
+    const doc = { ...r.doc, tags: [...(r.doc.tags || []), `best of ${rows.length}`].slice(0, 24) };
+    await storePutItem('uploads', uploadKey(doc.file), doc);
+    if (genLockWanted()) await genLockMade({ doc }, status);
+  }
+  for (const r of rest) {
+    if (drop) await forgetUpload(r.doc);
+    else await storePutItem('uploads', uploadKey(r.doc.file), { ...r.doc, tags: [...(r.doc.tags || []), 'passed over'].slice(0, 24) });
+  }
+  storeChanged();
+  await showGenerate(false);
+  status.textContent = `Kept the best ${best.length} of ${rows.length} (${best.map(r => r.score).join(' and ')} of 100); the other ${rest.length} ${drop ? 'deleted' : 'are tagged "passed over"'}. It reads focus and light, not hands: look them over.`;
+}
+
 /* ---- the panel */
 
 function genMoreInit() {
@@ -595,6 +697,12 @@ function genMoreInit() {
   body.innerHTML =
     block('gmSeriesBlock', 'A series', 'One scene, several views, the same seed and palette. Uses the choices above.',
       chips('gmViews', 'Views of the scene', GEN_VIEWS, 'view') + `<button type="button" class="ghost" id="gmSeries">Make the series</button>`) +
+    block('gmEmoBlock', 'A sheet of emotions', 'One character, several feelings, a close-up of the face each, with one seed. Uses the choices above.',
+      chips('gmEmos', 'Feelings', GEN_EMOTIONS, 'emo') + `<button type="button" class="ghost" id="gmEmoGo">Draw the faces</button>`) +
+    block('gmBestBlock', 'The best of several', 'The request drawn several times with different seeds; the pictures are read for focus and light and the best two kept. It cannot see hands.',
+      `<div class="chips" id="gmBestCount" role="group" aria-label="How many to draw">${GEN_BEST_COUNTS.map(n => `<button type="button" class="chip" data-n="${n}">${n}</button>`).join('')}</div>` +
+      `<div class="chips" id="gmBestDrop" role="group" aria-label="The ones passed over"><button type="button" class="chip" data-drop="0" title="They stay in Uploads, tagged 'passed over'">Keep the rest</button><button type="button" class="chip" data-drop="1" title="They are deleted">Delete the rest</button></div>` +
+      `<button type="button" class="ghost" id="gmBestGo">Draw and choose</button>`) +
     block('gmCompBlock', 'Composition sketches', 'The scene in several compositions as small quick drafts, with one seed: choose one in the drafts strip and finish it.',
       chips('gmComps', 'Compositions', GEN_COMPS, 'comp') + `<button type="button" class="ghost" id="gmCompGo">Sketch the compositions</button>`) +
     block('gmStoryBlock', 'From the storyboard', `The frames of Anime study's Storyboard (<span id="gmStoryCount">${genStoryCount()}</span>) drawn as pictures of one scene: the shot, the angle, where she looks and what she does.`,
@@ -603,7 +711,7 @@ function genMoreInit() {
       `<div class="row"><input type="text" id="genMoveText" maxlength="80" placeholder="e.g. біжить, озирається" aria-label="What she does"><button type="button" class="ghost" id="gmMove">Add</button></div>`) +
     block('gmTasteBlock', 'A or B', 'Two of your pictures at a time: which is better? The words that keep winning can go into More tags.',
       `<button type="button" class="ghost" id="gmDuel">Compare two</button> <span class="count" id="gmTaste"></span>`) +
-    genNewBlocks();
+    genNewBlocks() + genPickBlocks();
   const sync = (id, picked, attr) => { const p = picked(); for (const b of el(id).children) b.setAttribute('aria-pressed', String(p.includes(b.dataset[attr]))); };
   const toggle = (id, key, picked, attr) => {
     sync(id, picked, attr);
@@ -616,6 +724,19 @@ function genMoreInit() {
   };
   toggle('gmViews', GEN_VIEWS_KEY, genViewsPicked, 'view');
   toggle('gmComps', GEN_COMPS_KEY, genCompsPicked, 'comp');
+  toggle('gmEmos', GEN_EMOTIONS_KEY, genEmotionsPicked, 'emo');
+  const bestSync = () => {
+    const b = genBestLoad();
+    for (const x of el('gmBestCount').children) x.setAttribute('aria-pressed', String(+x.dataset.n === b.count));
+    for (const x of el('gmBestDrop').children) x.setAttribute('aria-pressed', String((x.dataset.drop === '1') === b.drop));
+  };
+  bestSync();
+  el('gmBestCount').addEventListener('click', e => { const x = e.target.closest('[data-n]'); if (x) { genBestSave({ count: +x.dataset.n }); bestSync(); } });
+  el('gmBestDrop').addEventListener('click', e => { const x = e.target.closest('[data-drop]'); if (x) { genBestSave({ drop: x.dataset.drop === '1' }); bestSync(); } });
+  // One block open at a time: the panel holds a dozen, and open they would be a page to scroll.
+  body.addEventListener('toggle', e => { if (e.target.open) for (const d of body.querySelectorAll('details.gm-block[open]')) if (d !== e.target) d.open = false; }, true);
+  el('gmEmoGo').addEventListener('click', genEmotionsGo);
+  el('gmBestGo').addEventListener('click', genBestGo);
   el('gmSeries').addEventListener('click', genSeriesGo);
   el('gmCompGo').addEventListener('click', genCompsGo);
   el('gmStoryGo').addEventListener('click', genStoryGo);
@@ -624,4 +745,5 @@ function genMoreInit() {
   el('genMoveText').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); genMoveAdd(); } });
   genDuelSummary();
   genNewWire();
+  genPickWire();
 }

@@ -58,7 +58,8 @@ const AN_DRILL_POSES = [
   'reaching up', 'reaching forward', 'pulling something', 'pushing a heavy door', 'throwing', 'catching', 'a kick', 'a punch', 'a sword raised', 'drawing a bow',
   'walking with a bag', 'leaning on a wall', 'stretching', 'twirling', 'stepping onto a stair', 'crouching to look at something', 'waving', 'dancing', 'falling backwards', 'holding an umbrella in the wind',
 ];
-const AN_DRILL_SECS = [30, 60, 120];
+const AN_DRILL_SECS = [15, 30, 60, 120];
+const AN_DRILL_RUN = 10;      // poses in a run
 
 /* ---- tones */
 

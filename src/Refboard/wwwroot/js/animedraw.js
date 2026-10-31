@@ -108,7 +108,8 @@ function adHull(pts) {
   return [...build(p), ...build([...p].reverse())];
 }
 
-function adHandView(pose, turn, ox) {
+// between(proj): something drawn on the palm and under the fingers - an object the hand holds.
+function adHandView(pose, turn, ox, between = null) {
   const th = adRad(turn), cs = Math.cos(th), sn = Math.sin(th);
   const proj = ([x, y, z]) => [ox + 110 + (x * cs + z * sn) * 0.9, 215 - y * 0.9];
   const skin = '#f6d8c3', skinDark = '#e7b99f', ink = AD_INK;
@@ -128,7 +129,7 @@ function adHandView(pose, turn, ox) {
   };
   const dots = pts => pts.slice(1, -1).map(q => `<circle cx="${adF(q[0])}" cy="${adF(q[1])}" r="1.8" fill="${skinDark}"/>`).join('');
   let g = `<path d="${poly(adHull(wrist))}" fill="${skin}" stroke="${ink}" stroke-width="1.8" stroke-linejoin="round"/>` +
-    `<path d="${poly(adHull(box))}" fill="${skin}" stroke="${ink}" stroke-width="1.8" stroke-linejoin="round"/>`;
+    `<path d="${poly(adHull(box))}" fill="${skin}" stroke="${ink}" stroke-width="1.8" stroke-linejoin="round"/>` + (between ? between(proj) : '');
   const sorted = AD_FINGERS.map(f => {
     const [key, bx, lens, w, k] = f, sp = adRad(pose.spread * k);
     const pts = chain([bx, 110, 0], lens, pose[key], c => [Math.sin(sp) * Math.cos(c), Math.cos(sp) * Math.cos(c), Math.sin(c)]);

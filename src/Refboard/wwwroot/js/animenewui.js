@@ -6,7 +6,7 @@
 "use strict";
 
 const ANN_KEY = 'refboard.animeNew.v1';
-const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth', 'skirt', 'walk', 'balloons'];
+const ANN_MODES = ['gesture', 'tones', 'effects', 'shots', 'legs', 'silhouette', 'compare', 'construct', 'facelight', 'mouth', 'skirt', 'walk', 'balloons', 'holds', 'sit', 'ages', 'footwear', 'earneck'];
 
 function annLoad() {
   let s = {};
@@ -15,7 +15,7 @@ function annLoad() {
   const num = (v, lo, hi, d) => (v == null || v === '' || !Number.isFinite(+v) ? d : adClamp(+v, lo, hi));
   return {
     secs: AN_DRILL_SECS.includes(+s.secs) ? +s.secs : 60,
-    shoulders: Math.round(num(s.shoulders, -30, 30, 8)), hips: Math.round(num(s.hips, -30, 30, -10)), shift: Math.round(num(s.shift, -40, 40, 12)), light: key(s.light, AN_FACE_LIGHTS, 'ul'), mouthFull: s.mouthFull !== false, gait: key(s.gait, AN_GAITS, 'walk'),
+    shoulders: Math.round(num(s.shoulders, -30, 30, 8)), hips: Math.round(num(s.hips, -30, 30, -10)), shift: Math.round(num(s.shift, -40, 40, 12)), light: key(s.light, AN_FACE_LIGHTS, 'ul'), mouthFull: s.mouthFull !== false, gait: key(s.gait, AN_GAITS, 'walk'), hold: key(s.hold, AN_HOLDS, 'stick'), sit: key(s.sit, AN_SITS, 'chair'), ageView: key(s.ageView, AN_AGE_VIEWS, 'figure'), footwear: key(s.footwear, AN_FOOTWEAR, 'sneaker'), footView: key(s.footView, AN_FOOTWEAR_VIEWS, 'side'), earView: key(s.earView, AN_EARNECK_VIEWS, 'ear'), run: s.run === true,
     skirtLength: key(s.skirtLength, AN_SKIRT_LENGTHS, 'knee'), skirtPleats: AN_SKIRT_PLEATS[s.skirtPleats] ? +s.skirtPleats : 12, skirtView: key(s.skirtView, AN_SKIRT_VIEWS, 'front'), wind: Math.round(num(s.wind, 0, 2, 0)),
     tone: key(s.tone, AN_TONE_KINDS, 'liner'),
     fx: key(s.fx, AN_FX, 'speed'), dir: key(s.dir, AN_FX_DIRS, 'h'), density: Math.round(num(s.density, 1, 3, 2)), seed: Math.round(num(s.seed, 1, 99999, 7)),
@@ -27,7 +27,7 @@ function annLoad() {
 function annSave(s) { try { localStorage.setItem(ANN_KEY, JSON.stringify(s)); } catch { /* private mode */ } }
 function annPatch(patch) { const s = { ...annLoad(), ...patch }; annSave(s); return s; }
 
-const ann = { svg: {}, gesture: { img: null, pts: [], drag: -1 }, tone: null, shot: { img: null, pts: [] }, sil: [], cmp: { ref: null, mine: null }, timers: {} };
+const ann = { drill: null, svg: {}, gesture: { img: null, pts: [], drag: -1 }, tone: null, shot: { img: null, pts: [] }, sil: [], cmp: { ref: null, mine: null }, timers: {} };
 
 // A pane for a mode, added after the others in the Anime view.
 function annPane(id, label, note, controls, stage) {
@@ -74,10 +74,12 @@ function annInit() {
     `<div class="pg-row"><button type="button" class="ghost" id="agtUndo">Take back a mark</button><button type="button" class="ghost" id="agtReset">Start over</button></div>` + annPngRow('agt') +
     `<div class="count" id="agtStatus" role="status" aria-live="polite">Or drop a picture here.</div>` +
     `<div class="pg-row"><span class="pg-label">Drill</span><div class="chips" id="agtSecs" role="group" aria-label="Seconds for each pose"></div><button type="button" class="ghost" id="agtNext">Next pose</button></div>` +
+    `<div class="pg-row"><span class="pg-label">Run</span><div class="chips" id="agtRun" role="group" aria-label="One pose or a run of ten"></div></div>` +
     `<div class="agt-drill"><b id="agtPose">Press Next pose</b> <span class="count" id="agtTimer" role="timer"></span></div>`,
     `<div class="agt-stage"><canvas id="agtCanvas" class="hidden" role="img" aria-label="The figure with the marks on it"></canvas></div><div class="count pg-note" id="agtNote"></div>`);
   annPick('agt', f => annGestureLoad(f[0])); annDropOn('agtPane', f => annGestureLoad(f[0]));
   adMakeChips('agtSecs', AN_DRILL_SECS.map(n => [n, `${n} s`]), v => { annPatch({ secs: +v }); adPress('agtSecs', v); });
+  adMakeChips('agtRun', [['one', 'One at a time'], ['ten', `A run of ${AN_DRILL_RUN}, on its own`]], v => { annPatch({ run: v === 'ten' }); adPress('agtRun', v); annDrillStop(); });
   el('agtNext').addEventListener('click', annDrillNext);
   el('agtUndo').addEventListener('click', () => { ann.gesture.pts.pop(); annGestureRender(); });
   el('agtReset').addEventListener('click', () => { ann.gesture.pts = []; annGestureRender(); });
@@ -184,6 +186,47 @@ function annInit() {
     `<div class="ad-stage ad-wide" id="abbStage"></div><div class="count pg-note" id="abbNote"></div>`);
   adWire('abb', () => ann.svg.balloons, 'manga-balloons', 'manga-balloons', null);
 
+  /* A hand holding something. */
+  annPane('ahoPane', 'A hand holding something',
+    'The grip of a hand round a stick, a sword, a mug, a pen, a phone and an apple, from the front and in three-quarter: where each finger goes, and what the object hides.',
+    annRow('Holding', 'ahoGrip') + annSaveRow('aho') + `<div class="pg-row"><button type="button" class="ghost hidden" id="ahoToGenerate" title="Add the words for this grip to Generate's More tags">Use in Generate</button></div>`,
+    `<div class="ad-stage ad-wide" id="ahoStage"></div><div class="count pg-note" id="ahoNote"></div>`);
+  adMakeChips('ahoGrip', Object.entries(AN_HOLDS).map(([k, v]) => [k, v.label]), v => { annPatch({ hold: v }); annHoldRender(); });
+  adWire('aho', () => ann.svg.holds, 'anime-hand-holding', 'anime-hand-holding', () => AN_HOLDS[annLoad().hold].words);
+
+  /* Sitting. */
+  annPane('asePane', 'Ways to sit',
+    'Six sitting poses from the side: on a chair, cross-legged, kneeling on the heels, knees up, on a ledge with the legs hanging, and legs out leaning back. The hip comes first, then the spine, then the thighs; the far arm and leg are grey.',
+    annRow('Sitting', 'aseSit') + annSaveRow('ase') + `<div class="pg-row"><button type="button" class="ghost hidden" id="aseToGenerate" title="Add the words for this pose to Generate's More tags">Use in Generate</button></div>`,
+    `<div class="ad-stage ad-wide" id="aseStage"></div><div class="count pg-note" id="aseNote"></div>`);
+  adMakeChips('aseSit', Object.entries(AN_SITS).map(([k, v]) => [k, v.label]), v => { annPatch({ sit: v }); annSitRender(); });
+  adWire('ase', () => ann.svg.sit, 'anime-sitting', 'anime-sitting', () => AN_SITS[annLoad().sit].words);
+
+  /* The ages. */
+  annPane('aagPane', 'The ages',
+    'The same person at five ages, from a small child to an adult: the height in heads, where the shoulders, hips and knees fall, and on the face where the eye line sits and how big the eyes are against it.',
+    annRow('Show', 'aagView') + annSaveRow('aag'),
+    `<div class="ad-stage ad-wide" id="aagStage"></div><div class="count pg-note" id="aagNote"></div>`);
+  adMakeChips('aagView', Object.entries(AN_AGE_VIEWS), v => { annPatch({ ageView: v }); annAgesRender(); });
+  adWire('aag', () => ann.svg.ages, 'anime-ages', 'anime-ages', null);
+
+  /* Footwear. */
+  annPane('afwPane', 'Shoes',
+    'Six kinds of shoe, from the side and from the front: the sole and the heel, the opening at the ankle, the instep and the toe box, and what is drawn on each - laces, a band, a strap or straps. The leg in grey goes down into the shoe.',
+    annRow('Shoe', 'afwShoe') + annRow('Seen from', 'afwView') + annSaveRow('afw') + `<div class="pg-row"><button type="button" class="ghost hidden" id="afwToGenerate" title="Add the words for this shoe to Generate's More tags">Use in Generate</button></div>`,
+    `<div class="ad-stage ad-wide" id="afwStage"></div><div class="count pg-note" id="afwNote"></div>`);
+  adMakeChips('afwShoe', Object.entries(AN_FOOTWEAR).map(([k, v]) => [k, v.label]), v => { annPatch({ footwear: v }); annFootwearRender(); });
+  adMakeChips('afwView', Object.entries(AN_FOOTWEAR_VIEWS), v => { annPatch({ footView: v }); annFootwearRender(); });
+  adWire('afw', () => ann.svg.footwear, 'anime-shoes', 'anime-shoes', () => AN_FOOTWEAR[annLoad().footwear].words);
+
+  /* Ears and neck. */
+  annPane('aenPane', 'Ears and neck',
+    'Where the ear sits on the head - between the eyebrow line and the nose line, from the front, in three-quarter and from the side - and the neck: its width, the lean forward, the collarbones and the muscle that shows the turn.',
+    annRow('Show', 'aenView') + annSaveRow('aen'),
+    `<div class="ad-stage ad-wide" id="aenStage"></div><div class="count pg-note" id="aenNote"></div>`);
+  adMakeChips('aenView', Object.entries(AN_EARNECK_VIEWS), v => { annPatch({ earView: v }); annEarNeckRender(); });
+  adWire('aen', () => ann.svg.earneck, 'anime-ears-neck', 'anime-ears-neck', null);
+
   /* The walk and the run. */
   annPane('awkPane', 'The walk and the run',
     'The four key poses of a walk or a run from the side: contact, down, passing and up (a run has a flight instead). The far arm and leg are grey. Draw these first, then the in-betweens.',
@@ -229,7 +272,7 @@ function annInit() {
 function annShow(mode) {
   if (!ANN_MODES.includes(mode)) return;
   const s = annLoad();
-  if (mode === 'gesture') { adPress('agtSecs', s.secs); annGestureRender(); }
+  if (mode === 'gesture') { adPress('agtSecs', s.secs); adPress('agtRun', s.run ? 'ten' : 'one'); annGestureRender(); }
   if (mode === 'tones') { adPress('atoKind', s.tone); annToneRender(); }
   if (mode === 'effects') annEffectsRender();
   if (mode === 'shots') annShotRender();
@@ -242,6 +285,51 @@ function annShow(mode) {
   if (mode === 'skirt') annSkirtRender();
   if (mode === 'walk') annGaitRender();
   if (mode === 'balloons') annBalloonsRender();
+  if (mode === 'holds') annHoldRender();
+  if (mode === 'sit') annSitRender();
+  if (mode === 'ages') annAgesRender();
+  if (mode === 'footwear') annFootwearRender();
+  if (mode === 'earneck') annEarNeckRender();
+}
+
+function annSitRender() {
+  const s = annLoad();
+  adPress('aseSit', s.sit);
+  ann.svg.sit = anSitSvg({ sit: s.sit });
+  el('aseStage').innerHTML = ann.svg.sit;
+  el('aseNote').innerHTML = `<ul>${anSitNotes({ sit: s.sit }).map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
+}
+
+function annFootwearRender() {
+  const s = annLoad();
+  adPress('afwShoe', s.footwear); adPress('afwView', s.footView);
+  ann.svg.footwear = anFootwearSvg({ shoe: s.footwear, view: s.footView });
+  el('afwStage').innerHTML = ann.svg.footwear;
+  el('afwNote').innerHTML = `<ul>${anFootwearNotes({ shoe: s.footwear }).map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
+}
+
+function annEarNeckRender() {
+  const s = annLoad();
+  adPress('aenView', s.earView);
+  ann.svg.earneck = anEarNeckSvg({ view: s.earView });
+  el('aenStage').innerHTML = ann.svg.earneck;
+  el('aenNote').innerHTML = `<ul>${anEarNeckNotes({ view: s.earView }).map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
+}
+
+function annAgesRender() {
+  const s = annLoad();
+  adPress('aagView', s.ageView);
+  ann.svg.ages = anAgesSvg({ view: s.ageView });
+  el('aagStage').innerHTML = ann.svg.ages;
+  el('aagNote').innerHTML = `<ul>${anAgesNotes().map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
+}
+
+function annHoldRender() {
+  const s = annLoad(), H = AN_HOLDS[s.hold];
+  adPress('ahoGrip', s.hold);
+  ann.svg.holds = anHoldSheet(s.hold);
+  el('ahoStage').innerHTML = ann.svg.holds;
+  el('ahoNote').innerHTML = `<ul><li>${esc(H.says)}</li><li>${esc(H.tip)}</li></ul>`;
 }
 
 function annBalloonsRender() {
@@ -333,16 +421,34 @@ function annGestureRender() {
   } else el('agtNote').textContent = '';
 }
 
+// The drill in hand: { n } poses drawn in the run so far, or null.
+function annDrillStop() {
+  clearInterval(ann.timers.drill); ann.timers.drill = 0; ann.drill = null;
+  el('agtTimer').textContent = '';
+}
+
 function annDrillNext() {
-  const pose = AN_DRILL_POSES[Math.floor(Math.random() * AN_DRILL_POSES.length)], secs = annLoad().secs;
-  el('agtPose').textContent = pose[0].toUpperCase() + pose.slice(1);
+  const s = annLoad(), pose = AN_DRILL_POSES[Math.floor(Math.random() * AN_DRILL_POSES.length)], secs = s.secs;
+  // Pressed again in a run, it starts the run over.
+  if (!s.run) ann.drill = null; else if (!ann.drill || ann.drill.n >= AN_DRILL_RUN) ann.drill = { n: 0 };
+  if (ann.drill) ann.drill.n++;
+  const tag = ann.drill ? ` (${ann.drill.n} of ${AN_DRILL_RUN})` : '';
+  el('agtPose').textContent = pose[0].toUpperCase() + pose.slice(1) + tag;
   clearInterval(ann.timers.drill);
   let left = secs;
   el('agtTimer').textContent = annClock(left);
   ann.timers.drill = setInterval(() => {
     left--;
-    el('agtTimer').textContent = left > 0 ? annClock(left) : 'Time. Next pose when you are ready.';
-    if (left <= 0) clearInterval(ann.timers.drill);
+    if (left > 0) { el('agtTimer').textContent = annClock(left); return; }
+    clearInterval(ann.timers.drill); ann.timers.drill = 0;
+    if (!ann.drill) { el('agtTimer').textContent = 'Time. Next pose when you are ready.'; return; }
+    if (ann.drill.n >= AN_DRILL_RUN) {
+      const total = AN_DRILL_RUN * secs;
+      el('agtPose').textContent = `Done: ${AN_DRILL_RUN} poses`;
+      el('agtTimer').textContent = `${total >= 60 ? Math.round(total / 6) / 10 + ' min' : total + ' s'} of drawing. Press Next pose for another run.`;
+      return;
+    }
+    annDrillNext();
   }, 1000);
 }
 

@@ -261,3 +261,44 @@ test('Colours to a palette: Bare paper and Tones say what they did, and a kept p
   await page.locator('#genResults .gen-pull').first().click();
   await expect(page.locator('#pullSteps [data-v="4"]')).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('a sheet of emotions: one seed, a close-up of the face each, the feeling weighted, the framing of the choices gone', async ({ page }) => {
+  const { asked } = await setup(page);
+  await page.locator('#genMore summary').click();
+  await page.locator('#gmEmoBlock summary').click();
+  await expect(page.locator('#gmEmos [data-emo]')).toHaveCount(6);
+  await expect(page.locator('#gmEmos [aria-pressed=true]')).toHaveCount(4);
+  await page.locator('#gmEmos [data-emo=shy]').click();
+  await page.locator('#gmEmoGo').click();
+  await expect(page.locator('#genStatus')).toContainText('5 faces of one character');
+  expect(asked).toHaveLength(5);
+  expect(new Set(asked.map(a => a.seed)).size).toBe(1);
+  expect(asked[0].prompt).toContain('(face focus:1.3)');
+  expect(asked[0].prompt).toContain('(happy:1.3)');
+  expect(asked[1].prompt).toContain('(sad:1.3)');
+  expect(asked.every(a => !a.prompt.includes('full body') && a.tags.includes('emotions'))).toBe(true);
+  expect(new Set(asked.map(a => a.prompt)).size).toBe(5);
+});
+
+test('the best of several: sharp, well lit pictures score high, blurred, flat or burnt ones low, and the best two come first', async ({ page }) => {
+  await setup(page);
+  const r = await page.evaluate(async () => {
+    await loadSection('genmore');
+    const q = (sharp, spread, blown, crushed) => ({ sharp, spread, blown, crushed });
+    const good = genBestScore(q(25, 70, 0, 0)), soft = genBestScore(q(2, 70, 0, 0)), flat = genBestScore(q(25, 15, 0, 0)), burnt = genBestScore(q(25, 70, 10, 5)), worst = genBestScore(q(0, 0, 50, 50));
+    const o = genBestOrder([{ score: 40 }, { score: 80 }, { score: 80 }, { score: 20 }]);
+    return { good, soft, flat, burnt, worst, best: o.best.map(x => x.i), rest: o.rest.map(x => x.i), counts: GEN_BEST_COUNTS };
+  });
+  expect(r.good).toBeGreaterThan(r.soft); expect(r.good).toBeGreaterThan(r.flat); expect(r.good).toBeGreaterThan(r.burnt);
+  expect(r.good).toBeLessThanOrEqual(100); expect(r.worst).toBe(0);
+  expect(r.best).toEqual([1, 2]); expect(r.rest).toEqual([0, 3]);
+  await page.locator('#genMore summary').click();
+  await page.locator('#gmEmoBlock summary').click();
+  await page.locator('#gmBestBlock summary').click();
+  await expect(page.locator('#gmEmoBlock')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#gmBestCount [data-n="6"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#gmBestCount [data-n="4"]').click();
+  await page.locator('#gmBestDrop [data-drop="1"]').click();
+  await expect(page.locator('#gmBestDrop [data-drop="1"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#gmBestDrop [data-drop="0"]')).toHaveAttribute('aria-pressed', 'false');
+});

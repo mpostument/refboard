@@ -113,3 +113,21 @@ test('balloons: six shapes on a sheet, each says what it is for, and the rules f
   await expect(page.locator('#abbNote')).toContainText('mouth, not to the face');
   await expect(page.locator('#abbNote')).toContainText('reading');
 });
+
+test('holding: six grips, each drawn in two turns with its object under the fingers, and a choice that stays', async ({ page }) => {
+  await openApp(page);
+  const r = await run(page, () => ({ keys: Object.keys(AN_HOLDS), svgs: Object.keys(AN_HOLDS).map(k => anHoldSheet(k)) }));
+  expect(r.keys.length).toBe(6);
+  expect(new Set(r.svgs).size).toBe(6);
+  for (const s of r.svgs) expect((s.match(/<text /g) || []).length).toBe(2);
+  await openSection(page, 'anime');
+  await page.locator('#asMode [data-mode=holds]').click();
+  await expect(page.locator('#ahoStage svg')).toBeVisible();
+  await expect(page.locator('#ahoNote li')).toHaveCount(2);
+  await page.locator('#ahoGrip [data-v=pen]').click();
+  await expect(page.locator('#ahoNote')).toContainText('web between');
+  await page.reload();
+  await openSection(page, 'anime');
+  await page.locator('#asMode [data-mode=holds]').click();
+  await expect(page.locator('#ahoGrip [data-v=pen]')).toHaveAttribute('aria-pressed', 'true');
+});

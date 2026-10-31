@@ -22,7 +22,7 @@ const AS_MAX_IMAGES = 24;
 const AS_PANES = { frames: 'afPane', background: 'abPane', outfits: 'aoPane', proportions: 'apPane', faces: 'acPane', storyboard: 'asbPane',
   hands: 'ahdPane', eyes: 'aeyPane', hair: 'ahrPane', shading: 'ashPane', expressions: 'axPane', perspective: 'avPane',
   inking: 'ainPane', folds: 'aflPane', layers: 'alyPane', angles: 'aanPane',
-  gesture: 'agtPane', tones: 'atoPane', effects: 'afxPane', shots: 'astPane', legs: 'algPane', silhouette: 'asiPane', compare: 'acpPane', construct: 'acnPane', facelight: 'alfPane', mouth: 'amtPane', skirt: 'akrPane', walk: 'awkPane', balloons: 'abbPane' };
+  gesture: 'agtPane', tones: 'atoPane', effects: 'afxPane', shots: 'astPane', legs: 'algPane', silhouette: 'asiPane', compare: 'acpPane', construct: 'acnPane', facelight: 'alfPane', mouth: 'amtPane', skirt: 'akrPane', walk: 'awkPane', balloons: 'abbPane', holds: 'ahoPane', sit: 'asePane', ages: 'aagPane', footwear: 'afwPane', earneck: 'aenPane' };
 
 let asState = null;      // null until first opened; then { frames: [{ canvas, data }], busy }
 const abMixCache = new Map();
