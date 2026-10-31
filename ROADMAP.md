@@ -665,3 +665,8 @@ marked is said plainly instead of searching. The markers' and pencils' colours a
 estimates from short lists, not the whole range. Not done: adding a marker or pencil that is not
 on the list (a code, a name and a swatch photo to read its colour from), and the same choice for
 the watercolour paints beyond the box above them.
+- **Five more ways (0.41.0).** Anime study: Shoes (`AN_FOOTWEAR`, six kinds from the side and the front), Ears and neck
+  (`anEarNeckSvg`), Sitting and Ages, and the Gesture drill with 15 s and a run of ten (`ann.drill`); in `js/animebody.js`
+  and `js/animenewui.js`. Generate: `js/genpick.js` has a palette from a picture, colours from the user's own set, What
+  changed, Simple forms (`GP_FORMS`, one job each with one seed) and the History sheet (pins kept in
+  `refboard.generate.pins.v1`, Draw again with a new seed).
