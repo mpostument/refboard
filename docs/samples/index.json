@@ -1,0 +1,45 @@
+{
+ "generated": 1790600043,
+ "source": "samples",
+ "totalImages": 6,
+ "totalBytes": 1116534,
+ "packCount": 1,
+ "packs": [
+  {
+   "name": "Samples",
+   "count": 6,
+   "groups": [
+    {
+     "name": "Anime in watercolour",
+     "rotation": false,
+     "images": [
+      {
+       "src": "samples/01-pink-bob.jpg",
+       "bytes": 198911
+      },
+      {
+       "src": "samples/02-long-black.jpg",
+       "bytes": 173520
+      },
+      {
+       "src": "samples/03-blonde-twintails.jpg",
+       "bytes": 182459
+      },
+      {
+       "src": "samples/04-brown-ponytail.jpg",
+       "bytes": 159204
+      },
+      {
+       "src": "samples/05-silver-long.jpg",
+       "bytes": 219941
+      },
+      {
+       "src": "samples/06-red-short.jpg",
+       "bytes": 182499
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

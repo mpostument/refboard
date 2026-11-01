@@ -1,0 +1,11 @@
+{
+  "name": "refboard-browser-tests",
+  "private": true,
+  "description": "Browser tests for the refboard frontend (src/Refboard/wwwroot)",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

@@ -1,0 +1,1344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- three.js for the 3D forms view, and nothing else. An import map only says
+     where "three" lives - nothing is fetched until showForms() first imports
+     it, so every other view stays fully offline. Pinned to an exact version:
+     a CDN "latest" would change the renderer under the page without a commit. -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+} }
+</script>
+<title>Reference Board</title>
+<!-- Installable: a drawing session is run from a phone or tablet propped
+     beside the paper, and a home-screen icon beats finding the right browser
+     tab with charcoal on your hands. -->
+<!-- Relative, not root-absolute: this exact file is served two ways - at a
+     container's own domain root, and from a GitHub Pages project page one
+     path segment deep (/refboard/) - and a relative link is the one spelling
+     that resolves correctly under both. -->
+<link rel="manifest" href="refboard.webmanifest">
+<link rel="icon" href="icon-refboard.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1b1b1d">
+<!--
+  Timed gesture-drawing board over your own reference image library.
+  Self-contained: no build step, no dependencies, no external requests - it
+  reads one JSON manifest (index.json) that the server container generates
+  by walking whatever you mounted at /references, and, once the background
+  pass has had time to run, a second one (features.json) with per-image tone
+  stats and display copies. Both are optional in the sense that this page
+  degrades gracefully without them - see boot() below - but index.json is
+  what turns an empty page into a usable one.
+
+  Settings are localStorage. What you upload is kept by js/store.js - on the
+  container's disk when there is one, else in this browser if you ask. There
+  is no account: a profile (js/profile.js) is a choice of whose settings and
+  upload list are shown, so a server-side session would be pure overhead.
+-->
+<!-- Two scripts in <head>: profile.js, which says whose settings are read
+     (it must come first), and theme.js, which sets the saved theme's colours
+     before anything is drawn. Everything else loads at the end of <body>. -->
+<script src="js/profile.js?v=322309cf"></script>
+<script src="js/theme.js?v=16e8d197"></script>
+<link rel="stylesheet" href="css/app.css?v=68ad4e70">
+</head>
+<body>
+<div id="setup">
+  <!-- The first Tab: past the rail to the screen's content - see js/a11y.js. -->
+  <a class="skip-link" href="#main">Skip to the content</a>
+  <!-- ---------------------------------------------- the rail: every section,
+       grouped by the stage of work it is for - Prepare, Practise, Paint,
+       Check - rather than by how it was built. data-view is read by
+       setView(); Library opens the folder panel beside it rather than being
+       a view of its own - browsing a folder is. The dashboard's stage cards
+       are built from these groups (js/stages.js): add a button to a group
+       and it is on its card too. -->
+  <nav id="rail" aria-label="Sections">
+    <img class="rail-brand" src="icon-refboard.svg" alt="Refboard">
+    <button type="button" id="btnFind" data-icon="search" data-tip="Find a tool (Ctrl+K)" aria-label="Find a tool"></button>
+    <button class="nav-item" type="button" data-view="dashboard" data-icon="home" data-tip="Dashboard" aria-label="Dashboard"></button>
+    <div class="rail-stage" role="group" aria-label="References" data-stage="References"
+         data-blurb="Find them, draw from them, look at them again.">
+      <span class="rail-stage-name" aria-hidden="true">References</span>
+      <button type="button" id="btnLibrary" data-icon="folder" data-tip="Library - packs and folders" aria-label="Library"></button>
+      <button class="nav-item" type="button" data-view="all" data-icon="images" data-tip="All images - browse and search" aria-label="All images"></button>
+      <button class="nav-item rail-sub" type="button" data-view="museum" data-icon="museum" data-tip="Museums - search the Met and the Rijksmuseum, open a painting in the viewer" aria-label="Museums"></button>
+      <button type="button" id="btnPaint" data-icon="play" data-tip="Start drawing - a timed session from the packs you ticked"
+              data-about="a timed session from the packs you ticked" aria-label="Start drawing"></button>
+      <button class="nav-item" type="button" data-view="drop" data-icon="eye" data-tip="Check an image - a reference or a photo of your drawing" aria-label="Check your own image"></button>
+      <button type="button" id="btnMaterials" data-icon="brush" data-tip="My materials - what you draw and paint with" aria-label="My materials"></button>
+    </div>
+    <div class="rail-stage" role="group" aria-label="Generate" data-stage="Generate"
+         data-blurb="Make a reference of your own with ComfyUI.">
+      <span class="rail-stage-name" aria-hidden="true">Generate</span>
+            <button class="nav-item" type="button" data-view="generate" data-icon="sparkle" data-tip="Gen AI - pictures made with your ComfyUI: references, and assets for a 2D game" aria-label="Gen AI"></button>
+    </div>
+    <div class="rail-stage" role="group" aria-label="Colours" data-stage="Colours"
+         data-blurb="Plan the colours, and how to mix each one.">
+      <span class="rail-stage-name" aria-hidden="true">Colours</span>
+      <button class="nav-item" type="button" data-view="colour" data-icon="palette" data-tip="Colour studio - palette, colour wheel, gamut mask" aria-label="Colour studio"></button>
+      <button class="nav-item rail-sub" type="button" data-view="palette" data-icon="swatches" data-tip="Palettes - generate one, with how to mix each colour" aria-label="Palettes"></button>
+    </div>
+    <div class="rail-stage" role="group" aria-label="Practise" data-stage="Practise"
+         data-blurb="The basics, a little every day.">
+      <span class="rail-stage-name" aria-hidden="true">Practise</span>
+      <button class="nav-item" type="button" data-view="forms" data-icon="cube" data-tip="3D forms - light on simple forms" aria-label="3D forms"></button>
+    </div>
+    <span class="grow"></span>
+    <button type="button" id="btnTheme" data-icon="moon" data-tip="Theme" aria-label="Theme"
+            aria-haspopup="menu" aria-expanded="false" aria-controls="themeMenu"></button>
+    <button type="button" id="btnHelpSetup" data-icon="help" data-tip="Help (?)" aria-label="Help"></button>
+  </nav>
+
+  <!-- Shown when this tab has outlived a deploy - see checkForUpdate(). Inside
+       #setup, so it never appears over a running session: reloading
+       mid-pose would throw the session away. -->
+  <button type="button" id="updateReady" class="hidden"
+          title="A newer Refboard has been deployed since this tab was opened">New version ready - <b>Reload</b></button>
+
+  <!-- The theme picker, beside the rail button that opens it - see
+       initThemeMenu(). Filled from THEMES in js/theme.js. -->
+  <div id="themeMenu" class="hidden" role="menu" aria-label="Theme"></div>
+
+  <!-- ------------------------------------------ the library, folding panel -->
+  <aside id="sidebar">
+    <div class="side-head">
+      <span class="brand">Library</span>
+      <button id="btnCollapse" class="icon-btn" type="button" data-icon="close"
+              title="Hide the library" aria-label="Hide the library"></button>
+    </div>
+
+    <div class="side-section collapsible" id="packsSection">
+      <div class="side-title">
+        <span class="grow">Your library</span>
+        <!-- Act on whatever the filter box below is currently SHOWING, not on
+             the whole library: typing "hands" and pressing All plainly means
+             "all the hands packs", and a button that quietly ticked thirty
+             hidden packs as well would be the one thing here you cannot see
+             happen. With an empty filter the two are the same thing. -->
+        <button id="btnPacksAll" class="ghost" type="button"
+                style="padding:2px 7px;font-size:11px"
+                title="Select every pack the filter is showing">All</button>
+        <button id="btnPacksNone" class="ghost" type="button"
+                style="padding:2px 7px;font-size:11px"
+                title="Deselect every pack the filter is showing">None</button>
+        <!-- Hidden until boot() confirms a backend exists at all - meaningless
+             on GitHub Pages, which has none to ask. The index pass this kicks
+             off is cheap (a directory walk, no decoding) and runs within
+             seconds; the request itself only ever needs to succeed or fail,
+             never wait for that to finish. -->
+        <button id="btnRescan" class="ghost hidden" type="button"
+                style="padding:2px 8px;font-size:11px"
+                title="Ask the container to reindex now instead of waiting for its next scheduled pass">Rescan</button>
+      </div>
+      <!-- Filters which pack boxes are VISIBLE only - never touches a
+           checkbox's checked state, so narrowing the list to find one pack
+           and then widening it again never silently drops a selection made
+           while it was hidden. See applyPackFilter(). -->
+      <input type="search" id="packFilter" placeholder="Filter packs..." aria-label="Filter packs">
+      <div class="count" id="packFilterCount" style="margin:6px 2px 0"></div>
+      <div class="packs" id="packs" style="margin-top:8px"></div>
+    </div>
+  </aside>
+
+  <!-- ------------------------------------- middle: what you are looking at -->
+  <main id="main" tabindex="-1">
+    <header id="mainHead">
+      <div class="row">
+        <h1 class="grow" id="viewTitle">Dashboard</h1>
+        <button class="icon-btn" type="button" id="btnOpenSession" data-icon="sliders"
+                title="Session controls - interval, schedule, options, Start" aria-label="Session controls"></button>
+      </div>
+      <!-- The sections that share one rail button (VIEW_GROUPS, js/stages.js), as tabs. -->
+      <div class="chips hidden" id="viewTabs" role="group" aria-label="In this section" style="margin-top:6px"></div>
+      <div class="count" id="viewMeta" style="margin-top:6px"></div>
+      <!-- Browse-only: a search box over a dashboard would have nothing to
+           search. setView() shows and hides it with the grid it belongs to. -->
+      <div class="searchbar hidden" id="searchbar">
+        <input type="search" id="imgFilter" placeholder="Search by file, folder, pack or tag - sitting, profile, low key...">
+        <!-- The two brightness orders are dropped by initShell() when there is
+             no features.json behind this page to read a value out of - an
+             order that silently does nothing is worse than an absent one. -->
+        <select id="gridOrder" title="What order the thumbnails are drawn in">
+          <option value="index">Folder order</option>
+          <option value="name">Name A-Z</option>
+          <option value="bright" data-needs-features>Lightest first</option>
+          <option value="dark" data-needs-features>Darkest first</option>
+          <option value="random">Shuffle</option>
+        </select>
+        <!-- Hidden until palettes.json is found (js/colourfind.js): without the
+             server's colour measurements there is nothing to search. -->
+        <button class="ghost hidden" type="button" id="btnColour" aria-expanded="false" aria-controls="colourPanel"
+                title="Find pictures by colour - pick colours, or a mood like warm dusk">Colour</button>
+        <button class="ghost" type="button" id="btnBrowseDraw"
+                title="Start a timed session from exactly what this grid is showing">Draw these</button>
+        <div class="colourbar hidden" id="colourPanel"></div>
+      </div>
+    </header>
+
+    <div id="mainBody">
+      <!-- The dashboard is what the old single-column setup screen was, minus
+           everything that moved into the rail and the inspector: what the
+           library holds, what you have drawn, and the one tool that needs no
+           library at all. -->
+      <div id="viewDashboard">
+        <div class="sub" id="summary">loading index...</div>
+
+        <!-- The four stages of the work, as on the rail - built from the
+             rail's groups by initStages(), so the two never disagree. -->
+        <section id="stages" aria-label="Stages of the work"></section>
+        <details id="sectionsEdit">
+          <summary>Sections you use</summary>
+          <p class="count">Untick what you never open: it leaves the rail and its card, and the
+            interface gets simpler. Hidden ones are still in Find a tool (Ctrl+K).</p>
+          <div id="sectionsList"></div>
+        </details>
+
+        <!-- Everything in here is derived from the same `sessions` array the
+             one-line summary used to be: no new store, no backend, and nothing
+             logged that was not already being logged. Browse-mode viewing is
+             deliberately absent from it - see startSession(), which leaves
+             startedAt null - so this counts drawing, not looking.
+
+             Hidden until something has actually been drawn. Four zeroes and an
+             empty calendar is a worse first screen than no panel at all. -->
+        <section id="practice" class="hidden">
+          <h2>Your practice</h2>
+          <div class="stats" id="practiceStats"></div>
+          <div class="cal-months" id="practiceCalMonths"></div>
+          <div class="cal" id="practiceCal"></div>
+          <div class="count" id="practiceCalHint"></div>
+          <div class="runs" id="practiceRuns"></div>
+        </section>
+
+        <!-- Independent of everything else here - not from the pack library,
+             no pool, no session. Local to this browser only -
+             createObjectURL, never uploaded anywhere - so it works exactly as
+             well offline as it does served from the container, and exactly as
+             well with no server behind it at all (see boot()'s "no library"
+             path) - this is the whole board on GitHub Pages, where there
+             never is one.
+
+             Both a single drop and several route through the exact same
+             full-screen stage a pack-based session uses (see startSession()'s
+             adHoc branch) rather than a small inline preview of their own - a
+             thumbnail a few hundred pixels wide defeats the point of checking
+             a reference at all, and the stage already has the split view, the
+             tonal-value control, zoom and the angle tool built in. One
+             dropped file starts immediately, paused, with no timer running -
+             "look at this," not a timed drill; several show a count and a
+             button, since committing to an actual timed session is worth the
+             extra click. -->
+        <section id="dropSection">
+          <h2>Check your own image</h2>
+          <div id="dropZone" tabindex="0" role="button"
+               style="border:1px dashed var(--line); border-radius:8px; padding:26px; text-align:center; color:var(--dim); font-size:13px; cursor:pointer;">
+            Drop one image to view it full-screen, or several to draw a timed session from them -
+            or a video, to draw from frames taken at random through it.
+          </div>
+          <input type="file" id="dropInput" accept="image/*,video/*" multiple class="hidden">
+          <!-- Off: the picture as it is. On: it opens already split into
+               three values, with the Value tools beside it. -->
+          <label class="opt" style="margin-top:8px"><input type="checkbox" id="optDropStudy"> Open one image as a value study (notan)</label>
+          <!-- Uses the Interval/Schedule/Options sections in the inspector
+               exactly as they are - a dropped-file session is not a different
+               kind of session, just one whose pool came from the browser
+               instead of the pack library. -->
+          <div id="dropSessionInfo" class="row hidden" style="margin-top:12px">
+            <span class="count" id="dropSessionCount"></span>
+            <button id="startDropped" class="ghost" type="button" style="margin-left:auto">Start session with these</button>
+          </div>
+          <!-- What you have given the app, kept - see js/uploads.js. Where it
+               is kept is said here, never left to a reload to find out. -->
+          <div id="uploads">
+            <div class="row" style="margin-top:20px">
+              <h3 class="grow" id="uploadsTitle">Your uploads</h3>
+              <button class="ghost" type="button" id="btnData" title="Where things are kept, and a backup of everything">Your data...</button>
+            </div>
+            <p class="count" id="uploadsWhere" style="margin:6px 0"></p>
+            <p class="count hidden" id="uploadsSorting" aria-live="polite" style="margin:0 0 6px"></p>
+            <label class="opt hidden" id="keepWrap"><input type="checkbox" id="optKeep"> Keep in this browser</label>
+            <ul id="uploadsList" aria-labelledby="uploadsTitle"></ul>
+          </div>
+          <!-- What the app drew itself (Generate, Game assets) - kept the same
+               way, but not among what you gave it. -->
+          <div id="generated" class="hidden">
+            <h3 id="generatedTitle" style="margin-top:20px">Generated</h3>
+            <ul id="generatedList" aria-labelledby="generatedTitle"></ul>
+          </div>
+        </section>
+
+        <!-- APP_VERSION below is the source of truth on GitHub Pages, which has
+             no backend to ask - bump it there by hand on release (see the
+             project README). Everywhere else, updateFooterVersion() overwrites
+             it with whatever the running container's own /healthz reports, so a
+             container never shows a stale hand-typed number. -->
+        <footer style="margin-top:40px; padding-top:16px; border-top:1px solid var(--line); color:var(--dim); font-size:11px;">
+          <a href="https://github.com/mpostument/refboard" style="color:inherit">Refboard</a>
+          <span id="appVersion"></span>
+        </footer>
+      </div>
+
+      <!-- Rendered a page at a time by renderGrid() - a pack of several
+           thousand images would otherwise put several thousand <img> elements
+           on the page at once, which no amount of loading="lazy" makes free. -->
+      <!-- Needs no library and no backend, like the drop zone - a simple form
+           under a light you control is the one reference nobody has to own.
+           The panel is built by showForms() from FORM_PANEL rather than
+           written out here: forty near-identical slider rows would bury the
+           three or four that differ. -->
+      <div id="viewForms" class="hidden">
+        <div id="formsLeft">
+          <div id="formsStage">
+            <canvas id="formsCanvas"></canvas>
+            <canvas id="formsOverlay" aria-hidden="true"></canvas>
+            <!-- The memory drill's cover: see startMemoryDrill(). Above both
+                 canvases, so while the form is hidden no guide gives it away. -->
+            <div id="formsCover" class="hidden"></div>
+            <!-- Which handles the selected form shows. Under the cover, so the
+                 memory drill hides these too. -->
+            <div id="formsTools" role="toolbar" aria-label="Transform handles">
+              <button class="chip" type="button" data-gizmo="move" data-icon="move" title="Move handles - or press G over the view" aria-label="Move"></button>
+              <button class="chip" type="button" data-gizmo="rotate" data-icon="rotate" title="Rotate rings - or press R over the view" aria-label="Rotate"></button>
+              <button class="chip" type="button" data-gizmo="scale" data-icon="scale" title="Scale handles - or press S over the view" aria-label="Scale"></button>
+              <button class="chip" type="button" data-clean data-icon="clean" title="Clean: just the scene - hide every handle, number and guide drawn over it (Shift+Alt+Z, as in Blender; Esc comes back)" aria-label="Clean view"></button>
+            </div>
+            <!-- The view drill's task and its answer - see startViewDrill(). -->
+            <div id="formsTask" class="hidden"></div>
+            <!-- The anime head's angle, read from the render - see syncAnimeNote(). -->
+            <div id="formAnimeNote" class="hidden"></div>
+            <div id="formsNoGl" class="hidden">This browser has no WebGL 2, which the 3D forms need. Every other part of the board still works.</div>
+          </div>
+          <div class="count" id="formsHint">Click a form to select it, the selected one to light that spot · click the floor to throw the shadow there · drag to orbit · scroll to zoom · G / R / S move, rotate, scale the selected form, as in Blender</div>
+        </div>
+        <div id="formsPanel"></div>
+      </div>
+
+      <!-- Generate references - js/generate.js; only behind a server with a
+           ComfyUI (COMFY_URL). The choices are drawn by renderGenerate(). -->
+      <div id="viewGenerate" class="hidden">
+        <div class="col-wrap">
+          <div class="col-left gen-left">
+            <!-- ComfyUI is set up and not answering: why, and a way to ask again (js/generate.js genCheck()). -->
+            <div id="genOffline" class="gen-offline hidden" role="status">
+              <p id="genOfflineText"></p>
+              <button type="button" class="ghost" id="genRetry">Check again</button>
+            </div>
+            <!-- Start from a picture or a sketch instead of from nothing - at the top, so it is not hidden under the bar: js/generate.js genSetSource(). -->
+            <div class="gen-source" id="genSource">
+              <button type="button" class="ghost" id="genPick" title="Draw from a picture of your own: a photo simplified into a study, with the choices above as its style. Or drop one here.">Start from a picture...</button>
+              <input type="file" id="genPickInput" accept="image/*" class="hidden" aria-label="Picture to start from">
+              <button type="button" class="ghost" id="genSketch" title="Draw a rough sketch or a stick figure here: the pose and the layout you draw are what the picture is made from">Draw a sketch...</button>
+              <!-- Figures to draw fast, made for you: js/warmup.js. -->
+              <div class="gen-warm" id="genWarm">
+                <select id="genWarmN" aria-label="How many poses"></select>
+                <select id="genWarmT" aria-label="Time for each pose"></select>
+                <button type="button" class="ghost" id="genWarmGo" title="Gesture drawing with new figures: a run of whole figures in different poses, each on the screen for a short time (the session kind Gesture warm-up draws from your library instead). The choices above are the character and the style; the next figure is made while you draw.">Warm-up with new poses</button>
+              </div>
+              <div id="genSourceBody" class="hidden"></div>
+            </div>
+            <div id="genChoices"></div>
+            <!-- A series, a movement: js/genmore.js, loaded when this is first opened. -->
+            <details class="gen-more-ways" id="genMore">
+              <summary>More ways to make</summary>
+              <div id="genMoreBody"></div>
+            </details>
+            <!-- Stays at the bottom of the view while the choices scroll. -->
+            <div class="gen-bar">
+              <!-- What goes to the model, hidden until asked: js/generate.js renderGenPrompt(). -->
+              <details id="genPrompt">
+                <summary>Prompt</summary>
+                <div id="genPromptBody"></div>
+              </details>
+              <label class="gen-extra">More tags <input type="text" id="genExtra" placeholder="e.g. hat, rain, holding umbrella" maxlength="200"></label>
+              <div class="row gen-go">
+                <label>How many <select id="genCount"><option>1</option><option selected>2</option><option>4</option></select></label>
+                <label>As <select id="genQuality" title="Drafts take half the time: make four, then finish the one worth keeping."><option value="">Final pictures</option><option value="draft">Drafts</option></select></label>
+                <button type="button" id="genGo" class="primary">Generate</button>
+                <span class="count" id="genStatus" role="status"></span>
+              </div>
+            </div>
+            <!-- Drafts waiting for a choice (renderGenDrafts in js/generate.js). -->
+            <div class="gen-drafts hidden" id="genDrafts">
+              <div class="gen-made-head">
+                <h4>Drafts <span class="count" id="genDraftsCount"></span></h4>
+                <button type="button" id="genDraftsDrop" title="None of them - every draft still waiting is deleted, from Uploads too">Drop all</button>
+              </div>
+              <ul id="genDraftList" aria-label="Drafts to choose from"></ul>
+            </div>
+            <p class="count" id="genWhere"></p>
+          </div>
+          <div class="col-right gen-right">
+            <div class="gen-made-head">
+              <h4>Made here <span class="count" id="genMadeCount"></span></h4>
+              <button type="button" id="genClear" class="hidden">Delete all</button>
+            </div>
+            <ul id="genResults" aria-label="Generated pictures"></ul>
+            <div class="count" id="genEmpty">What you generate shows here - click one to open it with every tool.</div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- The gesture warm-up's full-screen run (js/warmup.js). -->
+      <div id="warmup" class="warmup hidden" role="dialog" aria-label="Gesture warm-up">
+        <div class="warm-top"><span class="warm-count"></span><span class="warm-clock" aria-live="off"></span>
+          <span class="warm-bar" aria-hidden="true"><i></i></span>
+          <button type="button" class="ghost" data-warm="pause" title="Space">Pause</button>
+          <button type="button" class="ghost" data-warm="skip" title="Right arrow - only once the next is made">Skip</button>
+          <button type="button" class="ghost" data-warm="stop" title="Esc">Stop</button></div>
+        <div class="warm-pic"><img alt="The pose to draw"><p class="warm-say" role="status"></p></div>
+      </div>
+
+
+
+      <!-- Colour studio - see showColour(). Like the drop zone it needs no
+           library: the image is read in this browser and goes nowhere. -->
+      <div id="viewColour" class="hidden">
+        <div class="col-wrap">
+          <div class="col-left">
+            <div class="row col-bar">
+              <button class="ghost" type="button" id="colPick">Choose image...</button>
+              <button class="ghost hidden" type="button" id="colRandom" title="A random image from your library">Random from library</button>
+              <div class="chips" id="colModes" role="group" aria-label="How the image is shown">
+                <button class="chip" type="button" data-col-mode="colour" title="The image as it is">Colour</button>
+                <button class="chip" type="button" data-col-mode="value" title="Its values alone - the lightness every colour in it has, as grey">Value</button>
+                <button class="chip" type="button" data-col-mode="mapped" title="Repainted inside the gamut mask - what this picture would be with only those colours">In gamut</button>
+              </div>
+            </div>
+            <div id="colStage">
+              <canvas id="colImg" class="hidden"></canvas>
+              <div id="colEmpty">Drop, paste or choose an image - a reference photo, a master painting, a painting of your own.</div>
+            </div>
+            <div class="count" id="colReadout"></div>
+          </div>
+          <!-- The paints first: every tab mixes from them. Then what is
+               asked of the picture - its palette, wheel and mask - of the
+               character in it, of the greys or of glazes, one at a time. -->
+          <div class="col-right">
+            <h4 class="col-first">Paints</h4>
+            <div class="chips" id="colMedium" role="group" aria-label="Medium"></div>
+            <div class="chips" id="colPaints"></div>
+            <div class="count" id="colPaintHint"></div>
+            <div class="tabs col-tabs" role="tablist" id="colTabs" aria-label="Colour studio">
+              <button type="button" role="tab" data-tab="picture" aria-selected="true">Picture</button>
+              <button type="button" role="tab" data-tab="wheel" aria-selected="false" title="A colour wheel: pick a colour and a harmony, and mix the colours that go with it from your paints">Wheel</button>
+              <button type="button" role="tab" data-tab="mixing" aria-selected="false" title="Every paint mixed with every other, on a sheet to print and paint">Mixing</button>
+              <button type="button" role="tab" data-tab="pigments" aria-selected="false" title="Your paints: which glaze cleanly, lift off, granulate or fade">Pigments</button>
+            </div>
+            <div class="col-tab on" data-tab="picture" role="tabpanel">
+              <canvas id="colWheel" title="Hue round the circle, chroma out from grey in the middle. Dots: every colour in the image. Numbers: its palette."></canvas>
+              <h4>Gamut mask</h4>
+              <div class="chips" id="colMasks"></div>
+              <div class="count" id="colMaskHint"></div>
+              <h4>Palette - colour, value and how to mix it</h4>
+              <div class="count">Point at a colour to see where it is in the picture; click to keep it.</div>
+              <div id="colPalette" class="count">No image yet.</div>
+              <div class="count" id="colValueNote"></div>
+              <button class="ghost hidden" type="button" id="colToPalette" title="These colours in the palette generator - to lock, reorder, and build a palette from">To the palette generator</button>
+            </div>
+            <!-- js/wheel.js: a harmony on a wheel, each colour mixed from the paints. -->
+            <div class="col-tab" data-tab="wheel" role="tabpanel">
+              <h4>Colour wheel - choose colours that go together</h4>
+              <div class="chips" id="whModes" role="group" aria-label="Which wheel"></div>
+              <canvas id="whWheel" class="wh-wheel" tabindex="0" role="img" aria-label="Colour wheel"></canvas>
+              <div class="lt-sliders">
+                <label for="whValue">Value</label><input type="range" id="whValue" min="15" max="95" step="1"><output id="whValueOut" for="whValue"></output>
+              </div>
+              <div class="chips" id="whHarmonies" role="group" aria-label="Harmony"></div>
+              <div class="count" id="whHint"></div>
+              <div class="row wh-picture hidden" id="whPicture"><span class="count">From the picture</span><span class="wh-picks" id="whPictureChips"></span></div>
+              <div id="whSwatches" class="wh-swatches" role="group" aria-label="The harmony's colours"></div>
+              <div id="whOne"></div>
+              <div class="count" id="whNote"></div>
+              <div class="row wh-go">
+                <button class="ghost" type="button" id="whToPalette" title="These colours in the palette generator - to lock, reorder, and build a palette from">To the palette generator</button>
+                <button class="ghost" type="button" id="whCopy">Copy hex codes</button>
+              </div>
+            </div>
+            <!-- js/mixing.js: every paint with every other, on a sheet to print. -->
+            <div class="col-tab" data-tab="mixing" role="tabpanel">
+              <h4>Mixing chart - every paint with every other</h4>
+              <div class="chips" id="mcLevel" role="group" aria-label="How much water"></div>
+              <div class="chips" id="mcRatio" role="group" aria-label="Proportions"></div>
+              <div class="count" id="mcRatioNote"></div>
+              <div id="mcChart" class="gz-chart" role="group" aria-label="Mixing chart"></div>
+              <div class="count" id="mcReadout">Point at a square to see what it is; click it for the colour and what the mix does.</div>
+              <div id="mcPair"></div>
+              <h4>The sheet to paint</h4>
+              <div class="row mc-sheet">
+                <label for="mcPaper">Paper</label><select id="mcPaper" title="The paper the chart is laid out for - printed at its real size"></select>
+                <label class="opt" title="Fill each square with the colour the model expects. Leave off to print empty squares to paint"><input type="checkbox" id="mcColours"> Predicted colours</label>
+              </div>
+              <div class="row mc-sheet">
+                <button type="button" id="mcPrint" class="primary" title="Print the sheet at its real size - empty squares to paint, the paints numbered">Print</button>
+                <button type="button" id="mcSave" class="ghost" title="The same sheet as an SVG at the paper's real size">Save SVG</button>
+              </div>
+              <div class="count" id="mcSheetNote"></div>
+            </div>
+            <!-- js/pigments.js: each paint's test swatch, and what it does on the paper. -->
+            <div class="col-tab" data-tab="pigments" role="tabpanel">
+              <h4>Pigment guide - what each paint does on the paper</h4>
+              <div class="chips" id="pigFilters" role="group" aria-label="Which paints"></div>
+              <div class="count" id="pigHint"></div>
+              <div id="pigBox" class="pig-box hidden" role="group" aria-label="The box, as the pans sit"></div>
+              <div id="pigRows" class="pig-rows" role="group" aria-label="Your paints"></div>
+              <div id="pigOne"></div>
+            </div>
+          </div>
+        </div>
+        <input type="file" id="colInput" accept="image/*" class="hidden">
+      </div>
+
+      <!-- Museums - see showMuseum() in js/museum.js, which loads the first
+           time this opens. Nothing here needs a library. -->
+      <div id="viewMuseum" class="hidden">
+        <form id="muForm" class="row mu-bar" role="search">
+          <input id="muQuery" type="search" class="mu-query" placeholder="An artist, a subject, a medium" aria-label="Search the museums" autocomplete="off" spellcheck="false">
+          <button type="submit" id="muSearch" class="primary" title="Search the chosen museums">Search</button>
+          <span class="count">Search in</span>
+          <div class="chips" id="muSources" role="group" aria-label="Museums to search"></div>
+        </form>
+        <div class="count mu-status" id="muStatus" role="status" aria-live="polite"></div>
+        <div id="muEmpty" class="mu-empty">
+          <p>Public-domain pictures from open collections. A painting opens in the viewer like a photo of your own, with every tool on it. Try:</p>
+          <div class="chips" id="muExamples"></div>
+        </div>
+        <div class="mu-body">
+          <div id="muGrid" class="mu-grid" role="group" aria-label="Results"></div>
+          <aside id="muDetail" class="mu-detail hidden" aria-label="The chosen picture">
+            <img id="muPreview" alt="">
+            <h3 id="muTitle"></h3>
+            <div id="muBy"></div>
+            <div class="count" id="muMedium"></div>
+            <div class="count" id="muSource"></div>
+            <div class="count" id="muCredit"></div>
+            <div class="row mu-actions">
+              <button type="button" id="muOpen" class="primary" title="Open it in the viewer, at a size to work on">Open in viewer</button>
+              <button type="button" id="muFull" class="ghost" title="The museum's original file - sharper, but often many megapixels and slow to open">Full size</button>
+              <button type="button" id="muCopy" class="ghost" title="Copy who made it, where it is kept and its licence">Copy credit</button>
+              <a id="muPage" class="ghost" target="_blank" rel="noopener noreferrer" title="Its page on the museum's site">Museum page</a>
+            </div>
+          </aside>
+        </div>
+        <div class="row mu-foot"><button type="button" id="muMore" class="ghost hidden" title="The next pictures for these words">More</button></div>
+      </div>
+
+
+
+
+      <!-- Palette generator - see showPalette() in js/palette.js, which
+           loads the first time this opens. Nothing here needs a library. -->
+
+      <div id="viewPalette" class="hidden">
+        <div class="row pg-bar">
+          <button type="button" id="pgGenerate" class="primary" title="A new palette - or press Space">New palette</button>
+          <span class="count pg-space">or press <kbd>Space</kbd></span>
+          <span class="grow"></span>
+          <!-- Changing the palette, then taking it somewhere. -->
+          <button class="ghost" type="button" id="pgUndo" title="Back to the palette before (Ctrl+Z)">Undo</button>
+          <button class="ghost" type="button" id="pgAdd" title="One more colour">Add a colour</button>
+          <span class="pg-sep" aria-hidden="true"></span>
+          <button class="ghost" type="button" id="pgCopy" title="Copy every colour as hex">Copy</button>
+          <button class="ghost" type="button" id="pgSave" title="Keep this palette - under Saved, below">Save</button>
+          <button class="ghost hidden" type="button" id="pgToGenerate" title="Generate a reference in these colours">Use in Generate</button>
+        </div>
+        <div id="pgRow" class="pg-row" role="group" aria-label="The palette"></div>
+        <!-- Filled by js/fewpaints.js when asked: which few of the paints below are enough. -->
+        <div id="pgFew" class="pg-few hidden" aria-live="polite"></div>
+        <div class="pg-under">
+          <div>
+            <h4>Seasons and times of day</h4>
+            <div class="chips" id="pgSeasons" role="group" aria-label="A landscape to start from"></div>
+            <div class="count" id="pgSeasonHint"></div>
+            <h4>Harmony</h4>
+            <div class="chips" id="pgHarmony" role="group" aria-label="Harmony"></div>
+            <div class="count" id="pgHarmonyHint"></div>
+            <h4>Your paints</h4>
+            <div class="chips" id="pgMedium" role="group" aria-label="Medium"></div>
+            <div class="chips" id="pgPaints" role="group" aria-label="Paints"></div>
+            <div class="chips">
+              <button class="chip" type="button" id="pgFit" aria-pressed="false" title="Make only colours these paints can mix">Only what my paints mix</button>
+            </div>
+            <div class="count" id="pgPaintHint"></div>
+            <h4>Fewest paints</h4>
+            <div class="chips" id="pgFewFor" role="group" aria-label="Paints, markers or pencils"></div>
+            <details id="pgFewMine" class="pg-few-mine hidden">
+              <summary id="pgFewMineSum"></summary>
+              <div class="chips" id="pgFewMineList" role="group" aria-label="The markers or pencils you have"></div>
+              <div class="chips">
+                <button class="chip" type="button" id="pgFewMineAll" title="The whole list is yours">All</button>
+                <button class="chip" type="button" id="pgFewMineNone" title="Clear them, then mark the ones you have">None</button>
+              </div>
+            </details>
+            <div class="chips" id="pgFewN" role="group" aria-label="At most this many paints"></div>
+            <div class="chips">
+              <button class="chip" type="button" id="pgFewGo" title="Which few of the paints above are enough to mix every colour of this palette - in watercolour, the paper being the white">Which paints?</button>
+            </div>
+            <div class="count">At most this many, from the paints above; fewer if the rest would add nothing.</div>
+          </div>
+          <div>
+            <h4>Saved</h4>
+            <div id="pgSaved"></div>
+            <h4>From a picture</h4>
+            <div class="row pg-from">
+<button class="ghost" type="button" id="pgFromPicture" title="Open a reference there, then To the palette generator under its palette">Colour studio<&button>
+              <span class="count">A reference's own colours come from there.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="viewBrowse" class="hidden">
+        <div id="thumbGrid"></div>
+        <div class="row" id="gridMoreRow" style="margin-top:14px; justify-content:center">
+          <button class="ghost hidden" type="button" id="btnGridMore">Show more</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ------------------------------ right: what you do with what you picked -->
+  <aside id="inspector">
+    <!-- Three tabs, one at a time - Timing, what the pool is (Filter), how a
+         pose is shown (Display) - over a footer that is always there: the
+         pool count, and Start. See initInspectorTabs(). -->
+    <div class="insp-head">
+      <div class="tabs" role="tablist" id="inspTabs">
+        <button type="button" role="tab" data-tab="timing">Timing</button>
+        <button type="button" role="tab" data-tab="filter">Filter</button>
+        <button type="button" role="tab" data-tab="display">Display</button>
+      </div>
+      <button class="icon-btn" type="button" id="btnCloseSession" data-icon="close" title="Hide the session panel" aria-label="Hide the session panel"></button>
+    </div>
+    <div class="insp-body">
+      <div class="insp-tab" data-tab="timing">
+    <section>
+      <h2>Interval</h2>
+      <div class="chips" id="intervals"></div>
+      <div class="row" style="margin-top:10px">
+        <label class="opt" for="customSecs">Custom</label>
+        <input type="number" id="customSecs" min="5" max="3600" step="5" placeholder="secs">
+      </div>
+    </section>
+    <section>
+      <h2>Schedule</h2>
+      <div class="chips" id="schedules"></div>
+      <div class="count" id="scheduleHint" style="margin-top:9px"></div>
+      <!-- Hidden unless the Custom chip is selected - see renderSchedules().
+           Each row is a plain [secs, count] pair, the exact shape every
+           built-in SCHEDULES entry already uses, so nothing downstream
+           (startSession(), advanceSchedule(), hintSchedule()) needs a
+           special case for a schedule just because it came from here. -->
+      <div id="customSchedule" class="hidden" style="margin-top:10px">
+        <div id="customScheduleRows"></div>
+        <button id="addScheduleStep" class="ghost" type="button" style="margin-top:6px">+ Add step</button>
+      </div>
+    </section>
+    <!-- Memory drawing - see beginMemoryStudy(). A mode of the session, not a
+         view of its own, so it works the same over the library, dropped
+         photos and 3D renders: everything that reaches startSession(). -->
+    <section>
+      <h2>Memory</h2>
+      <label class="opt"><input type="checkbox" id="optMemory"> Draw from memory</label>
+      <div class="row" style="margin-top:9px">
+        <label class="opt" for="memorySecs">Study for</label>
+        <select id="memorySecs">
+          <option value="5">5 s</option>
+          <option value="10">10 s</option>
+          <option value="15" selected>15 s</option>
+          <option value="30">30 s</option>
+          <option value="60">1 min</option>
+        </select>
+      </div>
+      <div class="count" style="margin-top:9px">Each pose is shown for the study time, then hidden - the interval above is
+        your drawing time. When it runs out the reference comes back and the clock stops:
+        <b>D</b> lays a photo of your drawing over it, <b>&rarr;</b> goes on.</div>
+    </section>
+    <!-- Build-up stages - see setStage(). -->
+    <section>
+      <h2>Stages</h2>
+      <label class="opt"><input type="checkbox" id="optStages"> Build up in stages</label>
+      <div class="count" style="margin-top:9px">For copying a master painting or a long study: each pose starts as two
+        masses of light and dark, then three values, then soft masses of colour, and only at the end everything -
+        the order a painting is built in. The interval is shared between the stages; <b>&rarr;</b> goes to the next one.</div>
+    </section>
+      </div>
+      <div class="insp-tab" data-tab="filter">
+        <p class="count" style="margin:0 0 12px">Which packs and folders: tick them in the library. Here, what is drawn from them.</p>
+    <!-- Hidden entirely when features.json is absent: with no measurements the
+         chips would all select everything, which reads as a broken filter. -->
+    <section id="toneSection" class="hidden">
+      <h2>Tone</h2>
+      <div class="chips" id="tones"></div>
+      <div class="count" id="toneHint" style="margin-top:9px"></div>
+    </section>
+        <section>
+          <h2>Poses</h2>
+          <div class="opts" style="flex-direction:column; gap:9px">
+            <label class="opt hidden" id="optDedupWrap" title="Frames that hash as near-identical are drawn as one pose. Off by default: the measured distance distributions for &quot;same pose, other angle&quot; and &quot;different pose&quot; overlap, so this removes some genuinely distinct poses too. The count below shows exactly how many it takes."><input type="checkbox" id="optDedup"> Skip near-duplicates</label>
+          </div>
+          <!-- Empty when nothing is skipped, same convention as poolInfo - a
+           permanently-hidden control with nothing to say is worse than an
+           absent one. -->
+      <div class="count" id="skipInfo" style="margin-top:9px"></div>
+        </section>
+      </div>
+      <div class="insp-tab" data-tab="display">
+    <section>
+      <h2>Display</h2>
+      <div class="opts" style="flex-direction:column; gap:9px">
+        <label class="opt"><input type="checkbox" id="optGray"> Grayscale</label>
+        <label class="opt"><input type="checkbox" id="optFlipRandom"> Randomly mirror</label>
+        <label class="opt"><input type="checkbox" id="optGrid"> Grid overlay</label>
+        <select id="gridStyle" title="Which guide lines the grid overlay draws">
+          <optgroup label="Divide the frame">
+            <option value="thirds">Rule of thirds</option>
+            <option value="golden">Golden ratio</option>
+            <option value="dynamic">Dynamic symmetry</option>
+            <option value="armature">Harmonic armature</option>
+            <option value="rabatment">Rabatment</option>
+            <option value="diagonal">Diagonals</option>
+            <option value="center">Center only</option>
+          </optgroup>
+          <optgroup label="Lay a shape (Carlson, Loomis)">
+            <option value="scurve">S-curve</option>
+            <option value="ell">L</option>
+            <option value="steelyard">Steelyard</option>
+            <option value="radiating">Radiating</option>
+            <option value="triangle">Triangle</option>
+          </optgroup>
+        </select>
+        <div class="count" id="gridStyleNote" aria-live="polite"></div>
+        <label class="opt" title="Black-outlined white lines with a distinct dash pattern per line, instead of one accent colour and opacity - for bright light or low contrast sensitivity. Also 'h' mid-session."><input type="checkbox" id="optHighContrast"> High-contrast overlays</label>
+        <label class="opt" title="Overlay a faint edge-detected silhouette of whatever pose was on screen just before this one, to help track how a gesture or form carries from pose to pose."><input type="checkbox" id="optGhost"> Ghost previous pose</label>
+        <label class="opt" title="Mark this pose's approximate visual-weight centroid (from its own brightness distribution) - a rough guide to where the eye lands first."><input type="checkbox" id="optFocalPoint"> Focal-point marker</label>
+        <label class="opt"><input type="checkbox" id="optBell" checked> Bell on change</label>
+        <label class="opt"><input type="checkbox" id="optFull" checked> Fullscreen</label>
+      </div>
+
+      <!-- A count, not a checkbox, because "on" is meaningless without
+           saying how many tones - this is a value study, not a filter with
+           one setting. Works with no features.json at all: unlike Tone
+           above, this reduces the image itself rather than selecting from
+           precomputed stats, so it needs nothing the page did not already
+           have. Grayscale is disabled rather than hidden while a step count
+           is active - it would still change nothing, since the SVG filter
+           below already forces its own grayscale, and a control that
+           silently does nothing is worse than one visibly turned off. -->
+      <div style="margin-top:14px">
+        <span style="font-size:13px">Tonal value</span>
+        <div class="chips" id="valueSteps" style="margin-top:7px"></div>
+      </div>
+      <div class="count" id="valueStepsHint" style="margin-top:9px"></div>
+    </section>
+      </div>
+    </div>
+    <div class="insp-foot">
+      <div class="insp-pool"><b id="poolCount">0</b><span class="count" id="poolInfo">select at least one pack</span></div>
+    <div class="startbar" id="startbar" style="gap:8px; flex-wrap:nowrap">
+      <button id="start" disabled>Start drawing</button>
+      <button id="copyLink" class="ghost" type="button" disabled title="A link that opens this exact setup - packs, interval, schedule">Copy link</button>
+    </div>
+    </div>
+
+
+
+
+
+  </aside>
+</div>
+
+<!-- Value-study filters (buildValueFilters() below). Not visually rendered -
+     #imgValue and the drop-zone preview reference one by id via CSS
+     filter:url(#value3) etc - so this lives anywhere in the document rather
+     than inside #stage. Built by JS rather than hand-typed: evenly spacing N
+     tone levels as decimal fractions is exactly the kind of arithmetic that
+     quietly drifts off "evenly spaced" after one hand-edit. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs id="valueFilterDefs"></defs>
+  <!-- Ghost overlay's filter (see #ghostImg) - the same gray + Laplacian
+       edge-detect recipe as the "Edges" tonal-value scheme (appendEdgeStages()),
+       but static rather than rebuilt: nothing user-configurable feeds this one,
+       unlike the real value filter buildValueFilter() rebuilds on every
+       settings change. -->
+  <!-- Build-up stages (setStage()): the picture as two masses, then three
+       values, each simplified first by a little blur - a stage is about big
+       shapes, and a hard-edged posterize of fine texture is noise. -->
+  <filter id="stageNotan" color-interpolation-filters="sRGB">
+    <feGaussianBlur stdDeviation="2.5"/>
+    <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"/>
+    <feComponentTransfer>
+      <feFuncR type="discrete" tableValues="0.12 0.86"/><feFuncG type="discrete" tableValues="0.12 0.86"/><feFuncB type="discrete" tableValues="0.12 0.86"/>
+    </feComponentTransfer>
+  </filter>
+  <filter id="stageThree" color-interpolation-filters="sRGB">
+    <feGaussianBlur stdDeviation="1.5"/>
+    <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"/>
+    <feComponentTransfer>
+      <feFuncR type="discrete" tableValues="0.12 0.5 0.86"/><feFuncG type="discrete" tableValues="0.12 0.5 0.86"/><feFuncB type="discrete" tableValues="0.12 0.5 0.86"/>
+    </feComponentTransfer>
+  </filter>
+  <filter id="ghostFilter" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"/>
+    <feConvolveMatrix order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" divisor="1" bias="0.5" preserveAlpha="true"/>
+  </filter>
+</svg>
+
+<!-- What changed, said by a screen reader - see announce() in js/a11y.js. -->
+<div id="announce" class="sr-only" role="status" aria-live="polite"></div>
+
+<div id="session" class="hidden">
+  <div id="stage">
+    <!-- .zoomwrap carries the zoom/pan transform, kept separate from #img's
+         own .flip transform (see applyOptions()) rather than combined into
+         one - two independent things changing on two independent triggers
+         is simpler to reason about as two transforms than as one string
+         rebuilt from both every time either changes. -->
+    <div class="pane" id="paneOrig">
+      <!-- The grid lives INSIDE .zoomwrap, next to the image it divides, and
+           positionGrid() sizes it to that image's own rendered box. Two things
+           were wrong with it on #stage: in a tonal-value split it stretched
+           across BOTH panes, so a rule-of-thirds grid drew its lines at each
+           image's two-sixths and four-sixths; and even on one pane it fitted
+           the PANE, while the image inside it is letterboxed to its own aspect
+           ratio - so the lines missed the image's thirds by however much
+           gutter there was, and part of the grid sat on black.
+
+           Inside .zoomwrap it also inherits the zoom/pan transform for free,
+           which is what you want here and specifically NOT what you want for
+           #angleOverlay or #constructOverlay: a measured angle is about the
+           pose as currently framed on screen, while a composition grid is a
+           statement about the image itself. -->
+      <div class="zoomwrap" id="zoomOrig"><img id="img" alt="" draggable="false"><div id="drawWrap" class="hidden"><img id="drawImg" alt="" draggable="false"><div id="drawMarks"></div></div><canvas id="watercolourOverlay" class="hidden"></canvas><canvas id="vignetteOverlay" class="hidden"></canvas><svg id="grid" class="hidden" preserveAspectRatio="none"></svg><svg id="poseOverlay" class="hidden" preserveAspectRatio="none"></svg><svg id="headOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="edgeOverlay" class="hidden"></canvas><canvas id="rangeOverlay" class="hidden"></canvas><canvas id="tempOverlay" class="hidden"></canvas><canvas id="tanOverlay" class="hidden"></canvas><canvas id="lineOverlay" class="hidden"></canvas><canvas id="lineWashOverlay" class="hidden"></canvas><canvas id="toneOverlay" class="hidden"></canvas><canvas id="symOverlay" class="hidden"></canvas><svg id="rhythmOverlay" class="hidden" preserveAspectRatio="none"></svg><canvas id="markerOverlay" class="hidden"></canvas><canvas id="gradeOverlay" class="hidden"></canvas><canvas id="qualityOverlay" class="hidden"></canvas><canvas id="flowOverlay" class="hidden"></canvas><canvas id="hatchOverlay" class="hidden"></canvas><canvas id="compositionOverlay" class="hidden"></canvas><canvas id="simplifyOverlay" class="hidden"></canvas><canvas id="jarsOverlay" class="hidden"></canvas><canvas id="amtOverlay" class="hidden"></canvas></div>
+      <!-- Ghost of the previous pose - see show() and #ghostImg's own CSS
+           comment. Hidden unless optGhost is checked. -->
+      <img id="ghostImg" class="hidden" alt="" draggable="false">
+      <!-- Visual-weight centroid marker - see refreshValueTools() and
+           #focalMarker's own CSS comment. Hidden unless optFocalPoint is
+           checked. -->
+      <div id="focalMarker" class="hidden" aria-hidden="true"></div>
+    </div>
+    <!-- Hidden whenever tonal value is off - see applyOptions(). Always the
+         SAME underlying file as #img (show() sets both src attributes
+         together), so nothing extra is fetched: the filter is the only
+         difference between the two panes. -->
+    <div class="pane hidden" id="paneValue">
+      <div class="zoomwrap" id="zoomValue"><img id="imgValue" alt="" draggable="false"><svg id="gridValue" class="hidden" preserveAspectRatio="none"></svg></div>
+      <!-- The steps, named in your medium - see drawLegend(). -->
+      <div id="paneLegend" aria-label="Value steps"></div>
+    </div>
+    <!-- The angle tool's drawn line(s) - see renderAngleOverlay(). Zoom
+         and pan apply to the images; this deliberately does not follow them
+         (no transform of its own) - a measurement is about the pose as
+         currently framed on screen, not a value that should slide around
+         underneath you while you are still looking at it. -->
+    <svg id="angleOverlay" class="hidden"></svg>
+    <!-- Construction guides (vanishing point / plumb line / proportion
+         divider) - see setConstructMode(). Same "does not follow zoom/pan"
+         treatment as #angleOverlay just above, for the same reason. -->
+    <svg id="constructOverlay" class="hidden"></svg>
+    <!-- Memory drawing's cover - see beginMemoryStudy(). Last in #stage so it
+         sits over every guide and measurement: while you draw from memory,
+         none of them may give the pose away. -->
+    <div id="memCover" class="hidden"></div>
+    <!-- Which build-up stage the pose is at - see setStage(). -->
+    <div id="stageBadge" class="hidden"></div>
+    <!-- What the pose skeleton found - see runPose(). -->
+    <div id="poseNote" class="hidden"></div>
+    <!-- While "o" has every overlay out of the way - see toggleLayersPeek(). -->
+    <div id="peekBadge" class="hidden">Overlays hidden · <kbd>o</kbd> brings them back</div>
+  </div>
+  <div id="bar"><div id="fill"></div></div>
+  <!-- Collapsed by default - see toggleValueTools(). Everything in here is
+       about UNDERSTANDING the reference (what scheme/blur the tonal-value
+       view uses, the current pose's own brightness histogram and dominant
+       colours, an eyedropper reading) rather than the moment-to-moment
+       controls in #hud below, so it gets its own strip instead of crowding
+       an already-full toolbar with five more buttons nobody needs open
+       every pose. -->
+  <div id="valueTools" class="hidden">
+    <label class="opt">Scheme <select id="schemeSelect"></select></label>
+    <label class="opt">Blur <select id="blurSelect"></select></label>
+    <div id="valueLegend" title="The current scheme's tone steps, dark to light - what each posterized level actually maps to"></div>
+    <span id="eyedropperReadout"></span>
+    <label class="opt" title="What you are using now - the value steps and the eyedropper speak in its terms. My materials... to change the list.">Medium <select id="mediumSelect"></select></label>
+    <label class="opt" title="The paints the mixing recipes may use">Paints <select id="paintSelect"></select></label>
+    <div id="mixGuide" title="Ways to mix the sampled colour from real paint - see Help, Eyedropper"></div>
+    <div id="eyedropperHistory" title="Last few sampled colours - click to copy the hex"></div>
+    <canvas id="histoCanvas" width="120" height="32" title="This pose's brightness distribution, dark to light"></canvas>
+    <div id="paletteSwatches" title="This pose's dominant colours"></div>
+  </div>
+  <!-- Only while a drawing is laid over the reference - see openCompare(). -->
+  <div id="compareBar" class="hidden">
+    <span>Your drawing</span>
+    <select id="cmpMode" title="How your drawing is laid over the reference">
+      <option value="lines">Lines in red</option>
+      <option value="photo">See-through photo</option>
+      <option value="blink">Blink</option>
+      <optgroup label="Where it parts (tones)">
+        <option value="tones">Darker / lighter</option>
+        <option value="warmth">Warmer / cooler</option>
+        <option value="colour">Stronger / greyer</option>
+      </optgroup>
+    </select>
+    <label>Opacity <input type="range" id="cmpOpacity" min="0.1" max="1" step="0.05"></label>
+    <button type="button" id="cmpAlign" title="Pick two landmarks on the reference, then the same two on your drawing - it is scaled, turned and moved to match them">Line up 2 points</button>
+    <button type="button" id="cmpScan" title="Digitise: click the four corners of the page on your photo - it is straightened, the shadow and the paper's tint taken out, and kept as a clean scan in My work">Clean scan...</button>
+    <select id="cmpPaper" title="What the page holds: a line drawing (thin marks on paper) or a painting (washes that must not be taken for paper)">
+      <option value="drawing">Line drawing</option>
+      <option value="painting">Painting</option>
+    </select>
+    <button type="button" id="cmpFit" title="Back to fitted in the middle - undoes any lining up">Fit</button>
+    <button type="button" id="cmpReplace" title="A different photo of your drawing">Another photo...</button>
+    <button type="button" id="cmpRemove" title="Take your drawing off the reference (d hides it for a moment)">Remove</button>
+    <span id="cmpHint"></span>
+  </div>
+  <input type="file" id="cmpInput" accept="image/*" class="hidden">
+  <div id="hud">
+    <span id="clock">0:30</span>
+    <button id="btnPause" data-icon="pause" title="Pause (space)" aria-label="Pause"></button>
+    <button id="btnPrev" data-icon="prev" title="Previous (←)" aria-label="Previous"></button>
+    <button id="btnNext" data-icon="next" title="Next (→)" aria-label="Next"></button>
+    <span class="hud-sep"></span>
+    <button id="btnFlip" data-icon="flip" title="Flip - mirror the reference (f)" aria-label="Flip"></button>
+    <button id="btnGray" data-icon="gray" title="Grayscale (g)" aria-label="Grayscale"></button>
+    <button id="btnSquint" data-icon="squint" title="Squint (q): blur the reference directly, to check big shapes and values without leaving the plain original view" aria-label="Squint"></button>
+    <select id="valueSelect" title="Tonal value split view (v cycles)"></select>
+    <span class="hud-sep"></span>
+    <button id="btnZoomOut" data-icon="zoomOut" title="Zoom out (-)" aria-label="Zoom out"></button>
+    <button id="btnZoomReset" title="Reset zoom (0, or double-click the reference)">100%</button>
+    <button id="btnZoomIn" data-icon="zoomIn" title="Zoom in (+)" aria-label="Zoom in"></button>
+    <span class="hud-sep"></span>
+    <button id="btnAngle" data-icon="angle" title="Angle tool (a): drag to measure an angle. The first drag sets a reference length; every drag after compares against it and stays on screen (a few at a time) until you clear or turn the tool off." aria-label="Angle tool"></button>
+    <button id="btnAngleClear" data-icon="clearLines" title="Clear all measured angle lines" aria-label="Clear lines" disabled></button>
+    <select id="constructSelect" title="Construction guides (c cycles): a vanishing point, a plumb line, or a repeating proportion divider">
+      <option value="off">Guides: Off</option>
+      <option value="vp">Vanishing point</option>
+      <option value="plumb">Plumb line</option>
+      <option value="divider">Proportion divider</option>
+      <option value="frame">Viewfinder</option>
+      <option value="persp">Perspective check</option>
+    </select>
+    <button id="btnEyedropper" data-icon="pipette" title="Eyedropper (e): click the reference to read its exact colour and value" aria-label="Eyedropper"></button>
+    <button id="btnGrades" data-icon="grades" title="Pencil grades: for graphite, which grade of pencil each area of the picture wants - 2H for the palest tone to 8B for the darkest - with the grade written on it" aria-label="Pencil grades" aria-pressed="false"></button>
+    <button id="btnCompare" data-icon="compare" title="Compare (d): lay a photo or scan of your drawing over the reference - or drop or paste one onto it" aria-label="Compare your drawing"></button>
+    <span class="hud-sep"></span>
+    <button id="btnInfo" data-icon="info" title="Show this pose's brightness histogram and dominant colours (i)" aria-label="Info"></button>
+    <button id="btnSimilar" class="hidden" data-icon="similar" title="Similar poses next (m)" aria-label="Similar"></button>
+    <button id="btnSkip" data-icon="ban" title="Never show this pose again (s)" aria-label="Skip"></button>
+    <!-- The pinned tools, in groups, and the rest under More - see
+         js/pins.js, which moves the buttons above into one or the other. -->
+    <span id="hudTools"></span>
+    <button id="btnMoreTools" data-icon="more" title="More tools - and which ones stay in the toolbar" aria-label="More tools" aria-haspopup="true" aria-expanded="false"></button>
+    <div id="hudMore" class="hidden" role="group" aria-label="More tools">
+      <div id="hudMoreList"></div>
+      <p id="hudMoreEmpty" class="hidden">Every tool is pinned to the toolbar.</p>
+      <div class="more-pins">
+        <div class="more-pins-head"><b>In the toolbar</b><button type="button" id="hudPinReset" class="more-reset">Reset</button></div>
+        <div id="hudPinList"></div>
+        <small>Unpinned tools keep their keys, and Ctrl+K finds them.</small>
+      </div>
+    </div>
+    <button id="btnFindHud" data-icon="search" title="Find a tool (Ctrl+K)" aria-label="Find a tool"></button>
+    <button id="btnHelpHud" data-icon="help" title="What every feature does and how to use it (?)" aria-label="Help"></button>
+    <button id="btnStop" data-icon="stop" title="Stop (Esc)" aria-label="Stop"></button>
+    <span id="pos"></span>
+    <span class="keys">space pause · ← → step · f flip · g gray · q squint · v value · +/- zoom · a angle · c guides · e eyedrop · d compare · i info · r grid · m similar · s skip · esc stop · ? help · ctrl+k find</span>
+  </div>
+</div>
+
+<!-- Reachable from the setup screen (#btnHelpSetup) and mid-session
+     (#btnHelpHud / the '?' key) alike, so it gets its own always-dark
+     theming (see #session's own comment on the same trick) rather than
+     inheriting whichever of light/dark #setup happens to be in - a help
+     card is read the same way regardless of which screen opened it from. -->
+<!-- Find a tool (Ctrl+K) - see js/command.js. Outside #setup and #session
+     so it opens over either. -->
+<!-- The tour - see js/tour.js. A ring round the real control, the rest
+     dimmed by the ring's own shadow, and a note beside it. -->
+<div id="tour" class="hidden" role="dialog" aria-modal="true" aria-label="Tour" aria-describedby="tourText">
+  <div id="tourRing"></div>
+  <div id="tourNote">
+    <p id="tourText"></p>
+    <div class="row">
+      <span id="tourCount" class="grow"></span>
+      <button type="button" id="tourSkip" class="ghost">Skip</button>
+      <button type="button" id="tourBack" class="ghost">Back</button>
+      <button type="button" id="tourNext">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="cmdk" class="hidden" role="dialog" aria-modal="true" aria-label="Find a tool">
+  <div id="cmdkBox">
+    <input id="cmdkInput" type="text" role="combobox" aria-expanded="true" aria-controls="cmdkList"
+           aria-autocomplete="list" autocomplete="off" spellcheck="false" aria-label="Find a tool"
+           placeholder="Find a tool - try &ldquo;green&rdquo;, &ldquo;flip&rdquo; or &ldquo;Loomis&rdquo;">
+    <ul id="cmdkList" role="listbox" aria-label="Tools"></ul>
+    <div class="cmdk-foot">&uarr; &darr; to choose · Enter to use · Esc to close</div>
+  </div>
+</div>
+
+<!-- The theme editor - see js/theme-editor.js. -->
+<div id="themeEditor" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="themeEditorTitle">
+  <div id="themeEditorBox" class="sheet-box">
+    <div class="row">
+      <h2 id="themeEditorTitle" class="grow">Theme editor</h2>
+      <button type="button" class="ghost" id="themeEditorClose" title="Close without saving (Esc)">Close</button>
+    </div>
+    <label class="te-name">Name <input type="text" id="themeName" maxlength="40" autocomplete="off"></label>
+    <div id="themeRows"></div>
+    <div id="themeContrast"></div>
+    <p class="te-note">Changes show on the whole app as you make them. The picture, a
+      session's stage, value scales and paint swatches never take a theme's colours.</p>
+    <div id="themeEditorMsg" role="status"></div>
+    <div class="row te-actions">
+      <button type="button" id="themeSave" class="primary">Save</button>
+      <button type="button" class="ghost" id="themeExport">Export file</button>
+      <button type="button" class="ghost" id="themeImport">Import file</button>
+      <button type="button" class="ghost hidden" id="themeDelete">Delete</button>
+    </div>
+    <input type="file" id="themeImportInput" accept=".json,application/json" class="hidden">
+  </div>
+</div>
+
+<!-- My materials - see js/materials.js. -->
+<div id="materials" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="materialsTitle">
+  <div id="materialsBox" class="sheet-box">
+    <div class="row">
+      <h2 id="materialsTitle" class="grow">My materials</h2>
+      <button type="button" class="ghost" id="materialsClose" title="Close (Esc)">Close</button>
+    </div>
+    <p class="te-note">Tick what you have; the dot is what you are using now. The value
+      split's steps and the eyedropper then speak in its terms - a wash, a layer
+      of hatching, a pencil grade. The medium select in the info drawer switches
+      between the ones you have.</p>
+    <div id="materialsList"></div>
+    <p id="materialsNow" class="te-note"></p>
+  </div>
+</div>
+
+
+<!-- Redraw a part - js/genedit.js: a generated picture with a brush over it;
+     only what is brushed is drawn again. -->
+<div id="redrawSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="redrawTitle">
+  <div class="sheet-box redraw-box">
+    <div class="row">
+      <h2 id="redrawTitle" class="grow">Redraw a part</h2>
+      <button type="button" class="ghost" id="redrawClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="redraw-stage">
+      <canvas id="redrawPic" aria-hidden="true"></canvas>
+      <canvas id="redrawMask" role="img" aria-label="The picture, to brush over the part to draw again - with a pointer or a pen"></canvas>
+    </div>
+    <p class="count" id="redrawHint" role="status"></p>
+    <div class="row redraw-tools">
+      <label>Brush <input type="range" id="redrawSize" min="8" max="120" value="40"></label>
+      <button type="button" class="ghost" id="redrawUndo" title="Undo the last stroke (Ctrl+Z)">Undo</button>
+      <button type="button" class="ghost" id="redrawClear" title="Take all the brushing off">Clear</button>
+    </div>
+    <div class="row redraw-tools">
+      <span class="count">How different</span>
+      <span class="chips" id="redrawLevels" role="group" aria-label="How different"></span>
+    </div>
+    <div class="row redraw-tools" id="redrawDetailRow">
+      <label class="opt" title="Four pictures with four seeds, to choose the one that came out right"><input type="checkbox" id="redrawFour"> Four tries</label>
+      <label class="opt" title="A small part - a face, a hand - is cut out with room round it, enlarged, drawn there with all the detail that size has, and put back. A part over a third of the picture is drawn where it is"><input type="checkbox" id="redrawDetail" checked> In detail - zoom in on a small part</label>
+    </div>
+    <div class="row redraw-tools">
+      <label class="grow" id="redrawLabel">What should be there <input type="text" id="redrawText" maxlength="100" placeholder="optional - e.g. open hand, brown eyes"></label>
+      <button type="button" class="primary" id="redrawGo">Redraw</button>
+    </div>
+  </div>
+</div>
+
+<!-- Extend the picture - js/genedit.js: more canvas on the sides chosen, drawn to match. -->
+<div id="extendSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="extendTitle">
+  <div class="sheet-box redraw-box">
+    <div class="row">
+      <h2 id="extendTitle" class="grow">Extend the picture</h2>
+      <button type="button" class="ghost" id="extendClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="redraw-stage"><canvas id="extendPreview" role="img" aria-label="The picture, with the new canvas round it"></canvas></div>
+    <p class="count" id="extendHint" role="status"></p>
+    <div class="row redraw-tools">
+      <span class="count">Which sides</span>
+      <span class="chips" id="extendSides" role="group" aria-label="Which sides"></span>
+    </div>
+    <div class="row redraw-tools">
+      <span class="count">How much</span>
+      <span class="chips" id="extendAmount" role="group" aria-label="How much"></span>
+    </div>
+    <div class="row redraw-tools">
+      <label class="opt" title="Off: only the scenery goes on - her hair and face are not described, or the model draws more of them. On: for a cropped picture whose body goes on past the edge"><input type="checkbox" id="extendPerson"> Continue the character too</label>
+    </div>
+    <div class="row redraw-tools">
+      <label class="grow">What is there <input type="text" id="extendText" maxlength="100" placeholder="optional - e.g. more of the room, a forest path"></label>
+      <button type="button" class="primary" id="extendGo">Extend</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cut out - js/genedit.js, js/assetsfx.js: the figure of a picture on a plain background,
+     with nothing behind it - looked at over a checkerboard, a dark or a light ground. -->
+<div id="cutSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="cutTitle">
+  <div class="sheet-box redraw-box">
+    <div class="row">
+      <h2 id="cutTitle" class="grow">Cut out</h2>
+      <button type="button" class="ghost" id="cutClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="cut-stage" id="cutStage" data-behind="checker"><canvas id="cutPreview" role="img" aria-label="The picture with its background cut away"></canvas></div>
+    <p class="count" id="cutHint" role="status"></p>
+    <div class="row redraw-tools">
+      <span class="count">Behind it</span>
+      <span class="chips" id="cutBehind" role="group" aria-label="What is behind it"></span>
+      <span class="count">Look</span>
+      <span class="chips" id="cutZoom" role="group" aria-label="How closely"></span>
+    </div>
+    <div class="row redraw-tools">
+      <label class="grow" title="How near the background's colour a pixel may be and still go. Higher takes more of a shadow or a gradient - and, too high, a pale part of the figure">How much counts as background <input type="range" id="cutTol" min="10" max="120" step="2"></label>
+    </div>
+    <div class="row redraw-tools">
+      <label class="opt" title="Off: a gap between an arm and the body keeps its colour. On: it is cut away too - and so is a white plate of armour that is the colour of the background"><input type="checkbox" id="cutHoles"> Cut the gaps inside too</label>
+      <label class="opt" title="Dots and sparks the model scatters round a figure: loose pieces far smaller than the figure go"><input type="checkbox" id="cutSpecks" checked> Drop specks</label>
+      <label class="opt" title="The picture shrunk to the figure, with a little room round it"><input type="checkbox" id="cutTrim" checked> Crop to it</label>
+      <button type="button" class="primary" id="cutSave">Keep the PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- Before and after - js/genedit.js: a picture over the one it was made from, a
+     slider between them. -->
+<div id="compareSheet" class="sheet sheet-center hidden" role="dialog" aria-modal="true" aria-labelledby="compareTitle">
+  <div class="sheet-box compare-box">
+    <div class="row">
+      <h2 id="compareTitle" class="grow">Before and after</h2>
+      <button type="button" class="ghost" id="compareClose" title="Close (Esc)">Close</button>
+    </div>
+    <div class="compare-stage" id="compareStage">
+      <img id="compareAfter" alt="After">
+      <img id="compareBefore" alt="Before">
+    </div>
+    <input type="range" id="compareSlider" min="0" max="100" value="50" aria-label="Before on the left, after on the right">
+    <p class="count compare-labels"><span>Before</span><span id="compareHint" role="status"></span><span>After</span></p>
+  </div>
+</div>
+<!-- Your data - see js/uploads.js (the sheet) and js/backup.js (the archive). -->
+<div id="dataSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+  <div class="sheet-box">
+    <div class="row">
+      <h2 id="dataTitle" class="grow">Your data</h2>
+      <button type="button" class="ghost" id="dataClose" title="Close (Esc)">Close</button>
+    </div>
+    <h3>Profile</h3>
+    <p class="te-note" id="profileNote"></p>
+    <div class="row te-actions">
+      <label class="grow">Painting as <select id="profileSelect"></select></label>
+      <button type="button" class="ghost" id="profileForget" title="Takes the profile off this device's list; its things are kept, and adding the same name brings them back">Remove from list</button>
+    </div>
+    <div class="row te-actions">
+      <label class="grow">New profile <input type="text" id="profileName" maxlength="24" placeholder="A name"></label>
+      <button type="button" class="primary" id="profileAdd">Add and switch</button>
+    </div>
+    <p class="te-note" id="profileMsg" role="status"></p>
+    <h3>Where it is kept</h3>
+    <p class="te-note" id="dataWhere"></p>
+    <label class="opt hidden" id="dataKeepWrap"><input type="checkbox" id="dataKeep"> Keep in this browser</label>
+    <p class="te-note" id="dataCounts"></p>
+    <h3>Backup</h3>
+    <p class="te-note">A backup is one .zip file: your settings, materials, themes, 3D scenes, practice log,
+      trainer scores and every upload. Keep it somewhere safe, or restore it on another computer.</p>
+    <div class="row te-actions">
+      <button type="button" class="primary" id="dataBackup">Download a backup</button>
+      <button type="button" class="ghost" id="dataRestore">Restore from a backup...</button>
+    </div>
+    <input type="file" id="dataRestoreInput" accept=".zip,application/zip" class="hidden">
+    <div id="dataConfirm" class="hidden">
+      <div id="dataConfirmText"></div>
+      <div class="row">
+        <button type="button" class="primary" id="dataConfirmYes">Restore</button>
+        <button type="button" class="ghost" id="dataConfirmNo">Cancel</button>
+      </div>
+    </div>
+    <h3>Portfolio site</h3>
+    <p class="te-note">Your own work as a small gallery site - one page and its pictures, in a .zip - to publish on
+      GitHub Pages, as Refboard is. References are left out.</p>
+    <div class="row te-actions">
+      <label class="grow">Title <input type="text" id="portfolioTitle" maxlength="80" placeholder="My work"></label>
+      <button type="button" class="primary" id="dataPortfolio">Make a portfolio site</button>
+    </div>
+    <p class="te-note" id="portfolioCount"></p>
+    <div id="dataMsg" role="status"></div>
+  </div>
+</div>
+
+<div id="helpOverlay" class="hidden" role="dialog" aria-modal="true" aria-label="Help">
+  <div id="helpModal">
+    <div class="row" style="margin-bottom:18px">
+      <div class="grow" style="font-size:17px;font-weight:600">How to use Refboard</div>
+      <button id="btnTour" class="ghost" type="button" title="Where things are, in six short notes">Take the tour</button>
+      <button id="btnHelpClose" class="ghost" type="button" title="Close (Escape)">Close</button>
+    </div>
+
+    <section>
+      <h2>The three things Refboard does</h2>
+      <p><b>References</b> - your library of pictures, browsed as a grid and drawn from in timed sessions.
+        <b>Generate</b> - references made to order by your own ComfyUI (only when one is connected).
+        <b>Colours</b> - palettes, with how to mix each colour from your own paints, and the Colour studio.
+        <b>3D forms</b> is a small extra for practising light on simple solids. The dashboard shows the same groups as cards.</p>
+      <p><b>Find a tool</b> - <kbd>Ctrl+K</kbd>, or the magnifier at the top of the rail: type a few letters of what you want and Enter.
+        The moon is the theme, the brush is My materials, the question mark is this page.</p>
+    </section>
+
+    <section>
+      <h2>References: the library</h2>
+      <p>Mount a folder of pictures (see the README) and its packs are listed in the Library panel. Clicking a pack or folder
+        opens it as a grid; its checkbox puts it in the pool a timed session draws from. They are separate on purpose:
+        browsing a pack to decide whether you want it is how you end up ticking it.</p>
+      <p>The search box matches file, folder and pack names; the box beside it sets the order - the folder's own,
+        by name, lightest or darkest first, or shuffled. Arrow keys move between thumbnails, Enter opens one, S skips it.
+        A skipped picture is never drawn again but stays in the grid, dimmed, so you can undo it.</p>
+      <p>Clicking a thumbnail opens it in the same viewer a session uses, with no clock; Esc returns to the grid.
+        <b>Draw these</b> starts a timed session from exactly what the grid shows. <b>Museums</b> searches the Met and the Rijksmuseum.
+        <b>Check an image</b> opens any picture you drop - a reference, or a photo of your drawing.</p>
+    </section>
+
+    <section>
+      <h2>References: a timed session</h2>
+      <p>Tick packs, then set the right-hand panel: an interval (a preset, a custom number of seconds, or a warm-up/quick/long-study
+        schedule), the tone filter, and options - grayscale, random mirroring, a grid overlay, a ghost of the previous pose, a bell,
+        fullscreen. Then <b>Start drawing</b>.</p>
+      <p><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> flip · <kbd>G</kbd> grayscale ·
+        <kbd>Q</kbd> squint · <kbd>V</kbd> value split · <kbd>E</kbd> eyedropper · <kbd>A</kbd> angle tool ·
+        <kbd>D</kbd> compare your drawing · <kbd>I</kbd> info · <kbd>S</kbd> skip for good · <kbd>Esc</kbd> stop.
+        Zoom is <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd>. The toolbar holds the tools you pin; the rest are under More (the three dots).</p>
+      <p><b>Value split</b> turns the picture into 2-6 flat tones next to the original: block in light and dark masses before detail.
+        <b>Pencil grades</b> says which grade of pencil each area wants. <b>Info</b> (<kbd>I</kbd>) shows the histogram,
+        the dominant colours and the scheme and blur of the value view.</p>
+      <p><b>Eyedropper</b> reads the exact colour under the cursor and several ways to mix it from real paint, in your medium.
+        <b>My materials</b> (the brush) says what you draw and paint with, so the value steps and recipes speak in its terms.
+        <b>Compare</b> lays a photo of your drawing over the reference.</p>
+    </section>
+
+    <section>
+      <h2>Generate</h2>
+      <p>With <code>COMFY_URL</code> set, Gen AI makes anime references by choices - a character, a landscape, buildings, nature
+        or an animal, in the light, setting and medium you pick - with a picture or a palette as the starting point, a sketch pad,
+        line art to trace, details enlarged, and a series, the best of several, or colours held to your own palette.
+        What it makes is kept under Uploads and History, ready to open in the viewer.</p>
+    </section>
+
+    <section>
+      <h2>Colours</h2>
+      <p><b>Palettes</b> makes a palette of colours in harmony and spread over the values, each with how to mix it from your paints;
+        it can also read one from a picture, and send it to Generate. <b>Colour studio</b> has four tabs:
+        Picture (a picture's palette and gamut mask), Wheel (a harmony and the paints that mix it), Mixing (every paint with every other)
+        and Pigments (what each paint does).</p>
+    </section>
+
+    <section>
+      <h2>3D forms</h2>
+      <p>A cube, sphere, cylinder, cone, pyramid, prism, torus, capsule or egg under a light you control. Click a form to select it,
+        the floor to throw a shadow there, drag to orbit, scroll to zoom; <kbd>G</kbd> <kbd>R</kbd> <kbd>S</kbd> move, rotate and scale.
+        The panel has tabs: Object, Light, View, Use. <b>Open in viewer</b> sends the render to the session viewer;
+        <b>Draw random forms</b> starts a timed session of random scenes.</p>
+    </section>
+
+    <section>
+      <h2>Yours to keep</h2>
+      <p>Everything stays in this browser unless you run it behind the container, which keeps uploads on its disk.
+        <b>Your data</b> (on the dashboard) shows where things are kept and makes a backup of everything.
+        The theme menu has Catppuccin Mocha (the default), Macchiato, Frappé, Latte, Studio dark and Daylight, and a theme editor.</p>
+    </section>
+  </div>
+</div>
+
+<!-- The app's code, as plain classic scripts - no modules, no build step.
+     Classic scripts share one global scope, so each file sees what the
+     earlier ones declared, exactly as when this was one <script>; and they
+     run in the order listed, so a file may use at load time only what the
+     files above it define (a function called later, from an event, can live
+     anywhere). Classic rather than type="module" so the page still opens
+     straight from disk: browsers refuse modules over file://. -->
+<script src="js/core.js?v=ddd0d3ea"></script>
+<script src="js/setup.js?v=9d30b9fd"></script>
+<script src="js/a11y.js?v=efccb1ab"></script>
+<script src="js/store.js?v=3136007f"></script>
+<script src="js/uploads.js?v=bb9d031f"></script>
+<script src="js/session.js?v=026a07c6"></script>
+<script src="js/vendor/spectral.js?v=3aa5d181"></script>
+<script src="js/paint.js?v=dc15b6b7"></script>
+<script src="js/tools.js?v=dfdbd425"></script>
+<script src="js/materials.js?v=aea2cd23"></script>
+<script src="js/vision.js?v=fc874c6c"></script>
+<script src="js/sort.js?v=6b40f3d5"></script>
+<script src="js/colourfind.js?v=d51aa014"></script>
+<script src="js/study.js?v=9e5c5205"></script>
+<script src="js/stages.js?v=1871e6d8"></script>
+<script src="js/pins.js?v=1cb6ac3d"></script>
+<script src="js/colourmath.js?v=ae688fd8"></script>
+<script src="js/theme-editor.js?v=0832e2ba"></script>
+<script src="js/command.js?v=0d24bf17"></script>
+<script src="js/tour.js?v=5eb07c59"></script>
+<script src="js/steps.js?v=2df7d991"></script>
+<script src="js/digitise.js?v=0d7a90f3"></script>
+<script src="js/paintcheck.js?v=c5e7b0f2"></script>
+<script src="js/markers.js?v=a61476ba"></script>
+<script src="js/grades.js?v=daa03a26"></script>
+<script src="js/quality.js?v=f9417300"></script>
+<script src="js/genlock.js?v=afcea6a6"></script>
+<script src="js/warmup.js?v=e784b8ca"></script>
+<script src="js/generate.js?v=9e2ebe54"></script>
+<script src="js/assetsfx.js?v=d1db7100"></script>
+<script src="js/genedit.js?v=e3635c75"></script>
+<!-- Sections whose code loads the first time they are opened - see
+     loadSection() in js/core.js. Nothing in a <template> runs; the stamps
+     on these URLs are kept up to date like every other. -->
+<template id="lazy-forms">
+<script src="js/forms-models.js?v=90353824"></script>
+<script src="js/forms.js?v=1798bd50"></script>
+<script src="js/forms-api.js?v=651af1d1"></script>
+</template>
+<template id="lazy-genmore">
+<script src="js/genmore.js?v=96131588"></script>
+<script src="js/gennew.js?v=c15d21ce"></script>
+<script src="js/genpick.js?v=c344fdf9"></script>
+</template>
+<template id="lazy-train">
+</template>
+<template id="lazy-report">
+</template>
+<template id="lazy-backup">
+<script src="js/portfolio.js?v=6dcc64d8"></script>
+<script src="js/backup.js?v=3e0da4c8"></script>
+</template>
+<template id="lazy-museum">
+<script src="js/museum.js?v=5250958e"></script>
+</template>
+<template id="lazy-perspective">
+</template>
+<template id="lazy-anime">
+</template>
+<template id="lazy-sky">
+</template>
+<template id="lazy-handbook">
+</template>
+<template id="lazy-palette">
+<script src="js/palette.js?v=300e6eee"></script>
+<script src="js/fewpaints.js?v=694da923"></script>
+<script src="js/seasons.js?v=16c922c8"></script>
+</template>
+<template id="lazy-colour">
+<script src="js/colour.js?v=f166f0c6"></script>
+<script src="js/wheel.js?v=4f33cec4"></script>
+<script src="js/mixing.js?v=0d50a6f6"></script>
+<script src="js/pigments.js?v=453ccfaf"></script>
+</template>
+<script src="js/main.js?v=5754f9c7"></script>
+</body>
+</html>

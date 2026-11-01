@@ -1,0 +1,305 @@
+// Generate references (js/generate.js): pictures made to order by a ComfyUI
+// the server knows about. No ComfyUI here - the server's side is played by
+// page.route (see fakeServer in helpers.js), and it answers each job with a
+// stored picture, as Services/ComfyClient.cs does.
+const { test, expect, openApp, fakeServer } = require('../helpers');
+
+test('the choices become the model\'s tags and the words it is filed under', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, hair: 'twintails', colour: 'pink', view: 'three', light: 'back' }, 'hat, rain'));
+  expect(r.prompt).toBe('1girl, solo, twintails, pink hair, upper body, three quarter view, backlighting, rim lighting, ' +
+    'watercolor \\(medium\\), traditional media, painting \\(medium\\), paper texture, colorful, rich colors, simple drawing, simple background, white background, hat, rain');
+  expect(r.tags).toEqual(['anime', 'girl', 'twin tails', 'pink hair', 'bust', 'three-quarter', 'backlit', 'watercolour',
+    'simple', 'hat', 'rain']);
+  expect(r.shape).toBe('portrait');
+  // Simple, the default, keeps the intricate out.
+  expect(r.avoid).toContain('intricate details');
+  expect((await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, detail: 'normal' }))).avoid).toBe('flat color, cel shading, digital art, vector art, thick outlines, 3d, cross necklace, cross pendant, latin cross');
+  // A cross pendant is kept out of every character, and of nothing else, unless one is asked for in More tags.
+  expect((await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, medium: 'ink', detail: 'normal' }, 'cross necklace'))).avoid).not.toContain('cross');
+  expect((await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'landscape', detail: 'normal' }))).avoid).not.toContain('cross');
+  // A head is square; "any" adds nothing.
+  const head = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, framing: 'head' }));
+  expect(head.shape).toBe('square');
+  expect(head.prompt.startsWith('1girl, solo, portrait, close-up, straight-on')).toBe(true);
+});
+
+test('Era says when, apart from where: tags per subject, after the Setting\'s, nothing for Any, and not with Original', async ({ page }) => {
+  await openApp(page);
+  const p = c => page.evaluate(c => genPrompt({ ...GEN_DEFAULTS, ...c }), c);
+  // A Slavic girl of Kyivan Rus: her place's tags, then the time's; a boy is dressed differently.
+  const girl = await p({ setting: 'slavic', era: 'kyivanrus' });
+  expect(girl.prompt).toContain('embroidered linen tunic');
+  expect(girl.prompt).toContain('medieval, long tunic, embroidered hem, fur-trimmed cloak, head veil');
+  expect(girl.prompt.indexOf('embroidered linen tunic')).toBeLessThan(girl.prompt.indexOf('head veil'));
+  expect((await p({ who: 'boy', era: 'kyivanrus' })).prompt).toContain('fur hat');
+  // Christian but before the onion dome.
+  expect(girl.avoid).toContain('onion dome');
+  expect(girl.tags).toContain('kyivan rus');
+  // Slavic is always before Christianity: a Slavic town of Kyivan Rus has idols, no church, no cross on her.
+  expect(girl.avoid).toContain('cross necklace');
+  const town = await p({ subject: 'building', setting: 'slavic', era: 'kyivanrus' });
+  expect(town.prompt).not.toContain('church');
+  expect(town.prompt).toContain('wooden idol');
+  expect(town.avoid).toContain('church');
+  expect((await p({ subject: 'building', era: 'kyivanrus' })).prompt).toContain('small stone church');
+  // Landscape and building have their own words; Any adds nothing.
+  expect((await p({ subject: 'landscape', era: 'victorian' })).prompt).toContain('gas lamp, cobblestone street');
+  expect((await p({ subject: 'building', era: 'medieval' })).prompt).toContain('stone castle');
+  expect((await p({ era: 'any' })).prompt).not.toContain('medieval');
+  // For a named character it is an outfit asked for, so the outfit is not hers any more.
+  expect((await p({ character: 'Frieren (Sousou no Frieren)', era: 'victorian' })).prompt).toContain('alternate costume');
+  // Original adds nothing to her, Era included: the row is out of the prompt (and hidden on the page).
+  const original = await p({ character: 'Frieren (Sousou no Frieren)', setting: 'original', era: 'victorian' });
+  expect(original.prompt).not.toContain('victorian');
+  expect(original.prompt).not.toContain('alternate costume');
+  // An animal or nature has no era: the row is for the other three.
+  expect((await p({ subject: 'animal', era: 'victorian' })).prompt).not.toContain('victorian');
+});
+
+test('Parting: the fringe parted in the middle or swept from the side - asked once a hair is chosen', async ({ page }) => {
+  await openApp(page);
+  const p = c => page.evaluate(c => genPrompt({ ...GEN_DEFAULTS, ...c }), c);
+  const centre = await p({ hair: 'long', parting: 'centre' });
+  expect(centre.prompt).toContain('long hair, parted bangs');
+  expect(centre.tags).toContain('centre parting');
+  expect((await p({ hair: 'bob', parting: 'side' })).prompt).toContain('swept bangs');
+  // With Any hair the row is not asked, so its choice is left out.
+  expect((await p({ hair: 'any', parting: 'centre' })).prompt).not.toContain('parted bangs');
+});
+
+test('a character sheet made again: her eyes, and a turnaround, wide', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, colour: 'purple', eyes: 'aqua', framing: 'sheet' }));
+  expect(r.prompt).toContain('purple hair, aqua eyes, reference sheet, multiple views, turnaround, full body');
+  expect(r.tags).toEqual(expect.arrayContaining(['purple hair', 'aqua eyes', 'turnaround']));
+  expect(r.shape).toBe('landscape');
+});
+
+test('a landscape or an animal: no one in it, and only its own choices', async ({ page }) => {
+  await openApp(page);
+  // The character's choices are still set - and left out.
+  const land = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'landscape', hair: 'long',
+    place: 'lake', time: 'sunset', weather: 'fog', season: 'autumn' }));
+  expect(land.prompt).toBe('no humans, scenery, landscape, lake, reflection, sunset, orange sky, evening, fog, mist, ' +
+    'autumn, autumn leaves, watercolor \\(medium\\), traditional media, painting \\(medium\\), paper texture, colorful, rich colors, simple drawing');
+  expect(land.tags).toEqual(['anime', 'landscape', 'lake', 'sunset', 'fog', 'autumn', 'watercolour', 'simple']);
+  expect(land.shape).toBe('landscape');
+  const fox = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'animal', animal: 'fox', size: 'close' }));
+  expect(fox.prompt).toContain('no humans, animal focus, solo, fox, portrait, close-up');
+  expect(fox.prompt).not.toContain('1girl');
+  expect(fox.shape).toBe('square');
+});
+
+test('ink is lines and hatching, never filled black', async ({ page }) => {
+  await openApp(page);
+  const ink = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, subject: 'nature', thing: 'mushrooms', medium: 'ink' }));
+  expect(ink.prompt).toContain('(hatching \\(texture\\):1.3), (cross-hatching:1.2), ink \\(medium\\)');
+  expect(ink.avoid).toContain('solid black');
+  // Black, not the reddish lines on warm paper it gave; and no pen drawn in.
+  expect(ink.avoid).toContain('sepia');
+  expect(ink.prompt).not.toContain('pen');
+  expect(ink.avoid).toContain('holding pen');
+  const pencil = await page.evaluate(() => genPrompt({ ...GEN_DEFAULTS, medium: 'sketch' }));
+  expect(pencil.prompt).toContain('(hatching \\(texture\\):1.2)');
+  expect(pencil.avoid).toContain('holding pencil');
+});
+
+test('watercolour asks for soft or hard edges; other media do not', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => [
+    genPrompt({ ...GEN_DEFAULTS, edges: 'soft' }), genPrompt({ ...GEN_DEFAULTS, edges: 'hard' }),
+    genPrompt({ ...GEN_DEFAULTS, medium: 'ink', edges: 'soft' })]);
+  expect(r[0].prompt).toContain('wet-on-wet, color bleeding, soft edges');
+  expect(r[0].tags).toContain('soft edges');
+  expect(r[1].prompt).toContain('hard edges');
+  expect(r[1].avoid).toContain('color bleeding');
+  expect(r[2].prompt).not.toContain('soft edges');
+});
+
+test('without a server, or with one that has no ComfyUI: the section is there and says it is not available', async ({ page }) => {
+  await openApp(page);
+  await page.click('.nav-item[data-view="generate"]');
+  await expect(page.locator('#genOffline')).toBeVisible();
+  await expect(page.locator('#genRetry')).toBeVisible();
+});
+
+test('with a ComfyUI behind the server: made, kept, shown, opened', async ({ page }) => {
+  const server = await fakeServer(page);
+  const asked = [];
+  const id = 'b'.repeat(64);
+  await page.route('**/api/generate**', async r => {
+    const req = r.request();
+    if (req.method() === 'POST') { asked.push(JSON.parse(req.postData())); return r.fulfill({ status: 202, json: { id: 'job1' } }); }
+    if (req.url().endsWith('/api/generate')) return r.fulfill({ json: { available: true, checkpoint: 'test.safetensors' } });
+    // The job: done at once, and kept as the server keeps it.
+    const doc = { file: id + '.png', name: 'girl, long hair', type: 'image/png', from: 'generate', bytes: 100,
+      t: Date.now(), folder: 'generated', tags: asked.at(-1).tags };
+    server.items.set('uploads/' + id, doc);
+    return r.fulfill({ json: { state: 'done', upload: { doc, url: 'uploads/Generated/' + id + '.png' } } });
+  });
+  await openApp(page);
+  const nav = page.locator('.nav-item[data-view="generate"]');
+  await expect(nav).toBeVisible();
+  // On the dashboard's Prepare card too.
+  await expect(page.locator('#stages .stage-card[data-stage="Generate"]').getByRole('button', { name: /Gen AI/ })).toHaveCount(1);
+
+  await nav.click();
+  // A landscape asks nothing about hair; back to a character, it does.
+  await page.click('[data-gen="subject"][data-opt="landscape"]');
+  await expect(page.locator('[data-row="hair"]')).toBeHidden();
+  await expect(page.locator('[data-row="place"]')).toBeVisible();
+  await page.click('[data-gen="subject"][data-opt="character"]');
+  await expect(page.locator('[data-row="place"]')).toBeHidden();
+  // Wet-in-wet is watercolour's question: not asked for ink.
+  await page.evaluate(() => document.querySelectorAll('.gen-rare').forEach(d => { d.open = true; }));
+  await expect(page.locator('[data-row="edges"]')).toBeVisible();
+  await page.click('[data-gen="medium"][data-opt="ink"]');
+  await expect(page.locator('[data-row="edges"]')).toBeHidden();
+  await page.click('[data-gen="medium"][data-opt="watercolour"]');
+  // Parting is asked once there is a hair to part.
+  await expect(page.locator('[data-row="parting"]')).toBeHidden();
+  await page.click('[data-gen="hair"][data-opt="long"]');
+  await expect(page.locator('[data-row="parting"]')).toBeVisible();
+  await page.fill('#genExtra', 'hat');
+  await page.selectOption('#genCount', '2');
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('2 made - in Uploads, Generated.');
+  expect(asked).toHaveLength(2);
+  expect(asked[0].prompt).toContain('long hair');
+  expect(asked[0].tags).toContain('hat');
+  await expect(page.locator('#genResults .gen-open')).toHaveCount(1);
+
+  // The choice is remembered.
+  await page.reload();
+  await page.locator('.nav-item[data-view="generate"]').click();
+  await expect(page.locator('[data-gen="hair"][data-opt="long"]')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.locator('#genResults .gen-open').first().click();
+  await expect(page.locator('#session')).toBeVisible();
+});
+
+test('an error from the server is said, and the button comes back', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate**', r => {
+    const req = r.request();
+    if (req.method() === 'POST') return r.fulfill({ status: 202, json: { id: 'job1' } });
+    if (req.url().endsWith('/api/generate')) return r.fulfill({ json: { available: true } });
+    return r.fulfill({ json: { state: 'error', error: 'ComfyUI stopped answering.' } });
+  });
+  await openApp(page);
+  await page.locator('.nav-item[data-view="generate"]').click();
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('ComfyUI stopped answering.');
+  await expect(page.locator('#genGo')).toBeEnabled();
+});
+
+test('a palette as a few tags for the whole of it', async ({ page }) => {
+  await openApp(page);
+  const t = rgbs => page.evaluate(r => genPaletteTags(r), rgbs);
+  // Muted blues, grey-ish, light to dark.
+  expect(await t([[138, 180, 217], [70, 90, 120], [30, 40, 60], [150, 155, 165], [200, 210, 225]]))
+    .toEqual(['limited palette', 'blue theme', 'muted color', 'high contrast']);
+  // Light and soft: pastel.
+  expect(await t([[250, 215, 225], [240, 225, 245], [220, 235, 250], [250, 240, 215]])).toContain('pastel colors');
+  // Mostly dark, one orange accent; a dark ochre is brown.
+  const dark = await t([[20, 25, 35], [60, 40, 30], [200, 110, 30], [40, 45, 60]]);
+  expect(dark).toEqual(expect.arrayContaining(['orange theme', 'dark']));
+  expect(await page.evaluate(() => genHueTag(0.4, 75))).toBe('brown');
+  // Peach, orange and browns are one warm family - orange, not split in two.
+  expect(await t([[250, 215, 180], [220, 120, 50], [150, 70, 40], [90, 50, 40], [240, 190, 120]])).toContain('orange theme');
+  // All of it dark ochre and umber: brown.
+  expect(await t([[110, 80, 40], [80, 55, 30], [140, 100, 50]])).toContain('brown theme');
+  // Two opposites, as strong: no one hue leads. The stronger of them does.
+  const even = await page.evaluate(() => genPaletteTags([lchRgb(0.6, 0.12, 25), lchRgb(0.6, 0.12, 205)]));
+  expect(even.some(x => x.endsWith('theme'))).toBe(false);
+  expect(await t([[200, 60, 60], [40, 160, 160]])).toContain('red theme');
+  // A grey palette, and none at all.
+  expect((await t([[40, 40, 40], [128, 128, 128], [220, 220, 220]])).some(x => x.endsWith('theme'))).toBe(false);
+  expect(await t([])).toEqual([]);
+});
+
+test('starting from a picture: a study, a variation, a pose', async ({ page }) => {
+  const server = await fakeServer(page);
+  const asked = [];
+  const id = 'c'.repeat(64);
+  await page.route('**/api/generate**', async r => {
+    const req = r.request();
+    if (req.method() === 'POST') { asked.push(JSON.parse(req.postData())); return r.fulfill({ status: 202, json: { id: 'job1' } }); }
+    if (req.url().endsWith('/api/generate')) return r.fulfill({ json: { available: true, control: true } });
+    const doc = { file: id + '.png', name: 'girl', type: 'image/png', from: 'generate', bytes: 100, t: Date.now(),
+      folder: 'generated', tags: ['anime', 'girl'], prompt: '1girl, solo, red hair', avoid: 'sepia', shape: 'square' };
+    server.items.set('uploads/' + id, doc);
+    return r.fulfill({ json: { state: 'done', upload: { doc, url: 'uploads/Generated/' + id + '.png' } } });
+  });
+  await openApp(page);
+  await page.locator('.nav-item[data-view="generate"]').click();
+  await page.selectOption('#genCount', '1');
+
+  // A picture of its own: sent at the size of the shape it suits, as base64,
+  // with the beginner's tags in front and a denoise below 1.
+  await page.setInputFiles('#genPickInput', { name: 'photo.png', mimeType: 'image/png', buffer: require('../helpers').quadrantsPng() });
+  await expect(page.locator('#genSourceBody')).toBeVisible();
+  await page.click('#genSourceBody [data-level="0.8"]');
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  expect(asked[0].image.length).toBeGreaterThan(100);
+  expect(asked[0].denoise).toBe(0.8);
+  expect(asked[0].control).toBeUndefined();
+  expect(asked[0].prompt.startsWith('(minimalist:1.4)')).toBe(true);
+  expect(asked[0].tags).toContain('study');
+
+  // Dropped, it is text-to-image again.
+  await page.click('#genSourceClear');
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  expect(asked[1].image).toBeUndefined();
+
+  // Vary: the original's own words and shape, not the choices'.
+  await page.locator('#genResults .gen-more').first().click();
+  await page.locator('#genResults .gen-vary').first().click();
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  expect(asked[2].prompt).toBe('1girl, solo, red hair');
+  expect(asked[2].avoid).toBe('sepia');
+  expect(asked[2].shape).toBe('square');
+  expect(asked[2].tags).toContain('variation');
+  expect(asked[2].denoise).toBe(0.6);
+
+  // A pose is held by the ControlNet, not started from.
+  await page.evaluate(async () => {
+    const c = document.createElement('canvas'); c.width = 300; c.height = 500;
+    c.getContext('2d').fillRect(0, 0, 300, 500);
+    await genSetSource(await new Promise(res => c.toBlob(res)), 'pose');
+  });
+  await page.click('#genGo');
+  await expect(page.locator('#genStatus')).toHaveText('Made - in Uploads, Generated.');
+  expect(asked[3].control).toBe(true);
+  expect(asked[3].strength).toBe(0.5);
+  // The mannequin the ControlNet reads is kept out of the picture, and she is dressed.
+  expect(asked[3].avoid).toContain('mannequin');
+  expect(asked[3].prompt).toContain('t-shirt');
+  expect(asked[3].denoise).toBeUndefined();
+  expect(asked[3].shape).toBe('portrait');
+});
+
+// A wide picture in a tall pane: every overlay must sit on the picture, not
+// on the pane round it (the watercolour preview, the vignette and the line
+// and wash were stretched to the pane's shape).
+test('the picture sent to the server is a JPEG under 700 kB, even of noise - a PNG of it was refused by nginx (413)', async ({ page }) => {
+  await openApp(page);
+  const r = await page.evaluate(() => {
+    // The worst case for a JPEG: noise over a whole frame.
+    const [W, H] = GEN_SHAPE_PX.portrait, c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d'), d = g.createImageData(W, H);
+    for (let i = 0; i < d.data.length; i += 4) { d.data[i] = Math.random() * 255; d.data[i + 1] = Math.random() * 255; d.data[i + 2] = Math.random() * 255; d.data[i + 3] = 255; }
+    g.putImageData(d, 0, 0);
+    const b64 = genEncode(c);
+    return { len: b64.length, jpeg: b64.startsWith('/9j/'), png: c.toDataURL('image/png').length };
+  });
+  expect(r.jpeg).toBe(true);
+  expect(r.len).toBeLessThanOrEqual(700000);
+  // The PNG of the same frame is what nginx's 1 MB refused.
+  expect(r.png).toBeGreaterThan(1000000);
+});

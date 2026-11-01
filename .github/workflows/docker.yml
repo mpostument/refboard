@@ -1,0 +1,167 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    # The docs-sync workflow's own commits touch only docs/ - excluding it
+    # here stops a Pages-only sync from triggering an unrelated image rebuild.
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Fast, no-Docker static check - catches the exact CSS mistake fixed in
+  # v0.4.2 (a replaced element sized only via inset:0, silently collapsing to
+  # the browser's 300x150 default) before it ever reaches a build. Runs in
+  # parallel with `build` rather than gating it via `needs`, since it doesn't
+  # depend on anything the build job produces.
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: node scripts/check-replaced-element-sizing.js
+      # Every js/ and css/ file index.html loads carries a hash of its
+      # contents (?v=...); a file changed without re-running the stamper
+      # would reach browsers under its old, cached-for-a-year URL.
+      - run: node scripts/stamp-assets.js --check
+
+  # The frontend in a real browser, served as GitHub Pages serves it (no
+  # backend): every section opens, a dropped image reaches the eyedropper's
+  # recipes, the colour studio finds a palette - and any uncaught error or
+  # console.error fails the run. See tests/. Parallel with `build`, like
+  # static-checks: nothing here needs the image.
+  browser-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - name: Keep the report of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            tests/playwright-report
+            tests/test-results
+          retention-days: 14
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Versioned tags only, no "type=sha": a build off main with no version
+      # tag yet gets "latest" and nothing else, and a `git tag v1.2.3 && git
+      # push --tags` is what actually produces 1.2.3 / 1.2 / 1 - see README
+      # for the release steps.
+      - name: Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      # The Dockerfile's VERSION build-arg, stamped into the assembly so
+      # /healthz (and the page footer that reads it) report the version
+      # actually running - "0.0.0-dev" for anything that isn't a real vX.Y.Z
+      # tag push, matching the csproj's own local-build default.
+      - name: Compute version
+        id: ver
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == v* ]]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=0.0.0-dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A clean multi-arch build only proves both targets cross-compiled - it
+      # never runs either one, so a native-library problem in the image
+      # (Magick.NET's is the current one worth worrying about: a missing
+      # shared library it dynamically links against would build fine and
+      # fail at runtime) would sail through unnoticed until someone's
+      # container actually failed to index anything. scripts/smoke-test.sh
+      # runs each platform for real and checks the whole decode/resize/
+      # encode/hash pipeline actually produces a featured image - see its
+      # own comment for why a bare healthcheck isn't enough. amd64 runs
+      # natively on the GitHub runner; arm64 runs under the QEMU emulation
+      # set up above - slower, but arm64 is this project's actual deployment
+      # target, so it is worth the CI minutes to catch an arm64-only problem
+      # here instead of on someone's Pi.
+      - name: Prepare smoke-test image
+        run: |
+          mkdir -p /tmp/smoke/references/Test
+          sudo apt-get update -qq && sudo apt-get install -yqq imagemagick
+          convert -size 800x1200 xc:red /tmp/smoke/references/Test/a.jpg
+
+      - name: Build amd64 for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: refboard:smoke-amd64
+          build-args: VERSION=${{ steps.ver.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test (amd64)
+        run: bash scripts/smoke-test.sh refboard:smoke-amd64 linux/amd64 18080
+
+      - name: Build arm64 for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          load: true
+          tags: refboard:smoke-arm64
+          build-args: VERSION=${{ steps.ver.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test (arm64, via QEMU)
+        run: bash scripts/smoke-test.sh refboard:smoke-arm64 linux/arm64 18081
+
+      # PRs build (both arches, to catch a target-arch-only failure) but never
+      # push - forking this repo should never be able to publish to your GHCR.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: VERSION=${{ steps.ver.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

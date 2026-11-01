@@ -1,0 +1,82 @@
+[
+ { "rgb": [4, 126, 219 ], "palette": "box", "medium": "water", "recipes": [ "hHorizon:3 hUltraDeep:1 | 1 | 77,125,193", "hCobalt:1 | 0.7 | 80,133,193", "hPeacock:8 hBrightViolet:3 | 1 | 45,116,174", "hUltraDeep:1 | 0.5 | 103,117,184" ]
+ },
+ { "rgb": [57, 98, 156 ], "palette": "box", "medium": "water", "recipes": [ "hUltraDeep:8 hPhthaloYS:3 | 0.7 | 57,97,156", "hCobalt:12 hVermilion:1 | 1 | 58,99,158", "hCobalt:12 hSienna:1 | 1 | 51,97,158", "hCobalt:1 | 1 | 44,100,176" ]
+ },
+ { "rgb": [79, 97, 65 ], "palette": "box", "medium": "water", "recipes": [ "hViridian:4 hVermilion:3 | 1 | 77,97,68", "hPaynes:4 hLeaf:3 | 1 | 73,100,69", "hOchre:16 hPrussian:3 | 1 | 84,95,68", "hYellowDeep:2 hPrussian:1 | 1 | 73,94,68" ]
+ },
+ { "rgb": [176, 249, 86 ], "palette": "box", "medium": "water", "recipes": [ "hLemon:6 hHorizon:1 hJaune1:1 | 1 | 225,224,88", "hLemon:6 hLeaf:1 hJaune1:1 | 1 | 218,219,69", "hLemon:1 | 1 | 243,230,63", "hLeaf:1 | 0.35 | 184,215,141" ]
+ },
+ { "rgb": [137, 11, 80 ], "palette": "box", "medium": "water", "recipes": [ "hQuinViolet:3 hCrimsonLake:2 | 1 | 135,37,83", "hCrimsonLake:4 hUltraDeep:1 | 1 | 127,34,68", "hMaroon:4 hOpera:3 | 1 | 137,31,63", "hQuinViolet:1 | 1 | 122,42,102" ]
+ },
+ { "rgb": [44, 191, 152 ], "palette": "box", "medium": "water", "recipes": [ "hPeacock:4 hLemon:3 | 0.7 | 98,186,160", "hHorizon:3 hLeaf:1 | 1 | 104,181,144", "hLeaf:4 hPeacock:3 | 0.7 | 89,177,129", "hViridian:1 | 0.35 | 123,184,165" ]
+ },
+ { "rgb": [204, 108, 211 ], "palette": "box", "medium": "water", "recipes": [ "hBrightViolet:4 hOpera:3 | 0.5 | 202,119,201", "hLavender:4 hOpera:1 | 1 | 206,110,184", "hOpera:1 hHorizon:1 | 0.7 | 206,112,181", "hBrightViolet:1 | 0.5 | 173,128,219" ]
+ },
+ { "rgb": [102, 68, 16 ], "palette": "box", "medium": "water", "recipes": [ "hSap:2 hMaroon:1 | 1 | 93,72,32", "hUmber:3 hYellowDeep:1 | 1 | 105,72,39", "hUmber:3 hYellowOrange:1 | 1 | 104,67,38", "hUmber:3 hOchre:2 | 1 | 102,70,41" ]
+ },
+ { "rgb": [85, 142, 82 ], "palette": "box", "medium": "water", "recipes": [ "hLeaf:3 hCobalt:2 | 1 | 77,144,82", "hSap:4 hViridian:3 | 0.7 | 83,145,86", "hSap:8 hPhthaloYS:1 | 0.7 | 94,139,83", "hSap:4 hHorizon:3 | 1 | 95,144,72" ]
+ },
+ { "rgb": [214, 208, 156 ], "palette": "box", "medium": "water", "recipes": [ "hSap:3 hYellowOrange:2 | 0.25 | 213,209,156", "hJaune2:4 hSap:1 | 0.5 | 217,207,155", "hOchre:1 | 0.35 | 226,202,147", "hSap:1 | 0.17 | 207,218,174" ]
+ },
+ { "rgb": [79, 54, 186 ], "palette": "box", "medium": "water", "recipes": [ "hBrightViolet:4 hUltraDeep:3 | 1 | 85,54,176", "hBrightViolet:8 hPhthaloYS:1 | 1 | 88,63,179", "hBrightViolet:8 hPrussian:1 | 1 | 93,57,172", "hBrightViolet:1 hCobalt:1 | 1 | 90,73,191" ]
+ },
+ { "rgb": [41, 77, 0 ], "palette": "box", "medium": "water", "recipes": [ "hSap:3 hPrussian:1 | 1 | 44,83,52", "hViridian:1 hUmber:1 | 1 | 45,79,59", "hUmber:4 hSap:3 | 1 | 82,75,33", "hLeaf:3 hPrussian:2 | 1 | 36,84,68" ]
+ },
+ { "rgb": [185, 124, 215 ], "palette": "box", "medium": "water", "recipes": [ "hBrightViolet:6 hOpera:2 hCobalt:1 | 0.5 | 183,126,208", "hLavender:6 hBrightViolet:3 hOpera:1 | 0.7 | 183,125,208", "hBrightViolet:6 hOpera:1 hBrightRose:1 | 0.5 | 189,125,208", "hBrightViolet:1 | 0.5 | 173,128,219" ]
+ },
+ { "rgb": [45, 128, 165 ], "palette": "box", "medium": "water", "recipes": [ "hPeacock:6 hBrightRose:1 | 1 | 47,127,161", "hPeacock:12 hOpera:1 | 1 | 38,130,164", "hPeacock:4 hPhthaloYS:3 | 0.7 | 51,129,162", "hPeacock:1 | 1 | 10,138,166" ]
+ },
+ { "rgb": [28, 76, 250 ], "palette": "box", "medium": "water", "recipes": [ "hBrightViolet:2 hPeacock:1 | 1 | 81,85,188", "hCobalt:1 | 1 | 44,100,176", "hUltraDeep:1 | 0.7 | 71,85,165", "hBrightViolet:1 | 1 | 122,56,200" ]
+ },
+ { "rgb": [66, 177, 106 ], "palette": "box", "medium": "water", "recipes": [ "hLemon:3 hPeacock:2 | 1 | 89,179,119", "hHorizon:1 hLeaf:1 | 1 | 104,176,97", "hLeaf:2 hViridian:1 | 0.7 | 99,169,93", "hLeaf:2 hPeacock:1 | 0.7 | 97,179,119" ]
+ },
+ { "rgb": [130, 43, 235 ], "palette": "full", "medium": "water", "recipes": [ "ultramarine:1 | 0.7 | 71,85,165", "ultramarine:6 violet:1 alizarin:1 | 0.7 | 83,78,144", "violet:1 | 0.5 | 118,97,148", "phthaloBlue:1 | 0.5 | 77,107,152" ]
+ },
+ { "rgb": [226, 187, 246 ], "palette": "full", "medium": "water", "recipes": [ "violet:1 | 0.11 | 209,200,214", "ultramarine:1 | 0.17 | 184,191,218", "alizarin:1 | 0.11 | 231,198,200", "phthaloBlue:1 | 0.11 | 193,204,215" ]
+ },
+ { "rgb": [222, 87, 175 ], "palette": "full", "medium": "water", "recipes": [ "alizarin:1 | 0.35 | 198,125,138", "alizarin:6 violet:1 cadRed:1 | 0.35 | 193,128,143", "cadRed:1 | 0.5 | 232,119,102", "violet:1 | 0.35 | 148,129,171" ]
+ },
+ { "rgb": [166, 14, 180 ], "palette": "full", "medium": "water", "recipes": [ "violet:6 alizarin:4 ultramarine:1 | 0.5 | 133,97,138", "violet:1 | 0.5 | 118,97,148", "alizarin:1 | 0.7 | 154,60,78", "ultramarine:1 | 0.7 | 71,85,165" ]
+ },
+ { "rgb": [211, 41, 1 ], "palette": "full", "medium": "water", "recipes": [ "cadRed:1 | 1 | 210,51,31", "cadRed:6 alizarin:1 cadYellow:1 | 1 | 201,58,34", "cadRed:6 sienna:1 ochre:1 | 1 | 200,58,33", "cadRed:6 alizarin:1 lemon:1 | 1 | 201,59,37" ]
+ },
+ { "rgb": [92, 239, 203 ], "palette": "full", "medium": "water", "recipes": [ "phthaloGreen:1 | 0.11 | 193,215,205", "phthaloBlue:1 | 0.07 | 210,217,222", "black:1 | 0.07 | 215,213,207", "umber:1 | 0.11 | 217,207,196" ]
+ },
+ { "rgb": [53, 211, 43 ], "palette": "full", "medium": "water", "recipes": [ "lemon:12 phthaloGreen:1 | 1 | 162,186,66", "lemon:24 phthaloBlue:1 | 1 | 186,189,73", "lemon:6 ultramarine:1 | 1 | 187,185,81", "cadYellow:8 phthaloGreen:1 | 0.7 | 172,174,80" ]
+ },
+ { "rgb": [106, 110, 69 ], "palette": "full", "medium": "water", "recipes": [ "lemon:1 black:1 | 0.7 | 113,110,76", "cadYellow:16 phthaloBlue:3 | 1 | 110,114,64", "cadYellow:1 black:1 | 0.7 | 118,106,66", "ochre:12 phthaloBlue:1 | 1 | 108,103,69" ]
+ },
+ { "rgb": [94, 100, 68 ], "palette": "split", "medium": "water", "recipes": [ "cadYellow:4 phthaloBlue:1 | 1 | 94,104,68", "cadYellow:1 ultramarine:1 | 1 | 103,104,88", "lemon:3 phthaloBlue:1 | 1 | 70,101,88", "lemon:1 ultramarine:1 | 1 | 96,112,109" ]
+ },
+ { "rgb": [247, 108, 120 ], "palette": "split", "medium": "water", "recipes": [ "cadRed:1 | 0.5 | 232,119,102", "cadRed:6 alizarin:1 lemon:1 | 0.5 | 226,126,106", "cadRed:6 alizarin:1 cadYellow:1 | 0.5 | 227,125,104", "alizarin:1 | 0.35 | 198,125,138" ]
+ },
+ { "rgb": [211, 111, 40 ], "palette": "split", "medium": "water", "recipes": [ "cadYellow:8 alizarin:3 | 1 | 206,117,37", "lemon:2 alizarin:1 | 1 | 194,118,59", "lemon:1 cadRed:1 | 1 | 229,111,44", "cadYellow:1 cadRed:1 | 1 | 230,102,27" ]
+ },
+ { "rgb": [253, 37, 207 ], "palette": "split", "medium": "water", "recipes": [ "alizarin:1 | 0.35 | 198,125,138", "alizarin:6 cadRed:1 ultramarine:1 | 0.35 | 194,130,144", "cadRed:1 | 0.5 | 232,119,102", "ultramarine:1 | 0.35 | 135,147,199" ]
+ },
+ { "rgb": [17, 116, 151 ], "palette": "split", "medium": "water", "recipes": [ "phthaloBlue:1 | 0.5 | 77,107,152", "ultramarine:4 lemon:1 | 0.7 | 89,106,155", "ultramarine:4 cadYellow:1 | 0.7 | 91,104,146", "ultramarine:1 | 0.5 | 103,117,184" ]
+ },
+ { "rgb": [175, 230, 63 ], "palette": "split", "medium": "water", "recipes": [ "lemon:1 | 1 | 243,226,58", "lemon:6 cadYellow:2 ultramarine:1 | 0.7 | 212,201,104", "cadYellow:1 | 0.5 | 246,212,106", "lemon:6 cadYellow:6 cadRed:1 | 0.5 | 244,212,117" ]
+ },
+ { "rgb": [115, 155, 40 ], "palette": "split", "medium": "water", "recipes": [ "lemon:8 phthaloBlue:1 | 1 | 126,146,82", "lemon:8 ultramarine:3 | 1 | 147,154,94", "cadYellow:12 phthaloBlue:1 | 1 | 160,140,52", "cadYellow:3 ultramarine:1 | 1 | 162,138,64" ]
+ },
+ { "rgb": [228, 152, 245 ], "palette": "split", "medium": "water", "recipes": [ "alizarin:1 | 0.17 | 222,177,182", "ultramarine:1 | 0.25 | 160,170,209", "phthaloBlue:1 | 0.17 | 169,185,204", "cadRed:1 | 0.25 | 241,172,158" ]
+ },
+ { "rgb": [224, 230, 163 ], "palette": "full", "medium": "opaque", "recipes": [ "white:8 ochre:1 | null | 237,224,170", "white:16 cadYellow:1 | null | 243,237,154", "white:8 lemon:1 | null | 243,244,162", "white:24 sienna:1 | null | 238,210,185" ]
+ },
+ { "rgb": [150, 147, 0 ], "palette": "full", "medium": "opaque", "recipes": [ "cadYellow:6 ultramarine:1 | null | 142,149,49", "cadYellow:12 black:1 | null | 163,147,40", "lemon:8 black:1 | null | 149,149,72", "cadYellow:24 phthaloBlue:1 | null | 119,152,48" ]
+ },
+ { "rgb": [228, 74, 111 ], "palette": "full", "medium": "opaque", "recipes": [ "white:2 alizarin:1 | null | 203,89,118", "cadRed:3 white:2 | null | 230,84,61", "lemon:8 alizarin:3 | null | 203,95,69", "cadRed:1 | null | 210,51,31" ]
+ },
+ { "rgb": [44, 172, 247 ], "palette": "full", "medium": "opaque", "recipes": [ "white:16 phthaloBlue:1 | null | 108,160,209", "white:4 ultramarine:1 | null | 133,156,221", "white:12 phthaloGreen:1 violet:1 | null | 94,149,165" ]
+ },
+ { "rgb": [203, 235, 143 ], "palette": "full", "medium": "opaque", "recipes": [ "white:8 cadYellow:1 | null | 244,231,129", "white:16 ochre:3 | null | 235,219,157", "lemon:1 | null | 243,226,58", "white:12 lemon:12 sienna:1 | null | 236,207,96" ]
+ },
+ { "rgb": [10, 150, 162 ], "palette": "full", "medium": "opaque", "recipes": [ "white:8 lemon:1 phthaloBlue:1 | null | 81,143,160", "white:8 ochre:2 phthaloBlue:1 | null | 83,140,147", "white:4 phthaloGreen:1 | null | 57,149,132", "white:8 phthaloBlue:1 cadYellow:1 | null | 79,143,134" ]
+ },
+ { "rgb": [241, 248, 176 ], "palette": "full", "medium": "opaque", "recipes": [ "white:12 lemon:1 | null | 243,245,175", "white:24 cadYellow:1 | null | 243,240,168", "white:16 ochre:1 | null | 240,232,190" ]
+ },
+ { "rgb": [8, 0, 62 ], "palette": "full", "medium": "opaque", "recipes": [ "violet:8 phthaloBlue:4 black:3 | null | 28,37,70", "black:1 | null | 30,29,28", "phthaloBlue:1 | null | 16,41,95", "violet:1 | null | 54,32,90" ]
+ }
+]

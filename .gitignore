@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+*.user
+.smoketest/
+node_modules/
+tests/test-results/
+test-results/
+tests/playwright-report/
