@@ -1617,8 +1617,8 @@ section { margin-bottom: 20px; }
   border: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; justify-content: space-between;
   padding: 10px 8px; box-sizing: border-box; overflow: hidden; cursor: grab;
 }
-.pg-sw.light .pg-colour { color: #fff; --ink-soft: rgba(255,255,255,.72); --tool: rgba(255,255,255,.14); }
-.pg-sw.dark .pg-colour { color: #111; --ink-soft: rgba(0,0,0,.62); --tool: rgba(0,0,0,.1); }
+.pg-sw.light .pg-colour { color: #fff; --ink: #fff; --ink-soft: rgba(255,255,255,.72); --tool: rgba(255,255,255,.14); }
+.pg-sw.dark .pg-colour { color: #111; --ink: #111; --ink-soft: rgba(0,0,0,.62); --tool: rgba(0,0,0,.1); }
 .pg-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
 .pg-tool {
   width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 7px;
@@ -1635,6 +1635,9 @@ section { margin-bottom: 20px; }
   color: inherit; background: none; border: 0; border-radius: 6px; padding: 2px 6px; cursor: copy;
 }
 .pg-hex:hover { background: var(--tool); }
+/* A second .pg-label further down is the paint picker's: on a colour, the colour's own ink wins. */
+.pg-colour .pg-label { color: var(--ink-soft); min-width: 0; }
+.pg-colour .pg-hex { color: var(--ink); }
 .pg-shades { position: absolute; inset: 52px 0 0; display: flex; flex-direction: column; z-index: 1; }
 .pg-shade { flex: 1; border: 0; font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; text-transform: uppercase; cursor: pointer; opacity: 1; }
 .pg-shade:hover, .pg-shade:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
@@ -2459,3 +2462,33 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .gen-dress { margin: 6px 0 0; font-size: 12px; }
 .gen-source .gen-warm { margin: 0 0 0 auto; }
 .gen-source .gen-warm { margin: 0 0 0 auto; }
+
+/* Stars and the end-of-session card - see js/marks.js. */
+.cell-star {
+  position: absolute; top: 5px; left: 5px; z-index: 1; background: rgba(0,0,0,.62);
+  border: 1px solid rgba(255,255,255,.22); color: #fff; border-radius: 6px;
+  padding: 0 6px; font-size: 14px; line-height: 20px; cursor: pointer; opacity: 0; transition: opacity .12s linear;
+}
+.cell:hover .cell-star, .cell:focus-within .cell-star, .cell.starred .cell-star { opacity: 1; }
+.cell.starred .cell-star { color: #f5c542; }
+#btnStarred[aria-pressed="true"] { color: #f5c542; border-color: #f5c542; }
+#markToast {
+  position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 90; pointer-events: none;
+  background: rgba(0,0,0,.78); color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px;
+}
+#doneCard {
+  position: fixed; left: 80px; bottom: 16px; z-index: 60; width: min(320px, calc(100vw - 96px));
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line-hi); border-radius: 12px;
+  padding: 12px 14px; box-shadow: 0 12px 40px rgb(0 0 0 / .4); display: flex; flex-direction: column; gap: 8px;
+}
+#doneCard.hidden, #markToast.hidden { display: none; }
+.done-head { display: flex; justify-content: space-between; align-items: center; }
+.done-thumbs { display: flex; flex-wrap: wrap; gap: 4px; }
+.done-thumbs img { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; }
+
+/* A batch made in one go - see genBatchShow() in js/generate.js. */
+.gen-batch { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.gen-batch.hidden { display: none; }
+.gen-batch-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.gen-batch-cell { display: flex; flex-direction: column; gap: 6px; width: 180px; }
+.gen-batch-cell img { width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--panel-2); border-radius: 8px; }

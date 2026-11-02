@@ -113,16 +113,6 @@ const PORTRAIT_LIGHTS = {
    relative to the viewer (world azimuth = lightAz + yaw - see
    setLightFromVector()), and a form turned by ry faces world azimuth ry, so
    face-relative a is scene lightAz = a + ry - yaw. */
-function portraitLight(sc, o, p) {
-  const off = (o.ry || 0) - sc.yaw;
-  const t = { lightAz: Math.round(wrap180(p.az + off)), lightEl: Math.round(p.el), fillOn: p.fill > 0 };
-  if (p.fill > 0) {
-    t.fillStrength = p.fill;
-    t.fillAz = Math.round(wrap180((p.fillAz !== undefined ? p.fillAz : (p.az <= 0 ? 60 : -60)) + off));
-    t.fillEl = p.fillEl || 15;
-  }
-  return t;
-}
 
 const LIGHT_PRESETS = {
   classic: { label: '3/4',   az: -45,  el: 40 },
@@ -166,16 +156,6 @@ const ANIME_SHOTS = {
   fish:  { label: 'Fisheye', pitch: 15, focal: 50, zoom: 0.5, roll: 0, fisheye: true, gen: 'fisheye',
     hint: 'Straight lines bow out round the middle - the face pushed into the lens, for comedy and for action' },
 };
-// Which shot the camera is at now, or '' - the worm's eye by being below the
-// forms' middle rather than at one pitch, since the floor decides where it
-// stops. A fisheye ignores the Lens slider, so its focal does not count.
-function animeShotOf(sc) {
-  return Object.keys(ANIME_SHOTS).find(k => {
-    const p = ANIME_SHOTS[k];
-    return (p.fisheye || sc.focal === p.focal) && sc.roll === p.roll && sc.fisheye === p.fisheye &&
-      Math.abs(sc.zoom - p.zoom) < 0.01 && (p.pitch < 0 ? sc.pitch < 0 : Math.round(sc.pitch) === p.pitch);
-  }) || '';
-}
 
 /* Surface finishes - each one a different way light behaves, not a different
    number on the same slider. `gloss` is where each preset puts the Shine
@@ -278,7 +258,6 @@ const FORM_SHAPES = {
 
 // The rigs (figure, hand, foot) are gone: the forms are the plain solids.
 const FORM_RIGS = {};
-const formRigOf = () => null;
 
 /* The zones view. Colours are arbitrary but ordered warm-to-cool the way the
    families run from the light round to the shadow side; the thresholds are

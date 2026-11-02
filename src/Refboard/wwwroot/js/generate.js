@@ -748,7 +748,6 @@ const genAvailable = () => genUp && !genOffline;
 let genBusy = false;
 // Whether the server has a ControlNet for "Draw this pose" (forms.js).
 let genControl = false;
-const genControlAvailable = () => genControl;
 
 function loadGenChoices() {
   try { Object.assign(genChoices, JSON.parse(localStorage.getItem(GEN_KEY)) || {}); } catch { /* defaults */ }
@@ -936,10 +935,6 @@ async function genFrameImage(blob, mode, extra = {}, box = null) {
 
 /* Where the figure is in a depth picture, as genFigureBox finds it - for a caller that frames
    several pictures round the union of their boxes. */
-async function genBoxOf(blob) {
-  const url = URL.createObjectURL(blob);
-  try { return genFigureBox(await loadImg(url)); } finally { URL.revokeObjectURL(url); }
-}
 
 async function genSetSource(blob, mode, extra = {}) {
   genSource = await genFrameImage(blob, mode, extra);
@@ -1379,11 +1374,14 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null, ui 
   const drafting = req && el('genQuality').value === 'draft';
   if (drafting) { req.steps = GEN_DRAFT_STEPS; req.tags = [...req.tags, 'draft'].slice(0, 24); }
   const status = el(ui.status);
+  const batch = [];
+  if (ui === GEN_UI) genBatchClear();
   try {
     for (let i = 1; i <= n; i++) {
       if (genStopped) break;
       status.textContent = jobs ? (typeof doing === 'function' ? doing(i, n) : doing) : n > 1 ? `Making ${i} of ${n}...` : 'Making it...';
       const made = await generateOne(jobs ? jobs[i - 1] : req);
+      if (!jobs && made) batch.push(made);
       if (!jobs && genLockWanted()) await genLockMade(made, status);
       if (jobs && after) await after(made);
       storeChanged();
@@ -1392,11 +1390,13 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null, ui 
     status.textContent = genStopped ? 'Stopped.' : jobs ? done
       : drafting ? (n > 1 ? `${n} drafts - finish the one worth keeping.` : 'A draft - finish it if it is worth keeping.') : n > 1 ? `${n} made - in Uploads, Generated.` : 'Made - in Uploads, Generated.';
     if (!jobs && genChoices.subject === 'character') { genCharsRemember(genChoices.character); genLooksRemember(genChoices.character, genChoices.look); renderGenRecent(); }
+    if (!jobs && ui === GEN_UI && batch.length > 1) genBatchShow(batch);
   } catch (err) {
     status.textContent = err.message;
     // It may have stopped answering: say so, with a way to ask again. Not
     // after a Stop, which is no sign of that.
     if (!genStopped) genCheck();
+    if (!jobs && ui === GEN_UI && batch.length > 1) genBatchShow(batch);
   } finally {
     genBusy = false;
     genJob = '';
@@ -1404,6 +1404,34 @@ async function runGenerate(jobs = null, doing = '', done = '', after = null, ui 
     go.removeAttribute('title');
     go.disabled = !!genOffline;
   }
+}
+
+/* Several pictures made in one go, side by side: Keep this one removes the others from Uploads. */
+function genBatchClear() {
+  const box = el('genBatch');
+  box.classList.add('hidden');
+  box.innerHTML = '';
+}
+async function genBatchShow(docs) {
+  const box = el('genBatch');
+  box.innerHTML = '<div class="count">This batch - keep the best, the rest are removed:</div><div class="gen-batch-row"></div>';
+  const row = box.querySelector('.gen-batch-row');
+  docs.forEach((d, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'gen-batch-cell';
+    cell.innerHTML = '<img alt=""><button type="button" class="ghost">Keep this one</button>';
+    cell.querySelector('button').addEventListener('click', async () => {
+      for (const o of docs) if (o !== d) { try { await forgetUpload(o); } catch { /* already gone */ } }
+      genBatchClear();
+      el('genStatus').textContent = 'Kept one - the others are removed.';
+      showGenerate(false);
+    });
+    row.appendChild(cell);
+    storeFileUrl(d.file).then(url => { if (url) cell.querySelector('img').src = url; });
+  });
+  box.insertAdjacentHTML('beforeend', '<button type="button" class="ghost" id="genBatchAll">Keep all</button>');
+  el('genBatchAll').addEventListener('click', genBatchClear);
+  box.classList.remove('hidden');
 }
 
 // A series, a movement, Colours to a palette and a photo's lights are in js/genmore.js, loaded on first use;

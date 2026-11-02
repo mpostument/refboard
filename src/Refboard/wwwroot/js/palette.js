@@ -207,10 +207,10 @@ function palgenRender() {
   if (!pg) return;
   const sw = pg.swatches, n = sw.length;
   el('pgRow').innerHTML = sw.map((s, i) => {
-    const hex = colHexOf(s.rgb), ink = lstar(s.rgb) > 62 ? 'dark' : 'light';
+    const hex = colHexOf(s.rgb), ink = lstar(s.rgb) > 52 ? 'dark' : 'light';
     const shades = pg.shades === i
       ? `<div class="pg-shades" role="group" aria-label="Tints and shades of ${hex}">` + palgenShades(s.rgb).map(c =>
-        `<button type="button" class="pg-shade${colHexOf(c) === hex ? ' on' : ''}" data-pg-shade="${colHexOf(c)}" style="background:${colHexOf(c)};color:${lstar(c) > 62 ? '#111' : '#fff'}" aria-label="Use ${colHexOf(c)}, L* ${Math.round(lstar(c))}">${colHexOf(c)}</button>`).join('') + '</div>'
+        `<button type="button" class="pg-shade${colHexOf(c) === hex ? ' on' : ''}" data-pg-shade="${colHexOf(c)}" style="background:${colHexOf(c)};color:${lstar(c) > 52 ? '#111' : '#fff'}" aria-label="Use ${colHexOf(c)}, L* ${Math.round(lstar(c))}">${colHexOf(c)}</button>`).join('') + '</div>'
       : '';
     return `<div class="pg-sw ${ink}${s.locked ? ' locked' : ''}" data-i="${i}" draggable="true" style="--c:${hex}">` +
       `<div class="pg-colour">` +
@@ -242,6 +242,28 @@ function palgenRender() {
   fewSync();
   if (typeof seasonsSync === 'function') seasonsSync();
   palgenMixes();
+}
+
+/* The palette as a file. .gpl is a plain text list - one "R G B name" line per colour. */
+function palgenDownload(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function palgenGplText(rgbs) {
+  const row = c => `${String(c[0]).padStart(3)} ${String(c[1]).padStart(3)} ${String(c[2]).padStart(3)} ${colHexOf(c)}`;
+  return ['GIMP Palette', 'Name: Refboard palette', 'Columns: ' + rgbs.length, '#', ...rgbs.map(row), ''].join('\n');
+}
+function palgenExportGpl() {
+  palgenDownload(new Blob([palgenGplText(pg.swatches.map(s => s.rgb))], { type: 'text/plain' }), 'refboard-palette.gpl');
+}
+function palgenExportPng() {
+  const rgbs = pg.swatches.map(s => s.rgb), S = 160;
+  const c = document.createElement('canvas');
+  c.width = S * rgbs.length; c.height = S;
+  const g = c.getContext('2d');
+  rgbs.forEach((rgb, i) => { g.fillStyle = colHexOf(rgb); g.fillRect(i * S, 0, S, S); });
+  c.toBlob(b => b && palgenDownload(b, 'refboard-palette.png'), 'image/png');
 }
 
 function palgenRenderSaved() {
@@ -304,6 +326,8 @@ function initPalette() {
     const b = e.currentTarget, label = b.textContent;
     b.textContent = 'Saved'; setTimeout(() => { b.textContent = label; }, 1400);
   });
+  el('pgGpl').addEventListener('click', palgenExportGpl);
+  el('pgPng').addEventListener('click', palgenExportPng);
   el('pgFromPicture').addEventListener('click', () => openColour('picture'));
   el('pgToGenerate').addEventListener('click', () => genUsePalette(pg.swatches.map(s => s.rgb)));
   el('pgSaved').addEventListener('click', e => {

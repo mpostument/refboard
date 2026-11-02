@@ -260,6 +260,7 @@ function startSession(pool, opts = {}) {
   state.startPacks = adHoc ? [opts.label || 'Dropped images'] : [...new Set(
     [...document.querySelectorAll('#packs .grp:checked')].map(b => b.value.split(' / ')[0]))];
   state.startSecs = state.secs;
+  marksBegin();
   setSimilar(null);
   // FEATURES, even when present, has nothing keyed by a blob: URL - a
   // dropped-files session has no similarity ranking to offer regardless of
@@ -311,7 +312,9 @@ function stopSession() {
   el('session').classList.add('hidden');
   el('setup').classList.remove('hidden');
   if (state.startedAt != null) {
-    logSession(state.startedAt, Math.floor(Date.now() / 1000), state.drawn, state.startPacks, state.startSecs);
+    const endedAt = Math.floor(Date.now() / 1000);
+    logSession(state.startedAt, endedAt, state.drawn, state.startPacks, state.startSecs);
+    marksFinish(state.startedAt, endedAt, state.drawn);
     state.startedAt = null;
   }
   // Whatever was skipped during the session just spent, so the setup screen

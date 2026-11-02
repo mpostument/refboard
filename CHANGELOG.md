@@ -1,5 +1,12 @@
 # What's new
 
+## 1.1.0
+
+- **Stars and come back to this** - press `L` to star a picture (shown as a star on the grid, with a filter beside search) and `B`
+  to mark one to come back to. After a session a card shows poses, time and skipped ones, with Draw these again.
+- **Palettes** - export a palette as a `.gpl` file or a PNG.
+- **Generate** - after a run of two or more pictures, a strip lets you keep one (the rest are deleted) or keep all.
+
 ## 1.0.0 - the first release
 
 Refboard does three things:

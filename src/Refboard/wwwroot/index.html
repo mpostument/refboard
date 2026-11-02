@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=68ad4e70">
+<link rel="stylesheet" href="css/app.css?v=e8fe33d9">
 </head>
 <body>
 <div id="setup">
@@ -75,7 +75,7 @@
     <div class="rail-stage" role="group" aria-label="Generate" data-stage="Generate"
          data-blurb="Make a reference of your own with ComfyUI.">
       <span class="rail-stage-name" aria-hidden="true">Generate</span>
-            <button class="nav-item" type="button" data-view="generate" data-icon="sparkle" data-tip="Gen AI - pictures made with your ComfyUI: references, and assets for a 2D game" aria-label="Gen AI"></button>
+            <button class="nav-item" type="button" data-view="generate" data-icon="sparkle" data-tip="Gen AI - references made with your ComfyUI" aria-label="Gen AI"></button>
     </div>
     <div class="rail-stage" role="group" aria-label="Colours" data-stage="Colours"
          data-blurb="Plan the colours, and how to mix each one.">
@@ -174,6 +174,7 @@
              server's colour measurements there is nothing to search. -->
         <button class="ghost hidden" type="button" id="btnColour" aria-expanded="false" aria-controls="colourPanel"
                 title="Find pictures by colour - pick colours, or a mood like warm dusk">Colour</button>
+        <button class="ghost" type="button" id="btnStarred" aria-pressed="false">★</button>
         <button class="ghost" type="button" id="btnBrowseDraw"
                 title="Start a timed session from exactly what this grid is showing">Draw these</button>
         <div class="colourbar hidden" id="colourPanel"></div>
@@ -361,6 +362,7 @@
                 <button type="button" id="genGo" class="primary">Generate</button>
                 <span class="count" id="genStatus" role="status"></span>
               </div>
+              <div id="genBatch" class="gen-batch hidden"></div>
             </div>
             <!-- Drafts waiting for a choice (renderGenDrafts in js/generate.js). -->
             <div class="gen-drafts hidden" id="genDrafts">
@@ -544,6 +546,8 @@
           <button class="ghost" type="button" id="pgAdd" title="One more colour">Add a colour</button>
           <span class="pg-sep" aria-hidden="true"></span>
           <button class="ghost" type="button" id="pgCopy" title="Copy every colour as hex">Copy</button>
+          <button class="ghost" type="button" id="pgGpl" title="Download as a .gpl palette - Krita, GIMP, Inkscape, Aseprite read it">.gpl</button>
+          <button class="ghost" type="button" id="pgPng" title="Download as a strip of colour, one square each">PNG</button>
           <button class="ghost" type="button" id="pgSave" title="Keep this palette - under Saved, below">Save</button>
           <button class="ghost hidden" type="button" id="pgToGenerate" title="Generate a reference in these colours">Use in Generate</button>
         </div>
@@ -586,7 +590,7 @@
             <div id="pgSaved"></div>
             <h4>From a picture</h4>
             <div class="row pg-from">
-<button class="ghost" type="button" id="pgFromPicture" title="Open a reference there, then To the palette generator under its palette">Colour studio<&button>
+              <button class="ghost" type="button" id="pgFromPicture" title="Open a reference there, then To the palette generator under its palette">Colour studio</button>
               <span class="count">A reference's own colours come from there.</span>
             </div>
           </div>
@@ -1177,6 +1181,8 @@
   </div>
 </div>
 
+<div id="markToast" class="hidden" role="status"></div>
+<div id="doneCard" class="hidden" role="status"></div>
 <div id="helpOverlay" class="hidden" role="dialog" aria-modal="true" aria-label="Help">
   <div id="helpModal">
     <div class="row" style="margin-bottom:18px">
@@ -1201,7 +1207,7 @@
         opens it as a grid; its checkbox puts it in the pool a timed session draws from. They are separate on purpose:
         browsing a pack to decide whether you want it is how you end up ticking it.</p>
       <p>The search box matches file, folder and pack names; the box beside it sets the order - the folder's own,
-        by name, lightest or darkest first, or shuffled. Arrow keys move between thumbnails, Enter opens one, S skips it.
+        by name, lightest or darkest first, or shuffled. Arrow keys move between thumbnails, Enter opens one, S skips it, L stars it; the ★ button beside the search shows only the starred.
         A skipped picture is never drawn again but stays in the grid, dimmed, so you can undo it.</p>
       <p>Clicking a thumbnail opens it in the same viewer a session uses, with no clock; Esc returns to the grid.
         <b>Draw these</b> starts a timed session from exactly what the grid shows. <b>Museums</b> searches the Met and the Rijksmuseum.
@@ -1215,7 +1221,7 @@
         fullscreen. Then <b>Start drawing</b>.</p>
       <p><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> flip · <kbd>G</kbd> grayscale ·
         <kbd>Q</kbd> squint · <kbd>V</kbd> value split · <kbd>E</kbd> eyedropper · <kbd>A</kbd> angle tool ·
-        <kbd>D</kbd> compare your drawing · <kbd>I</kbd> info · <kbd>S</kbd> skip for good · <kbd>Esc</kbd> stop.
+        <kbd>D</kbd> compare your drawing · <kbd>I</kbd> info · <kbd>S</kbd> skip for good · <kbd>L</kbd> star · <kbd>B</kbd> come back to this one at the end · <kbd>Esc</kbd> stop.
         Zoom is <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd>. The toolbar holds the tools you pin; the rest are under More (the three dots).</p>
       <p><b>Value split</b> turns the picture into 2-6 flat tones next to the original: block in light and dark masses before detail.
         <b>Pencil grades</b> says which grade of pencil each area wants. <b>Info</b> (<kbd>I</kbd>) shows the histogram,
@@ -1266,11 +1272,11 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=ddd0d3ea"></script>
-<script src="js/setup.js?v=9d30b9fd"></script>
+<script src="js/setup.js?v=db3aa374"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=3136007f"></script>
 <script src="js/uploads.js?v=bb9d031f"></script>
-<script src="js/session.js?v=026a07c6"></script>
+<script src="js/session.js?v=23b0619b"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=dc15b6b7"></script>
 <script src="js/tools.js?v=dfdbd425"></script>
@@ -1278,30 +1284,31 @@
 <script src="js/vision.js?v=fc874c6c"></script>
 <script src="js/sort.js?v=6b40f3d5"></script>
 <script src="js/colourfind.js?v=d51aa014"></script>
-<script src="js/study.js?v=9e5c5205"></script>
-<script src="js/stages.js?v=1871e6d8"></script>
+<script src="js/study.js?v=955b281b"></script>
+<script src="js/stages.js?v=66abf595"></script>
+<script src="js/marks.js?v=1b41ceb1"></script>
 <script src="js/pins.js?v=1cb6ac3d"></script>
 <script src="js/colourmath.js?v=ae688fd8"></script>
 <script src="js/theme-editor.js?v=0832e2ba"></script>
 <script src="js/command.js?v=0d24bf17"></script>
 <script src="js/tour.js?v=5eb07c59"></script>
-<script src="js/steps.js?v=2df7d991"></script>
+<script src="js/steps.js?v=5f71b0dc"></script>
 <script src="js/digitise.js?v=0d7a90f3"></script>
 <script src="js/paintcheck.js?v=c5e7b0f2"></script>
-<script src="js/markers.js?v=a61476ba"></script>
+<script src="js/markers.js?v=8d44da8b"></script>
 <script src="js/grades.js?v=daa03a26"></script>
-<script src="js/quality.js?v=f9417300"></script>
+<script src="js/quality.js?v=96cec6fd"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
-<script src="js/generate.js?v=9e2ebe54"></script>
-<script src="js/assetsfx.js?v=d1db7100"></script>
-<script src="js/genedit.js?v=e3635c75"></script>
+<script src="js/generate.js?v=e25de9fe"></script>
+<script src="js/assetsfx.js?v=03d131dd"></script>
+<script src="js/genedit.js?v=61d31206"></script>
 <!-- Sections whose code loads the first time they are opened - see
      loadSection() in js/core.js. Nothing in a <template> runs; the stamps
      on these URLs are kept up to date like every other. -->
 <template id="lazy-forms">
-<script src="js/forms-models.js?v=90353824"></script>
-<script src="js/forms.js?v=1798bd50"></script>
+<script src="js/forms-models.js?v=e47e61cb"></script>
+<script src="js/forms.js?v=6862733b"></script>
 <script src="js/forms-api.js?v=651af1d1"></script>
 </template>
 <template id="lazy-genmore">
@@ -1329,7 +1336,7 @@
 <template id="lazy-handbook">
 </template>
 <template id="lazy-palette">
-<script src="js/palette.js?v=300e6eee"></script>
+<script src="js/palette.js?v=80781982"></script>
 <script src="js/fewpaints.js?v=694da923"></script>
 <script src="js/seasons.js?v=16c922c8"></script>
 </template>

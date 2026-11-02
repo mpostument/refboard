@@ -48,3 +48,10 @@ test('an older server that says only "available: false" gets the same message', 
   await page.click(NAV);
   await expect(page.locator('#genOfflineText')).toContainText('not available');
 });
+
+test('the dashboard card for Generate says when ComfyUI is not available', async ({ page }) => {
+  await fakeServer(page);
+  await page.route('**/api/generate', r => r.fulfill({ json: { available: false, configured: false } }));
+  await openApp(page);
+  await expect(page.locator('#stageGenNote')).toContainText('not available');
+});

@@ -989,6 +989,7 @@ function viewImages() {
    from the left, however the words fall across name, folder and tags. */
 function filterImages(list) {
   list = cfFilter(list);
+  if (starsOnly) list = list.filter(i => isStarred(i.src));
   const words = el('imgFilter').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return list;
   return list.filter(i => {
@@ -1114,6 +1115,8 @@ function gridCell(item, i) {
   skip.textContent = isSkipped(item.src) ? 'Unskip' : 'Skip';
   skip.title = 'Never draw this pose in a session (it stays here so you can undo it)';
   cell.appendChild(skip);
+  cell.appendChild(gridStarButton(item));
+  if (isStarred(item.src)) cell.classList.add('starred');
 
   const meta = document.createElement('span');
   meta.className = 'cell-meta';
@@ -1198,7 +1201,7 @@ function updateViewMeta() {
     return;
   }
   if (view.kind === 'colour') {
-    m.textContent = 'Palette, colour wheel and gamut mask for any image - a character sheet: her colours, with how to mix them - the greys your paints make, what they give glazed one over another, a colour in the light and in shadow, and what each paint does on the paper.';
+    m.textContent = 'A picture palette and gamut mask, a colour wheel with the paints that mix each harmony, every paint mixed with every other, and what each paint does on the paper.';
     return;
   }
   if (view.kind === 'museum') {
@@ -1481,6 +1484,7 @@ function initShell(saved = {}) {
     if (!cell) return;
     const i = Number(cell.dataset.i);
     if (e.target.closest('.cell-skip')) { toggleCellSkip(i, cell); return; }
+    if (e.target.closest('.cell-star')) { toggleCellStar(i, cell); return; }
     if (e.target.closest('.cell-like')) { cfLikeThis(gridItems[i]); return; }
     openViewer(i);
   });
@@ -1494,6 +1498,7 @@ function initShell(saved = {}) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openViewer(i); return; }
     // Same key as the viewer's own skip toggle, on purpose.
     if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleCellSkip(i, cell); return; }
+    if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleCellStar(i, cell); return; }
     const per = cellsPerRow();
     const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: per, ArrowUp: -per }[e.key];
     let target;
@@ -1510,6 +1515,7 @@ function initShell(saved = {}) {
 
   el('btnGridMore').addEventListener('click', renderGridPage);
   el('imgFilter').addEventListener('input', refreshGrid);
+  initMarks();
   el('btnBrowseDraw').addEventListener('click', () => {
     if (gridItems.length) startSession(gridItems.map(browseUnit));
   });

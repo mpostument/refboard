@@ -55,10 +55,18 @@ function renderStages() {
     const tools = [...g.querySelectorAll('button')].map((b, bi) => railShown(b) ? stageToolHtml(b, `${gi}:${bi}`) : '').join('');
     return !tools ? '' : `<div class="stage-card" data-stage="${g.dataset.stage}">` +
       `<h2>${esc(g.dataset.stage)}</h2><p>${esc(g.dataset.blurb)}</p><div class="stage-tools">${tools}</div>` +
-      `${g.dataset.stage === 'References' ? '<p class="stage-note" id="stagePaintNote"></p>' : ''}</div>`;
+      `${g.dataset.stage === 'References' ? '<p class="stage-note" id="stagePaintNote"></p>' : ''}` +
+      `${g.dataset.stage === 'Generate' ? '<p class="stage-note" id="stageGenNote"></p>' : ''}</div>`;
   }).join('');
   applyIcons(el('stages'));
   syncPaintNote();
+  syncGenNote();
+}
+
+// The Generate card says so when there is no ComfyUI to make anything (genUp is set by js/generate.js).
+function syncGenNote() {
+  const note = document.getElementById('stageGenNote');
+  if (note) note.textContent = typeof genUp !== 'undefined' && !genUp ? 'ComfyUI is not available right now - open it to check again.' : '';
 }
 
 const HIDDEN_KEY = 'refboard.hiddenSections.v1';

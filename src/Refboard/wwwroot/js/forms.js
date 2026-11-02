@@ -858,10 +858,6 @@ function formCelUniforms(u, color, gloss, sc, rimDir) {
    raised arm would come out wide instead of long. A figure's build
    (FIGURE_BUILDS) scales each part the same way: a joint sits where its
    parent's scale puts it, its own parts take its own. */
-// The build a figure is drawn in. A real body takes only the real ones: an
-// Anime or Chibi object switched to Human (or saved so) is drawn Realistic.
-// `def` is the rig's FORM_RIGS entry.
-const formBuildOf = (o, def) => def.skin && FIGURE_BUILDS[o.build].mannequinOnly ? 'real' : o.build;
 function formShapeDef(shape) {
   return FORM_SHAPES[shape] || FORM_SHAPES.cube;
 }
@@ -2249,49 +2245,6 @@ function formsSnapshot(sc) {
    of a few steps of it (a perspective depth buffer is spent mostly near the
    camera). A fisheye is not a flat projection the depth material can draw:
    that one falls back to the shaded render. */
-function formsDepthSnapshot(sc) {
-  if (sc.fisheye) return formsSnapshot(sc);
-  const F = forms, T = F.T, [ew, eh] = formExportSize();
-  formsRender(sc, ew, eh, true);
-  const cam = F.camera, { target, rad } = F.frame, d = cam.position.distanceTo(target);
-  const keep = new Set(F.meshes), hidden = [];
-  for (const o of F.scene.children)
-    if (!keep.has(o) && !o.isLight && o.visible) { o.visible = false; hidden.push(o); }
-  const was = { near: cam.near, far: cam.far, background: F.scene.background };
-  const mat = new T.MeshDepthMaterial();
-  try {
-    cam.near = Math.max(d * 0.01, d - rad * 1.05); cam.far = d + rad * 1.05;
-    cam.updateProjectionMatrix();
-    F.scene.overrideMaterial = mat;
-    F.scene.background = new T.Color(0x000000);
-    F.renderer.render(F.scene, cam);
-    // The depth the forms really span is thin beside the radius they were
-    // bracketed with (a standing figure is as deep as it is wide, not as
-    // tall), so the greys are stretched: the nearest bit to white, the
-    // farthest to a mid grey - the background stays black. Copied here, before
-    // the live view is drawn over the canvas again.
-    const src = F.renderer.domElement, out = document.createElement('canvas');
-    out.width = src.width; out.height = src.height;
-    const g = out.getContext('2d', { willReadFrequently: true });
-    g.drawImage(src, 0, 0);
-    const im = g.getImageData(0, 0, out.width, out.height), px = im.data;
-    let lo = 255, hi = 0;
-    for (let i = 0; i < px.length; i += 4) if (px[i] > 8) { if (px[i] < lo) lo = px[i]; if (px[i] > hi) hi = px[i]; }
-    if (hi > lo) for (let i = 0; i < px.length; i += 4) {
-      if (px[i] <= 8) { px[i] = px[i + 1] = px[i + 2] = 0; continue; }
-      px[i] = px[i + 1] = px[i + 2] = Math.round(60 + (px[i] - lo) / (hi - lo) * 195);
-    }
-    g.putImageData(im, 0, 0);
-    return new Promise(res => out.toBlob(res, 'image/png'));
-  } finally {
-    F.scene.overrideMaterial = null;
-    F.scene.background = was.background;
-    cam.near = was.near; cam.far = was.far; cam.updateProjectionMatrix();
-    for (const o of hidden) o.visible = true;
-    mat.dispose();
-    requestFormsRender();
-  }
-}
 
 /* Generate's Light row, from the 3D key light: its direction is measured
    from the camera's side (0 = from behind the camera, 180 = from behind the
@@ -2299,12 +2252,6 @@ function formsDepthSnapshot(sc) {
    so this is the only way it reaches the picture. From behind the figure is
    a backlight; from a side, a side light; low and across, a dramatic one;
    and from the camera's side, soft. */
-function formLightChoice(sc) {
-  const az = Math.abs(wrap180(sc.lightAz)), el = sc.lightEl;
-  if (az >= 120) return 'back';
-  if (az >= 55) return el < 20 ? 'dramatic' : 'side';
-  return el < 15 ? 'dramatic' : 'soft';
-}
 
 function replaceFormUrls(blobs) {
   formUrls.forEach(u => URL.revokeObjectURL(u));
@@ -2959,11 +2906,6 @@ function formHit(clientX, clientY) {
   }
   return { i: forms.meshes.indexOf(o), joint };
 }
-// Which form is under a point on the screen, or -1.
-function formAt(clientX, clientY) {
-  const h = formHit(clientX, clientY);
-  return h ? h.i : -1;
-}
 
 function formsRay(clientX, clientY) {
   const F = forms, T = F.T;
@@ -3067,9 +3009,6 @@ function placeLightAt(clientX, clientY) {
   setLightFromVector(L);
 }
 
-// Resolves once the 3D view is up - for a command that opens it and then
-// renders from it.
-const formsReady = () => forms ? Promise.resolve(forms) : (formsLoading || Promise.reject(new Error('3D view not open')));
 
 function showForms() {
   // Character sheets may have changed in the Colour studio meanwhile.
