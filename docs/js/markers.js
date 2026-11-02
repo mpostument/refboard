@@ -196,19 +196,7 @@ function markersNote(m, c) {
 /* ---- in a session: the study over the picture, as a layer. */
 let markersRun = 0;
 
-function clearMarkers() {
-  markersRun++;
-  el('markerOverlay').classList.add('hidden');
-  overlayNote('markers', state.markersOn ? 'Choosing the greys...' : '');
-}
 
-function toggleMarkers() {
-  state.markersOn = !state.markersOn;
-  clearMarkers();
-  // Two ways of reading the same values in greys: one at a time.
-  if (state.markersOn && state.gradesOn) toggleGrades();
-  if (state.markersOn) runMarkers();
-}
 
 // A moment's work, so after a frame: the button shows pressed first.
 function runMarkers() {

@@ -31,27 +31,6 @@ function stepsBlur(src, w, h, r) {
   return a;
 }
 
-// Otsu: the lightness (0-100) that best splits the values given into two
-// groups - the darker ones and the lighter ones.
-function stepsOtsu(vals, lo = 0, hi = 100) {
-  const bins = new Float64Array(101);
-  let n = 0;
-  for (const v of vals) if (v >= lo && v <= hi) { bins[Math.round(v)]++; n++; }
-  if (!n) return (lo + hi) / 2;
-  let sum = 0;
-  for (let i = 0; i <= 100; i++) sum += i * bins[i];
-  let wB = 0, sumB = 0, best = -1, t = (lo + hi) / 2;
-  for (let i = 0; i <= 100; i++) {
-    wB += bins[i];
-    if (!wB) continue;
-    const wF = n - wB;
-    if (!wF) break;
-    sumB += i * bins[i];
-    const between = wB * wF * (sumB / wB - (sum - sumB) / wF) ** 2;
-    if (between > best) { best = between; t = i + 0.5; }
-  }
-  return t;
-}
 
 /* The picture read once: its pixels at STEPS_SIDE, and their lightness
    (L*, 0-100). */

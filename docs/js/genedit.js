@@ -67,7 +67,6 @@ function genRework(u, pic, prompt, avoid, tags, denoise) {
   return { prompt, avoid, tags: tags.slice(0, 24).map(t => t.slice(0, 40)), shape: u.shape || 'portrait', seed: u.seed,
     image: genEncode(pic), denoise, parent: u.file };
 }
-const genOptionOf = (row, id) => GEN_CHOICES.find(c => c.id === row).options.find(o => o.id === id);
 const genWordsOfOption = o => o.words ?? o.label.toLowerCase();
 
 /* Light it differently: soft, from the side, backlit, dramatic - four pictures of the same

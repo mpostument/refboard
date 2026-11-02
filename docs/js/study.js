@@ -558,6 +558,8 @@ document.addEventListener('keydown', e => {
       el('optHighContrast').checked = !el('optHighContrast').checked; applyOptions(); break;
     case 'm': case 'M': if (FEATURES) toggleSimilar(); break;
     case 's': case 'S': skipCurrent(); break;
+    case 'l': case 'L': starCurrent(); break;
+    case 'b': case 'B': revisitCurrent(); break;
     // Mid-way through lining up a drawing, Esc gives up on that - not on
     // the whole session.
     case 'Backspace':
