@@ -204,6 +204,38 @@ const PAINT_PALETTES = {
   box:     { label: 'My Holbein box', keys: Object.keys(PIGMENTS).filter(k => PIGMENTS[k].tube),
     hint: 'The tubes of the anime box, in the names on them - the Pigments tab lays them out as the pans sit.' },
 };
+/* Paint sets of my own: a name and the pigments in the box. Each one is a palette like the ones above (key "my:Name"),
+   so the Colour studio, the eyedropper and Palettes all mix from it. Kept in this browser. */
+const PAINT_SETS_KEY = 'refboard.paintsets.v1';
+const PAINT_SETS_MAX = 8;
+function paintSetsList() {
+  try {
+    const v = JSON.parse(localStorage.getItem(PAINT_SETS_KEY));
+    return Array.isArray(v) ? v.filter(s => s && typeof s.name === 'string' && s.name.trim() && Array.isArray(s.keys)).slice(0, PAINT_SETS_MAX) : [];
+  } catch { return []; }
+}
+function paintSetsRegister() {
+  for (const k of Object.keys(PAINT_PALETTES)) if (k.startsWith('my:')) delete PAINT_PALETTES[k];
+  for (const s of paintSetsList()) {
+    const keys = s.keys.filter(k => PIGMENTS[k]);
+    if (keys.length >= 2) PAINT_PALETTES['my:' + s.name] = { label: s.name, keys, hint: 'Your set: ' + keys.map(k => PIGMENTS[k].name).join(', ') + '.', mine: true };
+  }
+}
+function paintSetsSave(name, keys) {
+  name = String(name).trim().slice(0, 40);
+  keys = keys.filter(k => PIGMENTS[k]);
+  if (!name || keys.length < 2) return false;
+  const all = paintSetsList(), at = all.findIndex(s => s.name === name);
+  if (at >= 0) all[at].keys = keys; else if (all.length < PAINT_SETS_MAX) all.push({ name, keys }); else return false;
+  try { localStorage.setItem(PAINT_SETS_KEY, JSON.stringify(all)); } catch { return false; }
+  paintSetsRegister();
+  return true;
+}
+function paintSetsDelete(name) {
+  try { localStorage.setItem(PAINT_SETS_KEY, JSON.stringify(paintSetsList().filter(s => s.name !== name))); } catch {}
+  paintSetsRegister();
+}
+paintSetsRegister();
 const PAINT_KEY = 'refboard.paints.v1';
 const PAINT_MEDIUM_KEY = 'refboard.paintMedium.v1';
 const PAINT_MEDIA = { water: 'Watercolour', opaque: 'Oil / acrylic' };
@@ -575,11 +607,21 @@ function mapIntoGamut(pt, poly) {
    rows of chips, the same in the Colour studio and the palette generator.
    One pair of settings for the whole app: chosen here, they are the
    eyedropper's too. */
+const paintChipsHosts = [];
+const paintChipsFill = host => { host.innerHTML = Object.entries(PAINT_PALETTES)
+  .map(([k, p]) => `<button class="chip" type="button" data-paint-palette="${esc(k)}" title="${esc(p.hint)}">${esc(p.label)}</button>`).join(''); };
+/* A set was saved or deleted: every list of palettes is drawn again. */
+function paintPalettesChanged() {
+  paintChipsHosts.forEach(paintChipsFill);
+  const sel = document.getElementById('paintSelect');
+  if (sel) { sel.innerHTML = Object.entries(PAINT_PALETTES).map(([k, p]) => `<option value="${esc(k)}" title="${esc(p.hint)}">${esc(p.label)}</option>`).join(''); sel.value = paintPaletteKey(); }
+  paintChipsSync();
+}
 function paintChips(mediumHost, paintsHost, onChange) {
+  paintChipsHosts.push(paintsHost);
   mediumHost.innerHTML = Object.entries(PAINT_MEDIA)
     .map(([k, label]) => `<button class="chip" type="button" data-paint-medium="${k}">${label}</button>`).join('');
-  paintsHost.innerHTML = Object.entries(PAINT_PALETTES)
-    .map(([k, p]) => `<button class="chip" type="button" data-paint-palette="${k}" title="${esc(p.hint)}">${p.label}</button>`).join('');
+  paintChipsFill(paintsHost);
   mediumHost.addEventListener('click', e => {
     const b = e.target.closest('[data-paint-medium]');
     if (!b) return;

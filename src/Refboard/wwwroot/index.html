@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=e8fe33d9">
+<link rel="stylesheet" href="css/app.css?v=cbaf7d67">
 </head>
 <body>
 <div id="setup">
@@ -554,6 +554,8 @@
         <div id="pgRow" class="pg-row" role="group" aria-label="The palette"></div>
         <!-- Filled by js/fewpaints.js when asked: which few of the paints below are enough. -->
         <div id="pgFew" class="pg-few hidden" aria-live="polite"></div>
+        <!-- Filled by js/myset.js: each colour of the palette as the marker or pencil of my set that is nearest. -->
+        <div id="pgMatchOut" class="pg-few hidden" aria-live="polite"></div>
         <div class="pg-under">
           <div>
             <h4>Seasons and times of day</h4>
@@ -569,16 +571,47 @@
               <button class="chip" type="button" id="pgFit" aria-pressed="false" title="Make only colours these paints can mix">Only what my paints mix</button>
             </div>
             <div class="count" id="pgPaintHint"></div>
-            <h4>Fewest paints</h4>
+            <h4>My set</h4>
+            <div class="count">What you have: paints, Copic markers, watercolour pencils. Fewest paints, Generate and the match below all keep to it.</div>
             <div class="chips" id="pgFewFor" role="group" aria-label="Paints, markers or pencils"></div>
             <details id="pgFewMine" class="pg-few-mine hidden">
               <summary id="pgFewMineSum"></summary>
-              <div class="chips" id="pgFewMineList" role="group" aria-label="The markers or pencils you have"></div>
+              <input type="search" id="pgFewMineFind" class="pg-own-find" placeholder="Find by code or name - E57, sky, sepia" aria-label="Find a marker or pencil">
+              <div id="pgFewMineList" role="group" aria-label="The markers or pencils you have"></div>
               <div class="chips">
                 <button class="chip" type="button" id="pgFewMineAll" title="The whole list is yours">All</button>
                 <button class="chip" type="button" id="pgFewMineNone" title="Clear them, then mark the ones you have">None</button>
               </div>
+              <div class="pg-sets">
+                <div class="chips" id="pgSets" role="group" aria-label="Your saved sets"></div>
+                <div class="row">
+                  <input type="text" id="pgSetName" class="pg-own-find" maxlength="40" placeholder="Name this set - Desk, Travel box" aria-label="Name for this set">
+                  <button class="ghost" type="button" id="pgSetSave" title="Keep what is marked now as a set you can come back to">Save set</button>
+                </div>
+              </div>
             </details>
+            <details id="pgPaintSet" class="pg-few-mine hidden">
+              <summary id="pgPaintSetSum">Which paints do you have?</summary>
+              <div class="chips" id="pgPaintSetList" role="group" aria-label="The paints you have"></div>
+              <div class="pg-sets">
+                <div class="chips" id="pgPaintSets" role="group" aria-label="Your saved paint sets"></div>
+                <div class="row">
+                  <input type="text" id="pgPaintSetName" class="pg-own-find" maxlength="40" placeholder="Name this set - Travel tin" aria-label="Name for this paint set">
+                  <button class="ghost" type="button" id="pgPaintSetSave" title="Keep the marked paints as a set; it joins the paint sets everywhere (Colour studio, eyedropper, Palettes)">Save set</button>
+                </div>
+              </div>
+            </details>
+            <div class="chips hidden" id="pgMatchBar">
+              <button class="chip" type="button" id="pgMatch" aria-pressed="false" title="Under the palette, show which of my markers or pencils each colour is">Match the palette to my set</button>
+              <button class="chip" type="button" id="pgOnlyMine" aria-pressed="false" title="New palettes are made only of colours in my set">New palettes only from my set</button>
+            </div>
+            <div class="chips" id="pgMyIO" role="group" aria-label="Keep my set in a file">
+              <button class="chip" type="button" id="pgMyExport" title="Save everything in My set - the ones you have, the named sets, the paint sets - to a file, as a backup or for another computer">Save my set to a file</button>
+              <button class="chip" type="button" id="pgMyImport" title="Bring a saved My set file back; sets with the same name are replaced">Load from a file</button>
+              <input type="file" id="pgMyFile" accept="application/json,.json" class="hidden" aria-label="Choose a My set file">
+              <span class="count" id="pgMyIONote" role="status" aria-live="polite"></span>
+            </div>
+            <h4>Fewest paints</h4>
             <div class="chips" id="pgFewN" role="group" aria-label="At most this many paints"></div>
             <div class="chips">
               <button class="chip" type="button" id="pgFewGo" title="Which few of the paints above are enough to mix every colour of this palette - in watercolour, the paper being the white">Which paints?</button>
@@ -1278,8 +1311,8 @@
 <script src="js/uploads.js?v=bb9d031f"></script>
 <script src="js/session.js?v=23b0619b"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
-<script src="js/paint.js?v=dc15b6b7"></script>
-<script src="js/tools.js?v=dfdbd425"></script>
+<script src="js/paint.js?v=70d5fe8b"></script>
+<script src="js/tools.js?v=3bfb653a"></script>
 <script src="js/materials.js?v=aea2cd23"></script>
 <script src="js/vision.js?v=fc874c6c"></script>
 <script src="js/sort.js?v=6b40f3d5"></script>
@@ -1314,7 +1347,7 @@
 <template id="lazy-genmore">
 <script src="js/genmore.js?v=96131588"></script>
 <script src="js/gennew.js?v=c15d21ce"></script>
-<script src="js/genpick.js?v=c344fdf9"></script>
+<script src="js/genpick.js?v=5011f2d3"></script>
 </template>
 <template id="lazy-train">
 </template>
@@ -1336,8 +1369,11 @@
 <template id="lazy-handbook">
 </template>
 <template id="lazy-palette">
-<script src="js/palette.js?v=80781982"></script>
-<script src="js/fewpaints.js?v=694da923"></script>
+<script src="js/palette.js?v=21128ea2"></script>
+<script src="js/pencil-colours.js?v=c5c7089d"></script>
+<script src="js/copic-colours.js?v=042cb1c0"></script>
+<script src="js/fewpaints.js?v=7e13093e"></script>
+<script src="js/myset.js?v=0c1e0473"></script>
 <script src="js/seasons.js?v=16c922c8"></script>
 </template>
 <template id="lazy-colour">

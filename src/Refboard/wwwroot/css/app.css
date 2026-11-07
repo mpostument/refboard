@@ -2492,3 +2492,29 @@ button.linkish { background: none; border: 0; padding: 0; color: inherit; font: 
 .gen-batch-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .gen-batch-cell { display: flex; flex-direction: column; gap: 6px; width: 180px; }
 .gen-batch-cell img { width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--panel-2); border-radius: 8px; }
+
+/* My set (js/myset.js): a marker range is 357 chips, so they come in family groups. */
+.pg-own-fam { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0; }
+.pg-own-fam .chip { padding: 2px 8px; font-size: 12px; }
+.pg-own-all { border: 0; background: none; color: var(--dim); font-size: 12px; font-weight: 600; cursor: pointer; padding: 2px 6px; min-width: 56px; text-align: left; }
+.pg-own-all:hover { color: var(--text); }
+.pg-own-find { width: 100%; max-width: 280px; margin: 6px 0; }
+.pg-sets { margin-top: 8px; }
+.pg-sets .row { gap: 6px; align-items: center; }
+.pg-sets .pg-own-find { margin: 0; }
+.chip-set { display: inline-flex; }
+.chip-set .chip:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.chip-set .chip:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; padding-inline: 8px; }
+.chip small, #pgMatchOut h4 small { opacity: .65; font-weight: 400; }
+.pg-dE.close { color: var(--ok, #8fc98f); }
+.pg-dE.far { color: var(--warn, #e0a050); }
+#pgFewMineList { max-height: 320px; overflow-y: auto; }
+
+/* My set: paints, saved to a file, and the other near colours of a row */
+#pgPaintSetList { max-height: 220px; overflow: auto; }
+#pgPaintSetList .chip i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+.pg-alt { margin: 2px 0 6px 26px; font-size: 12px; }
+.pg-alt summary { cursor: pointer; color: var(--subtext, inherit); }
+.pg-alt .pg-few-paint { margin-right: 8px; }
+.pg-buy { margin: 4px 0 0; padding-left: 18px; }
+.pg-buy li { margin: 2px 0; }

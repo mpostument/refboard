@@ -710,7 +710,7 @@ function renderMixGuide(rgb) {
 
 function initPaintSelect() {
   const sel = el('paintSelect');
-  sel.innerHTML = Object.entries(PAINT_PALETTES).map(([k, p]) => `<option value="${k}" title="${esc(p.hint)}">${p.label}</option>`).join('');
+  sel.innerHTML = Object.entries(PAINT_PALETTES).map(([k, p]) => `<option value="${esc(k)}" title="${esc(p.hint)}">${esc(p.label)}</option>`).join('');
   sel.value = paintPaletteKey();
   sel.addEventListener('change', () => {
     setPaintPaletteKey(sel.value);
