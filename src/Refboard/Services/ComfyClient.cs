@@ -101,23 +101,38 @@ public sealed class ComfyClient(RefboardOptions opts, UserStore store, ILogger<C
     public async Task<object> StatusAsync(CancellationToken ct)
     {
         if (!Configured) return new { available = false, configured = false, reason = "No ComfyUI is set up (COMFY_URL)." };
+        // Only host:port, never the whole address - it may carry a key.
+        string? host = null;
+        try { host = new Uri(opts.ComfyUrl).Authority; } catch (UriFormatException) { /* shown without */ }
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(3));
             var models = await Http.GetFromJsonAsync<List<string>>($"{opts.ComfyUrl}/models/checkpoints", cts.Token) ?? [];
             var control = ControlConfigured && await HasControlNetAsync(cts.Token);
+            var waiting = await QueueLengthAsync(cts.Token);
             return models.Contains(opts.ComfyCheckpoint)
                 // What it always adds, for the page's Prompt to show. controlMissing: a ControlNet
-                // is named in the options and is not in ComfyUI - the page says which.
-                ? new { available = true, checkpoint = opts.ComfyCheckpoint, quality = Quality, negative = Negative,
-                    control, controlMissing = ControlConfigured && !control ? opts.ComfyControlNet : null }
-                : new { available = false, configured = true, reason = $"ComfyUI has no {opts.ComfyCheckpoint} in models/checkpoints." };
+                // is named in the options and is not in ComfyUI - the page says which. queue: pictures
+                // ComfyUI has running or waiting (null when it would not say).
+                ? new { available = true, host, checkpoint = opts.ComfyCheckpoint, quality = Quality, negative = Negative,
+                    control, controlMissing = ControlConfigured && !control ? opts.ComfyControlNet : null, queue = waiting }
+                : new { available = false, configured = true, host, reason = $"ComfyUI has no {opts.ComfyCheckpoint} in models/checkpoints." };
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            return new { available = false, configured = true, reason = "ComfyUI is not answering - is the machine it runs on awake, and reachable from this server?" };
+            return new { available = false, configured = true, host, reason = "ComfyUI is not answering - is the machine it runs on awake, and reachable from this server?" };
         }
+    }
+
+    private async Task<int?> QueueLengthAsync(CancellationToken ct)
+    {
+        try
+        {
+            var q = await Http.GetFromJsonAsync<JsonObject>($"{opts.ComfyUrl}/queue", ct);
+            return (q?["queue_running"] as JsonArray)?.Count + (q?["queue_pending"] as JsonArray)?.Count;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return null; }
     }
 
     private async Task<bool> HasControlNetAsync(CancellationToken ct)

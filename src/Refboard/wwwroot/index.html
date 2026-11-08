@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=cbaf7d67">
+<link rel="stylesheet" href="css/app.css?v=0cca9632">
 </head>
 <body>
 <div id="setup">
@@ -176,7 +176,14 @@
                 title="Find pictures by colour - pick colours, or a mood like warm dusk">Colour</button>
         <button class="ghost" type="button" id="btnStarred" aria-pressed="false">★</button>
         <button class="ghost" type="button" id="btnBrowseDraw"
-                title="Start a timed session from exactly what this grid is showing">Draw these</button>
+                title="Start a timed session from exactly what this grid is showing - all of it, or a number picked for you">Draw these</button>
+        <select id="drawCount" aria-label="How many to draw" title="All of them, or a number picked from them">
+          <option value="0">All</option><option value="10">10</option><option value="20">20</option>
+          <option value="30">30</option><option value="50">50</option>
+        </select>
+        <button class="ghost hidden" type="button" id="drawFresh" aria-pressed="true">Fresh</button>
+        <!-- Your own tags (js/tags.js): press one to show only it. -->
+        <div class="chips hidden tag-bar" id="tagBar" role="group" aria-label="Your tags"></div>
         <div class="colourbar hidden" id="colourPanel"></div>
       </div>
     </header>
@@ -329,6 +336,8 @@
               <p id="genOfflineText"></p>
               <button type="button" class="ghost" id="genRetry">Check again</button>
             </div>
+            <!-- ComfyUI is there: which model, how many pictures wait in its queue (renderGenLink). Press to ask again. -->
+            <button type="button" class="gen-link hidden" id="genLink" title="Press to ask ComfyUI again"><i aria-hidden="true"></i><span></span></button>
             <!-- Start from a picture or a sketch instead of from nothing - at the top, so it is not hidden under the bar: js/generate.js genSetSource(). -->
             <div class="gen-source" id="genSource">
               <button type="button" class="ghost" id="genPick" title="Draw from a picture of your own: a photo simplified into a study, with the choices above as its style. Or drop one here.">Start from a picture...</button>
@@ -342,6 +351,8 @@
               </div>
               <div id="genSourceBody" class="hidden"></div>
             </div>
+            <!-- Choices kept under a name: js/recipes.js. -->
+            <div class="gen-recipes" id="genRecipes"></div>
             <div id="genChoices"></div>
             <!-- A series, a movement: js/genmore.js, loaded when this is first opened. -->
             <details class="gen-more-ways" id="genMore">
@@ -1254,7 +1265,7 @@
         fullscreen. Then <b>Start drawing</b>.</p>
       <p><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> flip · <kbd>G</kbd> grayscale ·
         <kbd>Q</kbd> squint · <kbd>V</kbd> value split · <kbd>E</kbd> eyedropper · <kbd>A</kbd> angle tool ·
-        <kbd>D</kbd> compare your drawing · <kbd>I</kbd> info · <kbd>S</kbd> skip for good · <kbd>L</kbd> star · <kbd>B</kbd> come back to this one at the end · <kbd>Esc</kbd> stop.
+        <kbd>D</kbd> compare your drawing · <kbd>I</kbd> info · <kbd>S</kbd> skip for good · <kbd>L</kbd> star · <kbd>T</kbd> tag · <kbd>B</kbd> come back to this one at the end · <kbd>Esc</kbd> stop.
         Zoom is <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd>. The toolbar holds the tools you pin; the rest are under More (the three dots).</p>
       <p><b>Value split</b> turns the picture into 2-6 flat tones next to the original: block in light and dark masses before detail.
         <b>Pencil grades</b> says which grade of pencil each area wants. <b>Info</b> (<kbd>I</kbd>) shows the histogram,
@@ -1305,11 +1316,11 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=ddd0d3ea"></script>
-<script src="js/setup.js?v=db3aa374"></script>
+<script src="js/setup.js?v=a3110b56"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=3136007f"></script>
 <script src="js/uploads.js?v=bb9d031f"></script>
-<script src="js/session.js?v=23b0619b"></script>
+<script src="js/session.js?v=de9996bc"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
 <script src="js/paint.js?v=70d5fe8b"></script>
 <script src="js/tools.js?v=3bfb653a"></script>
@@ -1317,8 +1328,9 @@
 <script src="js/vision.js?v=fc874c6c"></script>
 <script src="js/sort.js?v=6b40f3d5"></script>
 <script src="js/colourfind.js?v=d51aa014"></script>
-<script src="js/study.js?v=955b281b"></script>
+<script src="js/study.js?v=905f2c4d"></script>
 <script src="js/stages.js?v=66abf595"></script>
+<script src="js/tags.js?v=0ebcf5d5"></script>
 <script src="js/marks.js?v=1b41ceb1"></script>
 <script src="js/pins.js?v=1cb6ac3d"></script>
 <script src="js/colourmath.js?v=ae688fd8"></script>
@@ -1333,7 +1345,8 @@
 <script src="js/quality.js?v=96cec6fd"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
-<script src="js/generate.js?v=e25de9fe"></script>
+<script src="js/generate.js?v=d5e97a34"></script>
+<script src="js/recipes.js?v=a87103f6"></script>
 <script src="js/assetsfx.js?v=03d131dd"></script>
 <script src="js/genedit.js?v=61d31206"></script>
 <!-- Sections whose code loads the first time they are opened - see

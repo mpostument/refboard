@@ -535,6 +535,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); toggleHelp(); }
     return;
   }
+  if (e.target.id === 'tagInput') return;
   armHudIdle();
   switch (e.key) {
     case ' ':          e.preventDefault(); togglePause(); break;
@@ -559,6 +560,7 @@ document.addEventListener('keydown', e => {
     case 'm': case 'M': if (FEATURES) toggleSimilar(); break;
     case 's': case 'S': skipCurrent(); break;
     case 'l': case 'L': starCurrent(); break;
+    case 't': case 'T': e.preventDefault(); tagCurrent(); break;
     case 'b': case 'B': revisitCurrent(); break;
     // Mid-way through lining up a drawing, Esc gives up on that - not on
     // the whole session.
