@@ -18,47 +18,34 @@
 const FEW_KEY = 'refboard.fewpaints.v1';
 const FEW_FOR = { paints: 'Paints', copic: 'Copic markers', pencils: 'Pencils' };
 
-/* Copic Sketch colours people reach for first - NOT the whole range. The
-   codes and names are the maker's; the hex is my estimate of what each lays
-   down on white paper (a printed chip is not your paper, and a second layer
-   goes darker), to be corrected from a swatch photo like the Holbein box. A
-   marker is not mixed with another on the page - it is laid over it - so a
-   colour here is matched to the NEAREST single marker. */
-const COPIC_COLOURS = [
-  ['E000', 'Pale Fruit Pink', '#fbeae3'], ['E11', 'Barely Beige', '#f6dcc4'], ['E21', 'Soft Sun', '#f4e4cc'], ['E04', 'Lipstick Natural', '#eab0a0'],
-  ['E35', 'Chamois', '#d9b98c'], ['E43', 'Dull Ivory', '#e8d3b4'], ['E57', 'Light Walnut', '#b88a5e'], ['E29', 'Burnt Sienna', '#a6603f'], ['E37', 'Sepia', '#7a4a32'],
-  ['R05', 'Salmon Red', '#ee6b5c'], ['R20', 'Blush', '#f6cdd1'], ['R29', 'Lipstick Red', '#e0383b'], ['R59', 'Cardinal', '#a8283a'],
-  ['RV25', 'Pink', '#f19bb2'], ['RV04', 'Shock Pink', '#ec4f8e'], ['RV09', 'Fuchsia', '#d6317f'],
-  ['YR04', 'Chrome Orange', '#f7b33e'], ['YR07', 'Cadmium Orange', '#ef7a2c'], ['Y11', 'Pale Yellow', '#fbf2a3'], ['Y15', 'Cadmium Yellow', '#fbe03b'], ['Y08', 'Acacia', '#f0c648'],
-  ['YG09', 'Lettuce Green', '#a6d35a'], ['YG17', 'Grass Green', '#7fbf4a'], ['YG67', 'Moss', '#8a9a4a'], ['G17', 'Forest Green', '#2f8f4e'], ['G28', 'Ocean Green', '#57b9a0'],
-  ['BG13', 'Mint Green', '#bfe5d4'], ['BG09', 'Blue Green', '#2fae9a'], ['B02', 'Robin Egg Blue', '#a7dbe8'], ['B04', 'Tahitian Blue', '#2fb3dc'],
-  ['B14', 'Light Blue', '#7cc3ea'], ['B24', 'Sky', '#bfdcf0'], ['B29', 'Ultramarine', '#2f6fc0'], ['B39', 'Prussian Blue', '#2b4f94'],
-  ['V12', 'Pale Lavender', '#d8cbe6'], ['V04', 'Lilac', '#b9a2d4'], ['V09', 'Violet', '#7d56a8'], ['V17', 'Amethyst', '#6a4a96'],
-  ['N1', 'Neutral Gray 1', '#e6e6e4'], ['N3', 'Neutral Gray 3', '#c9c9c8'], ['N5', 'Neutral Gray 5', '#a6a6a6'], ['N7', 'Neutral Gray 7', '#7f7f80'], ['N9', 'Neutral Gray 9', '#515253'], ['100', 'Black', '#1f1f21'],
-].map(([code, name, hex]) => ({ code, name, hex, rgb: [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) }));
+/* The whole Copic Sketch range (js/copic-colours.js). The hex is the maker's swatch as a screen shows it - NOT what
+   it lays down on your paper (a second layer goes darker). A marker is not mixed with another on the page - it is laid
+   over it - so a colour is matched to the NEAREST single marker. family: the letters of the code - E, R, RV, YG... */
+const COPIC_COLOURS = COPIC_ALL.map(([code, name, hex]) => ({ code, name, hex, family: code.replace(/\d.*$/, '') || code,
+  rgb: [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) }));
 const FEW_COPIC = Object.fromEntries(COPIC_COLOURS.map(m => [m.code, m]));
 const fewLab = rgb => linToOklab(...rgb.map(v => srgbToLin(v / 255)));
-/* Watercolour pencils - Faber-Castell Albrecht Duerer, a short list of what a
-   painter reaches for first, NOT the whole 120. The numbers and names are the
-   maker's as I know them; the hex is my estimate of the dry stroke on white paper,
-   to be corrected from a swatch photo like the Holbein box and the markers. A
-   pencil is not mixed on a palette - it is laid in layers on the paper - so a
-   colour is matched by one pencil (pressed lightly or firmly) or by two, the
-   second over the first. */
-const PENCIL_COLOURS = [
-  ['102', 'Cream', '#f3e3b8'], ['104', 'Light Yellow Glaze', '#f7e86a'], ['106', 'Light Chrome Yellow', '#f9d423'], ['107', 'Cadmium Yellow', '#f7c61c'],
-  ['109', 'Dark Chrome Yellow', '#f0a41a'], ['111', 'Cadmium Orange', '#ee7d1f'], ['118', 'Scarlet Red', '#d9302b'], ['121', 'Pale Geranium Lake', '#e0575a'],
-  ['126', 'Permanent Carmine', '#b3223f'], ['129', 'Pink Madder Lake', '#d9647d'], ['125', 'Middle Purple Pink', '#c9578f'], ['133', 'Magenta', '#b02a6b'],
-  ['136', 'Purple Violet', '#5b3a86'], ['138', 'Violet', '#7a5aa6'], ['140', 'Light Ultramarine', '#6f7fc4'], ['143', 'Cobalt Blue', '#3a63b0'],
-  ['151', 'Helioblue-Reddish', '#2d4a9a'], ['152', 'Middle Phthalo Blue', '#1f6fb2'], ['146', 'Sky Blue', '#6fb4e0'], ['149', 'Bluish Turquoise', '#2aa5b5'],
-  ['153', 'Cobalt Green', '#5ec0a0'], ['157', 'Dark Phthalo Green', '#17685a'], ['163', 'Emerald Green', '#1f9a5a'], ['167', 'Permanent Green Olive', '#6b8a2e'],
-  ['168', 'Earth Green Yellowish', '#8a9a4a'], ['170', 'May Green', '#8cc152'], ['172', 'Earth Green', '#5c7a4a'], ['174', 'Chromium Green Opaque', '#3d6e3a'],
-  ['175', 'Dark Sepia', '#4a2f24'], ['176', 'Van Dyck Brown', '#5a3a2a'], ['177', 'Walnut Brown', '#6d4a33'], ['180', 'Raw Umber', '#6a5a45'],
-  ['183', 'Light Yellow Ochre', '#d9ad5a'], ['185', 'Naples Yellow', '#f1d58a'], ['186', 'Terracotta', '#c0654a'], ['187', 'Burnt Ochre', '#b0643a'],
-  ['188', 'Sanguine', '#b44e3a'], ['189', 'Cinnamon', '#a06a4a'], ['190', 'Venetian Red', '#a8472f'], ['192', 'Indian Red', '#8f3a2f'], ['193', 'Burnt Sienna', '#8a4a2a'],
-  ['199', 'Black', '#232325'], ['230', 'Cold Grey I', '#e2e4e6'], ['232', 'Cold Grey III', '#b9bdc2'], ['234', 'Cold Grey V', '#8a9096'],
-  ['271', 'Warm Grey I', '#e8e3dc'], ['273', 'Warm Grey III', '#c3bbb0'], ['275', 'Warm Grey V', '#9a9086'],
-].map(([code, name, hex]) => ({ code, name, hex, rgb: [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) }));
+/* Watercolour pencils - the Faber-Castell numbering (js/pencil-colours.js), the whole range bar white and the metallics.
+   The colours are an estimate of the dry stroke on white paper, to be corrected from a swatch photo like the Holbein
+   box and the markers. A pencil is not mixed on a palette - it is laid in layers on the paper - so a colour is matched
+   by one pencil (pressed lightly or firmly) or by two, the second over the first. family: the hue group, so 116
+   pencils can be marked a group at a time. */
+function pencilFamily(rgb) {
+  const [r, g, b] = rgb.map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  if (d < 0.1 || (d / (1 - Math.abs(2 * l - 1) || 1)) < 0.14) return "Grey";
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  if (h < 50 && l < 0.58 && h >= 8) return "Brown";
+  if (h >= 330 || h < 8) return l > 0.72 ? "Pink" : "Red";
+  if (h < 20) return "Red";
+  if (h < 42) return "Orange";
+  if (h < 70) return "Yellow";
+  if (h < 175) return "Green";
+  if (h < 255) return "Blue";
+  if (h < 290) return "Violet";
+  return "Pink";
+}
+const PENCIL_COLOURS = PENCIL_ALL.map(([code, name, hex]) => { const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)); return { code, name, hex, rgb, family: pencilFamily(rgb) }; });
 const FEW_PENCIL = Object.fromEntries(PENCIL_COLOURS.map(m => [m.code, m]));
 const PENCIL_PRESS = { light: 0.5, firm: 1 };   // how much of the pencil's colour a stroke lays on what is under it
 const FEW_COUNTS = [2, 3, 4, 5];
@@ -273,7 +260,7 @@ function fewRenderPencils(host, res) {
     `<h4>${res.keys.length === 1 ? 'One pencil' : res.keys.length + ' pencils'} for this palette${fewOwnNote('pencils')}</h4>` +
     '<div class="pg-few-paints">' + res.keys.map(k => `<span class="pg-few-paint">${chip(FEW_PENCIL[k])}</span>`).join('') + '</div>' +
     `<p class="count">${close} of ${rows.length} colours land close (under ${FEW_CLOSE}); the furthest, ${esc(palgenName(far.rgb))} (${colHexOf(far.rgb)}), is ${far.r.dE.toFixed(1)} away.${fewer} ` +
-    "Light is a gentle stroke with the paper showing through; firm is pressed. Where two are named, lay the first and the second over it, then go over it with a damp brush to melt the layers - wet, the colour goes deeper than shown. The pencils' colours are my estimate, from a short list of Albrecht Duerer - not the whole range.</p>" +
+    "Light is a gentle stroke with the paper showing through; firm is pressed. Where two are named, lay the first and the second over it, then go over it with a damp brush to melt the layers - wet, the colour goes deeper than shown. The pencils' colours are my estimate, read off swatches of the Faber-Castell range.</p>" +
     '<div class="pg-few-rows">' + rows.map(x => `<div class="pg-few-row"><i style="background:${colHexOf(x.rgb)}" title="${colHexOf(x.rgb)} - the colour asked for"></i>` +
       `<i style="background:${colHexOf(x.r.rgb)}" title="${colHexOf(x.r.rgb)} - what the layers lay down"></i><span class="pg-few-how">${recipe(x.r)} <span class="count">${x.r.dE.toFixed(1)}</span></span></div>`).join('') + '</div>';
 }
@@ -283,16 +270,27 @@ const fewOwnNote = kind => few.own[kind] ? ` <span class="count">(from the ${few
 
 /* Which markers or pencils you have: a chip for each on the list, pressed while it is yours.
    Nothing marked yet is the whole list - every chip pressed. */
+/* The chips of the markers or pencils you can mark as yours, a group to a family of the range, narrowed by the
+   find box. A marker you have is pressed. */
 function fewMineRender() {
   const kind = few.medium, host = el('pgFewMine');
   host.classList.toggle('hidden', !FEW_THINGS[kind]);
-  if (!FEW_THINGS[kind]) return;
+  if (!FEW_THINGS[kind]) { myRender(); return; }
   const mine = new Set(fewMine(kind)), list = FEW_LISTS()[kind];
   el('pgFewMineSum').textContent = few.own[kind]
     ? `Which ${FEW_THINGS[kind]} do you have? ${mine.size} of ${list.length} marked`
     : `Which ${FEW_THINGS[kind]} do you have? All ${list.length} on the list`;
-  el('pgFewMineList').innerHTML = list.map(m =>
-    `<button class="chip" type="button" data-few-own="${esc(m.code)}" aria-pressed="${mine.has(m.code)}" title="${esc(m.name)}"><i style="background:${m.hex}"></i>${esc(m.code)}</button>`).join('');
+  const q = el('pgFewMineFind').value.trim().toLowerCase();
+  const shown = q ? list.filter(m => (m.code + ' ' + m.name).toLowerCase().includes(q)) : list;
+  const groups = new Map();
+  for (const m of shown) { const f = m.family; if (!groups.has(f)) groups.set(f, []); groups.get(f).push(m); }
+  const chip = m => `<button class="chip" type="button" data-few-own="${esc(m.code)}" aria-pressed="${mine.has(m.code)}" title="${esc(m.name)}"><i style="background:${m.hex}"></i>${esc(m.code)}</button>`;
+  el('pgFewMineList').innerHTML = shown.length ? [...groups].map(([f, ms]) => {
+    const have = ms.filter(m => mine.has(m.code)).length;
+    return `<div class="pg-own-fam">` + (f ? `<button type="button" class="pg-own-all" data-few-fam="${esc(f)}" title="Mark every ${esc(f)} ${FEW_THINGS[kind].replace(/s$/, '')} as yours, or clear them if you have them all">${esc(f)} <small>${have}/${ms.length}</small></button>` : '') +
+      ms.map(chip).join('') + `</div>`;
+  }).join('') : `<span class="count">Nothing is called that.</span>`;
+  myRender();
 }
 
 function fewSetMine(kind, codes) {
@@ -334,6 +332,14 @@ function initFewPaints() {
     fewSetMine(kind, mine.includes(code) ? mine.filter(c => c !== code) : [...mine, code]);
     el('pgFewMineList').querySelector(`[data-few-own="${code}"]`)?.focus();
   });
+  el('pgFewMineFind').addEventListener('input', fewMineRender);
+  el('pgFewMineList').addEventListener('click', e => {
+    const b = e.target.closest('[data-few-fam]');
+    if (!b) return;
+    const kind = few.medium, ms = FEW_LISTS()[kind].filter(m => m.family === b.dataset.fewFam).map(m => m.code), mine = fewMine(kind);
+    const all = ms.every(c => mine.includes(c));
+    fewSetMine(kind, all ? mine.filter(c => !ms.includes(c)) : [...new Set([...mine, ...ms])]);
+  });
   el('pgFewMineAll').addEventListener('click', () => fewSetMine(few.medium, null));
   el('pgFewMineNone').addEventListener('click', () => fewSetMine(few.medium, []));
   const chips = el('pgFewN');
@@ -347,4 +353,5 @@ function initFewPaints() {
     fewSync();
   });
   el('pgFewGo').addEventListener('click', fewRun);
+  initMySet();
 }

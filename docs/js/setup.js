@@ -973,7 +973,7 @@ function viewImages() {
       for (const img of g.images) {
         out.push({
           src: img.src, pack: pack.name, group: g.name,
-          rotation: !!g.rotation, name: baseName(img.src), tags: img.tags || [],
+          rotation: !!g.rotation, name: baseName(img.src), tags: [...(img.tags || []), ...userTags(img.src)],
         });
       }
     }
@@ -990,6 +990,7 @@ function viewImages() {
 function filterImages(list) {
   list = cfFilter(list);
   if (starsOnly) list = list.filter(i => isStarred(i.src));
+  list = filterByTag(list);
   const words = el('imgFilter').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return list;
   return list.filter(i => {
@@ -1066,6 +1067,7 @@ function refreshGrid() {
   renderGridPage();
   updateViewMeta();
   cfSync();
+  syncDrawPick();
 }
 
 function renderGridPage() {
@@ -1116,6 +1118,7 @@ function gridCell(item, i) {
   skip.title = 'Never draw this pose in a session (it stays here so you can undo it)';
   cell.appendChild(skip);
   cell.appendChild(gridStarButton(item));
+  cell.appendChild(gridTagButton(item));
   if (isStarred(item.src)) cell.classList.add('starred');
 
   const meta = document.createElement('span');
@@ -1485,6 +1488,7 @@ function initShell(saved = {}) {
     const i = Number(cell.dataset.i);
     if (e.target.closest('.cell-skip')) { toggleCellSkip(i, cell); return; }
     if (e.target.closest('.cell-star')) { toggleCellStar(i, cell); return; }
+    if (e.target.closest('.cell-tagbtn')) { toggleCellTags(i, cell); return; }
     if (e.target.closest('.cell-like')) { cfLikeThis(gridItems[i]); return; }
     openViewer(i);
   });
@@ -1499,6 +1503,7 @@ function initShell(saved = {}) {
     // Same key as the viewer's own skip toggle, on purpose.
     if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleCellSkip(i, cell); return; }
     if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleCellStar(i, cell); return; }
+    if (e.key === 't' || e.key === 'T') { e.preventDefault(); toggleCellTags(i, cell); return; }
     const per = cellsPerRow();
     const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: per, ArrowUp: -per }[e.key];
     let target;
@@ -1516,9 +1521,7 @@ function initShell(saved = {}) {
   el('btnGridMore').addEventListener('click', renderGridPage);
   el('imgFilter').addEventListener('input', refreshGrid);
   initMarks();
-  el('btnBrowseDraw').addEventListener('click', () => {
-    if (gridItems.length) startSession(gridItems.map(browseUnit));
-  });
+  initTags();
 }
 
 /* One image per unit, in grid order. A rotation folder is deliberately NOT

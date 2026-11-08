@@ -127,7 +127,7 @@ function palgenGenerate() {
     if (pg.fit) rgb = palgenFit(rgb);
     return { rgb, locked: false };
   });
-  palgenSet(next, harmony);
+  palgenSet(myGenerated(next), harmony);
 }
 
 /* ---- changing the palette: every change goes through here, so Undo can
@@ -240,6 +240,7 @@ function palgenRender() {
     (pg.fit ? ' Only what they mix is on: every new colour is pulled in to what these paints can reach, its value kept.' : '');
   palgenRenderSaved();
   fewSync();
+  myRender();
   if (typeof seasonsSync === 'function') seasonsSync();
   palgenMixes();
 }

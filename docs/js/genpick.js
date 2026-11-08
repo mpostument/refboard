@@ -64,6 +64,15 @@ function gpOwnCodes(kind) {
   try { const v = JSON.parse(localStorage.getItem(GP_OWN_KEY))?.own?.[kind]; return Array.isArray(v) ? v : null; } catch { return null; }
 }
 
+/* One line of what the set is, read from the one list Palettes keeps - so it is only ever marked in one place. */
+function gpSetNoteSync() {
+  const note = document.getElementById('gpSetNote'), kind = GP_SETS[genChoices.medium];
+  if (!note) return;
+  if (!kind) { note.textContent = 'Watercolour and flat colour take the Holbein box.'; return; }
+  const own = gpOwnCodes(kind[0]);
+  note.textContent = own ? (own.length ? `Your set: ${own.length} ${kind[1]} marked.` : `No ${kind[1]} are marked yet.`) : `Nothing marked, so the whole list of ${kind[1]} is used.`;
+}
+
 async function gpSetGo() {
   const status = el('genStatus'), medium = genChoices.medium;
   if (GEN_GREY.includes(medium)) { status.textContent = 'Ink and pencil are grey: choose a coloured medium first.'; return; }
@@ -76,7 +85,7 @@ async function gpSetGo() {
   try { await loadSection('palette'); } catch { status.textContent = 'Your set could not load - check the connection.'; return; }
   const all = (kind[0] === 'copic' ? COPIC_COLOURS : PENCIL_COLOURS), own = gpOwnCodes(kind[0]);
   const mine = own ? all.filter(m => own.includes(m.code)) : all;
-  if (!mine.length) { status.textContent = `No ${kind[1]} are marked as yours: mark them in Palettes, Fewest markers and pencils.`; return; }
+  if (!mine.length) { status.textContent = `No ${kind[1]} are marked as yours: mark them in Palettes, under My set.`; return; }
   genChoices.lock = 'on';
   genUsePalette(mine.map(m => m.rgb));
   status.textContent = own ? `Colours is your ${mine.length} ${kind[1]} of ${all.length}, and the picture is recoloured to them.` : `Colours is all ${all.length} ${kind[1]} on the list (none marked as yours), and the picture is recoloured to them.`;
@@ -181,7 +190,7 @@ function genPickBlocks() {
       `<div class="gp-sws" id="gpPalSw"></div><div class="count" id="gpPalNote" role="status" aria-live="polite"></div>` +
       `<div class="row"><label class="check"><input type="checkbox" id="gpPalLock"> Recolour the picture to it</label><button type="button" class="ghost" id="gpPalUse" disabled>Use as Your palette</button></div>`) +
     block('gpSetBlock', 'Colours from my set', 'Keep the picture to the markers or pencils you marked as yours in Palettes (Fewest markers and pencils); for watercolour, to the Holbein box. All of the list if you marked none.',
-      `<button type="button" class="ghost" id="gpSetGo">Use my set</button>`) +
+      `<div class="count" id="gpSetNote"></div><div class="row"><button type="button" class="ghost" id="gpSetGo">Use my set</button><button type="button" class="ghost" id="gpSetEdit" title="Mark which ones you have, in Palettes under My set">Change my set</button></div>`) +
     block('gpFormsBlock', 'Simple forms', 'The scene taken apart into the solids it is built from - a mannequin, boxes and cylinders, contour lines on the forms - to draw over before you commit to the lines. One seed for all.',
       gnChips('gpForms', GP_FORMS, 'Ways to take it apart') + `<button type="button" class="ghost" id="gpFormsGo">Draw the forms</button>`) +
     block('gpHisBlock', 'History', 'Your latest pictures with their words: pin the ones to come back to, or draw one again with a new seed.',
@@ -193,6 +202,8 @@ function genPickWire() {
   el('gpPalInput').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) gpPalettePick(f); });
   el('gpPalUse').addEventListener('click', gpPaletteUse);
   el('gpSetGo').addEventListener('click', gpSetGo);
+  el('gpSetEdit').addEventListener('click', () => setView({ kind: 'palette' }));
+  gpSetNoteSync();
   const formsSync = () => gnPress(el('gpForms'), v => gpFormsPicked().includes(v));
   formsSync();
   el('gpForms').addEventListener('click', e => {

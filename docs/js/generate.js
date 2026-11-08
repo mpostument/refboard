@@ -1322,6 +1322,14 @@ async function genLockMade(made, status) {
 
 // One picture: start the job, then ask after it once a second.
 async function generateOne(req) {
+  try { return await generateOneRaw(req); }
+  catch (err) {
+    // Not a Stop: ComfyUI may be what went - look, so the panel says so instead of a bare error.
+    if (err.message !== 'Stopped.') genCheck();
+    throw err;
+  }
+}
+async function generateOneRaw(req) {
   const r = await fetch('api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) });
   if (!r.ok) throw new Error(r.status === 404 ? 'This server has no ComfyUI set up.' : 'The server refused it (HTTP ' + r.status + ').');
   const { id } = await r.json();
@@ -1534,6 +1542,7 @@ async function genCheck() {
   genOffline = info.available ? '' : (info.configured === true ? (info.reason || 'ComfyUI is not answering.')
     : 'ComfyUI is not available right now. Start it and set COMFY_URL for this server, then press Check again.');
   if (info.available) genServer = { quality: info.quality || '', negative: info.negative || '' };
+  genLink = { configured: info.configured === true || !!info.available, host: info.host || '', checkpoint: info.checkpoint || '', queue: Number.isInteger(info.queue) ? info.queue : null, at: Date.now() };
   genControl = !!info.available && !!info.control;
   // A ControlNet named in COMFY_CONTROLNET that ComfyUI does not have: Draw this pose is
   // missing for that reason, and nothing else on the page would say so.
@@ -1543,8 +1552,37 @@ async function genCheck() {
   document.querySelector('.nav-item[data-view="generate"]').classList.remove('hidden');
   el('genOffline').classList.toggle('hidden', !genOffline);
   el('genOfflineText').textContent = genOffline;
+  renderGenLink();
+  genWatch();
   el('genGo').disabled = !!genOffline;
   renderGenPrompt();
   renderStages();
 }
+
+/* ---- Is ComfyUI there? Said on the view all the time, not only when it is gone. */
+let genLink = null, genWatchTimer = 0;
+const genClock = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function renderGenLink() {
+  const b = el('genLink');
+  if (!b || !genLink) return;
+  const up = genAvailable();
+  // Gone, the panel above says so, with the reason: this chip is for when it is there.
+  b.classList.toggle('hidden', !up);
+  if (!up) {
+    if (genLink.configured) el('genOfflineText').textContent = genOffline +
+      `${genLink.host ? ' (' + genLink.host + ')' : ''} Checked ${genClock(genLink.at)}; looking again every 20 s.`;
+    return;
+  }
+  b.querySelector('span').textContent = `ComfyUI is ready${genLink.checkpoint ? ' · ' + genLink.checkpoint.replace(/\.(safetensors|ckpt)$/, '') : ''}` +
+    (genLink.queue ? ` · ${genLink.queue} in its queue` : '') + ` · checked ${genClock(genLink.at)}`;
+}
+// While it is gone, ask again by itself - a laptop that woke up should be noticed without a press. While it
+// is there, a slow look now and then, so the queue shown is not hours old.
+function genWatch() {
+  clearTimeout(genWatchTimer);
+  if (!genLink || !genLink.configured || (document.hidden && !genOffline)) return;
+  genWatchTimer = setTimeout(() => { if (!genBusy) genCheck(); else genWatch(); }, genOffline ? 20000 : 60000);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && genLink && Date.now() - genLink.at > 5000 && !genBusy) genCheck(); });
+el('genLink')?.addEventListener('click', () => { if (!genBusy) genCheck(); });
 initGenerate();

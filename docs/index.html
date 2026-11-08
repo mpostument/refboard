@@ -44,7 +44,7 @@
      before anything is drawn. Everything else loads at the end of <body>. -->
 <script src="js/profile.js?v=322309cf"></script>
 <script src="js/theme.js?v=16e8d197"></script>
-<link rel="stylesheet" href="css/app.css?v=e8fe33d9">
+<link rel="stylesheet" href="css/app.css?v=0cca9632">
 </head>
 <body>
 <div id="setup">
@@ -176,7 +176,14 @@
                 title="Find pictures by colour - pick colours, or a mood like warm dusk">Colour</button>
         <button class="ghost" type="button" id="btnStarred" aria-pressed="false">★</button>
         <button class="ghost" type="button" id="btnBrowseDraw"
-                title="Start a timed session from exactly what this grid is showing">Draw these</button>
+                title="Start a timed session from exactly what this grid is showing - all of it, or a number picked for you">Draw these</button>
+        <select id="drawCount" aria-label="How many to draw" title="All of them, or a number picked from them">
+          <option value="0">All</option><option value="10">10</option><option value="20">20</option>
+          <option value="30">30</option><option value="50">50</option>
+        </select>
+        <button class="ghost hidden" type="button" id="drawFresh" aria-pressed="true">Fresh</button>
+        <!-- Your own tags (js/tags.js): press one to show only it. -->
+        <div class="chips hidden tag-bar" id="tagBar" role="group" aria-label="Your tags"></div>
         <div class="colourbar hidden" id="colourPanel"></div>
       </div>
     </header>
@@ -329,6 +336,8 @@
               <p id="genOfflineText"></p>
               <button type="button" class="ghost" id="genRetry">Check again</button>
             </div>
+            <!-- ComfyUI is there: which model, how many pictures wait in its queue (renderGenLink). Press to ask again. -->
+            <button type="button" class="gen-link hidden" id="genLink" title="Press to ask ComfyUI again"><i aria-hidden="true"></i><span></span></button>
             <!-- Start from a picture or a sketch instead of from nothing - at the top, so it is not hidden under the bar: js/generate.js genSetSource(). -->
             <div class="gen-source" id="genSource">
               <button type="button" class="ghost" id="genPick" title="Draw from a picture of your own: a photo simplified into a study, with the choices above as its style. Or drop one here.">Start from a picture...</button>
@@ -342,6 +351,8 @@
               </div>
               <div id="genSourceBody" class="hidden"></div>
             </div>
+            <!-- Choices kept under a name: js/recipes.js. -->
+            <div class="gen-recipes" id="genRecipes"></div>
             <div id="genChoices"></div>
             <!-- A series, a movement: js/genmore.js, loaded when this is first opened. -->
             <details class="gen-more-ways" id="genMore">
@@ -554,6 +565,8 @@
         <div id="pgRow" class="pg-row" role="group" aria-label="The palette"></div>
         <!-- Filled by js/fewpaints.js when asked: which few of the paints below are enough. -->
         <div id="pgFew" class="pg-few hidden" aria-live="polite"></div>
+        <!-- Filled by js/myset.js: each colour of the palette as the marker or pencil of my set that is nearest. -->
+        <div id="pgMatchOut" class="pg-few hidden" aria-live="polite"></div>
         <div class="pg-under">
           <div>
             <h4>Seasons and times of day</h4>
@@ -569,16 +582,47 @@
               <button class="chip" type="button" id="pgFit" aria-pressed="false" title="Make only colours these paints can mix">Only what my paints mix</button>
             </div>
             <div class="count" id="pgPaintHint"></div>
-            <h4>Fewest paints</h4>
+            <h4>My set</h4>
+            <div class="count">What you have: paints, Copic markers, watercolour pencils. Fewest paints, Generate and the match below all keep to it.</div>
             <div class="chips" id="pgFewFor" role="group" aria-label="Paints, markers or pencils"></div>
             <details id="pgFewMine" class="pg-few-mine hidden">
               <summary id="pgFewMineSum"></summary>
-              <div class="chips" id="pgFewMineList" role="group" aria-label="The markers or pencils you have"></div>
+              <input type="search" id="pgFewMineFind" class="pg-own-find" placeholder="Find by code or name - E57, sky, sepia" aria-label="Find a marker or pencil">
+              <div id="pgFewMineList" role="group" aria-label="The markers or pencils you have"></div>
               <div class="chips">
                 <button class="chip" type="button" id="pgFewMineAll" title="The whole list is yours">All</button>
                 <button class="chip" type="button" id="pgFewMineNone" title="Clear them, then mark the ones you have">None</button>
               </div>
+              <div class="pg-sets">
+                <div class="chips" id="pgSets" role="group" aria-label="Your saved sets"></div>
+                <div class="row">
+                  <input type="text" id="pgSetName" class="pg-own-find" maxlength="40" placeholder="Name this set - Desk, Travel box" aria-label="Name for this set">
+                  <button class="ghost" type="button" id="pgSetSave" title="Keep what is marked now as a set you can come back to">Save set</button>
+                </div>
+              </div>
             </details>
+            <details id="pgPaintSet" class="pg-few-mine hidden">
+              <summary id="pgPaintSetSum">Which paints do you have?</summary>
+              <div class="chips" id="pgPaintSetList" role="group" aria-label="The paints you have"></div>
+              <div class="pg-sets">
+                <div class="chips" id="pgPaintSets" role="group" aria-label="Your saved paint sets"></div>
+                <div class="row">
+                  <input type="text" id="pgPaintSetName" class="pg-own-find" maxlength="40" placeholder="Name this set - Travel tin" aria-label="Name for this paint set">
+                  <button class="ghost" type="button" id="pgPaintSetSave" title="Keep the marked paints as a set; it joins the paint sets everywhere (Colour studio, eyedropper, Palettes)">Save set</button>
+                </div>
+              </div>
+            </details>
+            <div class="chips hidden" id="pgMatchBar">
+              <button class="chip" type="button" id="pgMatch" aria-pressed="false" title="Under the palette, show which of my markers or pencils each colour is">Match the palette to my set</button>
+              <button class="chip" type="button" id="pgOnlyMine" aria-pressed="false" title="New palettes are made only of colours in my set">New palettes only from my set</button>
+            </div>
+            <div class="chips" id="pgMyIO" role="group" aria-label="Keep my set in a file">
+              <button class="chip" type="button" id="pgMyExport" title="Save everything in My set - the ones you have, the named sets, the paint sets - to a file, as a backup or for another computer">Save my set to a file</button>
+              <button class="chip" type="button" id="pgMyImport" title="Bring a saved My set file back; sets with the same name are replaced">Load from a file</button>
+              <input type="file" id="pgMyFile" accept="application/json,.json" class="hidden" aria-label="Choose a My set file">
+              <span class="count" id="pgMyIONote" role="status" aria-live="polite"></span>
+            </div>
+            <h4>Fewest paints</h4>
             <div class="chips" id="pgFewN" role="group" aria-label="At most this many paints"></div>
             <div class="chips">
               <button class="chip" type="button" id="pgFewGo" title="Which few of the paints above are enough to mix every colour of this palette - in watercolour, the paper being the white">Which paints?</button>
@@ -1221,7 +1265,7 @@
         fullscreen. Then <b>Start drawing</b>.</p>
       <p><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> previous/next · <kbd>F</kbd> flip · <kbd>G</kbd> grayscale ·
         <kbd>Q</kbd> squint · <kbd>V</kbd> value split · <kbd>E</kbd> eyedropper · <kbd>A</kbd> angle tool ·
-        <kbd>D</kbd> compare your drawing · <kbd>I</kbd> info · <kbd>S</kbd> skip for good · <kbd>L</kbd> star · <kbd>B</kbd> come back to this one at the end · <kbd>Esc</kbd> stop.
+        <kbd>D</kbd> compare your drawing · <kbd>I</kbd> info · <kbd>S</kbd> skip for good · <kbd>L</kbd> star · <kbd>T</kbd> tag · <kbd>B</kbd> come back to this one at the end · <kbd>Esc</kbd> stop.
         Zoom is <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd>. The toolbar holds the tools you pin; the rest are under More (the three dots).</p>
       <p><b>Value split</b> turns the picture into 2-6 flat tones next to the original: block in light and dark masses before detail.
         <b>Pencil grades</b> says which grade of pencil each area wants. <b>Info</b> (<kbd>I</kbd>) shows the histogram,
@@ -1272,20 +1316,21 @@
      anywhere). Classic rather than type="module" so the page still opens
      straight from disk: browsers refuse modules over file://. -->
 <script src="js/core.js?v=ddd0d3ea"></script>
-<script src="js/setup.js?v=db3aa374"></script>
+<script src="js/setup.js?v=a3110b56"></script>
 <script src="js/a11y.js?v=efccb1ab"></script>
 <script src="js/store.js?v=3136007f"></script>
 <script src="js/uploads.js?v=bb9d031f"></script>
-<script src="js/session.js?v=23b0619b"></script>
+<script src="js/session.js?v=de9996bc"></script>
 <script src="js/vendor/spectral.js?v=3aa5d181"></script>
-<script src="js/paint.js?v=dc15b6b7"></script>
-<script src="js/tools.js?v=dfdbd425"></script>
+<script src="js/paint.js?v=70d5fe8b"></script>
+<script src="js/tools.js?v=3bfb653a"></script>
 <script src="js/materials.js?v=aea2cd23"></script>
 <script src="js/vision.js?v=fc874c6c"></script>
 <script src="js/sort.js?v=6b40f3d5"></script>
 <script src="js/colourfind.js?v=d51aa014"></script>
-<script src="js/study.js?v=955b281b"></script>
+<script src="js/study.js?v=905f2c4d"></script>
 <script src="js/stages.js?v=66abf595"></script>
+<script src="js/tags.js?v=0ebcf5d5"></script>
 <script src="js/marks.js?v=1b41ceb1"></script>
 <script src="js/pins.js?v=1cb6ac3d"></script>
 <script src="js/colourmath.js?v=ae688fd8"></script>
@@ -1300,7 +1345,8 @@
 <script src="js/quality.js?v=96cec6fd"></script>
 <script src="js/genlock.js?v=afcea6a6"></script>
 <script src="js/warmup.js?v=e784b8ca"></script>
-<script src="js/generate.js?v=e25de9fe"></script>
+<script src="js/generate.js?v=d5e97a34"></script>
+<script src="js/recipes.js?v=a87103f6"></script>
 <script src="js/assetsfx.js?v=03d131dd"></script>
 <script src="js/genedit.js?v=61d31206"></script>
 <!-- Sections whose code loads the first time they are opened - see
@@ -1314,7 +1360,7 @@
 <template id="lazy-genmore">
 <script src="js/genmore.js?v=96131588"></script>
 <script src="js/gennew.js?v=c15d21ce"></script>
-<script src="js/genpick.js?v=c344fdf9"></script>
+<script src="js/genpick.js?v=5011f2d3"></script>
 </template>
 <template id="lazy-train">
 </template>
@@ -1336,8 +1382,11 @@
 <template id="lazy-handbook">
 </template>
 <template id="lazy-palette">
-<script src="js/palette.js?v=80781982"></script>
-<script src="js/fewpaints.js?v=694da923"></script>
+<script src="js/palette.js?v=21128ea2"></script>
+<script src="js/pencil-colours.js?v=c5c7089d"></script>
+<script src="js/copic-colours.js?v=042cb1c0"></script>
+<script src="js/fewpaints.js?v=7e13093e"></script>
+<script src="js/myset.js?v=0c1e0473"></script>
 <script src="js/seasons.js?v=16c922c8"></script>
 </template>
 <template id="lazy-colour">

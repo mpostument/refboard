@@ -487,6 +487,7 @@ function show(src) {
   // overlay block near the end of this function.
   const prevSrc = state.current;
   state.current = src;
+  if (state.startedAt != null) markSeen(src);
   const candidates = displayCandidates(src);
   let stage = 0;
   img.style.opacity = '0';
