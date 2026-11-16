@@ -1,5 +1,15 @@
 # What's new
 
+## 1.2.0
+
+- **My set** - mark what you own from the whole Copic range (357) and the Faber-Castell pencil range (116), keep several
+  named sets, and save a set to a file or load it back. Match a palette to your set, with up to three colours worth getting
+  next. Paint sets: pick tubes and save them as a palette the Colour studio, eyedropper and Palettes use.
+- **Tags** - your own tags on pictures (`#` on the grid, `T` in a session or the grid); tag chips filter the grid.
+- **Draw these** - takes a number and prefers pictures you have not drawn lately, and starred ones.
+- **Generate** - save your choices as a recipe under a name, or "Same, but light". A status line shows whether ComfyUI is
+  ready and its queue, and re-checks by itself while it is down. A one-line summary of your set links to changing it.
+
 ## 1.1.0
 
 - **Stars and come back to this** - press `L` to star a picture (shown as a star on the grid, with a filter beside search) and `B`
